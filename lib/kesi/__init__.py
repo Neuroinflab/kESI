@@ -22,3 +22,33 @@
 #                                                                             #
 ###############################################################################
 
+import numpy as np
+
+class KernelFieldInterpolator(object):
+    def __init__(self, FieldComponents, nodes, points):
+        self._nodes = {k: list(v) for k, v in nodes.items()}
+        self._points = {k: list(v) for k, v in points.items()}
+        self._components = list(FieldComponents)
+
+        self._equations = {name: np.matrix([[getattr(FieldComponents[c], name)(n)
+                                             for c in self._components
+                                             ]
+                                            for n in nds])
+                           for name, nds in self._nodes.items()
+                           }
+
+        self._values = {name: np.matrix([[getattr(FieldComponents[c], name)(n)
+                                          for c in self._components
+                                          ]
+                                         for n in nds
+                                         ])
+                        for name, nds in self._points.items()
+                        }
+
+    def __call__(self, field, measuredField, measurements):
+        nodes = self._nodes[measuredField]
+        rhs = np.matrix([measurements[n] for n in nodes]).T
+        lhs = self._equations[measuredField]
+        weights = np.linalg.solve(lhs, rhs)
+        values = np.array(self._values[field] * weights).flatten()
+        return {k: v for k, v in zip(self._points[field], values)}
