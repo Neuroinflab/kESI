@@ -68,7 +68,7 @@ class _GivenComponentsAndNodesBase(TestCase):
 class _GivenSingleComponentSingleNodeBase(_GivenComponentsAndNodesBase):
     NODES = ['zero']
 
-    def testGivenSingleNodeInterpolatesTheNode(self):
+    def testProperlyHandlesTheNode(self):
         interpolatedName = 'func'
         measuredName = 'func'
         self.checkWeightedInterpolation(measuredName,
@@ -77,7 +77,7 @@ class _GivenSingleComponentSingleNodeBase(_GivenComponentsAndNodesBase):
                                         self.NODES,
                                         weights={'1': 2})
 
-    def testGivenSingleNodeExtrapolatesOneOtherPoint(self):
+    def testExtrapolatesOneOtherPoint(self):
         interpolatedName = 'func'
         measuredName = 'func'
         points = ['one']
@@ -86,7 +86,7 @@ class _GivenSingleComponentSingleNodeBase(_GivenComponentsAndNodesBase):
                                         interpolatedName,
                                         points)
 
-    def testGivenSingleNodeExtrapolatesManyOtherPoints(self):
+    def testExtrapolatesManyOtherPoints(self):
         interpolatedName = 'func'
         measuredName = 'func'
         points = ['one', 'two']
@@ -101,36 +101,10 @@ class GivenSingleConstantFieldComponentSingleNode(_GivenSingleComponentSingleNod
                                                     lambda x: 0)}
 
 
-@unittest.skip('singular or sth')
-class GivenSingleLinearFieldComponentSingleZeroedNode(_GivenSingleComponentSingleNodeBase):
-    FIELD_COMPONENTS = {'x': FunctionFieldComponent({'zero': 0,
-                                                     'one': 1,
-                                                     'two': 2}.get,
-                                                    {'zero': 1,
-                                                     'one': 1,
-                                                     'two': 1}.get)}
-
-@unittest.skip('singular or sth')
-class GivenSingleLinearFieldComponentSingleNonZeroedNode(_GivenSingleComponentSingleNodeBase):
-    FIELD_COMPONENTS = {'x': FunctionFieldComponent({'zero': 1,
-                                                     'one': 2,
-                                                     'two': 3}.get,
-                                                    {'zero': 1,
-                                                     'one': 1,
-                                                     'two': 1}.get)}
-
-class GivenTwoLinearFieldComponentsAndTwoNodes(_GivenComponentsAndNodesBase):
+class _GivenTwoNodesBase(_GivenComponentsAndNodesBase):
     NODES = ['zero', 'two']
-    FIELD_COMPONENTS = {'1': FunctionFieldComponent(lambda x: 1,
-                                                    lambda x: 0),
-                        'x': FunctionFieldComponent({'zero': 0,
-                                                     'one': 1,
-                                                     'two': 2}.get,
-                                                    {'zero': 1,
-                                                     'one': 1,
-                                                     'two': 1}.get)}
 
-    def testInterpolatesTheNodes(self):
+    def testProperlyHandlesTheNodes(self):
         interpolatedName = 'func'
         measuredName = 'func'
         self.checkWeightedInterpolation(measuredName,
@@ -138,6 +112,39 @@ class GivenTwoLinearFieldComponentsAndTwoNodes(_GivenComponentsAndNodesBase):
                                         interpolatedName,
                                         self.NODES,
                                         weights={'1': 2})
+
+    def testInterpolates(self):
+        interpolatedName = 'func'
+        measuredName = 'func'
+        self.checkWeightedInterpolation(measuredName,
+                                        self.NODES,
+                                        interpolatedName,
+                                        ['one'],
+                                        weights={'1': 2})
+
+    def testExtrapolatesAndInterpolates(self):
+        interpolatedName = 'func'
+        measuredName = 'func'
+        self.checkWeightedInterpolation(measuredName,
+                                        self.NODES,
+                                        interpolatedName,
+                                        ['one', 'three'],
+                                        weights={'1': 2})
+
+
+class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
+    FIELD_COMPONENTS = {'1': FunctionFieldComponent(lambda x: 1,
+                                                    lambda x: 0),
+                        'x': FunctionFieldComponent({'zero': 0,
+                                                     'one': 1,
+                                                     'two': 2,
+                                                     'three': 3}.get,
+                                                    {'zero': 1,
+                                                     'one': 1,
+                                                     'two': 1,
+                                                     'three': 1}.get),
+                        }
+
 
 if __name__ == '__main__':
     unittest.main()
