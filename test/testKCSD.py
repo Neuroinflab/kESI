@@ -26,6 +26,10 @@ import unittest
 
 import collections
 from unittest import TestCase
+try:
+    import pandas as pd
+except:
+    pd = None
 
 import kesi as kesi
 
@@ -166,6 +170,21 @@ class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase):
                                                          'three': -1}.get),
                         }
 
+@unittest.skipIf(pd is None, 'No pandas module')
+class WhenCalledWithPandasSeries(GivenTwoNodesAndThreeLinearFieldComponents):
+    def createField(self, name, points, weights={}):
+        return pd.Series(super(WhenCalledWithPandasSeries,
+                               self).createField(name,
+                                                 points,
+                                                 weights=weights))
+
+    def _checkInterpolation(self, expected, interpolatedName, measured,
+                           measuredName):
+        interpolator = self.createInterpolator({measuredName: list(measured.index)},
+                                               {interpolatedName: list(expected.index)})
+        interpolated = interpolator(interpolatedName, measuredName, measured)
+        self.assertIsInstance(interpolated, pd.Series)
+        self.assertTrue((expected == interpolated).all())
 
 if __name__ == '__main__':
     unittest.main()

@@ -24,6 +24,12 @@
 
 import numpy as np
 
+try:
+    import pandas as pd
+
+except:
+    pd = None
+
 class KernelFieldInterpolator(object):
     def __init__(self, fieldComponents, nodes, points):
         self._components = {name: [getattr(f, name)
@@ -59,4 +65,9 @@ class KernelFieldInterpolator(object):
         invK = np.linalg.inv(self._K[measuredField])
         values = np.dot(self._crossK[measuredField, field],
                         np.dot(invK, rhs)).flatten()
-        return dict(zip(self._points[field], values))
+        keys = self._points[field]
+
+        if pd and isinstance(measurements, pd.Series):
+            return pd.Series(data=values,
+                             index=keys)
+        return dict(zip(keys, values))
