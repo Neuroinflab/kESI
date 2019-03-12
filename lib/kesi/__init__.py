@@ -26,29 +26,37 @@ import numpy as np
 
 class KernelFieldInterpolator(object):
     def __init__(self, fieldComponents, nodes, points):
+        self._components = {name: [getattr(f, name)
+                                   for f in fieldComponents]
+                            for name in set(nodes) | set(points)}
         self._nodes = {k: list(v) for k, v in nodes.items()}
         self._points = {k: list(v) for k, v in points.items()}
 
-        self._K = {name: np.matrix([[sum(getattr(f, name)(a) * getattr(f, name)(b)
-                                         for f in fieldComponents)
-                                     for b in nds
-                                     ]
-                                    for a in nds])
-                   for name, nds in self._nodes.items()}
-        self._crossK = {(src, dst): np.matrix([[sum(getattr(f, src)(n) * getattr(f, dst)(p)
-                                                    for f in
-                                                    fieldComponents)
-                                                for n in nds
-                                                ]
-                                                for p in pts
-                                               ])
-                        for src, nds in self._nodes.items()
-                        for dst, pts in self._points.items()
+        self._K = {name: self._makeKernel(name)
+                   for name in self._nodes}
+        self._crossK = {(src, dst): self._makeCrossKernel(src, dst)
+                        for src in self._nodes
+                        for dst in self._points
                         }
+
+    def _makeKernel(self, name):
+        NDS = self._evaluateComponents(name, self._nodes[name])
+        return np.dot(NDS, NDS.T)
+
+    def _makeCrossKernel(self, src, dst):
+        PTS = self._evaluateComponents(dst, self._points[dst])
+        NDS = self._evaluateComponents(src, self._nodes[src])
+        return np.dot(PTS, NDS.T)
+
+    def _evaluateComponents(self, name, points):
+        components = self._components[name]
+        return np.array([[f(p) for f in components]
+                         for p in points])
 
     def __call__(self, field, measuredField, measurements):
         nodes = self._nodes[measuredField]
-        rhs = np.matrix([measurements[n] for n in nodes]).T
+        rhs = np.array([measurements[n] for n in nodes]).reshape(-1, 1)
         invK = np.linalg.inv(self._K[measuredField])
-        values = np.array(self._crossK[measuredField, field] * invK * rhs).flatten()
+        values = np.dot(self._crossK[measuredField, field],
+                        np.dot(invK, rhs)).flatten()
         return dict(zip(self._points[field], values))
