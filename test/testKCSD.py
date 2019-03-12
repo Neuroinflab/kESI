@@ -142,7 +142,28 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
                                                     {'zero': 1,
                                                      'one': 1,
                                                      'two': 1,
+                                                     'three': 1}.get)}
+
+
+class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase):
+    FIELD_COMPONENTS = {'1': FunctionFieldComponent(lambda x: 1,
+                                                    lambda x: 0),
+                        'x': FunctionFieldComponent({'zero': 0,
+                                                     'one': 1,
+                                                     'two': 2,
+                                                     'three': 3}.get,
+                                                    {'zero': 1,
+                                                     'one': 1,
+                                                     'two': 1,
                                                      'three': 1}.get),
+                        '1 - x': FunctionFieldComponent({'zero': 1,
+                                                         'one': 0,
+                                                         'two': -1,
+                                                         'three': -2}.get,
+                                                        {'zero': -1,
+                                                         'one': -1,
+                                                         'two': -1,
+                                                         'three': -1}.get),
                         }
 
 
