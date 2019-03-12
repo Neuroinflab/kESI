@@ -45,7 +45,7 @@ class _GivenComponentsAndNodesBase(TestCase):
                 }
 
     def createInterpolator(self, nodes, points):
-        return kesi.KernelFieldInterpolator(self.FIELD_COMPONENTS,
+        return kesi.KernelFieldInterpolator(self.FIELD_COMPONENTS.values(),
                                             nodes=nodes,
                                             points=points)
 

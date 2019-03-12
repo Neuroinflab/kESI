@@ -25,19 +25,19 @@
 import numpy as np
 
 class KernelFieldInterpolator(object):
-    def __init__(self, FieldComponents, nodes, points):
+    def __init__(self, fieldComponents, nodes, points):
         self._nodes = {k: list(v) for k, v in nodes.items()}
         self._points = {k: list(v) for k, v in points.items()}
 
-        self._K = {name: np.matrix([[sum(getattr(f, name)(a)*getattr(f, name)(b)
-                                         for f in FieldComponents.values())
+        self._K = {name: np.matrix([[sum(getattr(f, name)(a) * getattr(f, name)(b)
+                                         for f in fieldComponents)
                                      for b in nds
                                      ]
                                     for a in nds])
                    for name, nds in self._nodes.items()}
-        self._crossK = {(src, dst): np.matrix([[sum(getattr(f, src)(n)*getattr(f, dst)(p)
+        self._crossK = {(src, dst): np.matrix([[sum(getattr(f, src)(n) * getattr(f, dst)(p)
                                                     for f in
-                                                    FieldComponents.values())
+                                                    fieldComponents)
                                                 for n in nds
                                                 ]
                                                 for p in pts
