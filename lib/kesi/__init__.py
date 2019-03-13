@@ -30,7 +30,7 @@ try:
 except:
     pd = None
 
-class KernelFieldInterpolator(object):
+class KernelFieldApproximator(object):
     def __init__(self, fieldComponents, nodes, points, lambda_=0):
         self._components = {name: [getattr(f, name)
                                    for f in fieldComponents]

@@ -50,10 +50,10 @@ class _GivenComponentsAndNodesBase(TestCase):
 
     def createInterpolator(self, nodes, points, lambda_=None):
         if lambda_ is None:
-            return kesi.KernelFieldInterpolator(self.FIELD_COMPONENTS.values(),
+            return kesi.KernelFieldApproximator(self.FIELD_COMPONENTS.values(),
                                                 nodes=nodes,
                                                 points=points)
-        return kesi.KernelFieldInterpolator(self.FIELD_COMPONENTS.values(),
+        return kesi.KernelFieldApproximator(self.FIELD_COMPONENTS.values(),
                                             nodes=nodes,
                                             points=points,
                                             lambda_=lambda_)
