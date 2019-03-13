@@ -61,16 +61,18 @@ class _GivenComponentsAndNodesBase(TestCase):
     def _checkInterpolation(self, expected, measured,
                             measuredName, lambda_=None):
         interpolator = self.createInterpolator({measuredName: list(measured)},
-                                               {interpolatedName: list(expected)},
+                                               {k: list(v)
+                                                for k, v in expected.items()},
                                                lambda_=lambda_)
-        self.assertEqual(expected,
-                         interpolator(interpolatedName, measuredName, measured))
+        for name in expected:
+            self.assertEqual(expected[name],
+                             interpolator(name, measuredName, measured))
 
-    def checkWeightedInterpolation(self, measuredName, nodes, interpolatedName,
-                                   points, weights={}):
+    def checkWeightedInterpolation(self, measuredName, nodes,
+                                   names, points, weights={}):
         self._checkInterpolation(
-            self.createField(interpolatedName, points, weights=weights),
-            interpolatedName,
+            {name: self.createField(name, points, weights=weights)
+             for name in names},
             self.createField(measuredName, nodes, weights=weights),
             measuredName)
 
@@ -79,7 +81,7 @@ class _GivenSingleComponentSingleNodeBase(_GivenComponentsAndNodesBase):
     NODES = ['zero']
 
     def testProperlyHandlesTheNode(self):
-        interpolatedName = 'func'
+        interpolatedName = ['func', 'fprime']
         measuredName = 'func'
         self.checkWeightedInterpolation(measuredName,
                                         self.NODES,
@@ -88,7 +90,7 @@ class _GivenSingleComponentSingleNodeBase(_GivenComponentsAndNodesBase):
                                         weights={'1': 2})
 
     def testExtrapolatesOneOtherPoint(self):
-        interpolatedName = 'func'
+        interpolatedName = ['func', 'fprime']
         measuredName = 'func'
         points = ['one']
         self.checkWeightedInterpolation(measuredName,
@@ -97,7 +99,7 @@ class _GivenSingleComponentSingleNodeBase(_GivenComponentsAndNodesBase):
                                         points)
 
     def testExtrapolatesManyOtherPoints(self):
-        interpolatedName = 'func'
+        interpolatedName = ['func', 'fprime']
         measuredName = 'func'
         points = ['one', 'two']
         self.checkWeightedInterpolation(measuredName,
@@ -115,7 +117,7 @@ class _GivenTwoNodesBase(_GivenComponentsAndNodesBase):
     NODES = ['zero', 'two']
 
     def testProperlyHandlesTheNodes(self):
-        interpolatedName = 'func'
+        interpolatedName = ['func', 'fprime']
         measuredName = 'func'
         self.checkWeightedInterpolation(measuredName,
                                         self.NODES,
@@ -124,7 +126,7 @@ class _GivenTwoNodesBase(_GivenComponentsAndNodesBase):
                                         weights={'1': 2})
 
     def testInterpolates(self):
-        interpolatedName = 'func'
+        interpolatedName = ['func', 'fprime']
         measuredName = 'func'
         self.checkWeightedInterpolation(measuredName,
                                         self.NODES,
@@ -133,7 +135,7 @@ class _GivenTwoNodesBase(_GivenComponentsAndNodesBase):
                                         weights={'1': 2})
 
     def testExtrapolatesAndInterpolates(self):
-        interpolatedName = 'func'
+        interpolatedName = ['func', 'fprime']
         measuredName = 'func'
         self.checkWeightedInterpolation(measuredName,
                                         self.NODES,
@@ -202,14 +204,17 @@ class WhenCalledWithPandasSeries(GivenTwoNodesAndThreeLinearFieldComponents):
                                                  points,
                                                  weights=weights))
 
-    def _checkInterpolation(self, expected, interpolatedName, measured,
+    def _checkInterpolation(self, expected, measured,
                             measuredName, lambda_=None):
         interpolator = self.createInterpolator({measuredName: list(measured.index)},
-                                               {interpolatedName: list(expected.index)},
+                                               {k: list(v.index)
+                                                for k, v in expected.items()},
                                                lambda_=lambda_)
-        interpolated = interpolator(interpolatedName, measuredName, measured)
-        self.assertIsInstance(interpolated, pd.Series)
-        self.assertTrue((expected == interpolated).all())
+        for name in expected:
+            interpolated = interpolator(name, measuredName, measured)
+            self.assertIsInstance(interpolated, pd.Series)
+            self.assertTrue((expected[name] == interpolated).all())
+
 
 if __name__ == '__main__':
     unittest.main()
