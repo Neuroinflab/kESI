@@ -37,13 +37,17 @@ class _KernelFieldApproximator(object):
         self._crossK = crossKernels
         self._nodes = nodes
         self._points = points
+        self.lambda_ = lambda_
         self._invK = {name: np.linalg.inv(K + np.eye(*K.shape) * lambda_)
                       for name, K in self._K.items()
                       }
 
-    def copy(self, lambda_):
-        return _KernelFieldApproximator(self._K, self._crossK, self._nodes,
-                                        self._points, lambda_)
+    def copy(self, lambda_=None):
+        return _KernelFieldApproximator(self._K,
+                                        self._crossK,
+                                        self._nodes,
+                                        self._points,
+                                        self.lambda_ if lambda_ is None else lambda_)
 
     def __call__(self, field, measuredField, measurements):
         nodes = self._nodes[measuredField]
