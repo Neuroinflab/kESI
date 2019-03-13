@@ -33,34 +33,43 @@ except:
 
 class _KernelFieldApproximator(object):
     def __init__(self, kernels, crossKernels, nodes, points, lambda_):
-        self._K = kernels
-        self._crossK = crossKernels
+        self._kernels = kernels
+        self._crossKernels = crossKernels
         self._nodes = nodes
         self._points = points
         self.lambda_ = lambda_
         self._invK = {name: np.linalg.inv(K + np.eye(*K.shape) * lambda_)
-                      for name, K in self._K.items()
+                      for name, K in self._kernels.items()
                       }
 
     def copy(self, lambda_=None):
-        return _KernelFieldApproximator(self._K,
-                                        self._crossK,
+        return _KernelFieldApproximator(self._kernels,
+                                        self._crossKernels,
                                         self._nodes,
                                         self._points,
                                         self.lambda_ if lambda_ is None else lambda_)
 
     def __call__(self, field, measuredField, measurements):
-        nodes = self._nodes[measuredField]
-        rhs = np.array([measurements[n] for n in nodes]).reshape(-1, 1)
-        invK = self._invK[measuredField]
-        values = np.dot(self._crossK[measuredField, field],
-                        np.dot(invK, rhs)).flatten()
+        values = self._approximate(field,
+                                   measuredField,
+                                   measurements)
         keys = self._points[field]
 
         if pd and isinstance(measurements, pd.Series):
             return pd.Series(data=values,
                              index=keys)
         return dict(zip(keys, values))
+
+    def _approximate(self, field, measuredField, measurements):
+        return np.dot(self._crossKernels[measuredField, field],
+                      np.dot(self._invK[measuredField],
+                             self._measurementVector(measuredField,
+                                                     measurements))).flatten()
+
+    def _measurementVector(self, name, values):
+        nodes = self._nodes[name]
+        rhs = np.array([values[n] for n in nodes]).reshape(-1, 1)
+        return rhs
 
 
 class KernelFieldApproximator(_KernelFieldApproximator):

@@ -164,16 +164,12 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
                                'one': 0.6,
                                },
                     }
-        approximator = self.createApproximator({'func': list(expected['func'])},
-                                               {k: list(v)
-                                                for k, v in expected.items()},
-                                               lambda_=1.0)
-        for name in expected:
-            approximated = approximator(name, 'func', {'zero': 1, 'one': 2})
-            self.assertEqual(sorted(expected[name]),
-                             sorted(approximated))
-            for k, v in expected[name].items():
-                self.assertAlmostEqual(v, approximated[k])
+        self.checkApproximator(expected,
+                               self.createApproximator(
+                                    {'func': list(expected['func'])},
+                                    {k: list(v)
+                                     for k, v in expected.items()},
+                                    lambda_=1.0))
 
     def testCopy(self):
         expected = {'func': {'zero': 0.8,
@@ -184,16 +180,11 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
                                },
                     }
         original = self.createApproximator({'func': list(expected['func'])},
-                                               {k: list(v)
-                                                for k, v in expected.items()},
+                                           {k: list(v)
+                                            for k, v in expected.items()},
                                            lambda_=1.0)
-        approximator = original.copy()
-        for name in expected:
-            approximated = approximator(name, 'func', {'zero': 1, 'one': 2})
-            self.assertEqual(sorted(expected[name]),
-                             sorted(approximated))
-            for k, v in expected[name].items():
-                self.assertAlmostEqual(v, approximated[k])
+        self.checkApproximator(expected,
+                               original.copy())
 
     def testCopyRegularisationChange(self):
         expected = {'func': {'zero': 0.8,
@@ -204,9 +195,12 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
                                },
                     }
         original = self.createApproximator({'func': list(expected['func'])},
-                                               {k: list(v)
-                                                for k, v in expected.items()})
-        approximator = original.copy(lambda_=1.0)
+                                           {k: list(v)
+                                            for k, v in expected.items()})
+        self.checkApproximator(expected,
+                               original.copy(lambda_=1.0))
+
+    def checkApproximator(self, expected, approximator):
         for name in expected:
             approximated = approximator(name, 'func', {'zero': 1, 'one': 2})
             self.assertEqual(sorted(expected[name]),
