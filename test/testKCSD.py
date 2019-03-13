@@ -48,15 +48,21 @@ class _GivenComponentsAndNodesBase(TestCase):
                 for k in points
                 }
 
-    def createInterpolator(self, nodes, points):
+    def createInterpolator(self, nodes, points, lambda_=None):
+        if lambda_ is None:
+            return kesi.KernelFieldInterpolator(self.FIELD_COMPONENTS.values(),
+                                                nodes=nodes,
+                                                points=points)
         return kesi.KernelFieldInterpolator(self.FIELD_COMPONENTS.values(),
                                             nodes=nodes,
-                                            points=points)
+                                            points=points,
+                                            lambda_=lambda_)
 
-    def _checkInterpolation(self, expected, interpolatedName, measured,
-                           measuredName):
+    def _checkInterpolation(self, expected, measured,
+                            measuredName, lambda_=None):
         interpolator = self.createInterpolator({measuredName: list(measured)},
-                                               {interpolatedName: list(expected)})
+                                               {interpolatedName: list(expected)},
+                                               lambda_=lambda_)
         self.assertEqual(expected,
                          interpolator(interpolatedName, measuredName, measured))
 
@@ -148,6 +154,24 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
                                                      'two': 1,
                                                      'three': 1}.get)}
 
+    def testRegularisation(self):
+        expected = {'func': {'zero': 0.8,
+                             'one': 1.4,
+                             },
+                    'fprime': {'zero': 0.6,
+                               'one': 0.6,
+                               },
+                    }
+        interpolator = self.createInterpolator({'func': list(expected['func'])},
+                                               {k: list(v)
+                                                for k, v in expected.items()},
+                                               lambda_=1.0)
+        for name in expected:
+            interpolated = interpolator(name, 'func', {'zero': 1, 'one': 2})
+            self.assertEqual(sorted(expected[name]),
+                             sorted(interpolated))
+            for k, v in expected[name].items():
+                self.assertAlmostEqual(v, interpolated[k])
 
 class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase):
     FIELD_COMPONENTS = {'1': FunctionFieldComponent(lambda x: 1,
@@ -179,9 +203,10 @@ class WhenCalledWithPandasSeries(GivenTwoNodesAndThreeLinearFieldComponents):
                                                  weights=weights))
 
     def _checkInterpolation(self, expected, interpolatedName, measured,
-                           measuredName):
+                            measuredName, lambda_=None):
         interpolator = self.createInterpolator({measuredName: list(measured.index)},
-                                               {interpolatedName: list(expected.index)})
+                                               {interpolatedName: list(expected.index)},
+                                               lambda_=lambda_)
         interpolated = interpolator(interpolatedName, measuredName, measured)
         self.assertIsInstance(interpolated, pd.Series)
         self.assertTrue((expected == interpolated).all())

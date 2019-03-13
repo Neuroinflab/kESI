@@ -31,7 +31,7 @@ except:
     pd = None
 
 class KernelFieldInterpolator(object):
-    def __init__(self, fieldComponents, nodes, points):
+    def __init__(self, fieldComponents, nodes, points, lambda_=0):
         self._components = {name: [getattr(f, name)
                                    for f in fieldComponents]
                             for name in set(nodes) | set(points)}
@@ -44,6 +44,9 @@ class KernelFieldInterpolator(object):
                         for src in self._nodes
                         for dst in self._points
                         }
+        self._invK = {name: np.linalg.inv(K + np.eye(*K.shape) * lambda_)
+                      for name, K in self._K.items()
+                      }
 
     def _makeKernel(self, name):
         NDS = self._evaluateComponents(name, self._nodes[name])
@@ -62,7 +65,7 @@ class KernelFieldInterpolator(object):
     def __call__(self, field, measuredField, measurements):
         nodes = self._nodes[measuredField]
         rhs = np.array([measurements[n] for n in nodes]).reshape(-1, 1)
-        invK = np.linalg.inv(self._K[measuredField])
+        invK = self._invK[measuredField]
         values = np.dot(self._crossK[measuredField, field],
                         np.dot(invK, rhs)).flatten()
         keys = self._points[field]
