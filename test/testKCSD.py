@@ -175,6 +175,25 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
             for k, v in expected[name].items():
                 self.assertAlmostEqual(v, approximated[k])
 
+    def testCopyRegularisationChange(self):
+        expected = {'func': {'zero': 0.8,
+                             'one': 1.4,
+                             },
+                    'fprime': {'zero': 0.6,
+                               'one': 0.6,
+                               },
+                    }
+        original = self.createApproximator({'func': list(expected['func'])},
+                                               {k: list(v)
+                                                for k, v in expected.items()})
+        approximator = original.copy(lambda_=1.0)
+        for name in expected:
+            approximated = approximator(name, 'func', {'zero': 1, 'one': 2})
+            self.assertEqual(sorted(expected[name]),
+                             sorted(approximated))
+            for k, v in expected[name].items():
+                self.assertAlmostEqual(v, approximated[k])
+
 
 class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase):
     FIELD_COMPONENTS = {'1': FunctionFieldComponent(lambda x: 1,

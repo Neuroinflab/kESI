@@ -30,7 +30,44 @@ try:
 except:
     pd = None
 
-class KernelFieldApproximator(object):
+
+class _KernelFieldApproximator(object):
+    def __init__(self, kernels, crossKernels, lambda_,
+                 nodes=None,
+                 points=None):
+        self._K = kernels
+        self._crossK = crossKernels
+        self._invK = {name: np.linalg.inv(K + np.eye(*K.shape) * lambda_)
+                      for name, K in self._K.items()
+                      }
+
+        if nodes is not None:
+            self._nodes = nodes
+
+        if points is not None:
+            self._points = points
+
+    def copy(self, lambda_):
+        return _KernelFieldApproximator(self._K, self._crossK,
+                                        lambda_,
+                                        self._nodes,
+                                        self._points)
+
+    def __call__(self, field, measuredField, measurements):
+        nodes = self._nodes[measuredField]
+        rhs = np.array([measurements[n] for n in nodes]).reshape(-1, 1)
+        invK = self._invK[measuredField]
+        values = np.dot(self._crossK[measuredField, field],
+                        np.dot(invK, rhs)).flatten()
+        keys = self._points[field]
+
+        if pd and isinstance(measurements, pd.Series):
+            return pd.Series(data=values,
+                             index=keys)
+        return dict(zip(keys, values))
+
+
+class KernelFieldApproximator(_KernelFieldApproximator):
     def __init__(self, fieldComponents, nodes, points, lambda_=0):
         self._components = {name: [getattr(f, name)
                                    for f in fieldComponents]
@@ -38,15 +75,15 @@ class KernelFieldApproximator(object):
         self._nodes = {k: list(v) for k, v in nodes.items()}
         self._points = {k: list(v) for k, v in points.items()}
 
-        self._K = {name: self._makeKernel(name)
+        kernels = {name: self._makeKernel(name)
                    for name in self._nodes}
-        self._crossK = {(src, dst): self._makeCrossKernel(src, dst)
+        crossKernels = {(src, dst): self._makeCrossKernel(src, dst)
                         for src in self._nodes
                         for dst in self._points
                         }
-        self._invK = {name: np.linalg.inv(K + np.eye(*K.shape) * lambda_)
-                      for name, K in self._K.items()
-                      }
+        super(KernelFieldApproximator,
+              self).__init__(kernels, crossKernels, lambda_)
+
 
     def _makeKernel(self, name):
         NDS = self._evaluateComponents(name, self._nodes[name])
@@ -61,16 +98,3 @@ class KernelFieldApproximator(object):
         components = self._components[name]
         return np.array([[f(p) for f in components]
                          for p in points])
-
-    def __call__(self, field, measuredField, measurements):
-        nodes = self._nodes[measuredField]
-        rhs = np.array([measurements[n] for n in nodes]).reshape(-1, 1)
-        invK = self._invK[measuredField]
-        values = np.dot(self._crossK[measuredField, field],
-                        np.dot(invK, rhs)).flatten()
-        keys = self._points[field]
-
-        if pd and isinstance(measurements, pd.Series):
-            return pd.Series(data=values,
-                             index=keys)
-        return dict(zip(keys, values))
