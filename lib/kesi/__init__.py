@@ -32,26 +32,18 @@ except:
 
 
 class _KernelFieldApproximator(object):
-    def __init__(self, kernels, crossKernels, lambda_,
-                 nodes=None,
-                 points=None):
+    def __init__(self, kernels, crossKernels, nodes, points, lambda_):
         self._K = kernels
         self._crossK = crossKernels
+        self._nodes = nodes
+        self._points = points
         self._invK = {name: np.linalg.inv(K + np.eye(*K.shape) * lambda_)
                       for name, K in self._K.items()
                       }
 
-        if nodes is not None:
-            self._nodes = nodes
-
-        if points is not None:
-            self._points = points
-
     def copy(self, lambda_):
-        return _KernelFieldApproximator(self._K, self._crossK,
-                                        lambda_,
-                                        self._nodes,
-                                        self._points)
+        return _KernelFieldApproximator(self._K, self._crossK, self._nodes,
+                                        self._points, lambda_)
 
     def __call__(self, field, measuredField, measurements):
         nodes = self._nodes[measuredField]
@@ -68,33 +60,47 @@ class _KernelFieldApproximator(object):
 
 
 class KernelFieldApproximator(_KernelFieldApproximator):
+    class _KernelGenerator(object):
+        def __init__(self, fieldComponents, nodes, points):
+            self._components = {name: [getattr(f, name)
+                                       for f in fieldComponents]
+                                for name in set(nodes) | set(points)}
+            self.nodes = {k: list(v) for k, v in nodes.items()}
+            self.points = {k: list(v) for k, v in points.items()}
+
+        def _makeKernel(self, name):
+            NDS = self._evaluateComponents(name, self.nodes[name])
+            return np.dot(NDS, NDS.T)
+
+        def _makeCrossKernel(self, src, dst):
+            PTS = self._evaluateComponents(dst, self.points[dst])
+            NDS = self._evaluateComponents(src, self.nodes[src])
+            return np.dot(PTS, NDS.T)
+
+        def _evaluateComponents(self, name, points):
+            components = self._components[name]
+            return np.array([[f(p) for f in components]
+                             for p in points])
+
+        @property
+        def kernels(self):
+            return {name: self._makeKernel(name)
+                    for name in self.nodes}
+
+        @property
+        def crossKernels(self):
+            return {(src, dst): self._makeCrossKernel(src, dst)
+                    for src in self.nodes
+                    for dst in self.points
+                    }
+
     def __init__(self, fieldComponents, nodes, points, lambda_=0):
-        self._components = {name: [getattr(f, name)
-                                   for f in fieldComponents]
-                            for name in set(nodes) | set(points)}
-        self._nodes = {k: list(v) for k, v in nodes.items()}
-        self._points = {k: list(v) for k, v in points.items()}
-
-        kernels = {name: self._makeKernel(name)
-                   for name in self._nodes}
-        crossKernels = {(src, dst): self._makeCrossKernel(src, dst)
-                        for src in self._nodes
-                        for dst in self._points
-                        }
+        generator = self._KernelGenerator(fieldComponents,
+                                          nodes,
+                                          points)
         super(KernelFieldApproximator,
-              self).__init__(kernels, crossKernels, lambda_)
-
-
-    def _makeKernel(self, name):
-        NDS = self._evaluateComponents(name, self._nodes[name])
-        return np.dot(NDS, NDS.T)
-
-    def _makeCrossKernel(self, src, dst):
-        PTS = self._evaluateComponents(dst, self._points[dst])
-        NDS = self._evaluateComponents(src, self._nodes[src])
-        return np.dot(PTS, NDS.T)
-
-    def _evaluateComponents(self, name, points):
-        components = self._components[name]
-        return np.array([[f(p) for f in components]
-                         for p in points])
+              self).__init__(generator.kernels,
+                             generator.crossKernels,
+                             generator.nodes,
+                             generator.points,
+                             lambda_)
