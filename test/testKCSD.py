@@ -48,7 +48,7 @@ class _GivenComponentsAndNodesBase(TestCase):
                 for k in points
                 }
 
-    def createInterpolator(self, nodes, points, lambda_=None):
+    def createApproximator(self, nodes, points, lambda_=None):
         if lambda_ is None:
             return kesi.KernelFieldApproximator(self.FIELD_COMPONENTS.values(),
                                                 nodes=nodes,
@@ -58,19 +58,19 @@ class _GivenComponentsAndNodesBase(TestCase):
                                             points=points,
                                             lambda_=lambda_)
 
-    def _checkInterpolation(self, expected, measured,
+    def _checkApproximation(self, expected, measured,
                             measuredName, lambda_=None):
-        interpolator = self.createInterpolator({measuredName: list(measured)},
+        approximator = self.createApproximator({measuredName: list(measured)},
                                                {k: list(v)
                                                 for k, v in expected.items()},
                                                lambda_=lambda_)
         for name in expected:
             self.assertEqual(expected[name],
-                             interpolator(name, measuredName, measured))
+                             approximator(name, measuredName, measured))
 
-    def checkWeightedInterpolation(self, measuredName, nodes,
+    def checkWeightedApproximation(self, measuredName, nodes,
                                    names, points, weights={}):
-        self._checkInterpolation(
+        self._checkApproximation(
             {name: self.createField(name, points, weights=weights)
              for name in names},
             self.createField(measuredName, nodes, weights=weights),
@@ -81,30 +81,30 @@ class _GivenSingleComponentSingleNodeBase(_GivenComponentsAndNodesBase):
     NODES = ['zero']
 
     def testProperlyHandlesTheNode(self):
-        interpolatedName = ['func', 'fprime']
+        approximated = ['func', 'fprime']
         measuredName = 'func'
-        self.checkWeightedInterpolation(measuredName,
+        self.checkWeightedApproximation(measuredName,
                                         self.NODES,
-                                        interpolatedName,
+                                        approximated,
                                         self.NODES,
                                         weights={'1': 2})
 
     def testExtrapolatesOneOtherPoint(self):
-        interpolatedName = ['func', 'fprime']
+        approximated = ['func', 'fprime']
         measuredName = 'func'
         points = ['one']
-        self.checkWeightedInterpolation(measuredName,
+        self.checkWeightedApproximation(measuredName,
                                         self.NODES,
-                                        interpolatedName,
+                                        approximated,
                                         points)
 
     def testExtrapolatesManyOtherPoints(self):
-        interpolatedName = ['func', 'fprime']
+        approximated = ['func', 'fprime']
         measuredName = 'func'
         points = ['one', 'two']
-        self.checkWeightedInterpolation(measuredName,
+        self.checkWeightedApproximation(measuredName,
                                         self.NODES,
-                                        interpolatedName,
+                                        approximated,
                                         points)
 
 
@@ -117,29 +117,29 @@ class _GivenTwoNodesBase(_GivenComponentsAndNodesBase):
     NODES = ['zero', 'two']
 
     def testProperlyHandlesTheNodes(self):
-        interpolatedName = ['func', 'fprime']
+        approximated = ['func', 'fprime']
         measuredName = 'func'
-        self.checkWeightedInterpolation(measuredName,
+        self.checkWeightedApproximation(measuredName,
                                         self.NODES,
-                                        interpolatedName,
+                                        approximated,
                                         self.NODES,
                                         weights={'1': 2})
 
     def testInterpolates(self):
-        interpolatedName = ['func', 'fprime']
+        approximated = ['func', 'fprime']
         measuredName = 'func'
-        self.checkWeightedInterpolation(measuredName,
+        self.checkWeightedApproximation(measuredName,
                                         self.NODES,
-                                        interpolatedName,
+                                        approximated,
                                         ['one'],
                                         weights={'1': 2})
 
     def testExtrapolatesAndInterpolates(self):
-        interpolatedName = ['func', 'fprime']
+        approximated = ['func', 'fprime']
         measuredName = 'func'
-        self.checkWeightedInterpolation(measuredName,
+        self.checkWeightedApproximation(measuredName,
                                         self.NODES,
-                                        interpolatedName,
+                                        approximated,
                                         ['one', 'three'],
                                         weights={'1': 2})
 
@@ -164,16 +164,17 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
                                'one': 0.6,
                                },
                     }
-        interpolator = self.createInterpolator({'func': list(expected['func'])},
+        approximator = self.createApproximator({'func': list(expected['func'])},
                                                {k: list(v)
                                                 for k, v in expected.items()},
                                                lambda_=1.0)
         for name in expected:
-            interpolated = interpolator(name, 'func', {'zero': 1, 'one': 2})
+            approximated = approximator(name, 'func', {'zero': 1, 'one': 2})
             self.assertEqual(sorted(expected[name]),
-                             sorted(interpolated))
+                             sorted(approximated))
             for k, v in expected[name].items():
-                self.assertAlmostEqual(v, interpolated[k])
+                self.assertAlmostEqual(v, approximated[k])
+
 
 class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase):
     FIELD_COMPONENTS = {'1': FunctionFieldComponent(lambda x: 1,
@@ -204,16 +205,16 @@ class WhenCalledWithPandasSeries(GivenTwoNodesAndThreeLinearFieldComponents):
                                                  points,
                                                  weights=weights))
 
-    def _checkInterpolation(self, expected, measured,
+    def _checkApproximation(self, expected, measured,
                             measuredName, lambda_=None):
-        interpolator = self.createInterpolator({measuredName: list(measured.index)},
+        approximator = self.createApproximator({measuredName: list(measured.index)},
                                                {k: list(v.index)
                                                 for k, v in expected.items()},
                                                lambda_=lambda_)
         for name in expected:
-            interpolated = interpolator(name, measuredName, measured)
-            self.assertIsInstance(interpolated, pd.Series)
-            self.assertTrue((expected[name] == interpolated).all())
+            approximated = approximator(name, measuredName, measured)
+            self.assertIsInstance(approximated, pd.Series)
+            self.assertTrue((expected[name] == approximated).all())
 
 
 if __name__ == '__main__':
