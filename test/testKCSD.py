@@ -24,7 +24,6 @@
 
 import unittest
 
-from unittest import TestCase
 try:
     import pandas as pd
 except:
@@ -43,7 +42,7 @@ class FunctionFieldComponent(object):
     def fprime(self, args):
         return [self._fprime(a) for a in args]
 
-class _GivenComponentsAndNodesBase(TestCase):
+class _GivenComponentsAndNodesBase(unittest.TestCase):
     def setUp(self):
         if not hasattr(self, 'FIELD_COMPONENTS'):
             self.skipTest('test in abstract class called')
