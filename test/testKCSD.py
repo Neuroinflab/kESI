@@ -24,7 +24,6 @@
 
 import unittest
 
-import collections
 from unittest import TestCase
 try:
     import pandas as pd
@@ -33,9 +32,16 @@ except:
 
 import kesi as kesi
 
-FunctionFieldComponent = collections.namedtuple('FunctionFieldComponent',
-                                                ['func', 'fprime'])
+class FunctionFieldComponent(object):
+    def __init__(self, func, fprime):
+        self._func = func
+        self._fprime = fprime
 
+    def func(self, args):
+        return [self._func(a) for a in args]
+
+    def fprime(self, args):
+        return [self._fprime(a) for a in args]
 
 class _GivenComponentsAndNodesBase(TestCase):
     def setUp(self):
@@ -43,7 +49,7 @@ class _GivenComponentsAndNodesBase(TestCase):
             self.skipTest('test in abstract class called')
 
     def createField(self, name, points, weights={}):
-        return {k: sum(getattr(f, name)(k) * weights.get(c, 1)
+        return {k: sum(getattr(f, name)([k])[0] * weights.get(c, 1)
                        for c, f in self.FIELD_COMPONENTS.items())
                 for k in points
                 }

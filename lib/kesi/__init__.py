@@ -83,17 +83,16 @@ class KernelFieldApproximator(_KernelFieldApproximator):
 
         def _makeKernel(self, name):
             NDS = self._evaluateComponents(name, self.nodes[name])
-            return np.dot(NDS, NDS.T)
+            return np.dot(NDS.T, NDS)
 
         def _makeCrossKernel(self, src, dst):
             PTS = self._evaluateComponents(dst, self.points[dst])
             NDS = self._evaluateComponents(src, self.nodes[src])
-            return np.dot(PTS, NDS.T)
+            return np.dot(PTS.T, NDS)
 
         def _evaluateComponents(self, name, points):
             components = self._components[name]
-            return np.array([[f(p) for f in components]
-                             for p in points])
+            return np.array([f(points) for f in components])
 
         @property
         def kernels(self):
