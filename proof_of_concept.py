@@ -41,7 +41,7 @@ for (x0, x1, x2) in [(0, 1, 1),
     Y_NODES = np.array(f(NODES)).reshape(-1, 1)
 
     fig, (ax1, ax2) = plt.subplots(ncols=2)
-    fig.suptitle(f'${x2} x^2 + {x1} x + {x0}$')
+    fig.suptitle('${2} x^2 + {1} x + {0}$'.format(x0, x1, x2))
     ax1.plot(X, f(X)) 
     ax1.plot(X, INT_F * Y_NODES, ls='--') 
     ax2.plot(X, f_prim(X)) 
