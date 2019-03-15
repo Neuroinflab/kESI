@@ -32,7 +32,7 @@ def integrate_2d(csd_at, true_csd, ele_pos, h, csd_lims):
     Ny = ylin.shape[0]
     m = np.sqrt((ele_pos[0] - csd_x)**2 + (ele_pos[1] - csd_y)**2)
     m[m < 0.0000001] = 0.0000001
-    y = np.arcsinh(2 * h / m) * true_csd
+    y = np.arcsinh(h / m) * true_csd
     integral_1D = np.zeros(Ny)
     for i in range(Ny):
         integral_1D[i] = integrate.simps(y[:, i], ylin)
