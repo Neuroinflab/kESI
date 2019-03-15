@@ -78,8 +78,10 @@ class KernelFieldApproximator(_KernelFieldApproximator):
             self._components = {name: [getattr(f, name)
                                        for f in fieldComponents]
                                 for name in set(nodes) | set(points)}
-            self.nodes = {k: list(v) for k, v in nodes.items()}
-            self.points = {k: list(v) for k, v in points.items()}
+            self.nodes = {k: v if isinstance(v, np.ndarray) else list(v)
+                          for k, v in nodes.items()}
+            self.points = {k: v if isinstance(v, np.ndarray) else list(v)
+                           for k, v in points.items()}
 
         def _makeKernel(self, name):
             NDS = self._evaluateComponents(name, self.nodes[name])
@@ -113,6 +115,16 @@ class KernelFieldApproximator(_KernelFieldApproximator):
         super(KernelFieldApproximator,
               self).__init__(generator.kernels,
                              generator.crossKernels,
-                             generator.nodes,
-                             generator.points,
+                             {k: self._numpyArraysToTuples(v)
+                              for k, v in generator.nodes.items()
+                              },
+                             {k: self._numpyArraysToTuples(v)
+                              for k, v in generator.points.items()
+                              },
                              lambda_)
+
+    def _numpyArraysToTuples(self, point):
+        if isinstance(point, np.ndarray):
+            return tuple(map(self._numpyArraysToTuples, point))
+
+        return point

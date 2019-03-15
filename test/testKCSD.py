@@ -23,6 +23,7 @@
 ###############################################################################
 
 import unittest
+import numpy as np
 
 try:
     import pandas as pd
@@ -80,6 +81,14 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
              for name in names},
             self.createField(measuredName, nodes, weights=weights),
             measuredName)
+
+    def checkApproximator(self, expected, approximator, funcValues):
+        for name in expected:
+            approximated = approximator(name, 'func', funcValues)
+            self.assertEqual(sorted(expected[name]),
+                             sorted(approximated))
+            for k, v in expected[name].items():
+                self.assertAlmostEqual(v, approximated[k])
 
 
 class _GivenSingleComponentSingleNodeBase(_GivenComponentsAndNodesBase):
@@ -169,12 +178,11 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
                                'one': 0.6,
                                },
                     }
-        self.checkApproximator(expected,
-                               self.createApproximator(
-                                    {'func': list(expected['func'])},
-                                    {k: list(v)
-                                     for k, v in expected.items()},
-                                    lambda_=1.0))
+        self.checkApproximator(expected, self.createApproximator(
+            {'func': list(expected['func'])},
+            {k: list(v)
+             for k, v in expected.items()},
+            lambda_=1.0), {'zero': 1, 'one': 2})
 
     def testCopy(self):
         expected = {'func': {'zero': 0.8,
@@ -188,8 +196,8 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
                                            {k: list(v)
                                             for k, v in expected.items()},
                                            lambda_=1.0)
-        self.checkApproximator(expected,
-                               original.copy())
+        self.checkApproximator(expected, original.copy(),
+                               funcValues={'zero': 1, 'one': 2})
 
     def testCopyRegularisationChange(self):
         expected = {'func': {'zero': 0.8,
@@ -202,16 +210,8 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
         original = self.createApproximator({'func': list(expected['func'])},
                                            {k: list(v)
                                             for k, v in expected.items()})
-        self.checkApproximator(expected,
-                               original.copy(lambda_=1.0))
-
-    def checkApproximator(self, expected, approximator):
-        for name in expected:
-            approximated = approximator(name, 'func', {'zero': 1, 'one': 2})
-            self.assertEqual(sorted(expected[name]),
-                             sorted(approximated))
-            for k, v in expected[name].items():
-                self.assertAlmostEqual(v, approximated[k])
+        self.checkApproximator(expected, original.copy(lambda_=1.0),
+                               funcValues={'zero': 1, 'one': 2})
 
 
 class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase):
@@ -234,6 +234,48 @@ class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase):
                                                          'two': -1,
                                                          'three': -1}.get),
                         }
+
+
+class GivenNumericFunctionsAsFieldComponents(_GivenComponentsAndNodesBase):
+    FIELD_COMPONENTS = {'1': FunctionFieldComponent(lambda x: 1,
+                                                    lambda x: 0),
+                        'x': FunctionFieldComponent(lambda x: x[0],
+                                                    lambda x: 1),
+                        }
+
+    def testNumpy2DArraysAreValidCollectionsOfTuples(self):
+        expected = {'func': {(0,): 1,
+                             (1,): 3,
+                             },
+                    'fprime': {(0,): 2,
+                               (1,): 2,
+                               },
+                    }
+        self.checkApproximator(expected,
+                               self.createApproximator(
+                                    {'func': np.array(list(expected['func']))},
+                                    {k: np.array(list(v))
+                                     for k, v in expected.items()}),
+                                    {(0,): 1,
+                                     (1,): 3})
+
+    def testNumpy3DArraysAreValidCollectionsOfNestedTuples(self):
+        expected = {'func': {((0,),): 1,
+                             ((1,),): 3,
+                             },
+                    'fprime': {((0,),): 2,
+                               ((1,),): 2,
+                               },
+                    }
+        self.checkApproximator(expected,
+                               self.createApproximator(
+                                    {'func': np.array(list(expected['func']))},
+                                    {k: np.array(list(v))
+                                     for k, v in expected.items()}),
+                                    {((0,),): 1,
+                                     ((1,),): 3})
+
+
 
 @unittest.skipIf(pd is None, 'No pandas module')
 class WhenCalledWithPandasSeries(GivenTwoNodesAndThreeLinearFieldComponents):
