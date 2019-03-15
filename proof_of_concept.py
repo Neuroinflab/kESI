@@ -249,10 +249,57 @@ print('kESI:\t{:10f} \t{:10f} \t{:10f}\t{:10f}'.format(
                                 finalKESI - endKESI,
                                 startKESI - preKESI]]))
 
+
+def cv(original, measured, lambdas):
+    POTS = original._measurementVector('potential', measured)
+    KERNEL = original._kernels['potential']
+    n = KERNEL.shape[0]
+    I = np.identity(n - 1)
+    IDX_N = np.arange(n)
+    errors = []
+    for l in lambdas:
+        errors.append(0.)
+        for i, p in zip(IDX_N, POTS[:, 0]):
+            IDX = IDX_N[IDX_N != i]
+            K = KERNEL[np.ix_(IDX, IDX)]
+            P = POTS[IDX, :]
+            CK = KERNEL[np.ix_([i], IDX)]
+            EST = np.dot(CK,
+                         np.dot(np.linalg.inv(K + l * I),
+                                P))
+            errors[-1] += (EST[0, 0] - p) ** 2
+
+    return errors
+
+measured = dict(zip(map(tuple, ele_pos),
+                    pots.flatten()))
+lambdas = [0] + list(np.logspace(-16, 0, 100))
+
+startCvKESI = datetime.now()
+err = cv(original, measured, lambdas)
+endCvKESI = datetime.now()
+
+idx_min = np.argmin(err)
+plt.figure()
+plt.title('Leave one out: SSE({:g}) = {:g}'.format(lambdas[idx_min], err[idx_min]))
+plt.xscale('log')
+plt.xlabel('lambda')
+plt.ylabel('SSE')
+plt.axhline(err[0])
+plt.plot(lambdas[1:], err[1:])
+plt.tight_layout()
+
+startCvKCSD = datetime.now()
+k.cross_validate(lambdas=np.array(lambdas), Rs=np.array([R]))
+endCvKCSD = datetime.now()
+print('CV: kESI {:g}s,\tkCSD {:g}s'.format((endCvKESI - startCvKESI).total_seconds(),
+                                           (endCvKCSD - startCvKCSD).total_seconds()))
+
 eps = np.finfo(float).eps * max(np.abs(x).max() for x in original._kernels.values())
 make_plot(csd_x, csd_y, true_csd, 'True CSD')
 make_plot(csd_x, csd_y, est_csd[:,:,0], 'kCSD CSD')
 make_plot(csd_x, csd_y, kesi_csd, 'kESI CSD (0)')
 make_plot(csd_x, csd_y, do_kesi(original.copy(lambda_=eps), pots, ele_pos), 'kESI CSD ({:g})'.format(eps))
-make_plot(csd_x, csd_y, do_kesi(original.copy(lambda_=0.001), pots, ele_pos), 'kESI CSD (0.001)')
+make_plot(csd_x, csd_y, do_kesi(original.copy(lambda_=err[idx_min]), pots, ele_pos), 'kESI CSD (cv: {:g})'.format(err[idx_min]))
+make_plot(csd_x, csd_y, k.values('CSD')[:,:,0], 'kCSD CSD (cv:{.lambd:g})'.format(k))
 plt.show()
