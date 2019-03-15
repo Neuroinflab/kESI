@@ -94,7 +94,11 @@ class KernelFieldApproximator(_KernelFieldApproximator):
 
         def _evaluateComponents(self, name, points):
             components = self._components[name]
-            return np.array([f(points) for f in components])
+            evaluated = np.empty((len(components), len(points)))
+            for i, f in enumerate(components):
+                evaluated[i, :] = f(points)
+
+            return evaluated
 
         @property
         def kernels(self):
