@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import kesi
 from kcsd import KCSD2D, utility_functions, csd_profile
 from scipy import integrate, interpolate
+from scipy.spatial import distance
 import matplotlib.cm as cm
 from datetime import datetime
 
@@ -106,14 +107,17 @@ class InterpolatingGeneratorOfSourceGauss2D(list):
         def potential(self, XY):
             return self.potentialInterpolator(np.sqrt(self._dist2(XY)))
 
-    def __init__(self, sources, electrodes, R, h, conductivity, dist_table_density=20):
+    def __init__(self, sources, electrodes, R, h, conductivity,
+                 dist_table_density=20,
+                 points=None):
         self.R = R
         self.h = h
         self.conductivity = conductivity
 
-        maxDist = np.sqrt(max((sx - ex)**2 + (sy - ey)**2
-                          for sx, sy in sources
-                          for ex, ey in electrodes))
+        maxDist = max(distance.cdist(sources, dst, 'euclidean').max()
+                      for dst in [electrodes, points]
+                      if dst is not None
+                      ) + R
         dists = np.logspace(0., np.log10(maxDist + 1.), dist_table_density) - 1
         potentials = np.array(list(map(self.forward_model, dists)))
         # potentialInterpolator = interpolate.make_interp_spline(dists, potentials,
@@ -179,7 +183,9 @@ src_x, src_y, R = utility_functions.distribute_srcs_2D(csd_x, csd_y, n_src_init,
 preKESI = datetime.now()
 sources = InterpolatingGeneratorOfSourceGauss2D(np.vstack((src_x.flatten(), src_y.flatten())).T,
                                                 ele_pos,
-                                                R, h, conductivity)
+                                                R, h, conductivity,
+                                                points=list(zip(csd_x.flatten(),
+                                                                csd_y.flatten())))
 startKESI = datetime.now()
 original = kesi.KernelFieldApproximator(sources,
                                         nodes={'potential': ele_pos},
