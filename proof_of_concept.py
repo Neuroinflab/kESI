@@ -23,7 +23,7 @@ def make_plot(xx, yy, zz, title, cmap=cm.bwr):
     ax.set_ylabel('Y (mm)')
     ax.set_title(title)
     ticks = np.linspace(-1 * t_max, t_max, 3, endpoint=True)
-    plt.colorbar(im, orientation='horizontal', format='%.2f', ticks=ticks)
+    plt.colorbar(im, orientation='horizontal', format='%.2g', ticks=ticks)
     return ax
 
 def integrate_2d(csd_at, true_csd, ele_pos, h, csd_lims):
@@ -254,11 +254,11 @@ endCvKCSD = datetime.now()
 print('CV: kESI {:g}s,\tkCSD {:g}s'.format((endCvKESI - startCvKESI).total_seconds(),
                                            (endCvKCSD - startCvKCSD).total_seconds()))
 
-eps = np.finfo(float).eps * max(np.abs(x).max() for x in original._kernels.values())
 make_plot(csd_x, csd_y, true_csd, 'True CSD')
 make_plot(csd_x, csd_y, est_csd[:,:,0], 'kCSD CSD')
 make_plot(csd_x, csd_y, kesi_csd, 'kESI CSD (0)')
-make_plot(csd_x, csd_y, do_kesi(original.copy(lambda_=eps), pots, ele_pos), 'kESI CSD ({:g})'.format(eps))
+make_plot(csd_x, csd_y, kesi_csd - est_csd[:,:,0],
+          'kESI - kCSD CSD (0)')
 make_plot(csd_x, csd_y, do_kesi(original.copy(lambda_=err[idx_min]), pots, ele_pos), 'kESI CSD (cv: {:g})'.format(err[idx_min]))
 make_plot(csd_x, csd_y, k.values('CSD')[:,:,0], 'kCSD CSD (cv:{.lambd:g})'.format(k))
 plt.show()
