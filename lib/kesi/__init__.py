@@ -50,11 +50,13 @@ class _KernelFieldApproximator(object):
                                         self.lambda_ if lambda_ is None else lambda_)
 
     def __call__(self, field, measuredField, measurements):
-        values = self._approximate(field,
-                                   measuredField,
-                                   measurements)
-        keys = self._points[field]
+        return self._wrapResults(measurements,
+                                 self._points[field],
+                                 self._approximate(field,
+                                                   measuredField,
+                                                   measurements))
 
+    def _wrapResults(self, measurements, keys, values):
         if pd and isinstance(measurements, pd.Series):
             return pd.Series(data=values,
                              index=keys)
@@ -62,9 +64,13 @@ class _KernelFieldApproximator(object):
 
     def _approximate(self, field, measuredField, measurements):
         return np.dot(self._crossKernels[measuredField, field],
-                      np.dot(self._invK[measuredField],
-                             self._measurementVector(measuredField,
-                                                     measurements))).flatten()
+                      self._solveKernel(measuredField,
+                                        self._measurementVector(measuredField,
+                                                                measurements))).flatten()
+
+    def _solveKernel(self, measuredField, measurementVector):
+        return np.dot(self._invK[measuredField],
+                      measurementVector)
 
     def _measurementVector(self, name, values):
         nodes = self._nodes[name]
