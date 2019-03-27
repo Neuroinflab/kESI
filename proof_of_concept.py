@@ -224,8 +224,7 @@ def cv(original, measured, lambdas):
             P = POTS[IDX, :]
             CK = KERNEL[np.ix_([i], IDX)]
             EST = np.dot(CK,
-                         np.dot(np.linalg.inv(K + l * I),
-                                P))
+                         np.linalg.solve(K + l * I, P))
             errors[-1] += (EST[0, 0] - p) ** 2
 
     return errors

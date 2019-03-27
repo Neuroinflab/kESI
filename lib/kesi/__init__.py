@@ -38,9 +38,6 @@ class _KernelFieldApproximator(object):
         self._nodes = nodes
         self._points = points
         self.lambda_ = lambda_
-        self._invK = {name: np.linalg.inv(K + np.eye(*K.shape) * lambda_)
-                      for name, K in self._kernels.items()
-                      }
 
     def copy(self, lambda_=None):
         return _KernelFieldApproximator(self._kernels,
@@ -69,8 +66,9 @@ class _KernelFieldApproximator(object):
                                                                 measurements))).flatten()
 
     def _solveKernel(self, measuredField, measurementVector):
-        return np.dot(self._invK[measuredField],
-                      measurementVector)
+        K = self._kernels[measuredField]
+        return np.linalg.solve(K + np.identity(K.shape[0]) * self.lambda_,
+                               measurementVector)
 
     def _measurementVector(self, name, values):
         nodes = self._nodes[name]
