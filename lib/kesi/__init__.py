@@ -32,45 +32,45 @@ except:
 
 
 class _KernelFieldApproximator(object):
-    def __init__(self, kernels, crossKernels, nodes, points, lambda_):
+    def __init__(self, kernels, cross_kernels, nodes, points, lambda_):
         self._kernels = kernels
-        self._crossKernels = crossKernels
+        self._cross_kernels = cross_kernels
         self._nodes = nodes
         self._points = points
         self.lambda_ = lambda_
 
     def copy(self, lambda_=None):
         return _KernelFieldApproximator(self._kernels,
-                                        self._crossKernels,
+                                        self._cross_kernels,
                                         self._nodes,
                                         self._points,
                                         self.lambda_ if lambda_ is None else lambda_)
 
-    def __call__(self, field, measuredField, measurements):
-        return self._wrapResults(measurements,
-                                 self._points[field],
-                                 self._approximate(field,
-                                                   measuredField,
-                                                   measurements))
+    def __call__(self, field, measured_field, measurements):
+        return self._wrap_results(measurements,
+                                  self._points[field],
+                                  self._approximate(field,
+                                                    measured_field,
+                                                    measurements))
 
-    def _wrapResults(self, measurements, keys, values):
+    def _wrap_results(self, measurements, keys, values):
         if pd and isinstance(measurements, pd.Series):
             return pd.Series(data=values,
                              index=keys)
         return dict(zip(keys, values))
 
-    def _approximate(self, field, measuredField, measurements):
-        return np.dot(self._crossKernels[measuredField, field],
-                      self._solveKernel(measuredField,
-                                        self._measurementVector(measuredField,
-                                                                measurements))).flatten()
+    def _approximate(self, field, measured_field, measurements):
+        return np.dot(self._cross_kernels[measured_field, field],
+                      self._solve_kernel(measured_field,
+                                         self._measurement_vector(measured_field,
+                                                                  measurements))).flatten()
 
-    def _solveKernel(self, measuredField, measurementVector):
-        K = self._kernels[measuredField]
+    def _solve_kernel(self, field, measurements):
+        K = self._kernels[field]
         return np.linalg.solve(K + np.identity(K.shape[0]) * self.lambda_,
-                               measurementVector)
+                               measurements)
 
-    def _measurementVector(self, name, values):
+    def _measurement_vector(self, name, values):
         nodes = self._nodes[name]
         rhs = np.array([values[n] for n in nodes]).reshape(-1, 1)
         return rhs
@@ -78,25 +78,25 @@ class _KernelFieldApproximator(object):
 
 class KernelFieldApproximator(_KernelFieldApproximator):
     class _KernelGenerator(object):
-        def __init__(self, fieldComponents, nodes, points):
+        def __init__(self, field_components, nodes, points):
             self._components = {name: [getattr(f, name)
-                                       for f in fieldComponents]
+                                       for f in field_components]
                                 for name in set(nodes) | set(points)}
             self.nodes = {k: v if isinstance(v, np.ndarray) else list(v)
                           for k, v in nodes.items()}
             self.points = {k: v if isinstance(v, np.ndarray) else list(v)
                            for k, v in points.items()}
 
-        def _makeKernel(self, name):
-            NDS = self._evaluateComponents(name, self.nodes[name])
+        def _make_kernel(self, name):
+            NDS = self._evaluate_components(name, self.nodes[name])
             return np.dot(NDS.T, NDS)
 
-        def _makeCrossKernel(self, src, dst):
-            PTS = self._evaluateComponents(dst, self.points[dst])
-            NDS = self._evaluateComponents(src, self.nodes[src])
+        def _make_cross_kernel(self, src, dst):
+            PTS = self._evaluate_components(dst, self.points[dst])
+            NDS = self._evaluate_components(src, self.nodes[src])
             return np.dot(PTS.T, NDS)
 
-        def _evaluateComponents(self, name, points):
+        def _evaluate_components(self, name, points):
             components = self._components[name]
             evaluated = np.empty((len(components), len(points)))
             for i, f in enumerate(components):
@@ -106,33 +106,33 @@ class KernelFieldApproximator(_KernelFieldApproximator):
 
         @property
         def kernels(self):
-            return {name: self._makeKernel(name)
+            return {name: self._make_kernel(name)
                     for name in self.nodes}
 
         @property
-        def crossKernels(self):
-            return {(src, dst): self._makeCrossKernel(src, dst)
+        def cross_kernels(self):
+            return {(src, dst): self._make_cross_kernel(src, dst)
                     for src in self.nodes
                     for dst in self.points
                     }
 
-    def __init__(self, fieldComponents, nodes, points, lambda_=0):
-        generator = self._KernelGenerator(fieldComponents,
+    def __init__(self, field_components, nodes, points, lambda_=0):
+        generator = self._KernelGenerator(field_components,
                                           nodes,
                                           points)
         super(KernelFieldApproximator,
               self).__init__(generator.kernels,
-                             generator.crossKernels,
-                             {k: self._numpyArraysToTuples(v)
+                             generator.cross_kernels,
+                             {k: self._ndarrays_to_tuples(v)
                               for k, v in generator.nodes.items()
                               },
-                             {k: self._numpyArraysToTuples(v)
+                             {k: self._ndarrays_to_tuples(v)
                               for k, v in generator.points.items()
                               },
                              lambda_)
 
-    def _numpyArraysToTuples(self, point):
+    def _ndarrays_to_tuples(self, point):
         if isinstance(point, np.ndarray):
-            return tuple(map(self._numpyArraysToTuples, point))
+            return tuple(map(self._ndarrays_to_tuples, point))
 
         return point

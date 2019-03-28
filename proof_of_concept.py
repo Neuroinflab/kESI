@@ -210,7 +210,7 @@ print('kESI:\t{:10f} \t{:10f} \t{:10f}\t{:10f}'.format(
 
 
 def cv(original, measured, lambdas):
-    POTS = original._measurementVector('potential', measured)
+    POTS = original._measurement_vector('potential', measured)
     KERNEL = original._kernels['potential']
     n = KERNEL.shape[0]
     I = np.identity(n - 1)
