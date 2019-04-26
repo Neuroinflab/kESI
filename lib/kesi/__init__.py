@@ -32,19 +32,22 @@ except:
 
 
 class _KernelFieldApproximator(object):
-    def __init__(self, kernels, cross_kernels, nodes, points, lambda_):
+    def __init__(self, kernels, cross_kernels, nodes, points,
+                 regularization_parameter):
         self._kernels = kernels
         self._cross_kernels = cross_kernels
         self._nodes = nodes
         self._points = points
-        self.lambda_ = lambda_
+        self.regularization_parameter = regularization_parameter
 
-    def copy(self, lambda_=None):
+    def copy(self, regularization_parameter=None):
         return _KernelFieldApproximator(self._kernels,
                                         self._cross_kernels,
                                         self._nodes,
                                         self._points,
-                                        self.lambda_ if lambda_ is None else lambda_)
+                                        self.regularization_parameter
+                                          if regularization_parameter is None
+                                          else regularization_parameter)
 
     def __call__(self, field, measured_field, measurements):
         return self._wrap_results(measurements,
@@ -67,7 +70,8 @@ class _KernelFieldApproximator(object):
 
     def _solve_kernel(self, field, measurements):
         K = self._kernels[field]
-        return np.linalg.solve(K + np.identity(K.shape[0]) * self.lambda_,
+        return np.linalg.solve(K + np.identity(K.shape[0])
+                                   * self.regularization_parameter,
                                measurements)
 
     def _measurement_vector(self, name, values):
@@ -116,7 +120,8 @@ class KernelFieldApproximator(_KernelFieldApproximator):
                     for dst in self.points
                     }
 
-    def __init__(self, field_components, nodes, points, lambda_=0):
+    def __init__(self, field_components, nodes, points,
+                 regularization_parameter=0):
         generator = self._KernelGenerator(field_components,
                                           nodes,
                                           points)
@@ -129,7 +134,7 @@ class KernelFieldApproximator(_KernelFieldApproximator):
                              {k: self._ndarrays_to_tuples(v)
                               for k, v in generator.points.items()
                               },
-                             lambda_)
+                             regularization_parameter)
 
     def _ndarrays_to_tuples(self, point):
         if isinstance(point, np.ndarray):
