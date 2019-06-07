@@ -54,22 +54,24 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
                 for k in points
                 }
 
-    def createApproximator(self, nodes, points, lambda_=None):
-        if lambda_ is None:
+    def createApproximator(self, nodes, points, regularization_parameter=None):
+        if regularization_parameter is None:
             return kesi.KernelFieldApproximator(self.FIELD_COMPONENTS.values(),
                                                 nodes=nodes,
                                                 points=points)
-        return kesi.KernelFieldApproximator(self.FIELD_COMPONENTS.values(),
-                                            nodes=nodes,
-                                            points=points,
-                                            lambda_=lambda_)
+        return kesi.KernelFieldApproximator(
+                      self.FIELD_COMPONENTS.values(),
+                      nodes=nodes,
+                      points=points,
+                      regularization_parameter=regularization_parameter)
 
-    def _checkApproximation(self, expected, measured,
-                            measuredName, lambda_=None):
-        approximator = self.createApproximator({measuredName: list(measured)},
-                                               {k: list(v)
-                                                for k, v in expected.items()},
-                                               lambda_=lambda_)
+    def _checkApproximation(self, expected, measured, measuredName,
+                            regularization_parameter=None):
+        approximator = self.createApproximator({
+                              measuredName: list(measured)},
+                              {k: list(v)
+                               for k, v in expected.items()},
+                              regularization_parameter=regularization_parameter)
         for name in expected:
             self.assertEqual(expected[name],
                              approximator(name, measuredName, measured))
@@ -178,11 +180,13 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
                                'one': 0.6,
                                },
                     }
-        self.checkApproximator(expected, self.createApproximator(
-            {'func': list(expected['func'])},
-            {k: list(v)
-             for k, v in expected.items()},
-            lambda_=1.0), {'zero': 1, 'one': 2})
+        self.checkApproximator(expected,
+                               self.createApproximator(
+                                      {'func': list(expected['func'])},
+                                      {k: list(v)
+                                       for k, v in expected.items()},
+                                      regularization_parameter=1.0),
+                               {'zero': 1, 'one': 2})
 
     def testCopy(self):
         expected = {'func': {'zero': 0.8,
@@ -192,10 +196,11 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
                                'one': 0.6,
                                },
                     }
-        original = self.createApproximator({'func': list(expected['func'])},
-                                           {k: list(v)
-                                            for k, v in expected.items()},
-                                           lambda_=1.0)
+        original = self.createApproximator(
+                          {'func': list(expected['func'])},
+                          {k: list(v)
+                           for k, v in expected.items()},
+                          regularization_parameter=1.0)
         self.checkApproximator(expected, original.copy(),
                                funcValues={'zero': 1, 'one': 2})
 
@@ -210,7 +215,8 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
         original = self.createApproximator({'func': list(expected['func'])},
                                            {k: list(v)
                                             for k, v in expected.items()})
-        self.checkApproximator(expected, original.copy(lambda_=1.0),
+        self.checkApproximator(expected,
+                               original.copy(regularization_parameter=1.0),
                                funcValues={'zero': 1, 'one': 2})
 
 
@@ -285,12 +291,13 @@ class WhenCalledWithPandasSeries(GivenTwoNodesAndThreeLinearFieldComponents):
                                                  points,
                                                  weights=weights))
 
-    def _checkApproximation(self, expected, measured,
-                            measuredName, lambda_=None):
-        approximator = self.createApproximator({measuredName: list(measured.index)},
-                                               {k: list(v.index)
-                                                for k, v in expected.items()},
-                                               lambda_=lambda_)
+    def _checkApproximation(self, expected, measured, measuredName,
+                            regularization_parameter=None):
+        approximator = self.createApproximator(
+                              {measuredName: list(measured.index)},
+                              {k: list(v.index)
+                               for k, v in expected.items()},
+                              regularization_parameter=regularization_parameter)
         for name in expected:
             approximated = approximator(name, measuredName, measured)
             self.assertIsInstance(approximated, pd.Series)

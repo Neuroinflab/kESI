@@ -1,0 +1,41 @@
+language: python
+python:
+  - "2.7"
+
+os:
+  - linux
+
+env:
+  matrix:
+    - PYTHON_VERSION="2.7" REQUIRES="numpy"
+    - PYTHON_VERSION="3.3" REQUIRES="numpy"
+    - PYTHON_VERSION="3.4" REQUIRES="numpy"
+    - PYTHON_VERSION="3.5" REQUIRES="numpy"
+    - PYTHON_VERSION="3.6" REQUIRES="numpy"
+    - PYTHON_VERSION="3.7" REQUIRES="numpy"
+    - PYTHON_VERSION="2.7" REQUIRES="numpy pandas"
+    - PYTHON_VERSION="3.3" REQUIRES="numpy pandas"
+    - PYTHON_VERSION="3.4" REQUIRES="numpy pandas"
+    - PYTHON_VERSION="3.5" REQUIRES="numpy pandas"
+    - PYTHON_VERSION="3.6" REQUIRES="numpy pandas"
+    - PYTHON_VERSION="3.7" REQUIRES="numpy pandas"
+
+install:
+  - echo "$TRAVIS_PYTHON_VERSION"
+  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+      wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh;
+    else
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    fi
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+  - conda create -q -n test-environment python=$PYTHON_VERSION $REQUIRES
+  - source activate test-environment
+  - python setup.py install
+
+script:
+  - python -m unittest discover
