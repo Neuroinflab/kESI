@@ -144,7 +144,7 @@ class KernelFieldApproximator(_KernelFieldApproximator):
         return point
 
 
-class _FunctionalKernelFieldApproximator(object):
+class FunctionalKernelFieldReconstructor(object):
     class _FieldApproximator(object):
         def __init__(self, field_components, field_weights):
             self._weighted_components = sorted(zip(field_weights,

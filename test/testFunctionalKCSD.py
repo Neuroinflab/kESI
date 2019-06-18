@@ -59,7 +59,7 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
                 }
 
     def createReconstructor(self, name, nodes):
-        return kesi._FunctionalKernelFieldApproximator(self.FIELD_COMPONENTS.values(),
+        return kesi.FunctionalKernelFieldReconstructor(self.FIELD_COMPONENTS.values(),
                                                        name,
                                                        nodes)
 
