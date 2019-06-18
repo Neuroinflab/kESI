@@ -158,11 +158,9 @@ class _FunctionalKernelFieldApproximator(object):
 
             return f
 
-    def __init__(self, field_components, input_domain, nodes,
-                 regularization_parameter=0):
+    def __init__(self, field_components, input_domain, nodes):
         self._field_components = field_components
         self._nodes = nodes
-        self._regularisation_parameter = regularization_parameter
         self._generate_kernels(input_domain)
 
     def _generate_kernels(self, input_domain):
@@ -183,12 +181,12 @@ class _FunctionalKernelFieldApproximator(object):
         for i, component in enumerate(self._field_components):
             evaluated[i, :] = getattr(component, name)(self._nodes)
 
-    def __call__(self, measurements):
+    def __call__(self, measurements, regularization_parameter=0):
         return self._FieldApproximator(self._field_components,
                                        np.dot(self._pre_cross_kernel,
                                               self._solve_kernel(
                                                   self._measurement_vector(measurements),
-                                                  self._regularisation_parameter)
+                                                  regularization_parameter)
                                               ).flatten())
 
     def _measurement_vector(self, values):

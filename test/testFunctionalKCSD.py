@@ -58,29 +58,31 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
                 for k in points
                 }
 
-    def createApproximator(self, name, nodes, regularization_parameter=None):
-        if regularization_parameter is None:
-            return kesi._FunctionalKernelFieldApproximator(self.FIELD_COMPONENTS.values(),
-                                                           name,
-                                                           nodes)
-        return kesi._FunctionalKernelFieldApproximator(
-                      self.FIELD_COMPONENTS.values(),
-                      name,
-                      nodes,
-                      regularization_parameter=regularization_parameter)
+    def createReconstructor(self, name, nodes):
+        return kesi._FunctionalKernelFieldApproximator(self.FIELD_COMPONENTS.values(),
+                                                       name,
+                                                       nodes)
 
     def _checkApproximation(self, expected, measured, measuredName,
                             regularization_parameter=None):
-        approximator = self.createApproximator(
-                              measuredName,
-                              list(measured),
-                              regularization_parameter=regularization_parameter)
+        reconstructor = self.createReconstructor(measuredName,
+                                                 list(measured))
+        approximator = self._get_approximator(reconstructor, measured,
+                                              regularization_parameter)
         for name in expected:
-            field = getattr(approximator(measured), name)
+            field = getattr(approximator, name)
 
             for k, v in expected[name].items():
                 self.assertEqual(v,
                                  field(k))
+
+    def _get_approximator(self, reconstructor, measured,
+                          regularization_parameter=None):
+        if regularization_parameter is None:
+            return reconstructor(measured)
+
+        return reconstructor(measured,
+                             regularization_parameter=regularization_parameter)
 
     def checkWeightedApproximation(self, measuredName, nodes,
                                    names, points, weights={}):
@@ -90,9 +92,13 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
             self.createField(measuredName, nodes, weights=weights),
             measuredName)
 
-    def checkApproximator(self, expected, approximator, funcValues):
+    def checkReconstructor(self, expected, reconstructor, funcValues,
+                           regularization_parameter=None):
+        approximator = self._get_approximator(reconstructor,
+                                              funcValues,
+                                              regularization_parameter)
         for name in expected:
-            field = getattr(approximator(funcValues), name)
+            field = getattr(approximator, name)
 
             for k, v in expected[name].items():
                 self.assertAlmostEqual(v, field(k))
@@ -185,12 +191,12 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
                                'one': 0.6,
                                },
                     }
-        self.checkApproximator(expected,
-                               self.createApproximator(
+        self.checkReconstructor(expected,
+                                self.createReconstructor(
                                         'func',
-                                        list(expected['func']),
-                                      regularization_parameter=1.0),
-                               {'zero': 1, 'one': 2})
+                                        list(expected['func'])),
+                                {'zero': 1, 'one': 2},
+                                regularization_parameter=1.0)
 
 
 class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase):
@@ -225,16 +231,17 @@ class WhenCalledWithPandasSeries(GivenTwoNodesAndThreeLinearFieldComponents):
 
     def _checkApproximation(self, expected, measured, measuredName,
                             regularization_parameter=None):
-        approximator = self.createApproximator(
+        reconstructor = self.createReconstructor(
                               measuredName,
-                              list(measured.index),
-                              regularization_parameter=regularization_parameter)
-        field = approximator(measured)
+                              list(measured.index))
+        approximator = self._get_approximator(reconstructor,
+                                              measured,
+                                              regularization_parameter)
         for name in expected:
-            approximated = getattr(field, name)
+            field = getattr(approximator, name)
             for k in expected[name].index:
                 self.assertEqual(expected[name][k],
-                                 approximated(k))
+                                 field(k))
 
 
 if __name__ == '__main__':
