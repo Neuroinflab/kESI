@@ -23,6 +23,7 @@
 ###############################################################################
 
 import numpy as np
+import operator
 
 try:
     import pandas as pd
@@ -147,7 +148,8 @@ class _FunctionalKernelFieldApproximatorBase(object):
     class _FieldApproximator(object):
         def __init__(self, field_components, field_weights):
             self._weighted_components = sorted(zip(field_weights,
-                                                   field_components))
+                                                   field_components),
+                                               key=operator.itemgetter(0))
 
         def __getattr__(self, item):
             def f(*args, **kwargs):
