@@ -144,7 +144,7 @@ class KernelFieldApproximator(_KernelFieldApproximator):
         return point
 
 
-class _FunctionalKernelFieldApproximatorBase(object):
+class _FunctionalKernelFieldApproximator(object):
     class _FieldApproximator(object):
         def __init__(self, field_components, field_weights):
             self._weighted_components = sorted(zip(field_weights,
@@ -158,17 +158,30 @@ class _FunctionalKernelFieldApproximatorBase(object):
 
             return f
 
-    def __init__(self,
-                 field_components,
-                 nodes,
-                 kernel,
-                 pre_cross_kernel,
-                 regularization_parameter):
+    def __init__(self, field_components, input_domain, nodes,
+                 regularization_parameter=0):
         self._field_components = field_components
         self._nodes = nodes
         self._regularisation_parameter = regularization_parameter
-        self._kernel = kernel
-        self._pre_cross_kernel = pre_cross_kernel
+        self._generate_kernels(input_domain)
+
+    def _generate_kernels(self, input_domain):
+        self._generate_pre_crosskernel(input_domain)
+        self._generate_kernel()
+
+    def _generate_kernel(self):
+        self._kernel = np.dot(self._pre_cross_kernel.T,
+                              self._pre_cross_kernel)
+
+    def _generate_pre_crosskernel(self, name):
+        self._pre_cross_kernel = np.empty((len(self._field_components),
+                                           len(self._nodes)))
+        self._fill_evaluated_components(self._pre_cross_kernel,
+                                        name)
+
+    def _fill_evaluated_components(self, evaluated, name):
+        for i, component in enumerate(self._field_components):
+            evaluated[i, :] = getattr(component, name)(self._nodes)
 
     def __call__(self, measurements):
         return self._FieldApproximator(self._field_components,
@@ -186,40 +199,3 @@ class _FunctionalKernelFieldApproximatorBase(object):
         return np.linalg.solve(K + np.identity(K.shape[0])
                                    * regularization_parameter,
                                measurements)
-
-    def copy(self, regularization_parameter=None):
-        return _FunctionalKernelFieldApproximatorBase(
-                   self._field_components,
-                   self._nodes,
-                   self._kernel,
-                   self._pre_cross_kernel,
-                   self._regularisation_parameter
-                   if regularization_parameter is None
-                   else regularization_parameter)
-
-
-class _FunctionalKernelFieldApproximator(_FunctionalKernelFieldApproximatorBase):
-    def __init__(self, field_components, input_domain, nodes,
-                 regularization_parameter=0):
-        pre_cross_kernel = self._evaluate_components(field_components,
-                                                     input_domain,
-                                                     nodes)
-        kernel = self._generate_kernel(pre_cross_kernel)
-        super(_FunctionalKernelFieldApproximator, self).__init__(field_components,
-                                                                 nodes,
-                                                                 kernel,
-                                                                 pre_cross_kernel,
-                                                                 regularization_parameter)
-
-    def _generate_kernel(self, pre_cross_kernel):
-        return np.dot(pre_cross_kernel.T,
-                      pre_cross_kernel)
-
-    def _evaluate_components(self, field_components, name, points):
-        components = [getattr(f, name)
-                      for f in field_components]
-        evaluated = np.empty((len(components), len(points)))
-        for i, f in enumerate(components):
-            evaluated[i, :] = f(points)
-
-        return evaluated

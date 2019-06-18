@@ -192,35 +192,6 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
                                       regularization_parameter=1.0),
                                {'zero': 1, 'one': 2})
 
-    def testCopy(self):
-        expected = {'func': {'zero': 0.8,
-                             'one': 1.4,
-                             },
-                    'fprime': {'zero': 0.6,
-                               'one': 0.6,
-                               },
-                    }
-        original = self.createApproximator(
-                          'func',
-                          list(expected['func']),
-                          regularization_parameter=1.0)
-        self.checkApproximator(expected, original.copy(),
-                               funcValues={'zero': 1, 'one': 2})
-
-    def testCopyRegularisationChange(self):
-        expected = {'func': {'zero': 0.8,
-                             'one': 1.4,
-                             },
-                    'fprime': {'zero': 0.6,
-                               'one': 0.6,
-                               },
-                    }
-        original = self.createApproximator('func',
-                                           list(expected['func']))
-        self.checkApproximator(expected,
-                               original.copy(regularization_parameter=1.0),
-                               funcValues={'zero': 1, 'one': 2})
-
 
 class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase):
     FIELD_COMPONENTS = {'1': FunctionFieldComponent(lambda x: 1,
