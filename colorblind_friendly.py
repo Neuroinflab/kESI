@@ -13,6 +13,7 @@
 # http://jfly.iam.u-tokyo.ac.jp/color/#pallet
 
 import collections
+from matplotlib import colors
 
 
 _Color = collections.namedtuple('_Color', ['red', 'green', 'blue'])
@@ -38,3 +39,14 @@ YELLOW    = _html(*_YELLOW)
 BLUE      = _html(*_BLUE)
 VERMILION = _html(*_VERMILION)
 PURPLE    = _html(*_PURPLE)
+
+def _BipolarColormap(name, negative, positive):
+    return colors.LinearSegmentedColormap(
+                      name,
+                      {k: [(0.0,) + (getattr(negative, k) / 255.,) * 2,
+                           (0.5, 1.0, 1.0),
+                           (1.0,) + (getattr(positive, k) / 255.,) * 2,]
+                       for k in ['red', 'green', 'blue']})
+
+bwr = _BipolarColormap('cbf.bwr', _BLUE, _ORANGE)
+PRGn = _BipolarColormap('cbf.PRGn', _PURPLE, _GREEN)
