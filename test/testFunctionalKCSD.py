@@ -59,25 +59,23 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
                 }
 
     def createReconstructor(self, name, nodes):
-        return kesi.FunctionalKernelFieldReconstructor(self.FIELD_COMPONENTS.values(),
-                                                       name,
-                                                       nodes)
+        return kesi.FunctionalKernelFieldReconstructor(
+                        self.FIELD_COMPONENTS.values(),
+                        name,
+                        nodes)
 
     def _checkApproximation(self, expected, measured, measuredName,
                             regularization_parameter=None):
         reconstructor = self.createReconstructor(measuredName,
                                                  list(measured))
-        approximator = self._get_approximator(reconstructor, measured,
-                                              regularization_parameter)
-        for name in expected:
-            field = getattr(approximator, name)
+        self.checkResultsAlmostEqual(self._getApproximator(
+                                              reconstructor,
+                                              measured,
+                                              regularization_parameter),
+                                     expected)
 
-            for k, v in expected[name].items():
-                self.assertEqual(v,
-                                 field(k))
-
-    def _get_approximator(self, reconstructor, measured,
-                          regularization_parameter=None):
+    def _getApproximator(self, reconstructor, measured,
+                         regularization_parameter=None):
         if regularization_parameter is None:
             return reconstructor(measured)
 
@@ -94,9 +92,13 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
 
     def checkReconstructor(self, expected, reconstructor, funcValues,
                            regularization_parameter=None):
-        approximator = self._get_approximator(reconstructor,
+        self.checkResultsAlmostEqual(self._getApproximator(
+                                              reconstructor,
                                               funcValues,
-                                              regularization_parameter)
+                                              regularization_parameter),
+                                     expected)
+
+    def checkResultsAlmostEqual(self, approximator, expected):
         for name in expected:
             field = getattr(approximator, name)
 
@@ -234,9 +236,9 @@ class WhenCalledWithPandasSeries(GivenTwoNodesAndThreeLinearFieldComponents):
         reconstructor = self.createReconstructor(
                               measuredName,
                               list(measured.index))
-        approximator = self._get_approximator(reconstructor,
-                                              measured,
-                                              regularization_parameter)
+        approximator = self._getApproximator(reconstructor,
+                                             measured,
+                                             regularization_parameter)
         for name in expected:
             field = getattr(approximator, name)
             for k in expected[name].index:

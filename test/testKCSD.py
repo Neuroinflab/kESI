@@ -73,8 +73,14 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
                                for k, v in expected.items()},
                               regularization_parameter=regularization_parameter)
         for name in expected:
-            self.assertEqual(expected[name],
-                             approximator(name, measuredName, measured))
+            self.checkDictAlmostEqual(expected[name],
+                                      approximator(name,
+                                                   measuredName,
+                                                   measured))
+
+    def checkDictAlmostEqual(self, expected, observed):
+        for k, v in expected.items():
+            self.assertAlmostEqual(v, observed[k])
 
     def checkWeightedApproximation(self, measuredName, nodes,
                                    names, points, weights={}):
@@ -89,8 +95,8 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
             approximated = approximator(name, 'func', funcValues)
             self.assertEqual(sorted(expected[name]),
                              sorted(approximated))
-            for k, v in expected[name].items():
-                self.assertAlmostEqual(v, approximated[k])
+            self.checkDictAlmostEqual(expected[name],
+                                      approximated)
 
 
 class _GivenSingleComponentSingleNodeBase(_GivenComponentsAndNodesBase):
