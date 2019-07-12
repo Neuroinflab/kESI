@@ -49,22 +49,34 @@ dipoles = {'rad': {'src_pos': [0., 7.85, 0.],
 YY, ZZ = np.meshgrid(np.linspace(0, 8, NY),
                      np.linspace(-8, 8, NZ))
 
+class PolarBase(object):
+    def __init__(self, ROW):
+        y = ROW.R * np.sin(ROW.ALTITUDE)
+        r = ROW.R * np.cos(ROW.ALTITUDE)
+        x = r * np.sin(ROW.AZIMUTH)
+        z = r * np.cos(ROW.AZIMUTH)
+        self.init(x, y, z, ROW)
+
+
+class CartesianBase(object):
+    def __init__(self, ROW):
+        self.init(ROW.x, ROW.y, ROW.z, ROW)
+
 
 class GaussianSourceBase(object):
-    def __init__(self, ROW):
+    def init(self, x, y, z, ROW):
+        self.x = x
+        self.y = y
+        self.z = z
         self._sigma2 = ROW.SIGMA ** 2
         self._a = (2 * np.pi * self._sigma2) ** -1.5
-        self.y = ROW.R * np.sin(ROW.ALTITUDE)
-        r = ROW.R * np.cos(ROW.ALTITUDE)
-        self.x = r * np.sin(ROW.AZIMUTH)
-        self.z = r * np.cos(ROW.AZIMUTH)
         self._ROW = ROW
 
     def __getattr__(self, name):
         return getattr(self._ROW, name)
 
 
-class GaussianSurceFEM(GaussianSourceBase):
+class GaussianSourceFEM(GaussianSourceBase):
     _BRAIN_R = 7.9
     NECK_ANGLE = -np.pi / 3
     NECK_AT = _BRAIN_R * np.sin(NECK_ANGLE)
@@ -83,8 +95,20 @@ class GaussianSourceKCSD3D(GaussianSourceBase):
     CONDUCTIVITY = sigma_brain
     _b = 0.25 / (np.pi * CONDUCTIVITY)
 
-    def __init__(self, ROW):
-        super(GaussianSourceKCSD3D, self).__init__(ROW)
+    _dtype = np.sqrt(0.5).__class__
+    _fraction_of_erf_to_x_limit_in_0 = _dtype(2 / np.sqrt(np.pi))
+    _x = _dtype(1.)
+    _half = _dtype(0.5)
+    _last = 2.
+    _err = 1.
+    while _err < _last:
+        _radius_of_erf_to_x_limit_applicability = _x
+        _last = _err
+        _x *= _half
+        _err = np.abs(erf(_x) - _fraction_of_erf_to_x_limit_in_0)
+
+    def init(self, x, y, z, ROW):
+        super(GaussianSourceKCSD3D, self).init(x, y, z, ROW)
         self._c = np.sqrt(0.5) / ROW.SIGMA
 
     def csd(self, X, Y, Z):
@@ -92,7 +116,22 @@ class GaussianSourceKCSD3D(GaussianSourceBase):
 
     def potential(self, electrodes):
         R = np.sqrt((electrodes.X - self.x) ** 2 + (electrodes.Y - self.y) ** 2 + (electrodes.Z - self.z) ** 2)
-        return self._b * (erf(R * self._c) / R)
+        Rc = R * self._c
+        return self._b * np.where(Rc >= self._radius_of_erf_to_x_limit_applicability,
+                                  erf(Rc) / R,
+                                  self._c * self._fraction_of_erf_to_x_limit_in_0)
+
+
+class PolarGaussianSourceFEM(PolarBase, GaussianSourceFEM):
+    pass
+
+
+class PolarGaussianSourceKCSD3D(PolarBase, GaussianSourceKCSD3D):
+    pass
+
+
+class CartesianGaussianSourceKCSD3D(CartesianBase, GaussianSourceKCSD3D):
+    pass
 
 
 class FourSphereModel(object):
@@ -286,55 +325,77 @@ POTENTIAL = pd.DataFrame(fh['POTENTIAL'], columns=ELECTRODES.index)
 for k in ['SIGMA', 'R', 'ALTITUDE', 'AZIMUTH',]:
     POTENTIAL[k] = fh[k]
 
-fourSM = FourSphereModel(ELECTRODES)
-fourSM.conductivity(sigma_skull)
+
 
 GND_ELECTRODES = ELECTRODES.index[(POTENTIAL[ELECTRODES.index] == 0).all()]
 RECORDING_ELECTRODES = ELECTRODES.index[(POTENTIAL[ELECTRODES.index] != 0).any()]
 
+SOURCES_GM = POTENTIAL[POTENTIAL.SIGMA <= 1]
 
+SX, SY, SZ = np.meshgrid(np.linspace(-8, 8, 11),
+                         np.linspace(0, 8, 5),
+                         np.linspace(-8, 8, 11),)
+SOURCES_UNIFORM = pd.DataFrame({'x': SX.flatten(),
+                                'y': SY.flatten(),
+                                'z': SZ.flatten(),
+                                'SIGMA': 1.0,
+                                })
+EX, EY, EZ = np.meshgrid(np.linspace(-8, 8, 7),
+                         np.linspace(0, 8, 4),
+                         np.linspace(-8, 8, 7),)
+UNIFORM_ELECTRODES = pd.DataFrame({'X': EX.flatten(),
+                                   'Y': EY.flatten(),
+                                   'Z': EZ.flatten(),
+                                   })
 
-CLS = [(GaussianSourceKCSD3D, ELECTRODES.loc[RECORDING_ELECTRODES]),
-       (GaussianSurceFEM, RECORDING_ELECTRODES),
+CLS = [(CartesianGaussianSourceKCSD3D, ELECTRODES.loc[RECORDING_ELECTRODES], SOURCES_UNIFORM),
+       (CartesianGaussianSourceKCSD3D, UNIFORM_ELECTRODES, SOURCES_UNIFORM),
+       (PolarGaussianSourceKCSD3D, ELECTRODES.loc[RECORDING_ELECTRODES], SOURCES_GM),
+       (PolarGaussianSourceFEM, RECORDING_ELECTRODES, SOURCES_GM),
        ]
 
 DF = []
-for cls, electrodes in CLS:
+for setup, (cls, electrodes, sources) in enumerate(CLS):
     print(cls.__name__)
 
-    sources = [cls(ROW) for _, ROW in POTENTIAL[POTENTIAL.SIGMA <= 1].iterrows()]
-
-
-    reconstructor = kesi.FunctionalKernelFieldReconstructor(sources,
-                                                            'potential',
-                                                            electrodes)
+    reconstructor = kesi.FunctionalKernelFieldReconstructor(
+        [cls(ROW) for _, ROW in sources.iterrows()],
+        'potential',
+        electrodes)
     gc.collect()
 
     A = np.array([f.csd(0, YY.flatten(), ZZ.flatten()) for f in reconstructor._field_components], dtype=np.float128).T
     B = reconstructor._pre_cross_kernel.astype(np.float128)
 
-    N_ELS = 134
+    N_ELS = reconstructor._pre_cross_kernel.shape[1]
     measures_names = ['electrode{:03d}'.format(i) for i in range(N_ELS)]
     measures = [np.identity(N_ELS)]
-    measures_names.append('tricky')
-    measures.append([[0] * 18 + [26.640652943802397498] + [0] * 10 + [27.86522309371085808] + [0] * 104])
+    if cls is GaussianSourceFEM:
+        measures_names.append('tricky')
+        measures.append([[0] * 18 + [26.640652943802397498] + [0] * 10 + [27.86522309371085808] + [0] * N_ELS - 30])
 
     measures_names.extend('noise{:03d}'.format(i) for i in range(100))
     np.random.seed(42)
     measures.append(np.random.normal(size=(100, N_ELS)))
+
+    fourSM = FourSphereModel(ELECTRODES if electrodes is not UNIFORM_ELECTRODES else UNIFORM_ELECTRODES)
+    fourSM.conductivity(sigma_skull)
 
     for name, dipole in dipoles.items():
         src_pos = dipole['src_pos']
         snk_pos = dipole['snk_pos']
 
 
-        S = pd.Series(fourSM.compute_phi(src_pos, snk_pos),
-                      index=ELECTRODES.index)
         measures_names.append('dipole_' + name)
-        measures.append((S[RECORDING_ELECTRODES].values - S[GND_ELECTRODES].mean()).reshape(1, -1))
+        if electrodes is not UNIFORM_ELECTRODES:
+            S = pd.Series(fourSM.compute_phi(src_pos, snk_pos),
+                          index=ELECTRODES.index)
+            measures.append((S[RECORDING_ELECTRODES].values - S[GND_ELECTRODES].mean()).reshape(1, -1))
+        else:
+            measures.append(fourSM.compute_phi(src_pos, snk_pos))
 
     r_names = [(0, 'random{:03d}'.format(i)) for i in range(100)]
-    C = [np.random.normal(size=(100, 134))]
+    C = [np.random.normal(size=(100, len(electrodes)))]
 
     for r in [0., 1., 10., 100.]:
         r_names.extend((r, name) for name in measures_names)
@@ -368,6 +429,7 @@ for cls, electrodes in CLS:
             L = np.matmul(_AB, C_COL) #_AB_C[:, i]
             R = np.matmul(_A, np.matmul(_B, C_COL))#_A_BC[:, i]
             row = {'regularization_parameter': r,
+                   'setup': setup,
                    'sources': cls.__name__,
                    'name': name,
                    'dtype': dtype.__name__,
@@ -385,11 +447,11 @@ for cls, electrodes in CLS:
 
 DF = pd.DataFrame(DF)
 
-for cls, _ in CLS:
+for setup, (cls, _, __) in enumerate(CLS):
     for dtype in [np.float32, np.float64]:
-        TMP = DF[(DF.dtype == dtype.__name__) & (DF.sources == cls.__name__) & ~ DF.name.apply(operator.methodcaller('startswith', 'random'))]
+        TMP = DF[(DF.dtype == dtype.__name__) & (DF.setup == setup) & ~ DF.name.apply(operator.methodcaller('startswith', 'random'))]
         for norm in ['max', 'L2', 'L1']:
-            assert (TMP['left_err_' + norm] >= TMP['right_err_' + norm]).all(), '{.__name__} {.__name__} {}'.format(cls, dtype, norm)
+            assert (TMP['left_err_' + norm] >= TMP['right_err_' + norm]).all(), '#{} ({.__name__}) {.__name__} {}'.format(setup, cls, dtype, norm)
 
 # for dtype in [np.float32, np.float64]:
 #     TMP = DF[(DF.dtype == dtype.__name__) & DF.name.apply(operator.methodcaller('startswith', 'random'))]
