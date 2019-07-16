@@ -4,7 +4,7 @@ import gc
 
 import kesi
 from common import (FourSphereModel, PolarGaussianSourceFEM,
-                    PolarGaussianSourceKCSD3D, ElectrodeAware)
+                    PolarGaussianSourceKCSD3D, ElectrodeAware, cv)
 
 
 import matplotlib.pyplot as plt
@@ -77,28 +77,6 @@ REGULARIZATION_PARAMETERS = np.logspace(-5, 5, 101)
 
 YY, ZZ = np.meshgrid(np.linspace(0, 8, NY),
                      np.linspace(-8, 8, NZ))
-
-
-
-def cv(reconstructor, measured, REGULARIZATION_PARAMETERS):
-    POTS = reconstructor._measurement_vector(measured)
-    KERNEL = reconstructor._kernel
-    n = KERNEL.shape[0]
-    I = np.identity(n - 1)
-    IDX_N = np.arange(n)
-    errors = []
-    for regularization_parameter in REGULARIZATION_PARAMETERS:
-        errors.append(0.)
-        for i, p in zip(IDX_N, POTS[:, 0]):
-            IDX = IDX_N[IDX_N != i]
-            K = KERNEL[np.ix_(IDX, IDX)]
-            P = POTS[IDX, :]
-            CK = KERNEL[np.ix_([i], IDX)]
-            EST = np.dot(CK,
-                         np.linalg.solve(K + regularization_parameter * I, P))
-            errors[-1] += (EST[0, 0] - p) ** 2
-
-    return errors
 
 
 def decorate_CSD(ax, title, r):

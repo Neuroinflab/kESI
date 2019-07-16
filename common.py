@@ -313,3 +313,24 @@ class PolarGaussianSourceKCSD3D(ElectrodeAware, PolarBase, GaussianSourceKCSD3D)
 
 class CartesianGaussianSourceKCSD3D(ElectrodeAware, CartesianBase, GaussianSourceKCSD3D):
     pass
+
+
+def cv(reconstructor, measured, REGULARIZATION_PARAMETERS):
+    POTS = reconstructor._measurement_vector(measured)
+    KERNEL = reconstructor._kernel
+    n = KERNEL.shape[0]
+    I = np.identity(n - 1)
+    IDX_N = np.arange(n)
+    errors = []
+    for regularization_parameter in REGULARIZATION_PARAMETERS:
+        errors.append(0.)
+        for i, p in zip(IDX_N, POTS[:, 0]):
+            IDX = IDX_N[IDX_N != i]
+            K = KERNEL[np.ix_(IDX, IDX)]
+            P = POTS[IDX, :]
+            CK = KERNEL[np.ix_([i], IDX)]
+            EST = np.dot(CK,
+                         np.linalg.solve(K + regularization_parameter * I, P))
+            errors[-1] += (EST[0, 0] - p) ** 2
+
+    return errors
