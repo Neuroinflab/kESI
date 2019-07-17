@@ -307,11 +307,21 @@ class PolarGaussianSourceFEM(PolarBase, GaussianSourceFEM):
     pass
 
 
-class PolarGaussianSourceKCSD3D(ElectrodeAware, PolarBase, GaussianSourceKCSD3D):
+class PolarGaussianSourceKCSD3D(PolarBase, GaussianSourceKCSD3D):
     pass
 
 
-class CartesianGaussianSourceKCSD3D(ElectrodeAware, CartesianBase, GaussianSourceKCSD3D):
+class ElectrodeAwarePolarGaussianSourceKCSD3D(ElectrodeAware,
+                                              PolarGaussianSourceKCSD3D):
+    pass
+
+
+class CartesianGaussianSourceKCSD3D(CartesianBase, GaussianSourceKCSD3D):
+    pass
+
+
+class ElectrodeAwareCartesianGaussianSourceKCSD3D(ElectrodeAware,
+                                                  CartesianGaussianSourceKCSD3D):
     pass
 
 

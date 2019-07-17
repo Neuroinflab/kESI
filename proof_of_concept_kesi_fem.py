@@ -4,7 +4,8 @@ import gc
 
 import kesi
 from common import (FourSphereModel, PolarGaussianSourceFEM,
-                    PolarGaussianSourceKCSD3D, ElectrodeAware, cv)
+                    ElectrodeAwarePolarGaussianSourceKCSD3D,
+                    ElectrodeAware, cv)
 
 
 import matplotlib.pyplot as plt
@@ -40,16 +41,16 @@ WHITE_R = 7.5
 RAD_TOL = 0.01
 
 
-class GroundedPolarGaussianSourceKCSD3D(PolarGaussianSourceKCSD3D):
+class GroundedElectrodeAwarePolarGaussianSourceKCSD3D(ElectrodeAwarePolarGaussianSourceKCSD3D):
     def __init__(self, ROW, ELECTRODES, GND):
-        super(GroundedPolarGaussianSourceKCSD3D, self).__init__(ROW, ELECTRODES)
+        super(GroundedElectrodeAwarePolarGaussianSourceKCSD3D, self).__init__(ROW, ELECTRODES)
         self._GND = GND
 
     def potential(self, electrodes):
-        reference = super(GroundedPolarGaussianSourceKCSD3D,
+        reference = super(GroundedElectrodeAwarePolarGaussianSourceKCSD3D,
                           self).potential(self._GND).mean()
 
-        return super(GroundedPolarGaussianSourceKCSD3D,
+        return super(GroundedElectrodeAwarePolarGaussianSourceKCSD3D,
                      self).potential(electrodes) - reference
 
 
@@ -149,7 +150,7 @@ for filename in ['proof_of_concept_fem_dirchlet_newman_CTX_deg_1.npz',
                                      for _, ROW in POTENTIAL[POTENTIAL.SIGMA <= 1].iterrows()],
                                     'potential',
                                     RECORDING_ELECTRODES)
-                     for name, cls in [('kCSD', GroundedPolarGaussianSourceKCSD3D),
+                     for name, cls in [('kCSD', GroundedElectrodeAwarePolarGaussianSourceKCSD3D),
                                        ('kESI', PolarGaussianSourceFEM),
                                        ]}
     gc.collect()

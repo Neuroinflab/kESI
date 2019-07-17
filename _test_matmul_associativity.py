@@ -5,8 +5,11 @@ import numpy as np
 import pandas as pd
 import kesi
 
-from common import (FourSphereModel, GaussianSourceFEM, PolarGaussianSourceFEM,
-                    PolarGaussianSourceKCSD3D, CartesianGaussianSourceKCSD3D,
+from common import (FourSphereModel,
+                    GaussianSourceFEM,
+                    PolarGaussianSourceFEM,
+                    ElectrodeAwarePolarGaussianSourceKCSD3D,
+                    ElectrodeAwareCartesianGaussianSourceKCSD3D,
                     ElectrodeAware)
 
 NY = 41
@@ -83,16 +86,24 @@ UNIFORM_ELECTRODES = pd.DataFrame({'X': EX.flatten(),
                                    },
                                    index=['E{:03d}'.format(i) for i in range(EX.size)])
 
-CLS = [(CartesianGaussianSourceKCSD3D, ELECTRODES.loc[RECORDING_ELECTRODES], SOURCES_UNIFORM),
-       (CartesianGaussianSourceKCSD3D, UNIFORM_ELECTRODES, SOURCES_UNIFORM),
-       (PolarGaussianSourceKCSD3D, ELECTRODES.loc[RECORDING_ELECTRODES], SOURCES_GM),
-       (PolarGaussianSourceFEM, ELECTRODES.loc[RECORDING_ELECTRODES], SOURCES_GM),
-       ]
+SETUPS = [(ElectrodeAwareCartesianGaussianSourceKCSD3D,
+           ELECTRODES.loc[RECORDING_ELECTRODES],
+           SOURCES_UNIFORM),
+          (ElectrodeAwareCartesianGaussianSourceKCSD3D,
+           UNIFORM_ELECTRODES,
+           SOURCES_UNIFORM),
+          (ElectrodeAwarePolarGaussianSourceKCSD3D,
+           ELECTRODES.loc[RECORDING_ELECTRODES],
+           SOURCES_GM),
+          (PolarGaussianSourceFEM,
+           ELECTRODES.loc[RECORDING_ELECTRODES],
+           SOURCES_GM),
+          ]
 
 reconstructors = []
 
 DF = []
-for setup, (cls, electrodes, sources) in enumerate(CLS):
+for setup, (cls, electrodes, sources) in enumerate(SETUPS):
     print(cls.__name__)
 
     reconstructor = kesi.FunctionalKernelFieldReconstructor(
@@ -187,7 +198,7 @@ for setup, (cls, electrodes, sources) in enumerate(CLS):
 
 DF = pd.DataFrame(DF)
 
-for setup, (cls, _, __) in enumerate(CLS):
+for setup, (cls, _, __) in enumerate(SETUPS):
     for dtype in [np.float32, np.float64]:
         TMP = DF[(DF.dtype == dtype.__name__) & (DF.setup == setup) & ~ DF.name.apply(operator.methodcaller('startswith', 'random'))]
         for norm in ['max', 'L2', 'L1']:
