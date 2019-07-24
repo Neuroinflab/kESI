@@ -349,3 +349,37 @@ def cv(reconstructor, measured, REGULARIZATION_PARAMETERS):
             errors[-1] += (EST[0, 0] - p) ** 2
 
     return errors
+
+try:
+    import pandas as pd
+
+except ImportError:
+    pass
+
+else:
+    LoadedPotentials = collections.namedtuple('LoadedPotentials',
+                                              ['POTENTIALS',
+                                               'ELECTRODES'])
+
+    def loadPotentialsAdHocNPZ(filename, conductivity=None):
+        fh = np.load(filename)
+        ELECTRODES = fh['ELECTRODES']
+        ELECTRODE_NAMES = ['E{{:0{}d}}'.format(max(int(np.ceil(np.log10(ELECTRODES.shape[1]))),
+                                                   3)).format(i + 1)
+                           for i in range(ELECTRODES.shape[1])]
+        ELECTRODES = pd.DataFrame(ELECTRODES.T, columns=['X', 'Y', 'Z'],
+                                  index=ELECTRODE_NAMES)
+
+        POTENTIALS = pd.DataFrame(fh['POTENTIAL'], columns=ELECTRODES.index)
+        for k in ['RES', 'DEGREE', 'SIGMA', 'X', 'Y', 'Z', 'INTEGRAL',
+                  'R', 'AZIMUTH', 'ALTITUDE', 'CONDUCTIVITY', 'TIME', 'N']:
+            if k in fh:
+                POTENTIALS[k] = fh[k]
+
+        if conductivity is not None:
+            POTENTIALS['CONDUCTIVITY'] = conductivity
+
+        elif 'CONDUCTIVITY' in fh:
+            POTENTIALS['CONDUCTIVITY'] = fh['CONDUCTIVITY']
+
+        return LoadedPotentials(POTENTIALS, ELECTRODES)
