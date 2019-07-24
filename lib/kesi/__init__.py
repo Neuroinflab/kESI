@@ -169,13 +169,15 @@ class FunctionalKernelFieldReconstructor(object):
 
     def _generate_kernel(self):
         self._kernel = np.dot(self._pre_cross_kernel.T,
-                              self._pre_cross_kernel)
+                              self._pre_cross_kernel) * self._pre_cross_kernel.shape[0]
 
     def _generate_pre_crosskernel(self, name):
-        self._pre_cross_kernel = np.empty((len(self._field_components),
+        n = len(self._field_components)
+        self._pre_cross_kernel = np.empty((n,
                                            len(self._nodes)))
         self._fill_evaluated_components(self._pre_cross_kernel,
                                         name)
+        self._pre_cross_kernel /= n
 
     def _fill_evaluated_components(self, evaluated, name):
         for i, component in enumerate(self._field_components):
@@ -197,3 +199,16 @@ class FunctionalKernelFieldReconstructor(object):
         return np.linalg.solve(K + np.identity(K.shape[0])
                                    * regularization_parameter,
                                measurements)
+
+    def leave_one_out_errors(self, measured, regularization_parameter):
+        n = self._kernel.shape[0]
+        KERNEL = self._kernel + regularization_parameter * np.identity(n)
+        IDX_N = np.arange(n)
+        X = self._measurement_vector(measured)
+        return [self._leave_one_out_estimate(KERNEL, X, i, IDX_N != i) - x[0]
+                for i, x in enumerate(X)]
+
+    def _leave_one_out_estimate(self, KERNEL, X, i, IDX):
+        return np.dot(KERNEL[np.ix_([i], IDX)],
+                      np.linalg.solve(KERNEL[np.ix_(IDX, IDX)],
+                                      X[IDX, :]))[0, 0]

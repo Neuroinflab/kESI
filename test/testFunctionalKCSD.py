@@ -137,9 +137,15 @@ class _GivenSingleComponentSingleNodeBase(_GivenComponentsAndNodesBase):
                                         points)
 
 
-class GivenSingleConstantFieldComponentSingleNode(_GivenSingleComponentSingleNodeBase):
+class _GivenSingleConstantComponent(object):
     FIELD_COMPONENTS = {'1': FunctionFieldComponent(lambda x: 1,
-                                                    lambda x: 0)}
+                                                    lambda x: 0),
+                        }
+
+
+class GivenSingleConstantFieldComponentSingleNode(_GivenSingleComponentSingleNodeBase,
+                                                  _GivenSingleConstantComponent):
+    pass
 
 
 class _GivenTwoNodesBase(_GivenComponentsAndNodesBase):
@@ -173,6 +179,64 @@ class _GivenTwoNodesBase(_GivenComponentsAndNodesBase):
                                         weights={'1': 2})
 
 
+class _GivenTwoNodesAndConstantComponentsTestLeaveOneOutBase(_GivenComponentsAndNodesBase):
+    NODES = ['zero', 'one']
+
+    def setUp(self):
+        super(_GivenTwoNodesAndConstantComponentsTestLeaveOneOutBase,
+              self).setUp()
+        self.reconstructor = self.createReconstructor('func', self.NODES)
+
+    def checkLeaveOneOut(self, expected, measurements,
+                         regularization_parameter):
+        observed = self.reconstructor.leave_one_out_errors(
+                                          measurements,
+                                          regularization_parameter=regularization_parameter)
+        self.assertEqual(len(expected), len(observed))
+        for e, o in zip(expected,
+                        observed):
+            try:
+                self.assertAlmostEqual(e, o)
+            except TypeError:
+                raise AssertionError(repr(o))
+
+    def testLeaveOneOutErrorsGivenConstantInputAndNoRegularisation(self):
+        self.checkLeaveOneOut([0, 0],
+                              {'zero': 1,
+                               'one': 1,
+                               },
+                              0)
+
+    def testLeaveOneOutErrorsGivenConstantInputAndRegularisation(self):
+        expected = [-0.5, -0.5]
+        self.checkLeaveOneOut(expected,
+                              {'zero': 1,
+                               'one': 1,
+                              },
+                              1)
+
+    def testLeaveOneOutErrorsGivenVariableInputAndNoRegularisation(self):
+        self.checkLeaveOneOut([-1, 1],
+                              {'zero': 2,
+                               'one': 1,
+                               },
+                              0)
+
+
+class GivenTwoNodesAndOneConstantComponentTestLeaveOneOut(_GivenTwoNodesAndConstantComponentsTestLeaveOneOutBase,
+                                           _GivenSingleConstantComponent):
+    pass
+
+
+class GivenTwoNodesAndTwoSameConstantComponentsTestLeaveOneOut(_GivenTwoNodesAndConstantComponentsTestLeaveOneOutBase):
+     FIELD_COMPONENTS = {'a': FunctionFieldComponent(lambda x: 1,
+                                                     lambda x: 0),
+                         'b': FunctionFieldComponent(lambda x: 1,
+                                                     lambda x: 0),
+                         }
+
+
+
 class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
     FIELD_COMPONENTS = {'1': FunctionFieldComponent(lambda x: 1,
                                                     lambda x: 0),
@@ -198,7 +262,7 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
                                         'func',
                                         list(expected['func'])),
                                 {'zero': 1, 'one': 2},
-                                regularization_parameter=1.0)
+                                regularization_parameter=0.5)
 
 
 class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase):
