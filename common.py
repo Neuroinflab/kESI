@@ -22,9 +22,13 @@
 #                                                                             #
 ###############################################################################
 import collections
+import logging
 
 import numpy as np
 from scipy.special import lpmv, erf
+
+
+logger = logging.getLogger(__name__)
 
 
 class FourSphereModel(object):
@@ -333,6 +337,7 @@ def cv(reconstructor, measured, REGULARIZATION_PARAMETERS):
     IDX_N = np.arange(n)
     errors = []
     for regularization_parameter in REGULARIZATION_PARAMETERS:
+        logger.info('cv(): error estimation for regularization parameter: {:g}'.format(regularization_parameter))
         errors.append(0.)
         for i, p in zip(IDX_N, POTS[:, 0]):
             IDX = IDX_N[IDX_N != i]
