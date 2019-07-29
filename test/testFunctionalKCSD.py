@@ -306,8 +306,8 @@ class WhenCalledWithPandasSeries(GivenTwoNodesAndThreeLinearFieldComponents):
         for name in expected:
             field = getattr(approximator, name)
             for k in expected[name].index:
-                self.assertEqual(expected[name][k],
-                                 field(k))
+                self.assertAlmostEqual(expected[name][k],
+                                       field(k))
 
 
 if __name__ == '__main__':
