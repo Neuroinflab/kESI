@@ -159,6 +159,25 @@ class FunctionalKernelFieldReconstructor(object):
             return f
 
     def __init__(self, field_components, input_domain, nodes):
+        """
+        :param field_components: assumed components of the field [#f1]_
+        :type field_components: Sequence(Component)
+
+        :param input_domain: the scalar quantity of the field the interpolation
+                             is based on [#f1]_
+        :type input_domain: str
+
+        :param nodes: estimation points of the ``input_domain`` [#f1]_
+        :type nodes: Sequence(key)
+
+        .. rubric:: Footnotes
+
+        .. [#f1] ``Component`` class objects are required to have a method which
+                 name is given as ``input_domain``. The method called with
+                 ``nodes`` as  its only argument is required to return
+                 a sequence of values of the ``input_domain`` quantity for
+                 the component.
+        """
         self._field_components = field_components
         self._nodes = nodes
         self._generate_kernels(input_domain)
@@ -184,6 +203,20 @@ class FunctionalKernelFieldReconstructor(object):
             evaluated[i, :] = getattr(component, name)(self._nodes)
 
     def __call__(self, measurements, regularization_parameter=0):
+        """
+        :param measurements: values of the field quantity in the estimation
+                             points (see the docstring of the
+                             :py:meth:`constructor<__init__>` for details.
+        :type measurements: Mapping(key, float)
+
+        :param regularization_parameter: the regularization parameter
+        :type regularization_parameter: float
+
+        :return: interpolator of field quantities
+        :rtype: an object implementing methods of the same names and signatures
+                as those of ``Component`` objects (provided as the argument
+                ``field_components`` of the :py:meth:`constructor<__init__>`.
+        """
         return self._FieldApproximator(self._field_components,
                                        np.dot(self._pre_cross_kernel,
                                               self._solve_kernel(
