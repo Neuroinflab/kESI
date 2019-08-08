@@ -362,9 +362,13 @@ else:
 
         POTENTIALS = pd.DataFrame(fh['POTENTIAL'], columns=ELECTRODES.index)
         for k in ['RES', 'DEGREE', 'SIGMA', 'X', 'Y', 'Z', 'INTEGRAL',
-                  'R', 'AZIMUTH', 'ALTITUDE', 'CONDUCTIVITY', 'TIME', 'N']:
+                  'R', 'AZIMUTH', 'ALTITUDE', 'CONDUCTIVITY', 'TIME', 'N',
+                  'WRAP', 'MAX_ITER', 'ITER']:
             if k in fh:
                 POTENTIALS[k] = fh[k]
+
+        if 'ITER' not in POTENTIALS and 'MAX_ITER' in POTENTIALS:
+            POTENTIALS['ITER'] = POTENTIALS.pop('MAX_ITER')
 
         if conductivity is not None:
             POTENTIALS['CONDUCTIVITY'] = conductivity
