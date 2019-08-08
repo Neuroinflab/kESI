@@ -266,8 +266,12 @@ print('CV: kESI {:g}s,\tkCSD {:g}s'.format((endCvKESI - startCvKESI).total_secon
 make_plot(csd_x, csd_y, true_csd, 'True CSD')
 make_plot(csd_x, csd_y, est_csd[:,:,0], 'kCSD CSD')
 make_plot(csd_x, csd_y, kesi_csd, 'kESI CSD (0)')
-make_plot(csd_x, csd_y, kesi_csd - est_csd[:,:,0],
-          'kESI - kCSD CSD (0)')
-make_plot(csd_x, csd_y, do_kesi(original.copy(lambda_=err[idx_min]), pots, ele_pos), 'kESI CSD (cv: {:g})'.format(err[idx_min]))
+diff = kesi_csd - est_csd[:, :, 0]
+if (diff != 0).any():
+    make_plot(csd_x, csd_y, diff, 'kESI - kCSD CSD (0)')
+else:
+    print('kESI and kCSD are compatible')
+make_plot(csd_x, csd_y, do_kesi(original.copy(
+    regularization_parameter=err[idx_min]), pots, ele_pos), 'kESI CSD (cv: {:g})'.format(err[idx_min]))
 make_plot(csd_x, csd_y, k.values('CSD')[:,:,0], 'kCSD CSD (cv:{.lambd:g})'.format(k))
 plt.show()
