@@ -236,8 +236,8 @@ class PolarBase(object):
 
 
 class ElectrodeAware(object):
-    def __init__(self, ROW, ELECTRODES):
-        super(ElectrodeAware, self).__init__(ROW)
+    def __init__(self, ELECTRODES, *args, **kwargs):
+        super(ElectrodeAware, self).__init__(*args, **kwargs)
         self._ELECTRODES = ELECTRODES
 
     def potential(self, electrodes):

@@ -36,14 +36,16 @@ CONDUCTIVITY = FourSphereModel.Properies(1.00 * BRAIN_CONDUCTIVITY,
                                          1.00 * BRAIN_CONDUCTIVITY)
 RADIUS = FourSphereModel.Properies(7.9, 8.0, 8.5, 9.0)
 
-
 WHITE_R = 7.5
 RAD_TOL = 0.01
 
+logger = logging.getLogger(__name__)
+
 
 class GroundedElectrodeAwarePolarGaussianSourceKCSD3D(ElectrodeAwarePolarGaussianSourceKCSD3D):
-    def __init__(self, ROW, ELECTRODES, GND):
-        super(GroundedElectrodeAwarePolarGaussianSourceKCSD3D, self).__init__(ROW, ELECTRODES)
+    def __init__(self, GND, ELECTRODES, ROW):
+        super(GroundedElectrodeAwarePolarGaussianSourceKCSD3D, self).__init__(
+            ELECTRODES, ROW)
         self._GND = GND
 
     def potential(self, electrodes):
@@ -144,7 +146,7 @@ for filename in ['proof_of_concept_fem_dirchlet_newman_CTX_deg_1.npz',
     RECORDING_ELECTRODES = ELECTRODES.index[(POTENTIAL[ELECTRODES.index] != 0).any()]
 
     reconstructors = {name: kesi.FunctionalKernelFieldReconstructor(
-                                    [cls(ROW, ELECTRODES, GND_ELECTRODES)
+                                    [cls(GND_ELECTRODES, ELECTRODES, ROW)
                                      if issubclass(cls, ElectrodeAware)
                                      else cls(ROW)
                                      for _, ROW in POTENTIAL[POTENTIAL.SIGMA <= 1].iterrows()],

@@ -107,7 +107,7 @@ for setup, (cls, electrodes, sources) in enumerate(SETUPS):
     print(cls.__name__)
 
     reconstructor = kesi.FunctionalKernelFieldReconstructor(
-        [cls(ROW, electrodes) if issubclass(cls, ElectrodeAware) else cls(ROW)
+        [cls(electrodes, ROW) if issubclass(cls, ElectrodeAware) else cls(ROW)
          for _, ROW in sources.iterrows()],
         'potential',
         electrodes.index)
