@@ -17,6 +17,8 @@ def make_plot(xx, yy, zz, title, cmap=cm.bwr):
     ax = plt.subplot(111)
     ax.set_aspect('equal')
     t_max = np.max(np.abs(zz))
+    if t_max == 0:
+        t_max = np.finfo(zz.dtype).eps
     levels = np.linspace(-1 * t_max, t_max, 32)
     im = ax.contourf(xx, yy, zz, levels=levels, cmap=cmap)
     ax.set_xlabel('X (mm)')
