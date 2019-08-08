@@ -330,23 +330,13 @@ class ElectrodeAwareCartesianGaussianSourceKCSD3D(ElectrodeAware,
 
 
 def cv(reconstructor, measured, REGULARIZATION_PARAMETERS):
-    POTS = reconstructor._measurement_vector(measured)
-    KERNEL = reconstructor._kernel
-    n = KERNEL.shape[0]
-    I = np.identity(n - 1)
-    IDX_N = np.arange(n)
     errors = []
+
     for regularization_parameter in REGULARIZATION_PARAMETERS:
         logger.info('cv(): error estimation for regularization parameter: {:g}'.format(regularization_parameter))
-        errors.append(0.)
-        for i, p in zip(IDX_N, POTS[:, 0]):
-            IDX = IDX_N[IDX_N != i]
-            K = KERNEL[np.ix_(IDX, IDX)]
-            P = POTS[IDX, :]
-            CK = KERNEL[np.ix_([i], IDX)]
-            EST = np.dot(CK,
-                         np.linalg.solve(K + regularization_parameter * I, P))
-            errors[-1] += (EST[0, 0] - p) ** 2
+        ERR = np.array(reconstructor.leave_one_out_errors(measured,
+                                                          regularization_parameter))
+        errors.append(np.sqrt((ERR**2).mean()))
 
     return errors
 
