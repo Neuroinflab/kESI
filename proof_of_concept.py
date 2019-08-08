@@ -86,8 +86,13 @@ class SourceGauss2DBase(object):
         self.conductivity = conductivity
 
     def csd(self, XY):
-        var = (R / 3.0)**2
-        return np.exp(-0.5 / var * self._dist2(XY)) / (2*np.pi*var)
+        var = (self.R / 3.0)**2
+        d = distance.cdist(XY, [[self.x, self.y]]).flatten()
+        return np.exp(-0.5 * d ** 2 / var) / (
+                np.sqrt(2 * np.pi) ** 2 * var)
+        #return np.exp(-0.5 * np.sqrt(self._dist2(XY)) ** 2 / var) / (
+        #        np.sqrt(2 * np.pi) ** 2 * var)
+        ##return np.exp(-0.5 / var * self._dist2(XY)) / (2*np.pi*var)
 
     def _dist2(self, XY):
         # X, Y = np.array(XY).T
@@ -140,9 +145,8 @@ class InterpolatingGeneratorOfSourceGauss2D(list):
                                      lambda x: -R,
                                      lambda x: R,
                                      args=(dist, var, self.h))
-        #return pot * (0.25 / (np.pi**2 * var * self.conductivity))
+        #return pot * (0.25 / (np.pi**2 * var * self._set_conductivities))
         return pot * (0.5 / (np.pi * self.conductivity))
-        # Potential basis functions bi_x_y
 
     def int_pot_2D(self, xp, yp, x, var, h):
         y = np.sqrt((x-xp)**2 + yp**2)
@@ -150,7 +154,9 @@ class InterpolatingGeneratorOfSourceGauss2D(list):
             y = 0.00001
         dist2 = xp**2 + yp**2
         #return np.arcsinh(h/y) * np.exp(-0.5 * dist2 / var)
-        return np.arcsinh(h/y) * np.exp(-0.5 * dist2 / var) / (2 * np.pi * var)
+        return np.arcsinh(h / y) * (np.exp(-0.5 * np.sqrt(dist2) ** 2 / var) / (
+                np.sqrt(2 * np.pi) ** 2 * var))
+        #return np.arcsinh(h/y) * np.exp(-0.5 * dist2 / var) / (2 * np.pi * var)
 
 
 
