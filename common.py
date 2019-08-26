@@ -284,11 +284,11 @@ class GaussianSourceKCSD3D(GaussianSourceBase):
     _half = _dtype(0.5)
     _last = 2.
     _err = 1.
-    while _err < _last:
+    while 0 < _err < _last:
         _radius_of_erf_to_x_limit_applicability = _x
         _last = _err
         _x *= _half
-        _err = np.abs(erf(_x) / _x - _fraction_of_erf_to_x_limit_in_0)
+        _err = _fraction_of_erf_to_x_limit_in_0 - erf(_x) / _x
 
     def init(self, x, y, z, ROW):
         super(GaussianSourceKCSD3D, self).init(x, y, z, ROW)
