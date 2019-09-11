@@ -25,6 +25,7 @@ import collections
 import logging
 
 import numpy as np
+from scipy.interpolate import interp1d
 from scipy.special import lpmv, erf
 
 
@@ -377,3 +378,45 @@ else:
             POTENTIALS['CONDUCTIVITY'] = fh['CONDUCTIVITY']
 
         return LoadedPotentials(POTENTIALS, ELECTRODES)
+
+
+class GaussianFEM(object):
+    def __init__(self, ELECTRODES, FEM, FEM_ELECTRODES,
+                 x, y, z, sigma,
+                 _y_min=-np.inf,
+                 _y_max=np.inf):
+        self.x = x
+        self.y = y
+        self.z = z
+        self.sigma = sigma
+        self.y_min = _y_min
+        self.y_max = _y_max
+
+        assert isinstance(sigma, float)
+
+        # # DIRTY HACK:
+        # # I use np.abs(FEM.Y - y) < sigma / 2 as for some reason there is no source at
+        # TMP = FEM[(FEM.SIGMA == sigma) & (np.abs(FEM.Y - y) < sigma / 2)].groupby('R', sort=True).mean()
+        # TMP = FEM[(FEM.SIGMA == sigma) & (FEM.Y == y)].sort_values('R')
+        TMP = FEM[(FEM.SIGMA == sigma) & (np.abs(FEM.Y - y) < sigma * 1e-10)].sort_values('R')
+        interpolate = {el_y: interp1d(TMP.R.values,
+                                                 TMP[name].values,
+                                                 'linear')
+                       for name, el_y in zip(FEM_ELECTRODES.index,
+                                             FEM_ELECTRODES.Y)
+                       }
+        self.ELECTRODES = pd.DataFrame({'R': np.sqrt((self.x - ELECTRODES.X) ** 2
+                                                   + (self.z - ELECTRODES.Z) ** 2),
+                                        'INTERPOLATE': ELECTRODES.Y.apply(interpolate.__getitem__),
+                                        })
+
+    def potential(self, electrodes):
+        return self.ELECTRODES.loc[electrodes].apply(lambda ROW: ROW.INTERPOLATE(ROW.R),
+                                                     axis=1)
+
+    def csd(self, X, Y, Z):
+        return np.where((Y < self.y_max) & (Y > self.y_min),
+                        np.exp(-0.5 / self.sigma**2 * ((X - self.x) ** 2
+                                                       + (Y - self.y) ** 2
+                                                       + (Z - self.z) ** 2)),
+                        0) * (2 * np.pi * self.sigma ** 2) **-1.5
