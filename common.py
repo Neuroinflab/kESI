@@ -23,6 +23,7 @@
 ###############################################################################
 import collections
 import logging
+import operator
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -378,6 +379,158 @@ else:
             POTENTIALS['CONDUCTIVITY'] = fh['CONDUCTIVITY']
 
         return LoadedPotentials(POTENTIALS, ELECTRODES)
+
+
+
+# MOI sources
+
+
+class _MethodOfImagesSourceBase(object):
+    SourceConfig = collections.namedtuple('SourceConfig',
+                                          ['X',
+                                           'Y',
+                                           'Z',
+                                           'SIGMA',
+                                           'CONDUCTIVITY'])
+
+    def __init__(self, mask_invalid_space):
+        self.mask_invalid_space = mask_invalid_space
+
+    def _mask_invalid_space_if_requested(self, VALUE, MASK, fill_value=0):
+        if self.mask_invalid_space:
+            return np.where(MASK,
+                            VALUE,
+                            fill_value)
+        return VALUE
+
+    def csd(self, X, Y, Z):
+        return self._mask_invalid_space_if_requested(
+                        self._source.csd(X, Y, Z),
+                        self.is_applicable(X, Y, Z))
+
+    def actual_csd(self, X, Y, Z):
+        return self._mask_invalid_space_if_requested(
+                        self._calculate_field('csd', X, Y, Z),
+                        self.is_applicable(X, Y, Z))
+
+    def potential(self, electrodes):
+        return np.where(self.is_applicable(electrodes.X,
+                                           electrodes.Y,
+                                           electrodes.Z),
+                        self._calculate_field('potential', electrodes),
+                        np.nan)
+
+
+class InfiniteSliceSource(_MethodOfImagesSourceBase):
+    """
+    Torbjorn V. Ness (2015)
+    """
+
+    def __init__(self, y, sigma, h, brain_conductivity, saline_conductivity,
+                 glass_conductivity=0,
+                 n=20,
+                 x=0,
+                 z=0,
+                 SourceClass=CartesianGaussianSourceKCSD3D,
+                 mask_invalid_space=True):
+        super(InfiniteSliceSource, self).__init__(mask_invalid_space)
+        self.x = x
+        self.y = y
+        self.z = z
+        self.h = h
+
+        wtg = float(brain_conductivity - glass_conductivity) / (brain_conductivity + glass_conductivity)
+        wts = float(brain_conductivity - saline_conductivity) / (brain_conductivity + saline_conductivity)
+        self.n = n
+        self._source = SourceClass(
+                           self.SourceConfig(x, y, z, sigma, brain_conductivity))
+        weights = [1]
+        sources = [self._source]
+        for i in range(n):
+            weights.append(wtg**i * wts**(i+1))
+            sources.append(SourceClass(
+                               self.SourceConfig(x,
+                                                 2 * (i+1) * h - y,
+                                                 z,
+                                                 sigma,
+                                                 brain_conductivity)))
+            weights.append(wtg**(i+1) * wts**i)
+            sources.append(SourceClass(
+                               self.SourceConfig(x,
+                                                 -2 * i * h - y,
+                                                 z,
+                                                 sigma,
+                                                 brain_conductivity)))
+
+        for i in range(1, n + 1):
+            weights.append((wtg * wts)**i)
+            weights.append((wtg * wts)**i)
+            sources.append(SourceClass(
+                               self.SourceConfig(x,
+                                                 y + 2 * i * h,
+                                                 z,
+                                                 sigma,
+                                                 brain_conductivity)))
+
+            sources.append(SourceClass(
+                               self.SourceConfig(x,
+                                                 y - 2 * i * h,
+                                                 z,
+                                                 sigma,
+                                                 brain_conductivity)))
+
+        self._positive = [(w, s) for w, s in zip(weights, sources)
+                          if w > 0]
+        self._positive.sort(key=operator.itemgetter(0), reverse=False)
+        self._negative = [(w, s) for w, s in zip(weights, sources)
+                          if w < 0]
+        self._negative.sort(key=operator.itemgetter(0), reverse=True)
+
+    def is_applicable(self, X, Y, Z):
+        return (Y >= 0) & (Y < self.h)
+
+    def _calculate_field(self, name, *args, **kwargs):
+        return (sum(w * getattr(s, name)(*args, **kwargs) for w, s in self._positive)
+                + sum(w * getattr(s, name)(*args, **kwargs) for w, s in self._negative))
+
+
+class ElectrodeAwareInfiniteSliceSource(ElectrodeAware, InfiniteSliceSource):
+    pass
+
+
+class HalfSpaceSource(_MethodOfImagesSourceBase):
+    def __init__(self, y, sigma, brain_conductivity, saline_conductivity,
+                 x=0,
+                 z=0,
+                 SourceClass=CartesianGaussianSourceKCSD3D,
+                 mask_invalid_space=True):
+        super(HalfSpaceSource, self).__init__(mask_invalid_space)
+        self.x = x
+        self.y = y
+        self.z = z
+
+        self._source = SourceClass(self.SourceConfig(x, y, z, sigma,
+                                                     brain_conductivity))
+
+        self._image = SourceClass(self.SourceConfig(x, -y, z, sigma,
+                                                    brain_conductivity))
+        self._weight = float(brain_conductivity - saline_conductivity) / (
+                brain_conductivity + saline_conductivity)
+
+    def is_applicable(self, X, Y, Z):
+        return Y < 0
+
+    def _calculate_field(self, name, *args, **kwargs):
+        return (getattr(self._source, name)(*args, **kwargs)
+                + self._weight * getattr(self._image, name)(*args, **kwargs))
+
+
+class ElectrodeAwareHalfSpaceSource(ElectrodeAware, HalfSpaceSource):
+    pass
+
+
+
+# FEM sources
 
 
 class GaussianFEM(object):
