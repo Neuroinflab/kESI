@@ -23,7 +23,8 @@
 ###############################################################################
 
 import unittest
-import numpy as np
+
+from ._common import FunctionFieldComponent
 
 try:
     import pandas as pd
@@ -31,21 +32,6 @@ except:
     pd = None
 
 import kesi as kesi
-
-class FunctionFieldComponent(object):
-    def __init__(self, func, fprime):
-        self._func = func
-        self._fprime = fprime
-
-    def func(self, arg):
-        if isinstance(arg, list):
-            return list(map(self._func, arg))
-        return self._func(arg)
-
-    def fprime(self, arg):
-        if isinstance(arg, list):
-            return list(map(self._fprime, arg))
-        return self._fprime(arg)
 
 class _GivenComponentsAndNodesBase(unittest.TestCase):
     def setUp(self):
