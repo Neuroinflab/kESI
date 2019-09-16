@@ -109,6 +109,7 @@ _YELLOW    = _sRGB.from_unsigned_char(240, 228, 66)
 _BLUE      = _sRGB.from_unsigned_char(0, 114, 178)
 _VERMILION = _sRGB.from_unsigned_char(213, 94, 0)
 _PURPLE    = _sRGB.from_unsigned_char(204, 121, 167)
+_WHITE     = _sRGB.from_unsigned_char(255, 255, 255)
 
 BLACK     = str(_BLACK)
 ORANGE    = str(_ORANGE)
@@ -120,7 +121,7 @@ VERMILION = str(_VERMILION)
 PURPLE    = str(_PURPLE)
 
 
-def _BipolarColormap(name, negative, positive):
+def _BipolarColormap(name, negative, positive, zero=_WHITE):
     neg_max = negative.lRGB.max()
     pos_max = positive.lRGB.max()
     neg_Y = negative.CIE_1931_XYZ[1]
@@ -144,11 +145,12 @@ def _BipolarColormap(name, negative, positive):
     return colors.LinearSegmentedColormap(
                       name,
                       {k: [(0.0,) + (getattr(negative, k),) * 2,
-                           (0.5, 1.0, 1.0),
+                           (0.5,) + (getattr(zero, k),) * 2,
                            (1.0,) + (getattr(positive, k),) * 2,
                            ]
                        for k in ['red', 'green', 'blue']})
 
 
 bwr = _BipolarColormap('cbf.bwr', _BLUE, _ORANGE)
+bbr = _BipolarColormap('cbf.bbr', _BLUE, _ORANGE, _BLACK)
 PRGn = _BipolarColormap('cbf.PRGn', _PURPLE, _GREEN)
