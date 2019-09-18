@@ -36,8 +36,7 @@ try:
 except (ImportError, SystemError, ValueError):
     from _common import Stub
 
-
-from kesi._engine import FunctionalFieldReconstructor
+from kesi._engine import FunctionalFieldReconstructor, LinearMixture
 
 
 class NodeManager(list):
@@ -59,6 +58,14 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
     def setUp(self):
         if not hasattr(self, 'FIELD_COMPONENTS'):
             self.skipTest('test in abstract class called')
+
+    def testReturnsLinearMixture(self):
+        reconstructor = self.createReconstructor(self.NODES)
+        approximator = self._getApproximator(reconstructor,
+                                             self.createField(self.NODES),
+                                             regularization_parameter=0.1)
+        self.assertIsInstance(approximator,
+                              LinearMixture)
 
     def createField(self, points, name='func', weights={}):
         return {k: sum(getattr(f, name)(k) * weights.get(c, 1)

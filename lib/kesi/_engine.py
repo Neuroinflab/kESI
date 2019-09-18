@@ -27,19 +27,6 @@ import sys
 import numpy as np
 
 class FunctionalFieldReconstructor(object):
-    class _FieldApproximator(object):
-        def __init__(self, field_components, field_weights):
-            self._components = field_components
-            self._weights = field_weights
-
-        def __getattr__(self, item):
-            def f(*args, **kwargs):
-                return sum(w * getattr(c, item)(*args, **kwargs)
-                           for w, c in zip(self._weights,
-                                           self._components))
-
-            return f
-
     def __init__(self, field_components, measurement_manager):
         self._field_components = field_components
         self._measurement_nodes = measurement_manager
@@ -65,12 +52,12 @@ class FunctionalFieldReconstructor(object):
             evaluated[i, :] = self._measurement_nodes.evaluate_component(component)
 
     def __call__(self, measurements, regularization_parameter=0):
-        return self._FieldApproximator(self._field_components,
-                                       np.dot(self._pre_cross_kernel,
-                                              self._solve_kernel(
-                                                  self._measurement_vector(measurements),
-                                                  regularization_parameter)
-                                              ).flatten())
+        return LinearMixture(zip(self._field_components,
+                                 np.dot(self._pre_cross_kernel,
+                                        self._solve_kernel(
+                                              self._measurement_vector(measurements),
+                                              regularization_parameter)
+                                          ).flatten()))
 
     def _measurement_vector(self, values):
         return self._measurement_nodes.get_measurement_vector(values).reshape(-1, 1)
