@@ -24,6 +24,8 @@
 
 from unittest.case import TestCase
 
+from kesi._engine import LinearMixture
+
 try:
     from ._common import Stub
     # When run as script raises:
@@ -44,7 +46,7 @@ class _MixtureTestBase(TestCase):
         except AttributeError:
             self.skipTest('Method of abstract class called.')
         else:
-            self.mixture = kesi.LinearMixture(*init)
+            self.mixture = LinearMixture(*init)
 
     @property
     def INIT(self):
@@ -206,10 +208,10 @@ class GivenMixtureOfTwoSources(_GivenFilledMixture):
 
     def setUp(self):
         super(GivenMixtureOfTwoSources, self).setUp()
-        self.mixture_a = kesi.LinearMixture([(Stub(**self.METHODS_A),
-                                              self.SCALE_FACTOR_A)])
-        self.mixture_b = kesi.LinearMixture([(Stub(**self.METHODS_B),
-                                              self.SCALE_FACTOR_B)])
+        self.mixture_a = LinearMixture([(Stub(**self.METHODS_A),
+                                         self.SCALE_FACTOR_A)])
+        self.mixture_b = LinearMixture([(Stub(**self.METHODS_B),
+                                         self.SCALE_FACTOR_B)])
 
     def testRaisesAttributeErrorWhenAccessedAttributeNotPresentInAllSources(self):
         for attr in ['a_only', 'b_only']:
@@ -263,7 +265,7 @@ class TestPerformance(_MixtureTestBase):
         self.assertEqual(1, self.call_counter)
 
     def testMixtureOfMixturesCallsMethodOnce(self):
-        mixture = kesi.LinearMixture([(self.mixture, 1),
-                                      (self.mixture, 1)])
+        mixture = LinearMixture([(self.mixture, 1),
+                                 (self.mixture, 1)])
         mixture.f()
         self.assertEqual(1, self.call_counter)
