@@ -24,7 +24,15 @@
 
 import unittest
 
-from ._common import FunctionFieldComponent
+try:
+    from ._common import FunctionFieldComponent
+    # When run as script raises:
+    #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
+    #  - `SystemError` (Python 3.3-5), or
+    #  - `ValueError` (Python 2.7).
+
+except (ImportError, SystemError, ValueError):
+    from _common import FunctionFieldComponent
 
 try:
     import pandas as pd
