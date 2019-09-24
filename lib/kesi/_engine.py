@@ -65,8 +65,8 @@ class FunctionalFieldReconstructor(object):
 
     def _solve_kernel(self, measurements, regularization_parameter=0):
         K = self._kernel
-        return np.linalg.solve(K + np.identity(K.shape[0])
-                                   * regularization_parameter,
+        return np.linalg.solve((K + np.identity(K.shape[0])
+                                    * regularization_parameter),
                                measurements)
 
     def leave_one_out_errors(self, measured, regularization_parameter):
