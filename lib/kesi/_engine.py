@@ -84,7 +84,7 @@ class FunctionalFieldReconstructor(object):
 
 
 class LinearMixture(object):
-    def __init__(self, components=[]):
+    def __init__(self, components=()):
         self._components, self._weights = [], []
 
         try:
