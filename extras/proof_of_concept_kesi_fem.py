@@ -13,7 +13,7 @@ from common import (FourSphereModel, PolarGaussianSourceFEM,
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 
-import colorblind_friendly as cbf
+import cbf
 
 
 NY = 41
