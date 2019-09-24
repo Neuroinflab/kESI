@@ -29,38 +29,38 @@ import numpy as np
 class FunctionalFieldReconstructor(object):
     def __init__(self, field_components, measurement_manager):
         self._field_components = field_components
-        self._measurement_nodes = measurement_manager
+        self._measurement_manager = measurement_manager
         self._generate_kernels()
 
     def _generate_kernels(self):
-        self._generate_pre_crosskernel()
+        self._generate_pre_kernel()
         self._generate_kernel()
 
     def _generate_kernel(self):
-        self._kernel = np.dot(self._pre_cross_kernel.T,
-                              self._pre_cross_kernel) * self._pre_cross_kernel.shape[0]
+        self._kernel = np.dot(self._pre_kernel.T,
+                              self._pre_kernel) * self._pre_kernel.shape[0]
 
-    def _generate_pre_crosskernel(self):
-        n = len(self._field_components)
-        self._pre_cross_kernel = np.empty((n,
-                                           len(self._measurement_nodes)))
-        self._fill_evaluated_components(self._pre_cross_kernel)
-        self._pre_cross_kernel /= n
+    def _generate_pre_kernel(self):
+        m = len(self._field_components)
+        n = self._measurement_manager.number_of_measurements
+        self._pre_kernel = np.empty((m, n))
+        self._fill_evaluated_components(self._pre_kernel)
+        self._pre_kernel /= m
 
     def _fill_evaluated_components(self, evaluated):
         for i, component in enumerate(self._field_components):
-            evaluated[i, :] = self._measurement_nodes.evaluate_component(component)
+            evaluated[i, :] = self._measurement_manager.probe(component)
 
     def __call__(self, measurements, regularization_parameter=0):
         return LinearMixture(zip(self._field_components,
-                                 np.dot(self._pre_cross_kernel,
+                                 np.dot(self._pre_kernel,
                                         self._solve_kernel(
                                               self._measurement_vector(measurements),
                                               regularization_parameter)
-                                          ).flatten()))
+                                        ).flatten()))
 
     def _measurement_vector(self, values):
-        return self._measurement_nodes.get_measurement_vector(values).reshape(-1, 1)
+        return self._measurement_manager.load(values).reshape(-1, 1)
 
     def _solve_kernel(self, measurements, regularization_parameter=0):
         K = self._kernel

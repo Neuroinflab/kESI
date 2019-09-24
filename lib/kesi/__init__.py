@@ -147,18 +147,16 @@ class KernelFieldApproximator(_KernelFieldApproximator):
 
 
 class FunctionalKernelFieldReconstructor(FunctionalFieldReconstructor):
-    class _NodeManager(object):
+    class _MeasurementManager(object):
         def __init__(self, name, nodes):
             self._nodes = nodes
             self._name = name
+            self.number_of_measurements = len(nodes)
 
-        def __len__(self):
-            return len(self._nodes)
+        def probe(self, field):
+            return getattr(field, self._name)(self._nodes)
 
-        def evaluate_component(self, component):
-            return getattr(component, self._name)(self._nodes)
-
-        def get_measurement_vector(self, measured):
+        def load(self, measured):
             return np.array([measured[k] for k in self._nodes])
 
     def __init__(self, field_components, input_domain, nodes):
@@ -183,8 +181,8 @@ class FunctionalKernelFieldReconstructor(FunctionalFieldReconstructor):
         """
         super(FunctionalKernelFieldReconstructor,
               self).__init__(field_components,
-                             self._NodeManager(input_domain,
-                                               nodes))
+                             self._MeasurementManager(input_domain,
+                                                      nodes))
 
     def __call__(self, measurements, regularization_parameter=0):
         """

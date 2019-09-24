@@ -115,9 +115,9 @@ for setup, (cls, electrodes, sources) in enumerate(SETUPS):
     gc.collect()
 
     A = np.array([f.csd(0, YY.flatten(), ZZ.flatten()) for f in reconstructor._field_components], dtype=np.float128).T
-    B = reconstructor._pre_cross_kernel.astype(np.float128)
+    B = reconstructor._pre_kernel.astype(np.float128)
 
-    N_ELS = reconstructor._pre_cross_kernel.shape[1]
+    N_ELS = reconstructor._pre_kernel.shape[1]
     measures_names = ['electrode{:03d}'.format(i) for i in range(N_ELS)]
     measures = [np.identity(N_ELS)]
     if cls is GaussianSourceFEM:

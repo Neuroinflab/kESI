@@ -39,12 +39,16 @@ except (ImportError, SystemError, ValueError):
 from kesi._engine import FunctionalFieldReconstructor, LinearMixture
 
 
-class NodeManager(list):
-    def evaluate_component(self, component):
-        return list(map(component.func, self))
+class MeasurementManager(list):
+    def probe(self, field):
+        return list(map(field.func, self))
 
-    def get_measurement_vector(self, measured):
+    def load(self, measured):
         return np.array([measured[k] for k in self])
+
+    @property
+    def number_of_measurements(self):
+        return len(self)
 
 
 class FunctionFieldComponent(Stub):
@@ -76,7 +80,7 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
     def createReconstructor(self, nodes):
         return FunctionalFieldReconstructor(
                         self.FIELD_COMPONENTS.values(),
-                        NodeManager(nodes))
+                        MeasurementManager(nodes))
 
     def _checkApproximation(self, expected, measured,
                             regularization_parameter=None):
