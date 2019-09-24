@@ -3,8 +3,8 @@
 
 import numpy as np
 import gc
-from dolfin import Constant, Mesh, MeshFunction, FunctionSpace, TestFunction, TrialFunction, Function, Measure, inner, grad, assemble, Point, PointSource, KrylovSolver, info
-from dolfin import Expression, DirichletBC, File, Vector, interpolate, XDMFFile
+from dolfin import Constant, Mesh, MeshFunction, FunctionSpace, TestFunction, TrialFunction, Function, Measure, inner, grad, assemble, KrylovSolver
+from dolfin import Expression, DirichletBC
 
 sigma_B = 1. / 300.  # S / cm
 sigma_brain = Constant(sigma_B)
@@ -223,7 +223,7 @@ def f():
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib import cm, colors
+from matplotlib import cm
 #from mpl_toolkits.mplot3d import Axes3D
 import colorblind_friendly as cbf
 
