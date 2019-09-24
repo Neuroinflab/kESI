@@ -60,7 +60,8 @@ class FunctionalFieldReconstructor(object):
                                         ).flatten()))
 
     def _measurement_vector(self, values):
-        return self._measurement_manager.load(values).reshape(-1, 1)
+        return np.reshape(self._measurement_manager.load(values),
+                          (-1, 1))
 
     def _solve_kernel(self, measurements, regularization_parameter=0):
         K = self._kernel

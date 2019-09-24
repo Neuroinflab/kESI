@@ -157,7 +157,7 @@ class FunctionalKernelFieldReconstructor(FunctionalFieldReconstructor):
             return getattr(field, self._name)(self._nodes)
 
         def load(self, measured):
-            return np.array([measured[k] for k in self._nodes])
+            return [measured[k] for k in self._nodes]
 
     def __init__(self, field_components, input_domain, nodes):
         """

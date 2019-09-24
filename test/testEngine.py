@@ -44,7 +44,7 @@ class MeasurementManager(list):
         return list(map(field.func, self))
 
     def load(self, measured):
-        return np.array([measured[k] for k in self])
+        return [measured[k] for k in self]
 
     @property
     def number_of_measurements(self):
