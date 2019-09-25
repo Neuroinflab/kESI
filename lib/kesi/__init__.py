@@ -31,7 +31,7 @@ except:
     pd = None
 
 
-from ._engine import FunctionalFieldReconstructor
+from ._engine import FunctionalFieldReconstructor, MeasurementManagerBase
 
 
 class _KernelFieldApproximator(object):
@@ -147,7 +147,7 @@ class KernelFieldApproximator(_KernelFieldApproximator):
 
 
 class FunctionalKernelFieldReconstructor(FunctionalFieldReconstructor):
-    class _MeasurementManager(object):
+    class _MeasurementManager(MeasurementManagerBase):
         def __init__(self, name, nodes):
             self._nodes = nodes
             self._name = name

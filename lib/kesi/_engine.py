@@ -257,3 +257,64 @@ class LinearMixture(object):
 
         def __div__(self, other):
             return self._div(other)
+
+
+class MeasurementManagerBase(object):
+    """
+    Base class for measurement managers.
+
+    An abstract base class for classes implementing measurement handling, i.e.
+    probing a field at some ordered measurement points (`probe()` method) and
+    loading such values from some other object (e.g. converting the object).
+
+    Objects of this class implement the measurement points as well as probing
+    and loading.
+
+    Attributes
+    ----------
+        number_of_measurements: int
+            A number of measurement points. May be implemented as a property.
+    """
+    number_of_measurements = None
+
+    def load(self, measurements):
+        """
+        Load the measurements.
+
+        Returns
+        -------
+        Sequence
+            Values measured at the measurement points.
+
+        Note
+        ----
+            Unless overriden in a subclass, requires `measurements` to be an
+            sequence appropriate to be returned.
+        """
+        return measurements
+
+    def probe(self, field):
+        """
+        Probe the field.
+
+        An abstract method implementing probing the field in the measurement
+        points.
+
+        Parameters
+        ----------
+        field : object
+            An object implementing the field. It is up to the measurement
+            manager to interpret the object and use its API.
+
+        Returns
+        -------
+        Sequence
+            A sequence of the field quantities measured at the measurement
+            points.
+
+        Raises
+        ------
+        NotImplementedError
+            Always (unless overriden in a subclass).
+        """
+        raise NotImplementedError
