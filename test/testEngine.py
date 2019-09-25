@@ -24,8 +24,6 @@
 
 import unittest
 
-import numpy as np
-
 try:
     from ._common import Stub
     # When run as script raises:
@@ -37,18 +35,6 @@ except (ImportError, SystemError, ValueError):
     from _common import Stub
 
 from kesi._engine import FunctionalFieldReconstructor, LinearMixture
-
-
-class MeasurementManager(list):
-    def probe(self, field):
-        return list(map(field.func, self))
-
-    def load(self, measured):
-        return [measured[k] for k in self]
-
-    @property
-    def number_of_measurements(self):
-        return len(self)
 
 
 class FunctionFieldComponent(Stub):
@@ -80,7 +66,7 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
     def createReconstructor(self, nodes):
         return FunctionalFieldReconstructor(
                         self.FIELD_COMPONENTS.values(),
-                        MeasurementManager(nodes))
+                        self.MeasurementManager(nodes))
 
     def _checkApproximation(self, expected, measured,
                             regularization_parameter=None):
@@ -100,10 +86,13 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
                              regularization_parameter=regularization_parameter)
 
     def checkWeightedApproximation(self, nodes, names, points, weights={}):
-        self._checkApproximation(
-            {name: self.createField(points, name, weights=weights)
-             for name in names},
-            self.createField(nodes, weights=weights))
+        self._checkApproximation({name: self.createField(points,
+                                                         name,
+                                                         weights=weights)
+                                  for name in names
+                                  },
+                                 self.probe(self.createField(nodes,
+                                                             weights=weights)))
 
     def checkReconstructor(self, expected, reconstructor, funcValues,
                            regularization_parameter=None):
@@ -121,7 +110,23 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
                 self.assertAlmostEqual(v, field(k))
 
 
-class _GivenSingleComponentSingleNodeBase(_GivenComponentsAndNodesBase):
+class _GivenMappingAsMeasurements(_GivenComponentsAndNodesBase):
+    class MeasurementManager(list):
+        def probe(self, field):
+            return list(map(field.func, self))
+
+        def load(self, measured):
+            return [measured[k] for k in self]
+
+        @property
+        def number_of_measurements(self):
+            return len(self)
+
+    def probe(self, field):
+        return field
+
+
+class _GivenSingleComponentSingleNodeBase(_GivenMappingAsMeasurements):
     NODES = ['zero']
 
     def testProperlyHandlesTheNode(self):
@@ -151,7 +156,7 @@ class GivenSingleConstantFieldComponentSingleNode(_GivenSingleComponentSingleNod
     pass
 
 
-class _GivenTwoNodesBase(_GivenComponentsAndNodesBase):
+class _GivenTwoNodesBase(object):
     NODES = ['zero', 'two']
 
     def testProperlyHandlesTheNodes(self):
@@ -170,7 +175,7 @@ class _GivenTwoNodesBase(_GivenComponentsAndNodesBase):
                                         ['one', 'three'], weights={'1': 2})
 
 
-class _GivenTwoNodesAndConstantComponentsTestLeaveOneOutBase(_GivenComponentsAndNodesBase):
+class _GivenTwoNodesAndConstantComponentsTestLeaveOneOutBase(_GivenMappingAsMeasurements):
     NODES = ['zero', 'one']
 
     def setUp(self):
@@ -228,7 +233,8 @@ class GivenTwoNodesAndTwoSameConstantComponentsTestLeaveOneOut(_GivenTwoNodesAnd
 
 
 
-class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
+class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase,
+                                               _GivenMappingAsMeasurements):
     FIELD_COMPONENTS = {'1': FunctionFieldComponent(lambda x: 1,
                                                     lambda x: 0),
                         'x': FunctionFieldComponent({'zero': 0,
@@ -255,7 +261,8 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
                                 regularization_parameter=0.5)
 
 
-class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase):
+class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase,
+                                                 _GivenMappingAsMeasurements):
     FIELD_COMPONENTS = {'1': FunctionFieldComponent(lambda x: 1,
                                                     lambda x: 0),
                         'x': FunctionFieldComponent({'zero': 0,
