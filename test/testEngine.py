@@ -44,6 +44,32 @@ class FunctionFieldComponent(Stub):
                              fprime=fprime)
 
 
+class TestsOfInitializationErrors(unittest.TestCase):
+    def testWhenMeasurementManagerLacksAttributesThenRaisesException(self):
+        for missing, exception in [('probe',
+                                    'ProbeMethod'),
+                                   ('load',
+                                    'LoadMethod'),
+                                   ('number_of_measurements',
+                                    'NumberOfMeasurementsAttribute'),
+                                   ]:
+            measurement_manager = self.getIncompleteMeasurementManager(missing)
+            exception_name = 'MeasurementManagerHasNo{}Error'.format(exception)
+            for ExceptionClass in [getattr(FunctionalFieldReconstructor,
+                                           exception_name),
+                                   TypeError]:
+                with self.assertRaises(ExceptionClass):
+                    FunctionalFieldReconstructor([],
+                                                 measurement_manager)
+
+    def getIncompleteMeasurementManager(self, missing):
+        return Stub(**{attr: None
+                       for attr in ['probe',
+                                    'load',
+                                    'number_of_measurements']
+                       if attr != missing})
+
+
 class _GivenComponentsAndNodesBase(unittest.TestCase):
     def setUp(self):
         if not hasattr(self, 'FIELD_COMPONENTS'):

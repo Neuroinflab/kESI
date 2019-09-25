@@ -26,11 +26,57 @@ import sys
 
 import numpy as np
 
+
+class _MissingAttributeError(TypeError):
+    """
+    An abstract base class for TypeError object validators.
+
+    Attributes
+    ----------
+    _missing : str
+        The name of the attribute which presence is to be validated.
+        A required class attribute of a concrete subclass.
+    """
+    @classmethod
+    def _validate(cls, o):
+        """
+        Validate the object.
+
+        Parameters
+        ----------
+            o : object
+                The object to be validated.
+
+        Raises
+        ------
+            cls
+                If the object is missing `cls._missing` attribute.
+        """
+        if not hasattr(o, cls._missing):
+            raise cls
+
+
 class FunctionalFieldReconstructor(object):
+    class MeasurementManagerHasNoProbeMethodError(_MissingAttributeError):
+        _missing = 'probe'
+
+    class MeasurementManagerHasNoLoadMethodError(_MissingAttributeError):
+        _missing = 'load'
+
+    class MeasurementManagerHasNoNumberOfMeasurementsAttributeError(_MissingAttributeError):
+        _missing = 'number_of_measurements'
+
     def __init__(self, field_components, measurement_manager):
         self._field_components = field_components
         self._measurement_manager = measurement_manager
+        self._validate_measurement_manager()
         self._generate_kernels()
+
+    def _validate_measurement_manager(self):
+        for validator in [self.MeasurementManagerHasNoProbeMethodError,
+                          self.MeasurementManagerHasNoLoadMethodError,
+                          self.MeasurementManagerHasNoNumberOfMeasurementsAttributeError]:
+            validator._validate(self._measurement_manager)
 
     def _generate_kernels(self):
         self._generate_pre_kernel()
