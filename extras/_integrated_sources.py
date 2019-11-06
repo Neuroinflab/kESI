@@ -204,6 +204,7 @@ if __name__ == '__main__':
     FACTOR_POTENTIAL = 4e-5 # physiological CSD
     potential_max = max(abs(EXACT).max(),
                         abs(NUMERIC).max(),
+                        abs(EXACT - NUMERIC).max(),
                         ERROR.max()) * FACTOR_POTENTIAL
     potential_levels = np.linspace(-potential_max, potential_max, 256)
     potential_ticks_major = np.linspace(-potential_max, potential_max, 6)
@@ -251,13 +252,20 @@ if __name__ == '__main__':
         return fig, ax
 
     plot_potential(EXACT, 'Exact')
-    fig, ax = plot_potential(NUMERIC, 'Numeric')
+    plot_potential(NUMERIC, 'Numeric')
+    fig, ax = plot_potential(NUMERIC, 'Numeric & nodes')
     ax.scatter(numeric._quadrature.X[numeric._quadrature.Z == 0] * FACTOR_X,
                numeric._quadrature.Y[numeric._quadrature.Z == 0] * FACTOR_X,
                marker='x',
                color=cbf.BLACK)
     plot_potential(ERROR, 'Estimated error')
     plot_potential(NUMERIC - EXACT, 'Numeric - Exact')
+    fig, ax = plot_potential(NUMERIC - EXACT, 'Numeric - Exact & nodes')
+    ax.scatter(numeric._quadrature.X[numeric._quadrature.Z == 0] * FACTOR_X,
+               numeric._quadrature.Y[numeric._quadrature.Z == 0] * FACTOR_X,
+               marker='o',
+               edgecolors=cbf.BLACK,
+               facecolor='none')
     print("""The error is high near nodes of the quadrature.
 It is due to the high leadfield value (due to short distance).
 
