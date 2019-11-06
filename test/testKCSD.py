@@ -22,6 +22,7 @@
 #                                                                             #
 ###############################################################################
 
+import sys
 import unittest
 import numpy as np
 
@@ -97,6 +98,15 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
                              sorted(approximated))
             self.checkDictAlmostEqual(expected[name],
                                       approximated)
+
+    @unittest.skipIf(sys.version_info < (3, 2),
+                     'Test requires Python version 3.2+')
+    def testDeprecationWarning(self):
+        with self.assertWarns(DeprecationWarning):
+            kesi.KernelFieldApproximator([FunctionFieldComponent(lambda x: 1,
+                                                                 lambda x: 0)],
+                                         nodes={'func': ['zero']},
+                                         points={'func': ['zero']})
 
 
 class _GivenSingleComponentSingleNodeBase(_GivenComponentsAndNodesBase):

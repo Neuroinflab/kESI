@@ -22,6 +22,7 @@
 #                                                                             #
 ###############################################################################
 
+import warnings
 import numpy as np
 
 try:
@@ -125,6 +126,9 @@ class KernelFieldApproximator(_KernelFieldApproximator):
 
     def __init__(self, field_components, nodes, points,
                  regularization_parameter=0):
+        warnings.warn(
+            DeprecationWarning('The class will be removed soon, use FunctionalFieldReconstructor instead.'))
+
         generator = self._KernelGenerator(field_components,
                                           nodes,
                                           points)
