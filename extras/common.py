@@ -331,17 +331,6 @@ class ElectrodeAwareCartesianGaussianSourceKCSD3D(ElectrodeAware,
     pass
 
 
-def cv(reconstructor, measured, regularization_parameters):
-    errors = []
-
-    for regularization_parameter in regularization_parameters:
-        logger.info('cv(): error estimation for regularization parameter: {:g}'.format(regularization_parameter))
-        ERR = np.array(reconstructor.leave_one_out_errors(measured,
-                                                          regularization_parameter))
-        errors.append(np.sqrt((ERR**2).mean()))
-
-    return errors
-
 try:
     import pandas as pd
 

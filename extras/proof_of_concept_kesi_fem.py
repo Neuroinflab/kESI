@@ -6,9 +6,8 @@ import logging
 import kesi
 from common import (FourSphereModel, PolarGaussianSourceFEM,
                     ElectrodeAwarePolarGaussianSourceKCSD3D,
-                    ElectrodeAware, cv,
-                    loadPotentialsAdHocNPZ)
-
+                    ElectrodeAware, loadPotentialsAdHocNPZ)
+from _common_new import cv
 
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
