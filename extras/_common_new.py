@@ -1,5 +1,6 @@
 import logging
 import collections
+import warnings
 
 import numpy as np
 from scipy.special import erf, lpmv
@@ -166,7 +167,14 @@ class FourSphereModel(object):
             ele_dist = np.linalg.norm(ele_pos, axis=1)
             dist_dp = np.linalg.norm(dp_loc)
             cos_theta = np.dot(ele_pos, dp_loc) / (ele_dist * dist_dp)
-            cos_theta = np.nan_to_num(cos_theta)
+            if np.isnan(cos_theta).any():
+                warnings.warn("invalid value of cos_theta", RuntimeWarning)
+                cos_theta = np.nan_to_num(cos_theta)
+
+            if (cos_theta > 1).any() or (cos_theta < -1).any():
+                warnings.warn("cos_theta out of [-1, 1]", RuntimeWarning)
+                cos_theta = np.maximum(-1, np.minimum(1, cos_theta))
+
             theta = np.arccos(cos_theta)
             return theta
 
@@ -176,9 +184,13 @@ class FourSphereModel(object):
             proj_rxyz_rz = (np.dot(ele_pos, dp_loc) / np.sum(dp_loc **2)).reshape(len(ele_pos),1) * dp_loc.reshape(1, 3)
             rxy = ele_pos - proj_rxyz_rz
             x = np.cross(p, dp_loc)
-            cos_phi = np.dot(rxy, x.T) / np.dot(np.linalg.norm(rxy, axis=1).reshape(len(rxy),1), np.linalg.norm(x, axis=1).reshape(1, len(x)))
-            cos_phi = np.nan_to_num(cos_phi)
-            phi_temp = np.arccos(cos_phi)
+            cos_phi = np.dot(rxy, x.T) / np.dot(np.linalg.norm(rxy, axis=1).reshape(len(rxy), 1),
+                                                np.linalg.norm(x, axis=1).reshape(1, len(x)))
+            if np.isnan(cos_phi).any():
+                warnings.warn("invalid value of cos_phi", RuntimeWarning)
+                cos_phi = np.nan_to_num(cos_phi)
+
+            phi_temp = np.arccos(np.maximum(-1, np.minimum(1, cos_phi)))
             phi = phi_temp
             range_test = np.dot(rxy, p.T)
             for i in range(len(r_ele)):
@@ -294,4 +306,10 @@ if __name__ == '__main__':
                                 ELECTRODES.Z)
     assert np.abs((DF.OLD - DF.NEW) / DF.OLD).max() < 1e-10
 
+    dipole = newFourSM([7.437628862425826, 1.9929066472894097, -1.3662702569423635e-15],
+                       [0.0, 0.0, 1.0])
+    assert not np.isnan(dipole(7.211087502867844, 5.368455739408048, -1.3246552843137878e-15))
 
+    dipole = newFourSM([7.437628862425826, 1.9929066472894097, -1.3662702569423635e-15],
+                       [0.0, 0.0, -1.0])
+    assert not np.isnan(dipole(7.211087502867844, 5.368455739408048, -1.3246552843137878e-15))
