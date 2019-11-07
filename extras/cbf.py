@@ -122,26 +122,7 @@ PURPLE    = str(_PURPLE)
 
 
 def _BipolarColormap(name, negative, positive, zero=_WHITE):
-    neg_max = negative.lRGB.max()
-    pos_max = positive.lRGB.max()
-    neg_Y = negative.CIE_1931_XYZ[1]
-    pos_Y = positive.CIE_1931_XYZ[1]
-
-    neg_scale = 0.5 * (neg_Y + pos_Y) / neg_Y
-    pos_scale = 0.5 * (neg_Y + pos_Y) / pos_Y
-
-    if neg_scale * neg_max > 1:
-        pos_scale /= neg_max * neg_scale
-        # neg_scale /= neg_max * neg_scale
-        neg_scale = 1. / neg_max
-
-    if pos_scale * pos_max > 1:
-        neg_scale /= pos_max * pos_scale
-        # pos_scale /= pos_max * pos_scale
-        pos_scale = 1. / pos_max
-
-    negative = negative * neg_scale
-    positive = positive * pos_scale
+    negative, positive = _normalize_colors(negative, positive)
     return colors.LinearSegmentedColormap(
                       name,
                       {k: [(0.0,) + (getattr(negative, k),) * 2,
@@ -151,6 +132,26 @@ def _BipolarColormap(name, negative, positive, zero=_WHITE):
                        for k in ['red', 'green', 'blue']})
 
 
-bwr = _BipolarColormap('cbf.bwr', _BLUE, _ORANGE)
-bbr = _BipolarColormap('cbf.bbr', _BLUE, _ORANGE, _BLACK)
+def _normalize_colors(negative, positive):
+    neg_max = negative.lRGB.max()
+    pos_max = positive.lRGB.max()
+    neg_Y = negative.CIE_1931_XYZ[1]
+    pos_Y = positive.CIE_1931_XYZ[1]
+    neg_scale = 0.5 * (neg_Y + pos_Y) / neg_Y
+    pos_scale = 0.5 * (neg_Y + pos_Y) / pos_Y
+    if neg_scale * neg_max > 1:
+        pos_scale /= neg_max * neg_scale
+        # neg_scale /= neg_max * neg_scale
+        neg_scale = 1. / neg_max
+    if pos_scale * pos_max > 1:
+        neg_scale /= pos_max * pos_scale
+        # pos_scale /= pos_max * pos_scale
+        pos_scale = 1. / pos_max
+    negative = negative * neg_scale
+    positive = positive * pos_scale
+    return negative, positive
+
+
+bwr = _BipolarColormap('cbf.bwr', _BLUE, _VERMILION)
+bbr = _BipolarColormap('cbf.bbr', _BLUE, _VERMILION, _BLACK)
 PRGn = _BipolarColormap('cbf.PRGn', _PURPLE, _GREEN)
