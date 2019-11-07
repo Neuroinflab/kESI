@@ -282,3 +282,14 @@ def cv(reconstructor, measured, regularization_parameters):
         errors.append(np.sqrt((ERR**2).mean()))
 
     return errors
+
+
+def altitude_azimuth_mesh(base, step, alternate=True):
+    for i, altitude in enumerate(np.linspace(base,
+                                             np.pi / 2,
+                                             int(round((np.pi / 2 - base) / step) + 1))):
+        for azimuth in (np.linspace(-1, 1,
+                                    int(round(np.cos(altitude) * 2 * np.pi / step)) + 1,
+                                    endpoint=False)
+                        + (0.5 * (-1) ** i if alternate else 1)) * np.pi:
+            yield altitude, azimuth
