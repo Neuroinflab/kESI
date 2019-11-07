@@ -47,33 +47,6 @@ if __name__ == '__main__':
                                              0.05 * BRAIN_CONDUCTIVITY,
                                              1.00 * BRAIN_CONDUCTIVITY)
     RADIUS = FourSphereModel.Properies(7.9, 8.0, 8.5, 9.0)
-    newFourSM = FourSphereModel(CONDUCTIVITY,
-                                RADIUS)
-
-    # ### FourSphereModel tests
-    # import common
-    # X, Y, Z = np.meshgrid(np.linspace(-8.9, 8.9, 10),
-    #                       np.linspace(-8.9, 8.9, 10),
-    #                       np.linspace(-8.9, 8.9, 10))
-    # ELECTRODES = pd.DataFrame({'X': X.flatten(),
-    #                            'Y': Y.flatten(),
-    #                            'Z': Z.flatten(),
-    #                            })
-    # DF = ELECTRODES.copy()
-    # oldFourSM = common.FourSphereModel(CONDUCTIVITY,
-    #                                    RADIUS,
-    #                                    ELECTRODES)
-    #
-    # SRC = np.array([-0.05, 7.835, -0.0353])
-    # DST = np.array([0.00, 7.765, 0.0353])
-    # DF['OLD'] = oldFourSM.compute_phi(SRC, DST)
-    # P = oldFourSM.I * (SRC - DST)
-    # LOC = 0.5 * (SRC + DST)
-    # newDipoleFourSM = newFourSM(LOC, P)
-    # DF['NEW'] = newDipoleFourSM(DF.X,
-    #                             DF.Y,
-    #                             DF.Z)
-    # assert np.abs((DF.OLD - DF.NEW) / DF.OLD).max() < 1e-10
 
     import common
 
