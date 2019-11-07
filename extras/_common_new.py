@@ -236,6 +236,29 @@ class FourSphereModel(object):
             return getattr(self.model, name)
 
 
+def cv(reconstructor, measured, regularization_parameters):
+    errors = []
+
+    for regularization_parameter in regularization_parameters:
+        logger.info('cv(): error estimation for regularization parameter: {:g}'.format(regularization_parameter))
+        ERR = np.array(reconstructor.leave_one_out_errors(measured,
+                                                          regularization_parameter))
+        errors.append(np.sqrt((ERR**2).mean()))
+
+    return errors
+
+
+def altitude_azimuth_mesh(base, step, alternate=True):
+    for i, altitude in enumerate(np.linspace(base,
+                                             np.pi / 2,
+                                             int(round((np.pi / 2 - base) / step) + 1))):
+        for azimuth in (np.linspace(-1, 1,
+                                    int(round(np.cos(altitude) * 2 * np.pi / step)) + 1,
+                                    endpoint=False)
+                        + (0.5 * (-1) ** i if alternate else 1)) * np.pi:
+            yield altitude, azimuth
+
+
 if __name__ == '__main__':
     import common
     import pandas as pd
@@ -272,24 +295,3 @@ if __name__ == '__main__':
     assert np.abs((DF.OLD - DF.NEW) / DF.OLD).max() < 1e-10
 
 
-def cv(reconstructor, measured, regularization_parameters):
-    errors = []
-
-    for regularization_parameter in regularization_parameters:
-        logger.info('cv(): error estimation for regularization parameter: {:g}'.format(regularization_parameter))
-        ERR = np.array(reconstructor.leave_one_out_errors(measured,
-                                                          regularization_parameter))
-        errors.append(np.sqrt((ERR**2).mean()))
-
-    return errors
-
-
-def altitude_azimuth_mesh(base, step, alternate=True):
-    for i, altitude in enumerate(np.linspace(base,
-                                             np.pi / 2,
-                                             int(round((np.pi / 2 - base) / step) + 1))):
-        for azimuth in (np.linspace(-1, 1,
-                                    int(round(np.cos(altitude) * 2 * np.pi / step)) + 1,
-                                    endpoint=False)
-                        + (0.5 * (-1) ** i if alternate else 1)) * np.pi:
-            yield altitude, azimuth
