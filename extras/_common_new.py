@@ -108,7 +108,7 @@ class FourSphereModel(object):
         return (r12n - k * Y_n * r21n1) / (r12n + Y_n * r21n1)
 
     def __call__(self, loc, P):
-        return self._PointDipole(self, loc, P)
+        return self._PointDipole(self, np.array(loc), P)
 
     class _PointDipole(object):
         def __init__(self, model, loc, P):
@@ -288,7 +288,7 @@ if __name__ == '__main__':
     DF['OLD'] = oldFourSM.compute_phi(src_pos, snk_pos)
     P = oldFourSM.I * (src_pos - snk_pos)
     LOC = 0.5 * (src_pos + snk_pos)
-    newDipoleFourSM = newFourSM(LOC, P)
+    newDipoleFourSM = newFourSM(list(LOC), list(P))
     DF['NEW'] = newDipoleFourSM(ELECTRODES.X,
                                 ELECTRODES.Y,
                                 ELECTRODES.Z)
