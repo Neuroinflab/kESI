@@ -146,56 +146,21 @@ if __name__ == '__main__':
 
     reconstructor = kesi.FunctionalFieldReconstructor(sources,
                                                       MeasurementManager(ELECTRODES))
-    IDX = ~np.isnan(reconstructor._pre_kernel).any(axis=1)
-    DIPOLES_VALID = DIPOLES.iloc[IDX]
 
     plt.figure()
     plt.title('Dipoles')
     plot_altitude_lines(plt.gca(),
                         np.pi / 2 - DIPOLES.ALTITUDE.min())
-    if len(DIPOLES_VALID) > 0:
-        plt.scatter((np.pi / 2 - DIPOLES_VALID.ALTITUDE) * np.cos(DIPOLES_VALID.AZIMUTH),
-                    (np.pi / 2 - DIPOLES_VALID.ALTITUDE) * np.sin(DIPOLES_VALID.AZIMUTH),
-                    color=cbf.SKY_BLUE)
+    plt.scatter((np.pi / 2 - DIPOLES.ALTITUDE) * np.cos(DIPOLES.AZIMUTH),
+                (np.pi / 2 - DIPOLES.ALTITUDE) * np.sin(DIPOLES.AZIMUTH),
+                color=cbf.SKY_BLUE)
 
-    if not IDX.all():
-        for (altitude, azimuth), TMP in DIPOLES.iloc[~IDX].groupby(['ALTITUDE',
-                                                                    'AZIMUTH']):
-            plt.text((np.pi / 2 - altitude) * np.cos(azimuth),
-                     (np.pi / 2 - altitude) * np.sin(azimuth),
-                     str(len(TMP)),
-                     horizontalalignment='center',
-                     verticalalignment='center',
-                     fontweight='bold',
-                     color=cbf.VERMILION)
-
-    if not IDX.all():
-        plt.figure()
-        plt.title('Dipoles vs. electrodes')
-        plot_altitude_lines(plt.gca(),
-                            np.pi / 2 - min(DIPOLES.ALTITUDE.min(),
-                                            DF.ALTITUDE.min()))
-        plt.scatter((np.pi / 2 - DIPOLES.ALTITUDE) * np.cos(DIPOLES.AZIMUTH),
-                    (np.pi / 2 - DIPOLES.ALTITUDE) * np.sin(DIPOLES.AZIMUTH),
-                    color=cbf.BLUE,
-                    marker='+')
-        plt.scatter((np.pi / 2 - DF.ALTITUDE) * np.cos(DF.AZIMUTH),
-                    (np.pi / 2 - DF.ALTITUDE) * np.sin(DF.AZIMUTH),
-                    color=cbf.VERMILION,
-                    marker='x')
-
-    reconstructor2 = kesi.FunctionalFieldReconstructor([s
-                                                        for s, i in zip(sources,
-                                                                        IDX)
-                                                        if i],
-                                                       MeasurementManager(ELECTRODES))
-
-    K = reconstructor2._kernel
+    K = reconstructor._kernel
     EIGENVALUES = abs(np.linalg.eigvalsh(K))
     LOG_START = np.floor(np.log10(EIGENVALUES.min())) - 2
     LOG_END = np.ceil(np.log10(EIGENVALUES.max())) + 4
     REGULARIZATION_PARAMETERS = [0] + list(np.logspace(LOG_START, LOG_END, 100))
-    CV_ERROR = cv(reconstructor2, DF.V, REGULARIZATION_PARAMETERS)
+    CV_ERROR = cv(reconstructor, DF.V, REGULARIZATION_PARAMETERS)
     idx = np.argmin(CV_ERROR)
     regularization_parameter = REGULARIZATION_PARAMETERS[idx]
     plt.figure()
@@ -208,8 +173,8 @@ if __name__ == '__main__':
     plt.axvline(regularization_parameter, ls=':', color=cbf.BLACK)
 
     for rp in [0, regularization_parameter]:
-        approximator = reconstructor2(DF.V,
-                                      regularization_parameter=rp)
+        approximator = reconstructor(DF.V,
+                                     regularization_parameter=rp)
         DIPOLES['W'] = approximator.dipole_moments()
         DIPOLES['WPX'] = DIPOLES.PX * DIPOLES.W
         DIPOLES['WPY'] = DIPOLES.PY * DIPOLES.W
