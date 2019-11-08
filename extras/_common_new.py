@@ -186,6 +186,10 @@ class FourSphereModel(object):
             x = np.cross(p, dp_loc)
             cos_phi = np.dot(rxy, x.T) / np.dot(np.linalg.norm(rxy, axis=1).reshape(len(rxy), 1),
                                                 np.linalg.norm(x, axis=1).reshape(1, len(x)))
+            if abs(cos_phi).max() - 1 > 1e-10:
+                warnings.warn("cos_phi out of [-1 - 1e-10, 1 + 1e-10]",
+                              RuntimeWarning)
+
             if np.isnan(cos_phi).any():
                 warnings.warn("invalid value of cos_phi", RuntimeWarning)
                 cos_phi = np.nan_to_num(cos_phi)
