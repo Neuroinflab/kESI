@@ -106,8 +106,19 @@ class FunctionalFieldReconstructor(object):
                                         ).flatten()))
 
     def _measurement_vector(self, values):
-        return np.reshape(self._measurement_manager.load(values),
-                          (-1, 1))
+        measurements = self._ensure_is_array(
+                                self._measurement_manager.load(values))
+
+        if len(measurements.shape) == 1:
+            return measurements.reshape(-1, 1)
+
+        return measurements
+
+    def _ensure_is_array(self, values):
+        if isinstance(values, np.ndarray):
+            return values
+
+        return np.array(values)
 
     def _solve_kernel(self, measurements, regularization_parameter=0):
         K = self._kernel
@@ -116,17 +127,24 @@ class FunctionalFieldReconstructor(object):
                                measurements)
 
     def leave_one_out_errors(self, measured, regularization_parameter):
+        """
+        Note
+        ----
+
+            In the future result for a static measurement may be a sequence
+            of scalars instead of arrays.
+        """
         n = self._kernel.shape[0]
         KERNEL = self._kernel + regularization_parameter * np.identity(n)
         IDX_N = np.arange(n)
         X = self._measurement_vector(measured)
-        return [self._leave_one_out_estimate(KERNEL, X, i, IDX_N != i) - x[0]
-                for i, x in enumerate(X)]
+        return [self._leave_one_out_estimate(KERNEL, X, i, IDX_N != i) - ROW
+                for i, ROW in enumerate(X)]
 
     def _leave_one_out_estimate(self, KERNEL, X, i, IDX):
-        return np.dot(KERNEL[np.ix_([i], IDX)],
-                      np.linalg.solve(KERNEL[np.ix_(IDX, IDX)],
-                                      X[IDX, :]))[0, 0]
+        return np.matmul(KERNEL[np.ix_([i], IDX)],
+                         np.linalg.solve(KERNEL[np.ix_(IDX, IDX)],
+                                         X[IDX, :]))[0, :]
 
 
 class LinearMixture(object):

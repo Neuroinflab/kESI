@@ -23,6 +23,7 @@
 ###############################################################################
 
 import unittest
+import numpy as np
 
 try:
     from ._common import Stub
@@ -214,33 +215,43 @@ class _GivenTwoNodesAndConstantComponentsTestLeaveOneOutBase(_GivenMappingAsMeas
         observed = self.reconstructor.leave_one_out_errors(
                                           measurements,
                                           regularization_parameter=regularization_parameter)
-        self.assertEqual(len(expected), len(observed))
-        for e, o in zip(expected,
-                        observed):
-            try:
-                self.assertAlmostEqual(e, o)
-            except TypeError:
-                raise AssertionError(repr(o))
+        self.assertEqual(np.shape(expected), np.shape(observed))
+        np.testing.assert_allclose(observed, expected)
+        # for e, o in zip(expected,
+        #                 observed):
+        #     try:
+        #         self.assertAlmostEqual(e, o)
+        #     except TypeError:
+        #         raise AssertionError(repr(o))
 
-    def testLeaveOneOutErrorsGivenConstantInputAndNoRegularisation(self):
-        self.checkLeaveOneOut([0, 0],
+    def testLeaveOneOutErrorsGivenConstantVectorInputAndNoRegularisation(self):
+        self.checkLeaveOneOut([[0], [0]],
                               {'zero': 1,
                                'one': 1,
                                },
                               0)
 
-    def testLeaveOneOutErrorsGivenConstantInputAndRegularisation(self):
-        expected = [-0.5, -0.5]
+    def testLeaveOneOutErrorsGivenConstantVectorInputAndRegularisation(self):
+        expected = [[-0.5], [-0.5]]
         self.checkLeaveOneOut(expected,
                               {'zero': 1,
                                'one': 1,
                               },
                               1)
 
-    def testLeaveOneOutErrorsGivenVariableInputAndNoRegularisation(self):
-        self.checkLeaveOneOut([-1, 1],
+    def testLeaveOneOutErrorsGivenVariableVectorInputAndNoRegularisation(self):
+        self.checkLeaveOneOut([[-1], [1]],
                               {'zero': 2,
                                'one': 1,
+                               },
+                              0)
+
+
+    def testLeaveOneOutErrorsGivenVariableMatrixInputAndNoRegularisation(self):
+        self.checkLeaveOneOut([[-1, -2],
+                               [1, 2]],
+                              {'zero': [2, 4],
+                               'one': [1, 2],
                                },
                               0)
 
