@@ -1,3 +1,5 @@
+import logging
+
 from _common_new import FourSphereModel, cv, altitude_azimuth_mesh
 
 
@@ -156,9 +158,12 @@ if __name__ == '__main__':
                 color=cbf.SKY_BLUE)
 
     K = reconstructor._kernel
-    EIGENVALUES = abs(np.linalg.eigvalsh(K))
-    LOG_START = np.floor(np.log10(EIGENVALUES.min())) - 2
-    LOG_END = np.ceil(np.log10(EIGENVALUES.max())) + 4
+    EIGENVALUES = np.linalg.eigvalsh(K)
+    if EIGENVALUES.min() <= 0:
+        logging.warning('nonpositive eigenvalueof K spotted!')
+
+    LOG_START = np.floor(np.log10(abs(EIGENVALUES).min())) - 2
+    LOG_END = np.ceil(np.log10(abs(EIGENVALUES).max())) + 4
     REGULARIZATION_PARAMETERS = [0] + list(np.logspace(LOG_START, LOG_END, 100))
     CV_ERROR = cv(reconstructor, DF.V, REGULARIZATION_PARAMETERS)
     idx = np.argmin(CV_ERROR)
@@ -166,9 +171,15 @@ if __name__ == '__main__':
     plt.figure()
     plt.title('CV')
     plt.xscale('symlog', linthreshx=10**LOG_START)
-    plt.axvspan(EIGENVALUES.min(), EIGENVALUES.max(), color=cbf.YELLOW)
+    plt.axvspan(abs(EIGENVALUES).min(),
+                abs(EIGENVALUES).max(),
+                color=cbf.YELLOW)
     for x in EIGENVALUES:
-        plt.axvline(x, ls='--', color=cbf.ORANGE)
+        if x > 0:
+            plt.axvline(x, ls='--', color=cbf.SKY_BLUE)
+        else:
+            plt.axvline(-x, ls='-', color=cbf.VERMILION)
+
     plt.plot(REGULARIZATION_PARAMETERS, CV_ERROR, color=cbf.BLUE)
     plt.axvline(regularization_parameter, ls=':', color=cbf.BLACK)
 
