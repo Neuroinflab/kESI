@@ -150,6 +150,17 @@ class _GivenMappingAsMeasurements(_GivenComponentsAndNodesBase):
             return len(self)
 
     def probe(self, field):
+        """
+        Measurements of field.
+
+        The measurements should be returned in a format appropriate for the
+        `self.MeasurementManager` class.
+
+        Note
+        ----
+
+            This is a stub method to enable use of other MM.
+        """
         return field
 
 
