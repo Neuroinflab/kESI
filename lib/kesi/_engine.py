@@ -90,12 +90,13 @@ class FunctionalFieldReconstructor(object):
         m = len(self._field_components)
         n = self._measurement_manager.number_of_measurements
         self._pre_kernel = np.empty((m, n))
-        self._fill_evaluated_components(self._pre_kernel)
+        self._fill_probed_components(self._pre_kernel,
+                                     self._measurement_manager.probe)
         self._pre_kernel /= m
 
-    def _fill_evaluated_components(self, evaluated):
+    def _fill_probed_components(self, values, probe):
         for i, component in enumerate(self._field_components):
-            evaluated[i, :] = self._measurement_manager.probe(component)
+            values[i, :] = probe(component)
 
     def __call__(self, measurements, regularization_parameter=0):
         return LinearMixture(zip(self._field_components,
