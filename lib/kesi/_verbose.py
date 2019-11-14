@@ -280,7 +280,7 @@ class VerboseFFR(FunctionalFieldReconstructor):
 
         See also
         --------
-        N, PHI, PHI_TILDE(measurement_manager)
+        N, M, K_TILDE(measurement_manager)
 
         Notes
         -----
