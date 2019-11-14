@@ -246,17 +246,15 @@ class VerboseFFR(FunctionalFieldReconstructor):
         (see eq. above 27) analogously to :math:`K` (eq 25).
         `K_TILDE == PHI_TILDE(measurement_manager).T @ PHI`
 
-        The cross-kernel matrix is calculated using denormalized PHI matrix
-        as parental class uses normalized PHI one.  Thus it may be affected by
-        numerical errors.
+        The cross-kernel matrix is denormalized as parental class uses
+        normalization.  Thus it may be affected by numerical errors.
 
         .. [1] C. Chintaluri et al. (2019) "kCSD-python, a tool for
            reliable current source density estimation" (preprint available at
            `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
            doi: 10.1101/708511
         """
-        return np.matmul(self.PHI_TILDE(measurement_manager).T,
-                         self.PHI)
+        return self.cross_kernel(measurement_manager) * self.M
 
     def cross_kernel(self, measurement_manager):
         r"""
@@ -290,5 +288,13 @@ class VerboseFFR(FunctionalFieldReconstructor):
 
         `cross_kernel == K_TILDE(measurement_manager) / M`
         """
-        return np.matmul(self.PHI_TILDE(measurement_manager).T,
-                         self._pre_kernel)
+        # Matrix multiplication not used as matrix returned by .PHI_TILDE() may
+        # be too big to be stored in available memory.
+        # The sum() builtin not used as it uses + operator instead of augmented
+        # assignment, thus it may be less memory-efficient than the loop below.
+        cross_kernel = 0
+        for component, ROW in zip(self._field_components,
+                                  self._pre_kernel):
+            cross_kernel += np.outer(measurement_manager.probe(component),
+                                     ROW)
+        return cross_kernel
