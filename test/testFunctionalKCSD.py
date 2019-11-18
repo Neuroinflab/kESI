@@ -22,9 +22,17 @@
 #                                                                             #
 ###############################################################################
 
-import sys
 import unittest
-import numpy as np
+
+try:
+    from ._common import FunctionFieldComponent
+    # When run as script raises:
+    #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
+    #  - `SystemError` (Python 3.3-5), or
+    #  - `ValueError` (Python 2.7).
+
+except (ImportError, SystemError, ValueError):
+    from _common import FunctionFieldComponent
 
 try:
     import pandas as pd
@@ -32,17 +40,6 @@ except:
     pd = None
 
 import kesi as kesi
-
-class FunctionFieldComponent(object):
-    def __init__(self, func, fprime):
-        self._func = func
-        self._fprime = fprime
-
-    def func(self, args):
-        return [self._func(a) for a in args]
-
-    def fprime(self, args):
-        return [self._fprime(a) for a in args]
 
 class _GivenComponentsAndNodesBase(unittest.TestCase):
     def setUp(self):
@@ -55,33 +52,29 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
                 for k in points
                 }
 
-    def createApproximator(self, nodes, points, regularization_parameter=None):
-        if regularization_parameter is None:
-            return kesi.KernelFieldApproximator(self.FIELD_COMPONENTS.values(),
-                                                nodes=nodes,
-                                                points=points)
-        return kesi.KernelFieldApproximator(
-                      self.FIELD_COMPONENTS.values(),
-                      nodes=nodes,
-                      points=points,
-                      regularization_parameter=regularization_parameter)
+    def createReconstructor(self, name, nodes):
+        return kesi.FunctionalKernelFieldReconstructor(
+                        self.FIELD_COMPONENTS.values(),
+                        name,
+                        nodes)
 
     def _checkApproximation(self, expected, measured, measuredName,
                             regularization_parameter=None):
-        approximator = self.createApproximator({
-                              measuredName: list(measured)},
-                              {k: list(v)
-                               for k, v in expected.items()},
-                              regularization_parameter=regularization_parameter)
-        for name in expected:
-            self.checkDictAlmostEqual(expected[name],
-                                      approximator(name,
-                                                   measuredName,
-                                                   measured))
+        reconstructor = self.createReconstructor(measuredName,
+                                                 list(measured))
+        self.checkResultsAlmostEqual(self._getApproximator(
+                                              reconstructor,
+                                              measured,
+                                              regularization_parameter),
+                                     expected)
 
-    def checkDictAlmostEqual(self, expected, observed):
-        for k, v in expected.items():
-            self.assertAlmostEqual(v, observed[k])
+    def _getApproximator(self, reconstructor, measured,
+                         regularization_parameter=None):
+        if regularization_parameter is None:
+            return reconstructor(measured)
+
+        return reconstructor(measured,
+                             regularization_parameter=regularization_parameter)
 
     def checkWeightedApproximation(self, measuredName, nodes,
                                    names, points, weights={}):
@@ -91,22 +84,20 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
             self.createField(measuredName, nodes, weights=weights),
             measuredName)
 
-    def checkApproximator(self, expected, approximator, funcValues):
-        for name in expected:
-            approximated = approximator(name, 'func', funcValues)
-            self.assertEqual(sorted(expected[name]),
-                             sorted(approximated))
-            self.checkDictAlmostEqual(expected[name],
-                                      approximated)
+    def checkReconstructor(self, expected, reconstructor, funcValues,
+                           regularization_parameter=None):
+        self.checkResultsAlmostEqual(self._getApproximator(
+                                              reconstructor,
+                                              funcValues,
+                                              regularization_parameter),
+                                     expected)
 
-    @unittest.skipIf(sys.version_info < (3, 2),
-                     'Test requires Python version 3.2+')
-    def testDeprecationWarning(self):
-        with self.assertWarns(DeprecationWarning):
-            kesi.KernelFieldApproximator([FunctionFieldComponent(lambda x: 1,
-                                                                 lambda x: 0)],
-                                         nodes={'func': ['zero']},
-                                         points={'func': ['zero']})
+    def checkResultsAlmostEqual(self, approximator, expected):
+        for name in expected:
+            field = getattr(approximator, name)
+
+            for k, v in expected[name].items():
+                self.assertAlmostEqual(v, field(k))
 
 
 class _GivenSingleComponentSingleNodeBase(_GivenComponentsAndNodesBase):
@@ -140,9 +131,15 @@ class _GivenSingleComponentSingleNodeBase(_GivenComponentsAndNodesBase):
                                         points)
 
 
-class GivenSingleConstantFieldComponentSingleNode(_GivenSingleComponentSingleNodeBase):
+class _GivenSingleConstantComponent(object):
     FIELD_COMPONENTS = {'1': FunctionFieldComponent(lambda x: 1,
-                                                    lambda x: 0)}
+                                                    lambda x: 0),
+                        }
+
+
+class GivenSingleConstantFieldComponentSingleNode(_GivenSingleComponentSingleNodeBase,
+                                                  _GivenSingleConstantComponent):
+    pass
 
 
 class _GivenTwoNodesBase(_GivenComponentsAndNodesBase):
@@ -176,6 +173,64 @@ class _GivenTwoNodesBase(_GivenComponentsAndNodesBase):
                                         weights={'1': 2})
 
 
+class _GivenTwoNodesAndConstantComponentsTestLeaveOneOutBase(_GivenComponentsAndNodesBase):
+    NODES = ['zero', 'one']
+
+    def setUp(self):
+        super(_GivenTwoNodesAndConstantComponentsTestLeaveOneOutBase,
+              self).setUp()
+        self.reconstructor = self.createReconstructor('func', self.NODES)
+
+    def checkLeaveOneOut(self, expected, measurements,
+                         regularization_parameter):
+        observed = self.reconstructor.leave_one_out_errors(
+                                          measurements,
+                                          regularization_parameter=regularization_parameter)
+        self.assertEqual(len(expected), len(observed))
+        for e, o in zip(expected,
+                        observed):
+            try:
+                self.assertAlmostEqual(e, o)
+            except TypeError:
+                raise AssertionError(repr(o))
+
+    def testLeaveOneOutErrorsGivenConstantInputAndNoRegularisation(self):
+        self.checkLeaveOneOut([0, 0],
+                              {'zero': 1,
+                               'one': 1,
+                               },
+                              0)
+
+    def testLeaveOneOutErrorsGivenConstantInputAndRegularisation(self):
+        expected = [-0.5, -0.5]
+        self.checkLeaveOneOut(expected,
+                              {'zero': 1,
+                               'one': 1,
+                              },
+                              1)
+
+    def testLeaveOneOutErrorsGivenVariableInputAndNoRegularisation(self):
+        self.checkLeaveOneOut([-1, 1],
+                              {'zero': 2,
+                               'one': 1,
+                               },
+                              0)
+
+
+class GivenTwoNodesAndOneConstantComponentTestLeaveOneOut(_GivenTwoNodesAndConstantComponentsTestLeaveOneOutBase,
+                                           _GivenSingleConstantComponent):
+    pass
+
+
+class GivenTwoNodesAndTwoSameConstantComponentsTestLeaveOneOut(_GivenTwoNodesAndConstantComponentsTestLeaveOneOutBase):
+     FIELD_COMPONENTS = {'a': FunctionFieldComponent(lambda x: 1,
+                                                     lambda x: 0),
+                         'b': FunctionFieldComponent(lambda x: 1,
+                                                     lambda x: 0),
+                         }
+
+
+
 class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
     FIELD_COMPONENTS = {'1': FunctionFieldComponent(lambda x: 1,
                                                     lambda x: 0),
@@ -196,44 +251,12 @@ class GivenTwoNodesAndTwoLinearFieldComponents(_GivenTwoNodesBase):
                                'one': 0.6,
                                },
                     }
-        self.checkApproximator(expected,
-                               self.createApproximator(
-                                      {'func': list(expected['func'])},
-                                      {k: list(v)
-                                       for k, v in expected.items()},
-                                      regularization_parameter=1.0),
-                               {'zero': 1, 'one': 2})
-
-    def testCopy(self):
-        expected = {'func': {'zero': 0.8,
-                             'one': 1.4,
-                             },
-                    'fprime': {'zero': 0.6,
-                               'one': 0.6,
-                               },
-                    }
-        original = self.createApproximator(
-                          {'func': list(expected['func'])},
-                          {k: list(v)
-                           for k, v in expected.items()},
-                          regularization_parameter=1.0)
-        self.checkApproximator(expected, original.copy(),
-                               funcValues={'zero': 1, 'one': 2})
-
-    def testCopyRegularisationChange(self):
-        expected = {'func': {'zero': 0.8,
-                             'one': 1.4,
-                             },
-                    'fprime': {'zero': 0.6,
-                               'one': 0.6,
-                               },
-                    }
-        original = self.createApproximator({'func': list(expected['func'])},
-                                           {k: list(v)
-                                            for k, v in expected.items()})
-        self.checkApproximator(expected,
-                               original.copy(regularization_parameter=1.0),
-                               funcValues={'zero': 1, 'one': 2})
+        self.checkReconstructor(expected,
+                                self.createReconstructor(
+                                        'func',
+                                        list(expected['func'])),
+                                {'zero': 1, 'one': 2},
+                                regularization_parameter=0.5)
 
 
 class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase):
@@ -258,47 +281,6 @@ class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase):
                         }
 
 
-class GivenNumericFunctionsAsFieldComponents(_GivenComponentsAndNodesBase):
-    FIELD_COMPONENTS = {'1': FunctionFieldComponent(lambda x: 1,
-                                                    lambda x: 0),
-                        'x': FunctionFieldComponent(lambda x: x[0],
-                                                    lambda x: 1),
-                        }
-
-    def testNumpy2DArraysAreValidCollectionsOfTuples(self):
-        expected = {'func': {(0,): 1,
-                             (1,): 3,
-                             },
-                    'fprime': {(0,): 2,
-                               (1,): 2,
-                               },
-                    }
-        self.checkApproximator(expected,
-                               self.createApproximator(
-                                    {'func': np.array(list(expected['func']))},
-                                    {k: np.array(list(v))
-                                     for k, v in expected.items()}),
-                                    {(0,): 1,
-                                     (1,): 3})
-
-    def testNumpy3DArraysAreValidCollectionsOfNestedTuples(self):
-        expected = {'func': {((0,),): 1,
-                             ((1,),): 3,
-                             },
-                    'fprime': {((0,),): 2,
-                               ((1,),): 2,
-                               },
-                    }
-        self.checkApproximator(expected,
-                               self.createApproximator(
-                                    {'func': np.array(list(expected['func']))},
-                                    {k: np.array(list(v))
-                                     for k, v in expected.items()}),
-                                    {((0,),): 1,
-                                     ((1,),): 3})
-
-
-
 @unittest.skipIf(pd is None, 'No pandas module')
 class WhenCalledWithPandasSeries(GivenTwoNodesAndThreeLinearFieldComponents):
     def createField(self, name, points, weights={}):
@@ -309,15 +291,17 @@ class WhenCalledWithPandasSeries(GivenTwoNodesAndThreeLinearFieldComponents):
 
     def _checkApproximation(self, expected, measured, measuredName,
                             regularization_parameter=None):
-        approximator = self.createApproximator(
-                              {measuredName: list(measured.index)},
-                              {k: list(v.index)
-                               for k, v in expected.items()},
-                              regularization_parameter=regularization_parameter)
+        reconstructor = self.createReconstructor(
+                              measuredName,
+                              list(measured.index))
+        approximator = self._getApproximator(reconstructor,
+                                             measured,
+                                             regularization_parameter)
         for name in expected:
-            approximated = approximator(name, measuredName, measured)
-            self.assertIsInstance(approximated, pd.Series)
-            self.assertTrue((expected[name] == approximated).all())
+            field = getattr(approximator, name)
+            for k in expected[name].index:
+                self.assertAlmostEqual(expected[name][k],
+                                       field(k))
 
 
 if __name__ == '__main__':

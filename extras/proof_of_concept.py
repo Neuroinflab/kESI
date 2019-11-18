@@ -17,6 +17,8 @@ def make_plot(xx, yy, zz, title, cmap=cm.bwr):
     ax = plt.subplot(111)
     ax.set_aspect('equal')
     t_max = np.max(np.abs(zz))
+    if t_max == 0:
+        t_max = np.finfo(zz.dtype).eps
     levels = np.linspace(-1 * t_max, t_max, 32)
     im = ax.contourf(xx, yy, zz, levels=levels, cmap=cmap)
     ax.set_xlabel('X (mm)')
@@ -33,7 +35,7 @@ def integrate_2d(csd_at, true_csd, ele_pos, h, csd_lims):
     Ny = ylin.shape[0]
     m = np.sqrt((ele_pos[0] - csd_x)**2 + (ele_pos[1] - csd_y)**2)
     m[m < 0.0000001] = 0.0000001
-    y = np.arcsinh(2 * h / m) * true_csd
+    y = np.arcsinh(h / m) * true_csd
     integral_1D = np.zeros(Ny)
     for i in range(Ny):
         integral_1D[i] = integrate.simps(y[:, i], ylin)
@@ -84,8 +86,13 @@ class SourceGauss2DBase(object):
         self.conductivity = conductivity
 
     def csd(self, XY):
-        var = (R / 3.0)**2
-        return np.exp(-0.5 / var * self._dist2(XY)) / (2*np.pi*var)
+        var = (self.R / 3.0)**2
+        d = distance.cdist(XY, [[self.x, self.y]]).flatten()
+        return np.exp(-0.5 * d ** 2 / var) / (
+                np.sqrt(2 * np.pi) ** 2 * var)
+        #return np.exp(-0.5 * np.sqrt(self._dist2(XY)) ** 2 / var) / (
+        #        np.sqrt(2 * np.pi) ** 2 * var)
+        ##return np.exp(-0.5 / var * self._dist2(XY)) / (2*np.pi*var)
 
     def _dist2(self, XY):
         # X, Y = np.array(XY).T
@@ -138,9 +145,8 @@ class InterpolatingGeneratorOfSourceGauss2D(list):
                                      lambda x: -R,
                                      lambda x: R,
                                      args=(dist, var, self.h))
-        #return pot * (0.25 / (np.pi**2 * var * self.conductivity))
+        #return pot * (0.25 / (np.pi**2 * var * self._set_conductivities))
         return pot * (0.5 / (np.pi * self.conductivity))
-        # Potential basis functions bi_x_y
 
     def int_pot_2D(self, xp, yp, x, var, h):
         y = np.sqrt((x-xp)**2 + yp**2)
@@ -148,7 +154,9 @@ class InterpolatingGeneratorOfSourceGauss2D(list):
             y = 0.00001
         dist2 = xp**2 + yp**2
         #return np.arcsinh(h/y) * np.exp(-0.5 * dist2 / var)
-        return np.arcsinh(h/y) * np.exp(-0.5 * dist2 / var) / (2 * np.pi * var)
+        return np.arcsinh(h / y) * (np.exp(-0.5 * np.sqrt(dist2) ** 2 / var) / (
+                np.sqrt(2 * np.pi) ** 2 * var))
+        #return np.arcsinh(h/y) * np.exp(-0.5 * dist2 / var) / (2 * np.pi * var)
 
 
 
@@ -225,6 +233,8 @@ def cv(original, measured, lambdas):
             CK = KERNEL[np.ix_([i], IDX)]
             EST = np.dot(CK,
                          np.linalg.solve(K + l * I, P))
+                         # np.dot(np.linalg.inv(K + l * I),
+                         #        P))
             errors[-1] += (EST[0, 0] - p) ** 2
 
     return errors
@@ -256,8 +266,12 @@ print('CV: kESI {:g}s,\tkCSD {:g}s'.format((endCvKESI - startCvKESI).total_secon
 make_plot(csd_x, csd_y, true_csd, 'True CSD')
 make_plot(csd_x, csd_y, est_csd[:,:,0], 'kCSD CSD')
 make_plot(csd_x, csd_y, kesi_csd, 'kESI CSD (0)')
-make_plot(csd_x, csd_y, kesi_csd - est_csd[:,:,0],
-          'kESI - kCSD CSD (0)')
-make_plot(csd_x, csd_y, do_kesi(original.copy(lambda_=err[idx_min]), pots, ele_pos), 'kESI CSD (cv: {:g})'.format(err[idx_min]))
+diff = kesi_csd - est_csd[:, :, 0]
+if (diff != 0).any():
+    make_plot(csd_x, csd_y, diff, 'kESI - kCSD CSD (0)')
+else:
+    print('kESI and kCSD are compatible')
+make_plot(csd_x, csd_y, do_kesi(original.copy(
+    regularization_parameter=err[idx_min]), pots, ele_pos), 'kESI CSD (cv: {:g})'.format(err[idx_min]))
 make_plot(csd_x, csd_y, k.values('CSD')[:,:,0], 'kCSD CSD (cv:{.lambd:g})'.format(k))
 plt.show()
