@@ -62,44 +62,44 @@ class _MatrixMM(MeasurementManagerBase):
 
 
 class TestKernelsOfVerboseFFR(unittest.TestCase):
-    _PHI = [[1, 2],
-            [3, 4],
-            [5, 6]]
-    _PHI_TILDE = [[-10, 20],
-                  [-30, 40],
-                  [-50, 60]]
+    _PROBED_POTENTIAL_BASIS = [[1, 2],
+                               [3, 4],
+                               [5, 6]]
+    _PROBED_CSD_BASIS = [[-10, 20],
+                         [-30, 40],
+                         [-50, 60]]
 
     @property
-    def PHI(self):
-        return np.array(self._PHI,
+    def PROBED_POTENTIAL_BASIS(self):
+        return np.array(self._PROBED_POTENTIAL_BASIS,
                         dtype=float)
 
     @property
-    def PHI_TILDE(self):
-        return np.array(self._PHI_TILDE,
+    def PROBED_CSD_BASIS(self):
+        return np.array(self._PROBED_CSD_BASIS,
                         dtype=float)
 
     @property
-    def K(self):
-        return np.matmul(np.transpose(self.PHI),
-                         self.PHI)
+    def KERNEL(self):
+        return np.matmul(np.transpose(self.PROBED_POTENTIAL_BASIS),
+                         self.PROBED_POTENTIAL_BASIS) / self.NUMBER_OF_BASIS
 
     @property
-    def K_TILDE(self):
-        return np.matmul(np.transpose(self.PHI_TILDE),
-                         self.PHI)
+    def CROSS_KERNEL(self):
+        return np.matmul(np.transpose(self.PROBED_CSD_BASIS),
+                         self.PROBED_POTENTIAL_BASIS) / self.NUMBER_OF_BASIS
 
     @property
-    def M(self):
-        return self.PHI.shape[0]
+    def NUMBER_OF_BASIS(self):
+        return self.PROBED_POTENTIAL_BASIS.shape[0]
 
     @property
-    def N(self):
-        return self.PHI.shape[1]
+    def NUMBER_OF_ELECTRODES(self):
+        return self.PROBED_POTENTIAL_BASIS.shape[1]
 
     def setUp(self):
-        self.estimation_mgr = _MatrixMM(self.PHI_TILDE)
-        self.reconstructor = self.getReconstructor(self.PHI)
+        self.estimation_mgr = _MatrixMM(self.PROBED_CSD_BASIS)
+        self.reconstructor = self.getReconstructor(self.PROBED_POTENTIAL_BASIS)
 
     def getReconstructor(self, measurements_of_basis_functions):
         return VerboseFFR(range(len(measurements_of_basis_functions)),
@@ -123,39 +123,33 @@ class TestKernelsOfVerboseFFR(unittest.TestCase):
         self.assertTrue(issubclass(VerboseFFR,
                                    FunctionalFieldReconstructor))
 
-    def testAttribute_PHI(self):
-        self.checkArrayAlmostEqual(self.PHI,
-                                   self.reconstructor.PHI)
-
-    def testAttribute_K(self):
-        self.checkArrayAlmostEqual(self.K,
-                                   self.reconstructor.K)
+    def testAttribute_probed_basis(self):
+        self.checkArrayAlmostEqual(self.PROBED_POTENTIAL_BASIS,
+                                   self.reconstructor.probed_basis)
 
     def testAttribute_kernel(self):
-        self.checkArrayAlmostEqual(self.K / self.M,
+        self.checkArrayAlmostEqual(self.KERNEL,
                                    self.reconstructor.kernel)
 
-    def testAttribute_M(self):
-        self.assertIsInstance(self.reconstructor.M, int)
-        self.assertEqual(self.M,
-                         self.reconstructor.M)
+    def testAttribute_number_of_basis(self):
+        self.assertIsInstance(self.reconstructor.number_of_basis,
+                              int)
+        self.assertEqual(self.NUMBER_OF_BASIS,
+                         self.reconstructor.number_of_basis)
 
-    def testAttribute_N(self):
-        self.assertIsInstance(self.reconstructor.N, int)
-        self.assertEqual(self.N,
-                         self.reconstructor.N)
+    def testAttribute_number_of_electrodes(self):
+        self.assertIsInstance(self.reconstructor.number_of_electrodes,
+                              int)
+        self.assertEqual(self.NUMBER_OF_ELECTRODES,
+                         self.reconstructor.number_of_electrodes)
 
-    def testMethod_PHI_TILDE(self):
-        self.checkArrayEqual(self.PHI_TILDE,
-                             self.reconstructor.PHI_TILDE(self.estimation_mgr))
+    def testMethod_get_probed_basis(self):
+        self.checkArrayEqual(self.PROBED_CSD_BASIS,
+                             self.reconstructor.get_probed_basis(self.estimation_mgr))
 
-    def testMethod_K_TILDE(self):
-        self.checkArrayAlmostEqual(self.K_TILDE,
-                                   self.reconstructor.K_TILDE(self.estimation_mgr))
-
-    def testMethod_cross_kernel(self):
-        self.checkArrayAlmostEqual(self.K_TILDE / self.M,
-                                   self.reconstructor.cross_kernel(self.estimation_mgr))
+    def testMethod_get_kernel_matrix(self):
+        self.checkArrayAlmostEqual(self.CROSS_KERNEL,
+                                   self.reconstructor.get_kernel_matrix(self.estimation_mgr))
 
 
 if __name__ == '__main__':
