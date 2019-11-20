@@ -28,8 +28,10 @@ from kesi._engine import MeasurementManagerBase
 
 
 class TestMeasurementManagerBase(unittest.TestCase):
+    CLASS = MeasurementManagerBase
+
     def setUp(self):
-        self.manager = MeasurementManagerBase()
+        self.manager = self.CLASS()
 
     def testLoadMethodIsIdentity(self):
         self.assertIs(self,

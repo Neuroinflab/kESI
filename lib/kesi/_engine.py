@@ -66,6 +66,11 @@ class FunctionalFieldReconstructor(object):
     class MeasurementManagerHasNoNumberOfMeasurementsAttributeError(_MissingAttributeError):
         _missing = 'number_of_measurements'
 
+    _mm_validators = [MeasurementManagerHasNoProbeMethodError,
+                      MeasurementManagerHasNoLoadMethodError,
+                      MeasurementManagerHasNoNumberOfMeasurementsAttributeError,
+                      ]
+
     def __init__(self, field_components, measurement_manager):
         self._field_components = field_components
         self._measurement_manager = measurement_manager
@@ -73,9 +78,7 @@ class FunctionalFieldReconstructor(object):
         self._generate_kernels()
 
     def _validate_measurement_manager(self):
-        for validator in [self.MeasurementManagerHasNoProbeMethodError,
-                          self.MeasurementManagerHasNoLoadMethodError,
-                          self.MeasurementManagerHasNoNumberOfMeasurementsAttributeError]:
+        for validator in self._mm_validators:
             validator._validate(self._measurement_manager)
 
     def _generate_kernels(self):

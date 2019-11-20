@@ -24,7 +24,8 @@
 
 import numpy as np
 
-from ._engine import FunctionalFieldReconstructor, LinearMixture
+from ._engine import (FunctionalFieldReconstructor, LinearMixture,
+                      MeasurementManagerBase, _MissingAttributeError)
 
 class VerboseFFR(FunctionalFieldReconstructor):
     """
@@ -40,6 +41,11 @@ class VerboseFFR(FunctionalFieldReconstructor):
     get_probed_basis(measurement_manager)
     get_kernel_matrix(measurement_manager)
 
+    Class attributes
+    ----------------
+    MeasurementManagerBase
+    MeasurementManagerHasNoProbeAtSinglePointMethodError
+
     Notes
     -----
     This class extends its parent, providing access to theoretical concepts
@@ -51,6 +57,37 @@ class VerboseFFR(FunctionalFieldReconstructor):
        `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
        doi: 10.1101/708511
     """
+    class MeasurementManagerBase(MeasurementManagerBase):
+        def probe_at_single_point(self, field, *args, **kwargs):
+            """
+            Probe the field at single point.
+
+            An abstract method implementing  probing of the appropriate basis
+            function at appropriate point.
+
+            Parameters
+            ----------
+            field : object
+                An object which implements corresponding basis functions.
+            args, kwargs
+                Description of the point.
+
+            Returns
+            -------
+            float
+                Value of the field at the point.
+
+            Notes
+            -----
+            It is possible, that vector returntypes will be allowed
+            """
+            raise NotImplementedError
+
+    class MeasurementManagerHasNoProbeAtSinglePointMethodError(_MissingAttributeError):
+        _missing = 'probe_at_single_point'
+
+    _mm_validators = (FunctionalFieldReconstructor._mm_validators
+                      + [MeasurementManagerHasNoProbeAtSinglePointMethodError])
 
     @property
     def probed_basis(self):

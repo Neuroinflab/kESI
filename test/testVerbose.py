@@ -27,11 +27,21 @@ import collections
 
 import numpy as np
 
-from kesi._engine import FunctionalFieldReconstructor, MeasurementManagerBase
+try:
+    from . import testMeasurementManagerBase, testEngine
+    # When run as script raises:
+    #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
+    #  - `SystemError` (Python 3.3-5), or
+    #  - `ValueError` (Python 2.7).
+
+except (ImportError, SystemError, ValueError):
+    import testMeasurementManagerBase, testEngine
+
+from kesi._engine import FunctionalFieldReconstructor
 from kesi._verbose import VerboseFFR
 
 
-class _PlainMatrixMM(MeasurementManagerBase):
+class _PlainMatrixMM(VerboseFFR.MeasurementManagerBase):
     def __init__(self, measurements_of_basis_functions):
         '''
         Parameters
@@ -237,6 +247,27 @@ class MockTestKernelFunctionsOfVerboseFFR(TestKernelMatricesOfVerboseFFR):
                 self.assertIn(basis, basis_probed)
             for basis in basis_probed:
                 self.assertIn(basis, self.reconstructor._field_components)
+
+
+class TestsOfInitializationErrors(testEngine.TestsOfInitializationErrors):
+    CLASS = VerboseFFR
+
+    MM_MISSING_ATTRIBUTE_ERRORS = (
+        testEngine.TestsOfInitializationErrors.MM_MISSING_ATTRIBUTE_ERRORS
+        + [('probe_at_single_point', 'ProbeAtSinglePointMethod')])
+
+
+
+class TestMeasurementManagerBase(testMeasurementManagerBase.TestMeasurementManagerBase):
+    CLASS = VerboseFFR.MeasurementManagerBase
+
+    def testMethod_probe_at_single_point_isAbstract(self):
+        for args, kwargs in [((), {}),
+                             ((0,), {}),
+                             ((), {'a': 1}),
+                             ]:
+            with self.assertRaises(NotImplementedError):
+                self.manager.probe_at_single_point(None, *args, **kwargs)
 
 
 if __name__ == '__main__':
