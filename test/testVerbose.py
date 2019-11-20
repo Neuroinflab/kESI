@@ -235,7 +235,7 @@ class MockTestKernelFunctionsOfVerboseFFR(TestKernelMatricesOfVerboseFFR):
                              ]:
 
             calls = self.measurement_mgr.recorded_calls['probe_at_single_point']
-            calls.clear()
+            del calls[:] # Python 2.7 does not support list.clear()
             self.reconstructor.get_kernel_functions(*args, **kwargs)
 
             self.assertEqual(self.NUMBER_OF_BASIS, len(calls))
