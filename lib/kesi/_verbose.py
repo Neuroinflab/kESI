@@ -24,7 +24,7 @@
 
 import numpy as np
 
-from ._engine import FunctionalFieldReconstructor
+from ._engine import FunctionalFieldReconstructor, LinearMixture
 
 class VerboseFFR(FunctionalFieldReconstructor):
     """
@@ -234,3 +234,34 @@ class VerboseFFR(FunctionalFieldReconstructor):
             cross_kernel += np.outer(measurement_manager.probe(component),
                                      ROW)
         return cross_kernel
+
+    def get_kernel_functions(self, *args, **kwargs):
+        """
+        The (cross-)kernel unary functions.
+
+        Parameters
+        ----------
+            Anything that passed to by the `.probe_at_single_point()`
+            method of the measurement manager (given to the constructor) will
+            be interpreted as a single measurement point (:math:`x`).
+
+        Returns
+        -------
+        object
+            The object implements the unary (cross-)kernel functions as its
+            methods.
+
+        Notes
+        -----
+        The unary (cross-)kernel function is a binary (cross-)kernel function
+        (:math:`K(y, x)`, see eq. 16 in [1]_) fixed with one leg at :math:`x`.
+
+        .. [1] C. Chintaluri et al. (2019) "kCSD-python, a tool for
+           reliable current source density estimation" (preprint available at
+           `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
+           doi: 10.1101/708511
+        """
+        probe = self._measurement_manager.probe_at_single_point
+        return (LinearMixture([(component, probe(component, *args, **kwargs))
+                               for component in self._field_components])
+                / self.number_of_basis)
