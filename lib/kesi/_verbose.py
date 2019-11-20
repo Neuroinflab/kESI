@@ -25,7 +25,7 @@
 import numpy as np
 
 from ._engine import (FunctionalFieldReconstructor, LinearMixture,
-                      MeasurementManagerBase, _MissingAttributeError)
+                      _MissingAttributeError)
 
 class VerboseFFR(FunctionalFieldReconstructor):
     """
@@ -57,7 +57,7 @@ class VerboseFFR(FunctionalFieldReconstructor):
        `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
        doi: 10.1101/708511
     """
-    class MeasurementManagerBase(MeasurementManagerBase):
+    class MeasurementManagerBase(FunctionalFieldReconstructor.MeasurementManagerBase):
         def probe_at_single_point(self, field, *args, **kwargs):
             """
             Probe the field at single point.

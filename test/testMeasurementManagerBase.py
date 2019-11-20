@@ -24,11 +24,11 @@
 
 import unittest
 
-from kesi._engine import MeasurementManagerBase
+from kesi._engine import FunctionalFieldReconstructor
 
 
 class TestMeasurementManagerBase(unittest.TestCase):
-    CLASS = MeasurementManagerBase
+    CLASS = FunctionalFieldReconstructor.MeasurementManagerBase
 
     def setUp(self):
         self.manager = self.CLASS()

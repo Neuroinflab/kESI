@@ -25,6 +25,7 @@
 import sys
 
 import numpy as np
+import warnings
 
 
 class _MissingAttributeError(TypeError):
@@ -57,6 +58,66 @@ class _MissingAttributeError(TypeError):
 
 
 class FunctionalFieldReconstructor(object):
+    class MeasurementManagerBase(object):
+        """
+        Base class for measurement managers.
+
+        An abstract base class for classes implementing measurement handling, i.e.
+        probing a field at some ordered measurement points (`probe()` method) and
+        loading such values from some other object (e.g. converting the object).
+
+        Objects of this class implement the measurement points as well as probing
+        and loading.
+
+        Attributes
+        ----------
+            number_of_measurements: int
+                A number of measurement points. May be implemented as a property.
+        """
+        number_of_measurements = None
+
+        def load(self, measurements):
+            """
+            Load the measurements.
+
+            Returns
+            -------
+            Sequence
+                Values measured at the measurement points.
+
+            Note
+            ----
+                Unless overriden in a subclass, requires `measurements` to be an
+                sequence appropriate to be returned.
+            """
+            return measurements
+
+        def probe(self, field):
+            """
+            Probe the field.
+
+            An abstract method implementing probing the field in the measurement
+            points.
+
+            Parameters
+            ----------
+            field : object
+                An object implementing the field. It is up to the measurement
+                manager to interpret the object and use its API.
+
+            Returns
+            -------
+            Sequence
+                A sequence of the field quantities measured at the measurement
+                points.
+
+            Raises
+            ------
+            NotImplementedError
+                Always (unless overriden in a subclass).
+            """
+            raise NotImplementedError
+
     class MeasurementManagerHasNoProbeMethodError(_MissingAttributeError):
         _missing = 'probe'
 
@@ -281,7 +342,7 @@ class LinearMixture(object):
             return self._div(other)
 
 
-class MeasurementManagerBase(object):
+class MeasurementManagerBase(FunctionalFieldReconstructor.MeasurementManagerBase):
     """
     Base class for measurement managers.
 
@@ -292,51 +353,19 @@ class MeasurementManagerBase(object):
     Objects of this class implement the measurement points as well as probing
     and loading.
 
+    .. deprecated:: 0.2
+        The class has been moved to `FunctionalFieldReconstructor` class.
+        Use `FunctionalFieldReconstructor.MeasurementManagerBase` instead.
+
     Attributes
     ----------
         number_of_measurements: int
             A number of measurement points. May be implemented as a property.
     """
-    number_of_measurements = None
 
-    def load(self, measurements):
-        """
-        Load the measurements.
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            DeprecationWarning(
+                'The class has been moved to `FunctionalFieldReconstructor`.  Use `FunctionalFieldReconstructor.MeasurementManagerBase` instead.'))
 
-        Returns
-        -------
-        Sequence
-            Values measured at the measurement points.
-
-        Note
-        ----
-            Unless overriden in a subclass, requires `measurements` to be an
-            sequence appropriate to be returned.
-        """
-        return measurements
-
-    def probe(self, field):
-        """
-        Probe the field.
-
-        An abstract method implementing probing the field in the measurement
-        points.
-
-        Parameters
-        ----------
-        field : object
-            An object implementing the field. It is up to the measurement
-            manager to interpret the object and use its API.
-
-        Returns
-        -------
-        Sequence
-            A sequence of the field quantities measured at the measurement
-            points.
-
-        Raises
-        ------
-        NotImplementedError
-            Always (unless overriden in a subclass).
-        """
-        raise NotImplementedError
+        super(MeasurementManagerBase, self).__init__(*args, **kwargs)
