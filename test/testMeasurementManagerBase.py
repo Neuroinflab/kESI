@@ -24,12 +24,14 @@
 
 import unittest
 
-from kesi._engine import MeasurementManagerBase
+from kesi._engine import FunctionalFieldReconstructor
 
 
 class TestMeasurementManagerBase(unittest.TestCase):
+    CLASS = FunctionalFieldReconstructor.MeasurementManagerBase
+
     def setUp(self):
-        self.manager = MeasurementManagerBase()
+        self.manager = self.CLASS()
 
     def testLoadMethodIsIdentity(self):
         self.assertIs(self,
