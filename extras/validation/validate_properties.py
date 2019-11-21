@@ -15,7 +15,7 @@ class ValidateKESI(VerboseFFR):
     def _eigensources(self, measurement_manager_basis,
                       regularization_parameter=0):
         kernel = self.kernel
-        cross_kernel = self.cross_kernel(measurement_manager_basis)
+        cross_kernel = self.get_kernel_matrix(measurement_manager_basis)
         self.eigenvalues, self.eigenvectors = self._evd(kernel,
                                                         regularization_parameter)
         return np.dot(cross_kernel, self.eigenvectors)
