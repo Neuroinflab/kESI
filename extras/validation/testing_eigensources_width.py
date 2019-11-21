@@ -29,7 +29,6 @@ EST_POINTS = pd.DataFrame({'X': est_X.flatten(),
                            'Y': est_Y.flatten(),
                            })
 measurement_manager_basis = MeasurementManager(EST_POINTS)
-standard_deviation = [H/10, H/5, H, H*5, H*10, H*50, H*100, H*250]
 
 RESULTS = pd.DataFrame(columns=['sigma', 'M'] + ['eigenvalue_{:03d}'.format(i)
                        for i in range(100)])
