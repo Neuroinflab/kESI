@@ -24,23 +24,27 @@
 
 import numpy as np
 
-from ._engine import FunctionalFieldReconstructor
+from ._engine import (FunctionalFieldReconstructor, LinearMixture,
+                      _MissingAttributeError)
 
 class VerboseFFR(FunctionalFieldReconstructor):
     """
     Attributes
     ----------
-    PHI
-    K
-    M
-    N
+    number_of_basis
+    number_of_electrodes
+    probed_basis
     kernel
 
     Methods
     -------
-    PHI_TILDE(measurement_manager)
-    K_TILDE(measurement_manager)
-    cross_kernel(measurement_manager)
+    get_probed_basis(measurement_manager)
+    get_kernel_matrix(measurement_manager)
+
+    Class attributes
+    ----------------
+    MeasurementManagerBase
+    MeasurementManagerHasNoProbeAtSinglePointMethodError
 
     Notes
     -----
@@ -53,9 +57,40 @@ class VerboseFFR(FunctionalFieldReconstructor):
        `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
        doi: 10.1101/708511
     """
+    class MeasurementManagerBase(FunctionalFieldReconstructor.MeasurementManagerBase):
+        def probe_at_single_point(self, field, *args, **kwargs):
+            """
+            Probe the field at single point.
+
+            An abstract method implementing  probing of the appropriate basis
+            function at appropriate point.
+
+            Parameters
+            ----------
+            field : object
+                An object which implements corresponding basis functions.
+            args, kwargs
+                Description of the point.
+
+            Returns
+            -------
+            float
+                Value of the field at the point.
+
+            Notes
+            -----
+            It is possible, that vector returntypes will be allowed
+            """
+            raise NotImplementedError
+
+    class MeasurementManagerHasNoProbeAtSinglePointMethodError(_MissingAttributeError):
+        _missing = 'probe_at_single_point'
+
+    _mm_validators = (FunctionalFieldReconstructor._mm_validators
+                      + [MeasurementManagerHasNoProbeAtSinglePointMethodError])
 
     @property
-    def PHI(self):
+    def probed_basis(self):
         r"""
         A matrix of basis functions (rows) probed at measurement points
         (columns).
@@ -64,12 +99,12 @@ class VerboseFFR(FunctionalFieldReconstructor):
 
         Returns
         -------
-        numpy.ndarray
-        The matrix as M x N numpy array.
+        probed_basis : numpy.ndarray
+            The matrix as number_of_basis x number_of_electrodes numpy array.
 
         See also
         --------
-        M, N
+        number_of_basis, number_of_electrodes
 
         Notes
         -----
@@ -78,78 +113,49 @@ class VerboseFFR(FunctionalFieldReconstructor):
         The matrix is denormalized as parental class uses normalized one.
         Thus it may be affected by numerical errors.
 
-        `PHI[:, i]` is :math:`\Phi(x_i)` (see eq. 16 and above in [1]_), where
-        :math:`x_i` is the i-th measurement point(electrode).
+        `probed_basis[:, i]` is :math:`\Phi(x_i)` (see eq. 16 and above
+        in [1]_), where :math:`x_i` is the i-th measurement point(electrode).
 
         .. [1] C. Chintaluri et al. (2019) "kCSD-python, a tool for
            reliable current source density estimation" (preprint available at
            `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
            doi: 10.1101/708511
         """
-        return self._pre_kernel * self.M
-
-    @property
-    def K(self):
-        r"""
-        The kernel matrix.
-
-        The matrix is not normalized.
-
-        Returns
-        -------
-        numpy.ndarray
-            The kernel matrix as an N x N numpy array.
-
-        See also
-        --------
-        N, PHI
-
-        Notes
-        -----
-        The measurement manager may affect the returned value.
-
-        The kernel matrix is denormalized as parental class uses normalized one.
-        Thus it may be affected by numerical errors.
-
-        The kernel matrix (:math:`K`) is defined in [1]_ (see eq. 16 and 25).
-        `K == PHI.T @ PHI`
-
-        .. [1] C. Chintaluri et al. (2019) "kCSD-python, a tool for
-           reliable current source density estimation" (preprint available at
-           `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
-           doi: 10.1101/708511
-        """
-        return self.kernel * self.M
+        return self._pre_kernel * self.number_of_basis
 
     @property
     def kernel(self):
         r"""
-        The actual kernel matrix.
-
-        The normalized kernel matrix used by the object.
+        The kernel matrix.
 
         Returns
         -------
-        numpy.ndarray
-            The kernel matrix as an N x N numpy array.
+        kernel : numpy.ndarray
+            The kernel matrix as an number_of_electrodes x number_of_electrodes numpy array.
 
         See also
         --------
-        K, N, M
+        number_of_electrodes, number_of_basis, probed_basis
 
         Notes
         -----
         The measurement manager may affect the returned value.
 
-        The returned kernel matrix may change to reflect implementation changes
-        in the parental class.
+        The kernel matrix is a normalized matrix :math:`K` defined in [1]_
+        (see eq. 16 and 25).
 
-        `kernel == K / M`
+        `kernel == K / number_of_basis`
+        `K == probed_basis.T @ probed_basis`
+
+        .. [1] C. Chintaluri et al. (2019) "kCSD-python, a tool for
+           reliable current source density estimation" (preprint available at
+           `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
+           doi: 10.1101/708511
         """
         return self._kernel
 
     @property
-    def M(self):
+    def number_of_basis(self):
         r"""
         The number of basis functions.
 
@@ -160,7 +166,7 @@ class VerboseFFR(FunctionalFieldReconstructor):
         return self._pre_kernel.shape[0]
 
     @property
-    def N(self):
+    def number_of_electrodes(self):
         r"""
         The number of measurement points (electrodes).
 
@@ -170,7 +176,7 @@ class VerboseFFR(FunctionalFieldReconstructor):
         """
         return self._pre_kernel.shape[1]
 
-    def PHI_TILDE(self, measurement_manager):
+    def get_probed_basis(self, measurement_manager):
         r"""
         A matrix of basis functions (rows) probed at estimation points
         (columns).
@@ -188,36 +194,37 @@ class VerboseFFR(FunctionalFieldReconstructor):
 
         Returns
         -------
-        PHI_TILDE : numpy.ndarray
-            The matrix as a `measurement_manager.number_of_measurements` x `M`
-            numpy array.
+        probed_basis : numpy.ndarray
+            The matrix as a `measurement_manager.number_of_measurements`
+             x `number_of_basis` numpy array.
 
         See also
         --------
-        M
+        number_of_basis
 
         Notes
         -----
         The measurement manager may affect the returned value.
 
-        `PHI_TILDE[:, i]` is :math:`\tilde{Phi}(x_i)` (see eq. above 16 in [1]_),
-        where :math:`x_i` is the i-th estimation point.
+        `probed_basis[:, i]` may be either :math:`\Phi(x_i)`
+        or :math:`\tilde{Phi}(x_i)` (see eq. 16  and above in [1]_),
+        depending on the measurement manager.
+        :math:`x_i` is the i-th estimation point.
 
         .. [1] C. Chintaluri et al. (2019) "kCSD-python, a tool for
            reliable current source density estimation" (preprint available at
            `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
            doi: 10.1101/708511
         """
-        PHI_TILDE = np.empty((self.M,
-                              measurement_manager.number_of_measurements))
-        self._fill_probed_components(PHI_TILDE, measurement_manager.probe)
-        return PHI_TILDE
+        probed_basis = np.empty((self.number_of_basis,
+                                 measurement_manager.number_of_measurements))
+        self._fill_probed_components(probed_basis,
+                                     measurement_manager.probe)
+        return probed_basis
 
-    def K_TILDE(self, measurement_manager):
+    def get_kernel_matrix(self, measurement_manager):
         r"""
-        A cross-kernel matrix.
-
-        The matrix is not normalized.
+        The (cross-)kernel matrix.
 
         Parameters
         ----------
@@ -230,66 +237,32 @@ class VerboseFFR(FunctionalFieldReconstructor):
 
         Returns
         -------
-        K_TILDE : numpy.ndarray
-            The cross-kernel matrix as a
-            `measurement_manager.number_of_measurements` x `N` numpy array.
+        kernel_matrix : numpy.ndarray
+            The (cross-)kernel matrix as a
+            `measurement_manager.number_of_measurements`
+            x `number_of_electrodes` numpy array.
 
         See also
         --------
-        N, PHI, PHI_TILDE(measurement_manager)
+        number_of_electrodes, number_of_basis, probed_basis
 
         Notes
         -----
         Measurement managers may affect the returned value.
 
         The cross-kernel matrix (:math:`\tilde{K}`) is defined in [1]_
-        (see eq. above 27) analogously to :math:`K` (eq 25).
-        `K_TILDE == PHI_TILDE(measurement_manager).T @ PHI`
+        (see eq. above 27) analogously to the kernel matrix :math:`K` (eq 25).
 
-        The cross-kernel matrix is denormalized as parental class uses
-        normalization.  Thus it may be affected by numerical errors.
+        `kernel_matrix == PHI.T @ probed_basis / number_of_basis`,
+        where `PHI` is `.get_probed_basis(measurement_manager)`.
 
         .. [1] C. Chintaluri et al. (2019) "kCSD-python, a tool for
            reliable current source density estimation" (preprint available at
            `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
            doi: 10.1101/708511
         """
-        return self.cross_kernel(measurement_manager) * self.M
-
-    def cross_kernel(self, measurement_manager):
-        r"""
-        The actual cross-kernel matrix.
-
-        The matrix is normalized and may be used with the actual kernel matrix
-        used by the object.
-
-        Parameters
-        ----------
-        measurement_manager : instance of kesi.MeasurementManagerBase subclass
-            The measurement manager is an object implementing `.probe(basis)`
-            method, which probes appropriate function related to `basis`
-            at appropriate estimation points and returns sequence of values.
-            The number of the estimation points is given by its
-            `.number_of_measurements` attribute.
-
-        Returns
-        -------
-        cross_kernel : numpy.ndarray
-            The cross-kernel matrix as a
-            `measurement_manager.number_of_measurements` x `N` numpy array.
-
-        See also
-        --------
-        N, M, K_TILDE(measurement_manager)
-
-        Notes
-        -----
-        Measurement managers may affect the returned value.
-
-        `cross_kernel == K_TILDE(measurement_manager) / M`
-        """
-        # Matrix multiplication not used as matrix returned by .PHI_TILDE() may
-        # be too big to be stored in available memory.
+        # Matrix multiplication not used as matrix returned by
+        # .get_probed_basis() may be too big to be stored in available memory.
         # The sum() builtin not used as it uses + operator instead of augmented
         # assignment, thus it may be less memory-efficient than the loop below.
         cross_kernel = 0
@@ -298,3 +271,34 @@ class VerboseFFR(FunctionalFieldReconstructor):
             cross_kernel += np.outer(measurement_manager.probe(component),
                                      ROW)
         return cross_kernel
+
+    def get_kernel_functions(self, *args, **kwargs):
+        """
+        The (cross-)kernel unary functions.
+
+        Parameters
+        ----------
+            Anything that passed to by the `.probe_at_single_point()`
+            method of the measurement manager (given to the constructor) will
+            be interpreted as a single measurement point (:math:`x`).
+
+        Returns
+        -------
+        object
+            The object implements the unary (cross-)kernel functions as its
+            methods.
+
+        Notes
+        -----
+        The unary (cross-)kernel function is a binary (cross-)kernel function
+        (:math:`K(y, x)`, see eq. 16 in [1]_) fixed with one leg at :math:`x`.
+
+        .. [1] C. Chintaluri et al. (2019) "kCSD-python, a tool for
+           reliable current source density estimation" (preprint available at
+           `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
+           doi: 10.1101/708511
+        """
+        probe = self._measurement_manager.probe_at_single_point
+        return (LinearMixture([(component, probe(component, *args, **kwargs))
+                               for component in self._field_components])
+                / self.number_of_basis)

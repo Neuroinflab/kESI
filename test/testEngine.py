@@ -46,28 +46,27 @@ class FunctionFieldComponent(Stub):
 
 
 class TestsOfInitializationErrors(unittest.TestCase):
-    def testWhenMeasurementManagerLacksAttributesThenRaisesException(self):
-        for missing, exception in [('probe',
-                                    'ProbeMethod'),
-                                   ('load',
-                                    'LoadMethod'),
+    CLASS = FunctionalFieldReconstructor
+
+    MM_MISSING_ATTRIBUTE_ERRORS = [('probe', 'ProbeMethod'),
+                                   ('load', 'LoadMethod'),
                                    ('number_of_measurements',
                                     'NumberOfMeasurementsAttribute'),
-                                   ]:
+                                   ]
+
+    def testWhenMeasurementManagerLacksAttributesThenRaisesException(self):
+        for missing, exception in self.MM_MISSING_ATTRIBUTE_ERRORS:
             measurement_manager = self.getIncompleteMeasurementManager(missing)
             exception_name = 'MeasurementManagerHasNo{}Error'.format(exception)
-            for ExceptionClass in [getattr(FunctionalFieldReconstructor,
+            for ExceptionClass in [getattr(self.CLASS,
                                            exception_name),
                                    TypeError]:
                 with self.assertRaises(ExceptionClass):
-                    FunctionalFieldReconstructor([],
-                                                 measurement_manager)
+                    self.CLASS([], measurement_manager)
 
     def getIncompleteMeasurementManager(self, missing):
         return Stub(**{attr: None
-                       for attr in ['probe',
-                                    'load',
-                                    'number_of_measurements']
+                       for attr, _ in self.MM_MISSING_ATTRIBUTE_ERRORS
                        if attr != missing})
 
 
