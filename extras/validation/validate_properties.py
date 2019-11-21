@@ -3,10 +3,8 @@
 """
 
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-import matplotlib.cm as cm
+import sys
+sys.path.append('../')
 
 import kesi
 from kesi._verbose import VerboseFFR
@@ -48,6 +46,10 @@ def gaussian_source_factory_2d(xs, ys, sd, conductivity):
 
 
 if __name__ == '__main__':
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import matplotlib.gridspec as gridspec
+    import matplotlib.cm as cm
     H = 3e-4
     standard_deviation = H*100  # H / 16
     conductivity = 0.3
@@ -58,8 +60,8 @@ if __name__ == '__main__':
                                })
 
     measurement_manager = MeasurementManager(ELECTRODES)
-    src_X, src_Y = np.mgrid[0.:1.:95j,
-                            0.:1.:95j]
+    src_X, src_Y = np.mgrid[0.:1.:100j,
+                            0.:1.:100j]
 
     sources = gaussian_source_factory_2d(src_X.flatten(),
                                          src_Y.flatten(),
