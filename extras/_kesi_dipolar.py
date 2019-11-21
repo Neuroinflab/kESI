@@ -160,7 +160,7 @@ if __name__ == '__main__':
     K = reconstructor._kernel
     EIGENVALUES = np.linalg.eigvalsh(K)
     if EIGENVALUES.min() <= 0:
-        logging.warning('nonpositive eigenvalueof K spotted!')
+        logging.warning('nonpositive eigenvalue of kernel spotted!')
 
     LOG_START = np.floor(np.log10(abs(EIGENVALUES).min())) - 2
     LOG_END = np.ceil(np.log10(abs(EIGENVALUES).max())) + 4
