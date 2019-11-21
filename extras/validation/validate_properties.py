@@ -6,8 +6,8 @@ import numpy as np
 import sys
 sys.path.append('../')
 
-import kesi
-from kesi._verbose import VerboseFFR
+from api_stabilizer import VerboseFFR, MeasurementManagerBase
+
 from _common_new import GaussianSourceKCSD3D
 
 
@@ -29,7 +29,7 @@ class ValidateKESI(VerboseFFR):
         return eigenvalues, eigenvectors
 
 
-class MeasurementManager(kesi.MeasurementManagerBase):
+class MeasurementManager(MeasurementManagerBase):
     def __init__(self, ELECTRODES):
         self._ELECTRODES = ELECTRODES
         self.number_of_measurements = len(ELECTRODES)
