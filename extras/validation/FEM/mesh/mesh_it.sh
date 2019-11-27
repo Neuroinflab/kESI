@@ -1,2 +1,2 @@
 
-dolfin-convert sphere_1.msh sphere_1.xml
+dolfin-convert slice_saline_model.msh slice_saline_model.xml
