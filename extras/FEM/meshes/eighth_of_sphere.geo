@@ -61,9 +61,9 @@ Function EighthOfSphere
 Return
 
 
-central_element_size = 1;
-middle_element_size = 1;
-surface_element_size = 10;
+central_element_size = 0.0625;
+middle_element_size = 0.0625;
+surface_element_size = 1.0;
 x = 0.; y= 0.; z=0.;
 surface_r = 55.5;
 // surface_r = sqrt(3) * 32 = 55.42562584220407
