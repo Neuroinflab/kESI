@@ -119,33 +119,37 @@ Function CheeseHole
 
 Return
 
-lcar3 = 1.5; lcar1 = 0.2;
-x = 0.; y= 0.; z=0.; r=8.0; t=1; h=3.; rs=1.5;
+h = 0.0003;
+x = 0.; y= 0.; z=h; r=0.001; t=1; h=0.0003; rs=h;
+
+lcar3 = 0.03125*r; lcar1 = 0.03125*h;
+
+
 Call CheeseHole ;
 model_base = news;
-Physical Surface (model_base) = {l17+1,l18+1,l19+1,l20+1,l21+1,l22+1,l23+1,l24+1};
+Physical Surface ("model_base") = {l17+1,l18+1,l19+1,l20+1,l21+1,l22+1,l23+1,l24+1};
 
 model_dome = news;
-Physical Surface (model_dome) = {l4+1,l3+1,l1+1,l2+1,l25+1,l26+1,l27+1,l28+1};
+Physical Surface ("model_dome") = {l4+1,l3+1,l1+1,l2+1,l25+1,l26+1,l27+1,l28+1};
 
 salinesurf = news;
-Physical Surface (salinesurf) = {l1+1,l2+1,l3+1,l4+1,l5+1,l6+1,l7+1,l8+1,l9+1,l10+1,l11+1,l12+1};
+//Physical Surface ("salinesurf") = {l1+1,l2+1,l3+1,l4+1,l5+1,l6+1,l7+1,l8+1,l9+1,l10+1,l11+1,l12+1};
 salinevolume = newreg;
 Volume(salinevolume) = elem_saline;
 salinevol = newreg;
-Physical Volume (salinevol) = salinevolume;
+Physical Volume ("salinevol") = salinevolume;
 
 slicesurf = news;
-Physical Surface (slicesurf) = {l9+1,l10+1,l11+1,l12+1,l13+1,l14+1,l15+1,l16+1,l21+1,l22+1,l23+1,l24+1,l25+1,l26+1,l27+1,l28+1};
+//Physical Surface ("slicesurf") = {l9+1,l10+1,l11+1,l12+1,l13+1,l14+1,l15+1,l16+1,l21+1,l22+1,l23+1,l24+1,l25+1,l26+1,l27+1,l28+1};
 slicevolume = newreg;
 Volume(slicevolume) = elem_slice;
 slicevol = newreg;
-Physical Volume (slicevol) = slicevolume;
+Physical Volume ("slicevol") = slicevolume;
 
 roisurf = news;
-Physical Surface (roisurf) = {l5+1,l6+1,l7+1,l8+1,l13+1,l14+1,l15+1,l16+1,l17+1,l18+1,l19+1,l20+1};
+//Physical Surface ("roisurf") = {l5+1,l6+1,l7+1,l8+1,l13+1,l14+1,l15+1,l16+1,l17+1,l18+1,l19+1,l20+1};
 roivolume = newreg;
 Volume(roivolume) = elem_roi;
 roivol = newreg;
-Physical Volume (roivol) = roivolume;
+Physical Volume ("roivol") = roivolume;
  
