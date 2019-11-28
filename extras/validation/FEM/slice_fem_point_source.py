@@ -11,11 +11,6 @@ from dolfin import Expression, DirichletBC
 import parameters_fem as params
 
 
-ROI_CONDUCTIVITY = 0.3
-SLICE_CONDUCTIVITY = 0.3
-SALINE_CONDUCTIVITY = 1.5
-
-
 def extract_pots(phi, positions):
     compt_values = np.zeros(positions.shape[0])
     for ii in range(positions.shape[0]):
