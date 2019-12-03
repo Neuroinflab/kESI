@@ -128,8 +128,8 @@ x = 0.; y= 0.; z=0.; r=5.0; h=0.5; rs=1.;
 Call Roi ;
 Call MakeDome ;
 
-model_base = news;
-Physical Surface (model_base) = elem_model_base;
+//model_base = news;
+//Physical Surface (model_base) = elem_model_base;
 
 model_dome = news;
 Physical Surface (model_dome) = elem_dome;
