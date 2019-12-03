@@ -3,12 +3,11 @@
 """
 
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-import matplotlib.cm as cm
+import sys
+sys.path.append('../')
 
 from api_stabilizer import VerboseFFR, MeasurementManagerBase
+
 from _common_new import GaussianSourceKCSD3D
 
 
@@ -16,7 +15,7 @@ class ValidateKESI(VerboseFFR):
     def _eigensources(self, measurement_manager_basis,
                       regularization_parameter=0):
         kernel = self.kernel
-        cross_kernel = self.cross_kernel(measurement_manager_basis)
+        cross_kernel = self.get_kernel_matrix(measurement_manager_basis)
         self.eigenvalues, self.eigenvectors = self._evd(kernel,
                                                         regularization_parameter)
         return np.dot(cross_kernel, self.eigenvectors)
@@ -47,6 +46,10 @@ def gaussian_source_factory_2d(xs, ys, sd, conductivity):
 
 
 if __name__ == '__main__':
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import matplotlib.gridspec as gridspec
+    import matplotlib.cm as cm
     H = 3e-4
     standard_deviation = H*100  # H / 16
     conductivity = 0.3
@@ -57,8 +60,8 @@ if __name__ == '__main__':
                                })
 
     measurement_manager = MeasurementManager(ELECTRODES)
-    src_X, src_Y = np.mgrid[0.:1.:95j,
-                            0.:1.:95j]
+    src_X, src_Y = np.mgrid[0.:1.:100j,
+                            0.:1.:100j]
 
     sources = gaussian_source_factory_2d(src_X.flatten(),
                                          src_Y.flatten(),
