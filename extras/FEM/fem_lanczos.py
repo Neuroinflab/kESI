@@ -1,6 +1,7 @@
 # $ docker run -ti --env HOST_UID=$(id -u) --env HOST_GID=$(id -g) -v $(pwd):/home/fenics/shared:Z quay.io/fenicsproject/stable
 # fenics@...$ cd /home/fenics/shared/
 
+import os
 import logging
 import itertools
 
@@ -9,7 +10,8 @@ logger.setLevel(logging.INFO)
 
 import numpy as np
 
-SOLUTION_FILENAME = 'Lanczos.npz'
+SOLUTION_FILENAME = os.path.join(os.path.dirname(__file__),
+                                 'Lanczos.npz')
 MAX_ITER = 10000
 
 class LanczosPotentialFEM(object):
