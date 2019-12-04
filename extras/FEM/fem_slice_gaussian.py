@@ -12,97 +12,11 @@ import numpy as np
 SOLUTION_FILENAME = 'Slice.npz'
 MAX_ITER = 10000
 
-class GaussianPotentialSliceFEM(object):
-    PATH = 'meshes/slice'
-    H = 3e-4  # m
-    RADIUS = 1.0  # m
-    SLICE_CONDUCTIVITY = 0.3  # S / m
-    SALINE_CONDUCTIVITY = 1.5  # S / m
 
-    SALINE_VOL = 3
-    SLICE_VOL = 4
-    ROI_VOL = 5
-
-    MODEL_DOME = 2
-    MODEL_BASE = 1
-
-    def __init__(self):
-        self._mesh = Mesh(self.PATH + '.xml')
-        self._subdomains = MeshFunction("size_t", self._mesh,
-                                        self.PATH + '_physical_region.xml')
-        self._boundaries = MeshFunction("size_t", self._mesh,
-                                        self.PATH + '_facet_region.xml')
-
-    def __call__(self, degree=3, y=0., standard_deviation=1.):
-        V = FunctionSpace(self._mesh, "CG", degree)
-        v = TestFunction(V)
-        potential_trial = TrialFunction(V)
-        potential = Function(V)
-        dx = Measure("dx")(subdomain_data=self._subdomains)
-        # ds = Measure("ds")(subdomain_data=self._boundaries)
-        csd = Expression(f'''
-                          x[1] >= {self.H} ?
-                          0 :
-                          a * exp({-0.5 / standard_deviation ** 2}
-                                  * ((x[0])*(x[0])
-                                     + (x[1] - {y})*(x[1] - {y})
-                                     + (x[2])*(x[2])
-                                     ))
-                          ''',
-                          degree=degree,
-                          a=1.0)
-
-        self.a = csd.a = 1.0 / assemble(csd * Measure("dx", self._mesh))
-        # print(assemble(csd * Measure("dx", self._mesh)))
-        L = csd * v * dx
-
-        known_terms = assemble(L)
-        # a = (inner(grad(potential_trial), grad(v))
-        #      * (Constant(self.SALINE_CONDUCTIVITY) * dx(self.SALINE_VOL)
-        #         + Constant(self.SLICE_CONDUCTIVITY) * (dx(self.SLICE_VOL)
-        #                                                + dx(self.ROI_VOL))))
-        a = sum(Constant(conductivity)
-                * inner(grad(potential_trial), grad(v))
-                * dx(domain)
-                for domain, conductivity
-                in [(self.SALINE_VOL, self.SALINE_CONDUCTIVITY),
-                    (self.SLICE_VOL, self.SLICE_CONDUCTIVITY),
-                    (self.ROI_VOL, self.SLICE_CONDUCTIVITY),
-                    ])
-        terms_with_unknown = assemble(a)
-        dirchlet_bc = DirichletBC(V,
-                                  Constant(2.0 * 0.25
-                                           / (self.RADIUS * np.pi * self.SALINE_CONDUCTIVITY)),
-                                  # 2.0 becaue of dielectric base duplicating
-                                  # the current source
-                                  # slice conductivity and thickness considered
-                                  # negligible
-                                  self._boundaries,
-                                  self.MODEL_DOME)
-        dirchlet_bc.apply(terms_with_unknown, known_terms)
-        solver = KrylovSolver("cg", "ilu")
-        solver.parameters["maximum_iterations"] = MAX_ITER
-        solver.parameters["absolute_tolerance"] = 1E-8
-        # solver.parameters["monitor_convergence"] = True
-        start = datetime.datetime.now()
-        try:
-            self.iterations = solver.solve(terms_with_unknown,
-                                           potential.vector(),
-                                           known_terms)
-            return potential
-
-        except RuntimeError as e:
-            self.iterations = MAX_ITER
-            logger.warning("Solver failed: {}".format(repr(e)))
-            return None
-
-        finally:
-            self.time = datetime.datetime.now() - start
-
-
-# class GaussianSourceSliceFactory(object):
-#     def __init__(self, degree=3, _limit=np.inf):
-#         with np.load(SOLUTION_FILENAME) as fh:
+class GaussianSourceSliceFactory(object):
+    def __init__(self, degree=3, _limit=np.inf):
+        with np.load(SOLUTION_FILENAME) as fh:
+            POTENTIAL = fh['Gaussian_{}'.format(degree)]
 #             N = min(_limit, fh['N'])
 #
 #             self.a = fh['A_{}_{}'.format(n, degree)]
@@ -211,6 +125,95 @@ if __name__ == '__main__':
         $ cd /home/fenics/shared/
         """)
     else:
+        class GaussianPotentialSliceFEM(object):
+            PATH = 'meshes/slice'
+            H = 3e-4  # m
+            RADIUS = 1.0  # m
+            SLICE_CONDUCTIVITY = 0.3  # S / m
+            SALINE_CONDUCTIVITY = 1.5  # S / m
+
+            SALINE_VOL = 3
+            SLICE_VOL = 4
+            ROI_VOL = 5
+
+            MODEL_DOME = 2
+            MODEL_BASE = 1
+
+            def __init__(self):
+                self._mesh = Mesh(self.PATH + '.xml')
+                self._subdomains = MeshFunction("size_t", self._mesh,
+                                                self.PATH + '_physical_region.xml')
+                self._boundaries = MeshFunction("size_t", self._mesh,
+                                                self.PATH + '_facet_region.xml')
+
+            def __call__(self, degree=3, y=0., standard_deviation=1.):
+                V = FunctionSpace(self._mesh, "CG", degree)
+                v = TestFunction(V)
+                potential_trial = TrialFunction(V)
+                potential = Function(V)
+                dx = Measure("dx")(subdomain_data=self._subdomains)
+                # ds = Measure("ds")(subdomain_data=self._boundaries)
+                csd = Expression(f'''
+                                  x[1] >= {self.H} ?
+                                  0 :
+                                  a * exp({-0.5 / standard_deviation ** 2}
+                                          * ((x[0])*(x[0])
+                                             + (x[1] - {y})*(x[1] - {y})
+                                             + (x[2])*(x[2])
+                                             ))
+                                  ''',
+                                 degree=degree,
+                                 a=1.0)
+
+                self.a = csd.a = 1.0 / assemble(csd * Measure("dx", self._mesh))
+                # print(assemble(csd * Measure("dx", self._mesh)))
+                L = csd * v * dx
+
+                known_terms = assemble(L)
+                # a = (inner(grad(potential_trial), grad(v))
+                #      * (Constant(self.SALINE_CONDUCTIVITY) * dx(self.SALINE_VOL)
+                #         + Constant(self.SLICE_CONDUCTIVITY) * (dx(self.SLICE_VOL)
+                #                                                + dx(self.ROI_VOL))))
+                a = sum(Constant(conductivity)
+                        * inner(grad(potential_trial), grad(v))
+                        * dx(domain)
+                        for domain, conductivity
+                        in [(self.SALINE_VOL, self.SALINE_CONDUCTIVITY),
+                            (self.SLICE_VOL, self.SLICE_CONDUCTIVITY),
+                            (self.ROI_VOL, self.SLICE_CONDUCTIVITY),
+                            ])
+                terms_with_unknown = assemble(a)
+                dirchlet_bc = DirichletBC(V,
+                                          Constant(2.0 * 0.25
+                                                   / (
+                                                               self.RADIUS * np.pi * self.SALINE_CONDUCTIVITY)),
+                                          # 2.0 becaue of dielectric base duplicating
+                                          # the current source
+                                          # slice conductivity and thickness considered
+                                          # negligible
+                                          self._boundaries,
+                                          self.MODEL_DOME)
+                dirchlet_bc.apply(terms_with_unknown, known_terms)
+                solver = KrylovSolver("cg", "ilu")
+                solver.parameters["maximum_iterations"] = MAX_ITER
+                solver.parameters["absolute_tolerance"] = 1E-8
+                # solver.parameters["monitor_convergence"] = True
+                start = datetime.datetime.now()
+                try:
+                    self.iterations = solver.solve(terms_with_unknown,
+                                                   potential.vector(),
+                                                   known_terms)
+                    return potential
+
+                except RuntimeError as e:
+                    self.iterations = MAX_ITER
+                    logger.warning("Solver failed: {}".format(repr(e)))
+                    return None
+
+                finally:
+                    self.time = datetime.datetime.now() - start
+
+
         logging.basicConfig(level=logging.INFO)
 
         fem = GaussianPotentialSliceFEM()

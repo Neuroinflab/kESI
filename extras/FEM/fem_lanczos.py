@@ -14,64 +14,6 @@ SOLUTION_FILENAME = os.path.join(os.path.dirname(__file__),
                                  'Lanczos.npz')
 MAX_ITER = 10000
 
-class LanczosPotentialFEM(object):
-    PATH = 'meshes/eighth_of_sphere'
-    EXTERNAL_SURFACE = 1
-    RADIUS = 55.5
-
-    def __init__(self):
-        self._mesh = Mesh(self.PATH + '.xml')
-        self._subdomains = MeshFunction("size_t", self._mesh,
-                                        self.PATH + '_physical_region.xml')
-        self._boundaries = MeshFunction("size_t", self._mesh,
-                                        self.PATH + '_facet_region.xml')
-    def __call__(self, n, DEGREE=3):
-        V = FunctionSpace(self._mesh, "CG", DEGREE)
-        v = TestFunction(V)
-        potential_trial = TrialFunction(V)
-        potential = Function(V)
-        dx = Measure("dx")(subdomain_data=self._subdomains)
-        # ds = Measure("ds")(subdomain_data=self._boundaries)
-        csd = Expression(f'''
-            x[0] >= n || x[1] >= n || x[2] >= n ?
-             0 :
-             a * (x[0] < {np.finfo(np.float32).eps} ? 1 : sin({np.pi} * x[0]) * sin({np.pi} * x[0] / n) / (x[0] * x[0] * {np.pi**2} / n))
-             * (x[1] < {np.finfo(np.float32).eps} ? 1 : sin({np.pi} * x[1]) * sin({np.pi} * x[1] / n) / (x[1] * x[1] * {np.pi**2} / n))
-             * (x[2] < {np.finfo(np.float32).eps} ? 1 : sin({np.pi} * x[2]) * sin({np.pi} * x[2] / n) / (x[2] * x[2] * {np.pi**2} / n))
-            ''',
-            n=n,
-            degree=DEGREE,
-            a=1.0)
-        self.a = csd.a = 0.125 / assemble(csd * Measure("dx", self._mesh))
-        # print(assemble(csd * Measure("dx", self._mesh)))
-        L = csd * v * dx
-        known_terms = assemble(L)
-        a = inner(grad(potential_trial), grad(v)) * dx
-        terms_with_unknown = assemble(a)
-        dirchlet_bc = DirichletBC(V,
-                                  Constant(0.25 / self.RADIUS / np.pi),
-                                  self._boundaries,
-                                  self.EXTERNAL_SURFACE)
-        dirchlet_bc.apply(terms_with_unknown, known_terms)
-        solver = KrylovSolver("cg", "ilu")
-        solver.parameters["maximum_iterations"] = MAX_ITER
-        solver.parameters["absolute_tolerance"] = 1E-8
-        # solver.parameters["monitor_convergence"] = True
-        start = datetime.datetime.now()
-        try:
-            self.iterations = solver.solve(terms_with_unknown,
-                                           potential.vector(),
-                                           known_terms)
-            return potential
-
-        except RuntimeError as e:
-            self.iterations = MAX_ITER
-            logger.warning("Solver failed: {}".format(repr(e)))
-            return None
-
-        finally:
-            self.time = datetime.datetime.now() - start
-
 
 class LanczosSourceFactory(object):
     def __init__(self, n=3, degree=3, _limit=np.inf):
@@ -185,6 +127,66 @@ if __name__ == '__main__':
         $ cd /home/fenics/shared/
         """)
     else:
+        class LanczosPotentialFEM(object):
+            PATH = 'meshes/eighth_of_sphere'
+            EXTERNAL_SURFACE = 1
+            RADIUS = 55.5
+
+            def __init__(self):
+                self._mesh = Mesh(self.PATH + '.xml')
+                self._subdomains = MeshFunction("size_t", self._mesh,
+                                                self.PATH + '_physical_region.xml')
+                self._boundaries = MeshFunction("size_t", self._mesh,
+                                                self.PATH + '_facet_region.xml')
+
+            def __call__(self, n, DEGREE=3):
+                V = FunctionSpace(self._mesh, "CG", DEGREE)
+                v = TestFunction(V)
+                potential_trial = TrialFunction(V)
+                potential = Function(V)
+                dx = Measure("dx")(subdomain_data=self._subdomains)
+                # ds = Measure("ds")(subdomain_data=self._boundaries)
+                csd = Expression(f'''
+                    x[0] >= n || x[1] >= n || x[2] >= n ?
+                     0 :
+                     a * (x[0] < {np.finfo(np.float32).eps} ? 1 : sin({np.pi} * x[0]) * sin({np.pi} * x[0] / n) / (x[0] * x[0] * {np.pi ** 2} / n))
+                     * (x[1] < {np.finfo(np.float32).eps} ? 1 : sin({np.pi} * x[1]) * sin({np.pi} * x[1] / n) / (x[1] * x[1] * {np.pi ** 2} / n))
+                     * (x[2] < {np.finfo(np.float32).eps} ? 1 : sin({np.pi} * x[2]) * sin({np.pi} * x[2] / n) / (x[2] * x[2] * {np.pi ** 2} / n))
+                    ''',
+                                 n=n,
+                                 degree=DEGREE,
+                                 a=1.0)
+                self.a = csd.a = 0.125 / assemble(
+                    csd * Measure("dx", self._mesh))
+                # print(assemble(csd * Measure("dx", self._mesh)))
+                L = csd * v * dx
+                known_terms = assemble(L)
+                a = inner(grad(potential_trial), grad(v)) * dx
+                terms_with_unknown = assemble(a)
+                dirchlet_bc = DirichletBC(V,
+                                          Constant(0.25 / self.RADIUS / np.pi),
+                                          self._boundaries,
+                                          self.EXTERNAL_SURFACE)
+                dirchlet_bc.apply(terms_with_unknown, known_terms)
+                solver = KrylovSolver("cg", "ilu")
+                solver.parameters["maximum_iterations"] = MAX_ITER
+                solver.parameters["absolute_tolerance"] = 1E-8
+                # solver.parameters["monitor_convergence"] = True
+                start = datetime.datetime.now()
+                try:
+                    self.iterations = solver.solve(terms_with_unknown,
+                                                   potential.vector(),
+                                                   known_terms)
+                    return potential
+
+                except RuntimeError as e:
+                    self.iterations = MAX_ITER
+                    logger.warning("Solver failed: {}".format(repr(e)))
+                    return None
+
+                finally:
+                    self.time = datetime.datetime.now() - start
+
         logging.basicConfig(level=logging.INFO)
 
         fem = LanczosPotentialFEM()
