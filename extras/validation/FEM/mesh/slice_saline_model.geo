@@ -49,6 +49,49 @@ Function Roi
   llroislice4 = newll; Line Loop(llroislice4) = {lroislice1, croislice4, -lroislice4}; Ruled Surface(newreg) = {llroislice4};
 Return
 
+Function InternalDome
+  pdomepeak = newp; Point(pdomepeak) = {x,  y+r,z,  lcar2} ;
+  pdomebase1 = newp; Point(pdomebase1) = {x+r,y,  z,  lcar2} ;
+  pdomebase2 = newp; Point(pdomebase2) = {x,  y,  z+r,lcar2} ;
+  pdomebase3 = newp; Point(pdomebase3) = {x-r,y,  z,  lcar2} ;
+  pdomebase4 = newp; Point(pdomebase4) = {x,  y,  z-r,lcar2} ;
+  pslicebase1 = newp; Point(pslicebase1) = {x+r,y-h,  z,  lcar2} ;
+  pslicebase4 = newp; Point(pslicebase4) = {x,  y-h,  z-r,  lcar2} ;
+  pslicebase2 = newp; Point(pslicebase2) = {x,  y-h,  z+r,lcar2} ;
+  pslicebase3 = newp; Point(pslicebase3) = {x-r,y-h,  z,  lcar2} ;
+  
+  cdome1 = newreg; Circle(cdome1) = {pdomebase1,pcenterdome,pdomepeak};
+  cdome2 = newreg; Circle(cdome2) = {pdomepeak,pcenterdome,pdomebase2};
+  cdome3 = newreg; Circle(cdome3) = {pdomepeak,pcenterdome,pdomebase3};
+  cdome4 = newreg; Circle(cdome4) = {pdomebase4,pcenterdome,pdomepeak};
+  cslice1 = newreg; Circle(cslice1) = {pslicebase2,pcenterslice,pslicebase1};
+  cslice2 = newreg; Circle(cslice2) = {pslicebase3,pcenterslice,pslicebase2};
+  cslice3 = newreg; Circle(cslice3) = {pslicebase4,pcenterslice,pslicebase3};
+  cslice4 = newreg; Circle(cslice4) = {pslicebase4,pcenterslice,pslicebase1};
+  cdomebase1 = newreg; Circle(cdomebase1) = {pdomebase2,pcenterdome,pdomebase1};
+  cdomebase2 = newreg; Circle(cdomebase2) = {pdomebase3,pcenterdome,pdomebase2};
+  cdomebase3 = newreg; Circle(cdomebase3) = {pdomebase4,pcenterdome,pdomebase3};
+  cdomebase4 = newreg; Circle(cdomebase4) = {pdomebase1,pcenterdome,pdomebase4};
+  
+  lsliceds1 = newl; Line(lsliceds1) = {pdomebase1, pslicebase1};
+  lsliceds2 = newl; Line(lsliceds2) = {pdomebase2, pslicebase2};
+  lsliceds3 = newl; Line(lsliceds3) = {pdomebase3, pslicebase3};
+  lsliceds4 = newl; Line(lsliceds4) = {pdomebase4, pslicebase4};
+  
+  lldome1 = newll; Line Loop(lldome1) = {cdome1,cdome2,cdomebase1};   Ruled Surface(newreg) = {lldome1};
+  lldome2 = newll; Line Loop(lldome2) = {-cdome2,cdome3,cdomebase2};  Ruled Surface(newreg) = {lldome2};
+  lldome3 = newll; Line Loop(lldome3) = {-cdome3,-cdome4,cdomebase3};  Ruled Surface(newreg) = {lldome3};
+  lldome4 = newll; Line Loop(lldome4) = {cdome4,-cdome1,cdomebase4};   Ruled Surface(newreg) = {lldome4};
+  llsliceds4 = newll; Line Loop(llsliceds4) = {cdomebase4, lsliceds4, cslice4, -lsliceds1};   Ruled Surface(newreg) = {llsliceds4};
+  llsliceds1 = newll; Line Loop(llsliceds1) = {cdomebase1, lsliceds1, -cslice1, -lsliceds2};   Ruled Surface(newreg) = {llsliceds1};
+  llsliceds2 = newll; Line Loop(llsliceds2) = {cdomebase2, lsliceds2, -cslice2, -lsliceds3};  Ruled Surface(newreg) = {llsliceds2};
+  llsliceds3 = newll; Line Loop(llsliceds3) = {cdomebase3, lsliceds3, -cslice3, -lsliceds4};  Ruled Surface(newreg) = {llsliceds3};
+  
+  i_surface_dome = {lldome3+1,lldome2+1,lldome1+1,lldome4+1,llsliceds4+1,llsliceds1+1,llsliceds2+1,llsliceds3+1};
+  //i_surface_base = {};
+Return
+
+
 Function MakeDome
 
   pdomepeak = newp; Point(pdomepeak) = {x,  y+r,z,  lcar3} ;
@@ -123,19 +166,18 @@ Function MakeDome
 
 Return
 
-lcar3 = 1.5; lcar1 = 0.2;
-x = 0.; y= 0.; z=0.; r=5.0; h=0.5; rs=1.;
+lcar1 = 0.2;
+x = 0.; y= 0.; z=0.; h=0.5; rs=1.;
 Call Roi ;
-Call MakeDome ;
 
-//model_base = news;
-//Physical Surface (model_base) = elem_model_base;
+lcar2 = 1.0;
+x = 0.; y= 0.; z=0.; r=5.0; h=0.5; rs=1.;
+Call InternalDome ;
 
 model_dome = news;
-Physical Surface (model_dome) = elem_dome;
+Physical Surface (model_dome) = i_surface_dome;
 
-
-lcar3 = 1.5; lcar1 = 0.2;
+lcar3 = 1.5;
 x = 0.; y= 0.; z=0.; r=8.0;
 Call MakeDome ;
 
