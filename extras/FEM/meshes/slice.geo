@@ -1,155 +1,400 @@
 Mesh.Algorithm = 5;
 
-Function CheeseHole 
-  // taken from t5.geo
+Function SliceExternalSurface
+  // Arguments
+  // ---------
+  //   dome_center, dome_north, dome_south, dome_west, dome_east,
+  //   base_center, base_north, base_south, base_west, base_east
+  //      Point
+  // Returns
+  // -------
+  //   dome_north_west_arc, dome_north_east_arc,
+  //   dome_south_east_arc, dome_south_west_arc,
+  //   base_north_west_arc, base_north_east_arc,
+  //   base_south_east_arc, base_south_west_arc
+  //      Circle
+  //   slice_external_ring
+  //      Surface[]
+  dome_north_west_arc = newl; Circle(dome_north_west_arc) = {dome_north,dome_center,dome_west};
+  dome_north_east_arc = newl; Circle(dome_north_east_arc) = {dome_north,dome_center,dome_east};
+  dome_south_east_arc = newl; Circle(dome_south_east_arc) = {dome_south,dome_center,dome_east};
+  dome_south_west_arc = newl; Circle(dome_south_west_arc) = {dome_south,dome_center,dome_west};
 
-  p1 = newp; Point(p1) = {x,  y,  z,  lcar1} ;
-  p2 = newp; Point(p2) = {x+r,y,  z,  lcar3} ;
-  p3 = newp; Point(p3) = {x,  y+r,z,  lcar3} ;
-  p4 = newp; Point(p4) = {x,  y,  z+r,lcar3} ;
-  p5 = newp; Point(p5) = {x-r,y,  z,  lcar3} ;
-  p6 = newp; Point(p6) = {x,  y,  z-r,lcar3} ;
-  p7 = newp; Point(p7) = {x,  y-h,  z,  lcar1} ;
-  p8 = newp; Point(p8) = {x+r,y-h,  z,  lcar3} ;
-  p9 = newp; Point(p9) = {x,  y-h,  z-r,  lcar3} ;
-  p10 = newp; Point(p10) = {x,  y-h,  z+r,lcar3} ;
-  p11 = newp; Point(p11) = {x-r,y-h,  z,  lcar3} ;
-  p12 = newp; Point(p12) = {x+rs,y-h,  z,  lcar1} ;
-  p13 = newp; Point(p13) = {x,  y-h,  z-rs,  lcar1} ;
-  p14 = newp; Point(p14) = {x,  y-h,  z+rs,lcar1} ;
-  p15 = newp; Point(p15) = {x-rs,y-h,  z,  lcar1} ;
-  p16 = newp; Point(p16) = {x+rs,y,  z,  lcar1} ;
-  p17 = newp; Point(p17) = {x,  y,  z-rs,  lcar1} ;
-  p18 = newp; Point(p18) = {x,  y,  z+rs,lcar1} ;
-  p19 = newp; Point(p19) = {x-rs,y,  z,  lcar1} ;
+  base_north_west_arc = newl; Circle(base_north_west_arc) = {base_north,base_center,base_west};
+  base_north_east_arc = newl; Circle(base_north_east_arc) = {base_north,base_center,base_east};
+  base_south_east_arc = newl; Circle(base_south_east_arc) = {base_south,base_center,base_east};
+  base_south_west_arc = newl; Circle(base_south_west_arc) = {base_south,base_center,base_west};
 
-  c1 = newreg; Circle(c1) = {p16,p1,p18};
-  c2 = newreg; Circle(c2) = {p18,p1,p19};
-  c3 = newreg; Circle(c3) = {p19,p1,p17};
-  c4 = newreg; Circle(c4) = {p17,p1,p16};
-  c5 = newreg; Circle(c5) = {p2,p1,p3};
-  c6 = newreg; Circle(c6) = {p3,p1,p5};
-  c7 = newreg; Circle(c7) = {p6,p1,p3};
-  c8 = newreg; Circle(c8) = {p3,p1,p4};
-  c9 = newreg; Circle(c9) = {p10,p7,p8};
-  c10 = newreg; Circle(c10) = {p9,p7,p8};
-  c11 = newreg; Circle(c11) = {p9,p7,p11};
-  c12 = newreg; Circle(c12) = {p11,p7,p10};
-  c13 = newreg; Circle(c13) = {p2,p1,p6};
-  c14 = newreg; Circle(c14) = {p6,p1,p5};
-  c15 = newreg; Circle(c15) = {p5,p1,p4};
-  c16 = newreg; Circle(c16) = {p4,p1,p2};
-  c17 = newreg; Circle(c17) = {p12,p7,p14};
-  c18 = newreg; Circle(c18) = {p14,p7,p15};
-  c19 = newreg; Circle(c19) = {p15,p7,p13};
-  c20 = newreg; Circle(c20) = {p13,p7,p12};
+  slice_west_line = newl; Line(slice_west_line) = {base_west, dome_west};
+  slice_north_line = newl; Line(slice_north_line) = {base_north, dome_north};
+  slice_east_line = newl; Line(slice_east_line) = {base_east, dome_east};
+  slice_south_line = newl; Line(slice_south_line) = {base_south, dome_south};
+
+  slice_external_north_west_loop = newll; Line Loop(slice_external_north_west_loop) = {-dome_north_west_arc, slice_west_line, base_north_west_arc, -slice_north_line};
+  slice_external_north_west_surface = news; Surface(slice_external_north_west_surface) = {slice_external_north_west_loop};
+  slice_external_north_east_loop = newll; Line Loop(slice_external_north_east_loop) = {dome_north_east_arc, slice_north_line, -base_north_east_arc, -slice_east_line};
+  slice_external_north_east_surface = news; Surface(slice_external_north_east_surface) = {slice_external_north_east_loop};
+  slice_external_south_east_loop = newll; Line Loop(slice_external_south_east_loop) = {-dome_south_east_arc, slice_east_line, base_south_east_arc, -slice_south_line};
+  slice_external_south_east_surface = news; Surface(slice_external_south_east_surface) = {slice_external_south_east_loop};
+  slice_external_south_west_loop = newll; Line Loop(slice_external_south_west_loop) = {dome_south_west_arc, slice_south_line, -base_south_west_arc, -slice_west_line};
+  slice_external_south_west_surface = news; Surface(slice_external_south_west_surface) = {slice_external_south_west_loop};
+
+  slice_external_ring = {slice_external_north_west_surface,
+                         slice_external_north_east_surface,
+                         slice_external_south_east_surface,
+                         slice_external_south_west_surface};
+Return
+
+Function SliceExternalPoints
+  // Arguments
+  // ---------
+  //   x, y, z, h, r, element_length
+  //      number
+  // Returns
+  // -------
+  //   dome_north, dome_south, dome_west, dome_east
+  //   base_north, base_south, base_east, base_west
+  //      Point
+  base_west = newp; Point(base_west) = {x+r,y-h,  z,  element_length} ;
+  base_south = newp; Point(base_south) = {x,  y-h,  z-r,  element_length} ;
+  base_north = newp; Point(base_north) = {x,  y-h,  z+r,element_length} ;
+  base_east = newp; Point(base_east) = {x-r,y-h,  z,  element_length} ;
+
+  dome_west = newp; Point(dome_west) = {x+r,y,  z,  element_length} ;
+  dome_south = newp; Point(dome_south) = {x,  y,  z-r,  element_length} ;
+  dome_north = newp; Point(dome_north) = {x,  y,  z+r,element_length} ;
+  dome_east = newp; Point(dome_east) = {x-r,y,  z,  element_length} ;
+Return
+
+Function MakeRadialLines
+  // Arguments
+  // ---------
+  //   internal_dome_north, internal_dome_south,
+  //   internal_dome_west, internal_dome_east,
+  //   dome_north, dome_south, dome_west, dome_east,
+  //   internal_base_north, internal_base_south,
+  //   internal_base_west, internal_base_east,
+  //   base_north, base_south, base_west, base_east
+  //      Point
+  // Returns
+  // -------
+  //   base_radial_west_line, base_radial_north_line,
+  //   base_radial_east_line, base_radial_south_line,
+  //   dome_radial_west_line, dome_radial_north_line,
+  //   dome_radial_east_line, dome_radial_south_line
+  //      Line
+  base_radial_west_line = newl; Line(base_radial_west_line) = {internal_base_west,base_west};
+  base_radial_north_line = newl; Line(base_radial_north_line) = {internal_base_north,base_north};
+  base_radial_east_line = newl; Line(base_radial_east_line) = {internal_base_east,base_east};
+  base_radial_south_line = newl; Line(base_radial_south_line) = {internal_base_south,base_south};
+
+  dome_radial_west_line = newl; Line(dome_radial_west_line) = {internal_dome_west, dome_west};
+  dome_radial_north_line = newl; Line(dome_radial_north_line) = {internal_dome_north, dome_north};
+  dome_radial_east_line = newl; Line(dome_radial_east_line) = {internal_dome_east, dome_east};
+  dome_radial_south_line = newl; Line(dome_radial_south_line) = {internal_dome_south, dome_south};
+Return
+
+
+Function MakeVolume
+  // Arguments
+  // ---------
+  //   volume_surfaces
+  //      Surfaces[]
+  // Returns
+  // -------
+  //   volume
+  //      Volume
+  _volume_loop = newsl;
+  Surface Loop(_volume_loop) = volume_surfaces[];
+  volume = newv;
+  Volume(volume) = _volume_loop;
+Return
+
+
+Function Roi
+  // Arguments
+  // ---------
+  //   x, y, z, h, r, element_length
+  //      number
+  // Returns
+  // -------
+  //   dome_center, dome_north, dome_south, dome_west, dome_east
+  //   base_center, base_north, base_south, base_east, base_west
+  //      Point
+  //   dome_north_west_arc, dome_north_east_arc,
+  //   dome_south_east_arc, dome_south_west_arc,
+  //   base_north_west_arc, base_north_east_arc,
+  //   base_south_east_arc, base_south_west_arc
+  //      Circle
+  //   volume
+  //      Volume
+  //   slice_external_ring, dome_base, slice_base
+  //      Surface[]
+  dome_center = newp; Point(dome_center) = {x,  y,  z,  element_length};
+  base_center = newp; Point(base_center) = {x,  y-h,  z,  element_length};
+
+  Call SliceExternalPoints;
+  Call SliceExternalSurface;
   
-  line1 = newl; Line(line1) = {p1, p16};
-  line2 = newl; Line(line2) = {p1, p17};
-  line3 = newl; Line(line3) = {p1, p19};
-  line4 = newl; Line(line4) = {p1, p18};
-  line5 = newl; Line(line5) = {p2, p8};
-  line6 = newl; Line(line6) = {p6, p9};
-  line7 = newl; Line(line7) = {p5, p11};
-  line8 = newl; Line(line8) = {p4, p10};
-  line9 = newl; Line(line9) = {p12, p8};
-  line10 = newl; Line(line10) = {p13, p9};
-  line11 = newl; Line(line11) = {p15, p11};
-  line12 = newl; Line(line12) = {p14, p10};
-  line13 = newl; Line(line13) = {p12, p7};
-  line14 = newl; Line(line14) = {p13, p7};
-  line15 = newl; Line(line15) = {p15, p7};
-  line16 = newl; Line(line16) = {p14, p7};
-  line17 = newl; Line(line17) = {p2, p16};
-  line18 = newl; Line(line18) = {p4, p18};
-  line19 = newl; Line(line19) = {p5, p19};
-  line20 = newl; Line(line20) = {p6, p17};
-  line21 = newl; Line(line21) = {p12, p16};
-  line22 = newl; Line(line22) = {p13, p17};
-  line23 = newl; Line(line23) = {p15, p19};
-  line24 = newl; Line(line24) = {p14, p18};
-
-  l1 = newreg; Line Loop(l1) = {c5,c8,c16};   Ruled Surface(newreg) = {l1};
-  l2 = newreg; Line Loop(l2) = {c7,-c5,c13};   Ruled Surface(newreg) = {l2};
-  l3 = newreg; Line Loop(l3) = {-c8,c6,c15};  Ruled Surface(newreg) = {l3};
-  l4 = newreg; Line Loop(l4) = {-c6,-c7,c14};  Ruled Surface(newreg) = {l4};
-  l5 = newreg; Line Loop(l5) = {line1, c1, -line4}; Plane Surface(newreg) = {l5};
-  l6 = newreg; Line Loop(l6) = {line4, c2, -line3}; Plane Surface(newreg) = {l6};
-  l7 = newreg; Line Loop(l7) = {line3, c3, -line2}; Plane Surface(newreg) = {l7};
-  l8 = newreg; Line Loop(l8) = {line2, c4, -line1}; Plane Surface(newreg) = {l8};
-  l9 = newreg; Line Loop(l9) = {line17, c16, -line18,c1};   Ruled Surface(newreg) = {l9};
-  l10 = newreg; Line Loop(l10) = {c2, line18, c15, -line19};   Ruled Surface(newreg) = {l10};
-  l11 = newreg; Line Loop(l11) = {c3, line19, c14, -line20};  Ruled Surface(newreg) = {l11};
-  l12 = newreg; Line Loop(l12) = {c4, line20, c13, -line17};  Ruled Surface(newreg) = {l12};
-  l13 = newreg; Line Loop(l13) = {c1, line21, -c17, -line24};   Ruled Surface(newreg) = {l13};
-  l14 = newreg; Line Loop(l14) = {c2, line24, -c18, -line23};   Ruled Surface(newreg) = {l14};
-  l15 = newreg; Line Loop(l15) = {c3, line23, -c19, -line22};  Ruled Surface(newreg) = {l15};
-  l16 = newreg; Line Loop(l16) = {c4, line22, -c20, -line21};  Ruled Surface(newreg) = {l16};
-  l17 = newreg; Line Loop(l17) = {line15, c18, -line16}; Ruled Surface(newreg) = {l17};
-  l18 = newreg; Line Loop(l18) = {line16, c17, -line13}; Ruled Surface(newreg) = {l18};
-  l19 = newreg; Line Loop(l19) = {line13, c20, -line14}; Ruled Surface(newreg) = {l19};
-  l20 = newreg; Line Loop(l20) = {line14, c19, -line15}; Ruled Surface(newreg) = {l20};
-  l21 = newreg; Line Loop(l21) = {c17, -line9, c9, line12};   Ruled Surface(newreg) = {l21};
-  l22 = newreg; Line Loop(l22) = {c18, -line12, c12, line11};   Ruled Surface(newreg) = {l22};
-  l23 = newreg; Line Loop(l23) = {c19, -line11, c11, line10};  Ruled Surface(newreg) = {l23};
-  l24 = newreg; Line Loop(l24) = {c20, -line10, -c10, line9};  Ruled Surface(newreg) = {l24};
-  l25 = newreg; Line Loop(l25) = {c13, line6, c10, -line5};   Ruled Surface(newreg) = {l25};
-  l26 = newreg; Line Loop(l26) = {c16, line5, -c9, -line8};   Ruled Surface(newreg) = {l26};
-  l27 = newreg; Line Loop(l27) = {c15, line8, -c12, -line7};  Ruled Surface(newreg) = {l27};
-  l28 = newreg; Line Loop(l28) = {c14, line7, -c11, -line6};  Ruled Surface(newreg) = {l28};
-  //l29 = newreg; Line Loop(l29) = {line24, -line18, line8, line12};   Plane Surface(newreg) = {l29};
-  //l30 = newreg; Line Loop(l30) = {c16, line5, -c9, -line8};   Ruled Surface(newreg) = {l30};
-  //l31 = newreg; Line Loop(l31) = {c15, line8, -c12, -line7};  Ruled Surface(newreg) = {l31};
-  //l32 = newreg; Line Loop(l32) = {c14, line7, -c11, -line6};  Ruled Surface(newreg) = {l32};
-
-  elem_dome = newreg;
-  Surface Loop(elem_dome) = {l4+1,l3+1,l1+1,l2+1,l25+1,l26+1,l27+1,l28+1};
-
-  elem_model_base = newreg;
-  Surface Loop(elem_model_base) = {l17+1,l18+1,l19+1,l20+1,l21+1,l22+1,l23+1,l24+1};
-
-  elem_saline = newreg;
-  Surface Loop(elem_saline) = {l1+1,l2+1,l3+1,l4+1,l5+1,l6+1,l7+1,l8+1,l9+1,l10+1,l11+1,l12+1};
+  internal_dome_north = dome_center;
+  internal_dome_south = dome_center;
+  internal_dome_west = dome_center;
+  internal_dome_east = dome_center;
   
-  elem_slice = newreg;
-  Surface Loop(elem_slice) = {l9+1,l10+1,l11+1,l12+1,l13+1,l14+1,l15+1,l16+1,l21+1,l22+1,l23+1,l24+1,l25+1,l26+1,l27+1,l28+1};
+  internal_base_north = base_center;
+  internal_base_south = base_center;
+  internal_base_west = base_center;
+  internal_base_east = base_center;
+  
+  Call MakeRadialLines;
 
-  elem_roi = newreg;
-  Surface Loop(elem_roi) = {l5+1,l6+1,l7+1,l8+1,l13+1,l14+1,l15+1,l16+1,l17+1,l18+1,l19+1,l20+1};
+  dome_center_west_north_loop = newll; Line Loop(dome_center_west_north_loop) = {dome_radial_west_line, -dome_north_west_arc, -dome_radial_north_line};
+  dome_center_west_north_surface = news; Plane Surface(dome_center_west_north_surface) = {dome_center_west_north_loop};
+  dome_center_north_east_loop = newll; Line Loop(dome_center_north_east_loop) = {dome_radial_north_line, dome_north_east_arc, -dome_radial_east_line};
+  dome_center_north_east_surface = news; Plane Surface(dome_center_north_east_surface) = {dome_center_north_east_loop};
+  dome_center_east_south_loop = newll; Line Loop(dome_center_east_south_loop) = {dome_radial_east_line, -dome_south_east_arc, -dome_radial_south_line};
+  dome_center_east_south_surface = news; Plane Surface(dome_center_east_south_surface) = {dome_center_east_south_loop};
+  dome_center_south_west_loop = newll; Line Loop(dome_center_south_west_loop) = {dome_radial_south_line, dome_south_west_arc, -dome_radial_west_line};
+  dome_center_south_west_surface = news; Plane Surface(dome_center_south_west_surface) = {dome_center_south_west_loop};
 
+  base_center_west_north_loop = newll; Line Loop(base_center_west_north_loop) = {-base_radial_north_line, -base_north_west_arc, base_radial_west_line};
+  base_center_west_north_surface = news; Plane Surface(base_center_west_north_surface) = {base_center_west_north_loop};
+  base_center_north_east_loop = newll; Line Loop(base_center_north_east_loop) = {-base_radial_east_line, base_north_east_arc, base_radial_north_line};
+  base_center_north_east_surface = news; Plane Surface(base_center_north_east_surface) = {base_center_north_east_loop};
+  base_center_east_south_loop = newll; Line Loop(base_center_east_south_loop) = {-base_radial_south_line, -base_south_east_arc, base_radial_east_line};
+  base_center_east_south_surface = news; Plane Surface(base_center_east_south_surface) = {base_center_east_south_loop};
+  base_center_south_west_loop = newll; Line Loop(base_center_south_west_loop) = {-base_radial_west_line, base_south_west_arc, base_radial_south_line};
+  base_center_south_west_surface = news; Plane Surface(base_center_south_west_surface) = {base_center_south_west_loop};
+
+  dome_base = {dome_center_west_north_surface,
+               dome_center_north_east_surface,
+               dome_center_east_south_surface,
+               dome_center_south_west_surface};
+  slice_base = {base_center_north_east_surface,
+                base_center_west_north_surface,
+                base_center_south_west_surface,
+                base_center_east_south_surface};
+  volume_surfaces = {slice_external_ring[],
+                     dome_base[],
+                     slice_base[]};
+  Call MakeVolume;
+Return
+
+
+Function Dome
+  // Arguments
+  // ---------
+  //   dome_center, dome_top, dome_north, dome_south, dome_west, dome_east
+  //      Point
+  //   dome_north_west_arc, dome_north_east_arc,
+  //   dome_south_east_arc, dome_south_west_arc,
+  //      Circle
+  // Returns
+  // -------
+  //   dome_surfaces
+  //      Surface[]
+
+  dome_north_arc = newl; Circle(dome_north_arc) = {dome_north,dome_center,dome_top};
+  dome_south_arc = newl; Circle(dome_south_arc) = {dome_south,dome_center,dome_top};
+  dome_east_arc = newl; Circle(dome_east_arc) = {dome_east,dome_center,dome_top};
+  dome_west_arc = newl; Circle(dome_west_arc) = {dome_west,dome_center,dome_top};
+  
+  dome_north_west_loop = newll; Line Loop(dome_north_west_loop) = {dome_north_west_arc,dome_west_arc,-dome_north_arc};
+  dome_north_west_surface = news; Surface(dome_north_west_surface) = {dome_north_west_loop};
+  dome_north_east_loop = newll; Line Loop(dome_north_east_loop) = {dome_north_east_arc,dome_east_arc,-dome_north_arc};
+  dome_north_east_surface = news; Surface(dome_north_east_surface) = {dome_north_east_loop};
+  dome_south_west_loop = newll; Line Loop(dome_south_west_loop) = {dome_south_west_arc,dome_west_arc,-dome_south_arc};
+  dome_south_west_surface = news; Surface(dome_south_west_surface) = {dome_south_west_loop};
+  dome_south_east_loop = newll; Line Loop(dome_south_east_loop) = {dome_south_east_arc,dome_east_arc,-dome_south_arc};
+  dome_south_east_surface = news; Surface(dome_south_east_surface) = {dome_south_east_loop};
+
+  dome_surfaces = {dome_north_west_surface,
+                   dome_north_east_surface,
+                   dome_south_west_surface,
+                   dome_south_east_surface};
+Return
+
+
+Function HemisphereDome
+  // Arguments
+  // ---------
+  //   dome_center, dome_top, dome_north, dome_south, dome_west, dome_east
+  //      Point
+  //   dome_north_west_arc, dome_north_east_arc,
+  //   dome_south_east_arc, dome_south_west_arc,
+  //      Circle
+  //   dome_base
+  //      Surface[]
+  // Returns
+  // -------
+  //   dome_surfaces
+  //      Surface[]
+  //   volume
+  //      Volume
+  Call Dome;
+  volume_surfaces = {dome_surfaces[],
+                     dome_base[]};
+  Call MakeVolume;
+Return
+
+
+Function Ring
+  // Arguments
+  // ---------
+  //   x, y, z, h, r, element_length
+  //      numbers
+  //   dome_center, dome_north, dome_south, dome_west, dome_east,
+  //   base_center, base_north, base_south, base_west, base_east
+  //      Point
+  //   dome_north_west_arc, dome_north_east_arc,
+  //   dome_south_east_arc, dome_south_west_arc,
+  //   base_north_west_arc, base_north_east_arc,
+  //   base_south_east_arc, base_south_west_arc
+  //      Circle
+  //   slice_external_ring
+  //      Surface[]
+  // Returns
+  // -------
+  //   dome_north, dome_south, dome_west, dome_east,
+  //   base_north, base_south, base_west, base_east
+  //      Point
+  //   dome_north_west_arc, dome_north_east_arc,
+  //   dome_south_east_arc, dome_south_west_arc,
+  //   base_north_west_arc, base_north_east_arc,
+  //   base_south_east_arc, base_south_west_arc
+  //      Circle
+  //   slice_internal_ring, slice_external_ring, ring_dome_base, ring_slice_base
+  //      Surface[]
+  //   volume
+  //      Volume
+  slice_internal_ring = slice_external_ring[];
+
+  internal_dome_north_west_arc = dome_north_west_arc;
+  internal_dome_north_east_arc = dome_north_east_arc;
+  internal_dome_south_east_arc = dome_south_east_arc;
+  internal_dome_south_west_arc = dome_south_west_arc;
+
+  internal_base_north_west_arc = base_north_west_arc;
+  internal_base_north_east_arc = base_north_east_arc;
+  internal_base_south_east_arc = base_south_east_arc;
+  internal_base_south_west_arc = base_south_west_arc;
+
+  internal_dome_north = dome_north;
+  internal_dome_south = dome_south;
+  internal_dome_west = dome_west;
+  internal_dome_east = dome_east;
+
+  internal_base_north = base_north;
+  internal_base_south = base_south;
+  internal_base_west = base_west;
+  internal_base_east = base_east;
+
+  Call SliceExternalPoints;
+  Call SliceExternalSurface;
+  Call MakeRadialLines;
+
+  dome_west_north_loop = newll; Line Loop(dome_west_north_loop) = {internal_dome_north_west_arc,dome_radial_west_line, -dome_north_west_arc, -dome_radial_north_line};
+  dome_west_north_surface = news; Plane Surface(dome_west_north_surface) = {dome_west_north_loop};
+  dome_north_east_loop = newll; Line Loop(dome_north_east_loop) = {-internal_dome_north_east_arc,dome_radial_north_line, dome_north_east_arc, -dome_radial_east_line};
+  dome_north_east_surface = news; Plane Surface(dome_north_east_surface) = {dome_north_east_loop};
+  dome_east_south_loop = newll; Line Loop(dome_east_south_loop) = {internal_dome_south_east_arc,dome_radial_east_line, -dome_south_east_arc, -dome_radial_south_line};
+  dome_east_south_surface = news; Plane Surface(dome_east_south_surface) = {dome_east_south_loop};
+  dome_south_west_loop = newll; Line Loop(dome_south_west_loop) = {-internal_dome_south_west_arc,dome_radial_south_line, dome_south_west_arc, -dome_radial_west_line};
+  dome_south_west_surface = news; Plane Surface(dome_south_west_surface) = {dome_south_west_loop};
+
+  base_west_north_loop = newll; Line Loop(base_west_north_loop) = {internal_base_north_west_arc,-base_radial_north_line, -base_north_west_arc, base_radial_west_line};
+  base_west_north_surface = news; Plane Surface(base_west_north_surface) = {base_west_north_loop};
+  base_north_east_loop = newll; Line Loop(base_north_east_loop) = {-internal_base_north_east_arc,-base_radial_east_line, base_north_east_arc, base_radial_north_line};
+  base_north_east_surface = news; Plane Surface(base_north_east_surface) = {base_north_east_loop};
+  base_east_south_loop = newll; Line Loop(base_east_south_loop) = {internal_base_south_east_arc,-base_radial_south_line, -base_south_east_arc, base_radial_east_line};
+  base_east_south_surface = news; Plane Surface(base_east_south_surface) = {base_east_south_loop};
+  base_south_west_loop = newll; Line Loop(base_south_west_loop) = {-internal_base_south_west_arc,-base_radial_west_line, base_south_west_arc, base_radial_south_line};
+  base_south_west_surface = news; Plane Surface(base_south_west_surface) = {base_south_west_loop};
+  
+  ring_dome_base = {dome_west_north_surface,
+                    dome_north_east_surface,
+                    dome_east_south_surface,
+                    dome_south_west_surface};
+  ring_slice_base = {base_north_east_surface,
+                     base_west_north_surface,
+                     base_south_west_surface,
+                     base_east_south_surface};
+
+  volume_surfaces = {slice_internal_ring[],
+                     slice_external_ring[],
+                     ring_dome_base[],
+                     ring_slice_base[]};
+  Call MakeVolume;
+Return
+
+
+Function HollowDome
+  // Arguments
+  // ---------
+  //   dome_center, dome_top, dome_north, dome_south, dome_west, dome_east
+  //      Point
+  //   dome_north_west_arc, dome_north_east_arc,
+  //   dome_south_east_arc, dome_south_west_arc,
+  //      Circle
+  //   ring_dome_base
+  //      Surface[]
+  // Returns
+  // -------
+  //   dome_surfaces
+  //      Surface[]
+  //   dome_volume
+  //      Volume
+  internal_dome_surfaces = dome_surfaces[];
+  Call Dome;
+  volume_surfaces = {dome_surfaces[],
+                     ring_dome_base[],
+                     internal_dome_surfaces[]};
+  Call MakeVolume;
 Return
 
 h = 0.0003;
-x = 0.; y= 0.; z=h; r=0.001; t=1; h=0.0003; rs=h;
+x = 0.; y = 0.; z = h;
+r = h;
+element_length = 0.03125*h;
+Call Roi ;
+slice_volumes = {volume};
 
-lcar3 = 0.03125*r; lcar1 = 0.03125*h;
+//Physical Volume ("ROI") = volume;
 
 
-Call CheeseHole ;
-model_base = news;
-Physical Surface ("model_base") = {l17+1,l18+1,l19+1,l20+1,l21+1,l22+1,l23+1,l24+1};
+r = 0.003;
+element_length = 0.03125*r;
 
-model_dome = news;
-Physical Surface ("model_dome") = {l4+1,l3+1,l1+1,l2+1,l25+1,l26+1,l27+1,l28+1};
+Call Ring;
+dome_base = {dome_base[], ring_dome_base[]};
+slice_base = {slice_base[], ring_slice_base[]};
+slice_volumes = {slice_volumes[], volume};
 
-salinesurf = news;
-//Physical Surface ("salinesurf") = {l1+1,l2+1,l3+1,l4+1,l5+1,l6+1,l7+1,l8+1,l9+1,l10+1,l11+1,l12+1};
-salinevolume = newreg;
-Volume(salinevolume) = elem_saline;
-salinevol = newreg;
-Physical Volume ("salinevol") = salinevolume;
 
-slicesurf = news;
-//Physical Surface ("slicesurf") = {l9+1,l10+1,l11+1,l12+1,l13+1,l14+1,l15+1,l16+1,l21+1,l22+1,l23+1,l24+1,l25+1,l26+1,l27+1,l28+1};
-slicevolume = newreg;
-Volume(slicevolume) = elem_slice;
-slicevol = newreg;
-Physical Volume ("slicevol") = slicevolume;
+dome_top = newp; Point(dome_top) = {x,  y+r,z, element_length};
+Call HemisphereDome ;
+saline_volumes = {volume};
 
-roisurf = news;
-//Physical Surface ("roisurf") = {l5+1,l6+1,l7+1,l8+1,l13+1,l14+1,l15+1,l16+1,l17+1,l18+1,l19+1,l20+1};
-roivolume = newreg;
-Volume(roivolume) = elem_roi;
-roivol = newreg;
-Physical Volume ("roivol") = roivolume;
- 
+
+r = 0.03; element_length = 0.1*r;
+Call Ring;
+dome_base = {dome_base[], ring_dome_base[]};
+slice_base = {slice_base[], ring_slice_base[]};
+slice_volumes = {slice_volumes[], volume};
+
+//Physical Surface("slice_internal_ring") = slice_internal_ring[];
+//Physical Surface("slice_external_ring") = slice_external_ring[];
+//Physical Volume ("ring") = volume;
+
+
+dome_top = newp; Point(dome_top) = {x,  y+r,z, element_length};
+Call HollowDome;
+saline_volumes = {saline_volumes[], volume};
+
+
+Physical Volume ("slice") = slice_volumes[];
+Physical Volume ("saline") = saline_volumes[];
+Physical Surface("dome") = {dome_surfaces[],
+                            slice_external_ring[]};
+Physical Surface("slice_surface") = dome_base[];
+Physical Surface("slice_base") = slice_base[];
