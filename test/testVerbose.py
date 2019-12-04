@@ -59,21 +59,29 @@ class _PlainMatrixMM(VerboseFFR.MeasurementManagerBase):
         """
         Parameters
         ----------
-        i : int
-            Index of the probed basis function.
+        i : object
+            `i.id()` is the index of the probed basis function.
 
         Returns
         -------
-        i-th of the measurements of basis functions.
+        The measurements of `i.id()`-th basis function.
         """
-        return self._measurements_of_basis_functions[i]
+        return self._measurements_of_basis_functions[i.id()]
 
     @property
     def number_of_measurements(self):
         return len(self._measurements_of_basis_functions[0])
 
+    class Basis(object):
+        def __init__(self, id):
+            self._id = id
+
+        def id(self):
+            return self._id
+
     def bases(self):
-        return range(len(self._measurements_of_basis_functions))
+        return list(map(self.Basis,
+                        range(len(self._measurements_of_basis_functions))))
 
 
 class _TrueBasesMatrixMM(_PlainMatrixMM):
@@ -81,32 +89,34 @@ class _TrueBasesMatrixMM(_PlainMatrixMM):
         """
         Parameters
         ----------
-        i : int
-            Index of the probed basis function.
+        i : object
+            `i.id()` is the index of the probed basis function.
         j : int
             Index of the measurement point
 
         Returns
         -------
-        j-th measurement of i-th basis functions.
+        j-th measurement of `i.id()`-th basis functions.
         """
-        return self._measurements_of_basis_functions[i][j]
+        return self._measurements_of_basis_functions[i.id()][j]
 
-    class Basis(int):
-        def __new__(cls, values, *args, **kwargs):
-            return super(_TrueBasesMatrixMM.Basis, cls).__new__(cls, *args, **kwargs)
-
-        def __init__(self, values, *args, **kwargs):
-            # super(_TrueBasesMatrixMM.Basis, self).__init__()
+    class Basis(_PlainMatrixMM.Basis):
+        def __init__(self, id, values, idvector):
+            super(_TrueBasesMatrixMM.Basis, self).__init__(id)
             self._values = values
+            self._idvector = idvector
 
         def f(self, i):
             return self._values[i]
 
+        def idvector(self):
+            return self._idvector
+
     def bases(self):
-        return [self.Basis(values, i)
-                for i, values
-                in enumerate(self._measurements_of_basis_functions)]
+        return [self.Basis(i, values, idvector)
+                for i, (values, idvector)
+                in enumerate(zip(self._measurements_of_basis_functions,
+                                 np.eye(len(self._measurements_of_basis_functions))))]
 
 
 class TestKernelMatricesOfVerboseFFR(unittest.TestCase):
@@ -210,23 +220,35 @@ class TestKernelFunctionsOfVerboseFFR(TestKernelMatricesOfVerboseFFR):
     def testMethod_get_kernel_functions(self):
         for i, k_row in enumerate(self.KERNEL):
             kernels = self.reconstructor.get_kernel_functions(i)
+            self.checkArrayAlmostEqual(self.PROBED_POTENTIAL_BASIS[:, i] / self.NUMBER_OF_BASIS,
+                                       kernels.idvector())
             for j, k in enumerate(k_row):
                 self.assertAlmostEqual(k, kernels.f(j))
 
 
-class MockTestKernelFunctionsOfVerboseFFR(TestKernelMatricesOfVerboseFFR):
-    class MM(TestKernelMatricesOfVerboseFFR.MM):
+class MockTestKernelFunctionsOfVerboseFFR(TestKernelFunctionsOfVerboseFFR):
+    class MM(TestKernelFunctionsOfVerboseFFR.MM):
         def __init__(self, *args, **kwargs):
             super(MockTestKernelFunctionsOfVerboseFFR.MM,
                   self).__init__(*args, **kwargs)
 
             self.recorded_calls = collections.defaultdict(list)
 
-        def probe_at_single_point(self, field, *args, **kwargs):
-            self.recorded_calls['probe_at_single_point'].append((field,
-                                                                 args,
+        def __enter__(self):
+            self.recorded_calls = collections.defaultdict(list)
+            return self.recorded_calls
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        def probe_at_single_point(self, *args, **kwargs):
+            self.recorded_calls['probe_at_single_point'].append((args,
                                                                  kwargs))
-            return 0
+            try:
+                return super(MockTestKernelFunctionsOfVerboseFFR.MM,
+                             self).probe_at_single_point(*args, **kwargs)
+            except:
+                return 0
 
     def testMethod_get_kernel_functions_delegatesArbitraryArgumentsTo_probe_at_single_point(self):
         for args, kwargs in [((), {}),
@@ -234,19 +256,17 @@ class MockTestKernelFunctionsOfVerboseFFR(TestKernelMatricesOfVerboseFFR):
                              ((), {'a': 12}),
                              ]:
 
-            calls = self.measurement_mgr.recorded_calls['probe_at_single_point']
-            del calls[:] # Python 2.7 does not support list.clear()
-            self.reconstructor.get_kernel_functions(*args, **kwargs)
+            with self.measurement_mgr as recorded_calls:
+                self.reconstructor.get_kernel_functions(*args, **kwargs)
+                calls = recorded_calls['probe_at_single_point']
 
-            self.assertEqual(self.NUMBER_OF_BASIS, len(calls))
-            for _, a, kw in calls:
-                self.assertEqual(args, a)
-                self.assertEqual(kwargs, kw)
-            basis_probed = [c[0] for c in calls]
-            for basis in self.reconstructor._field_components:
-                self.assertIn(basis, basis_probed)
-            for basis in basis_probed:
-                self.assertIn(basis, self.reconstructor._field_components)
+                self.assertEqual(self.NUMBER_OF_BASIS, len(calls))
+                for a, kw in calls:
+                    self.assertEqual(args, a[1:])
+                    self.assertEqual(kwargs, kw)
+
+                self.assertEqual({b.id() for b in self.measurement_mgr.bases()},
+                                 {c[0][0].id() for c in calls})
 
 
 class TestsOfInitializationErrors(testEngine.TestsOfInitializationErrors):
