@@ -32,8 +32,8 @@ measurement_manager_basis = MeasurementManager(EST_POINTS)
 
 RESULTS = pd.DataFrame(columns=['sigma', 'M'] + ['eigenvalue_{:03d}'.format(i)
                        for i in range(100)])
-sigma_min = H/5
-sigma_max = 1
+sigma_min = H/1000
+sigma_max = H
 R = sigma_max/sigma_min
 n = -1
 while True:
@@ -56,7 +56,7 @@ while True:
         else:
             print('success', end='\t')
         finally:
-            RESULTS.to_csv('eigenvalues_by_m_sd.csv')
+            RESULTS.to_csv('eigenvalues_by_m_sd_small_width.csv')
             print('saved')
 
 #            reconstructor_list.append(reconstructor)

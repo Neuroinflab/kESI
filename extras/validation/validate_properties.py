@@ -45,6 +45,10 @@ def gaussian_source_factory_2d(xs, ys, sd, conductivity):
             for x, y in zip(xs, ys)]
 
 
+def lanczos_source_factory_2d(xs, ys, sd, conductivity):
+    return []
+
+
 if __name__ == '__main__':
     import pandas as pd
     import matplotlib.pyplot as plt

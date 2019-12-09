@@ -15,7 +15,7 @@ H = 1e-2
 conductivity = 0.3
 X = np.linspace(0, 1, 101)
 nr = 8
-data = pd.read_csv('eigenvalues_by_m_sd.csv')
+data = pd.read_csv('eigenvalues_by_m_sd_small_width.csv')
 sigmas = list(data.sigma.values[:nr])
 
 eigenvalues = data.iloc[:nr, 3:].values
@@ -32,7 +32,7 @@ for indx, sigma in enumerate(sigmas):
     plt.xlabel('nr of components')
     plt.title('eigenvalues')
     plt.yscale('log')
-    plt.ylim([1e-5, 1e2])
+    plt.ylim([1e-5, 3e2])
     plt.subplot(1, 3, 2)
     plt.plot(gaussian)
     plt.xlabel('nr od probes')
