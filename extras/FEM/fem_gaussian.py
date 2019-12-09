@@ -120,7 +120,7 @@ class GaussianSourceFactory(object):
             return self._normalize(self._parent.potential_sinc, X, Y, Z)
 
         def potential(self, X, Y, Z):
-            return self.potential_sinc(X, Y, Z)
+            return self.potential_linear(X, Y, Z)
 
         def potential_linear(self, X, Y, Z):
             return self._normalize(self._parent.potential_linear, X, Y, Z)
