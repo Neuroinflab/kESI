@@ -20,7 +20,10 @@ else:
         EXTERNAL_SURFACE = 1
         MAX_ITER = 10000
 
-        def __init__(self, degree=3):
+        def __init__(self, degree=3, mesh_path=None):
+            if mesh_path is not None:
+                self.PATH = mesh_path
+
             self._mesh = Mesh(self.PATH + '.xml')
             self._subdomains = MeshFunction("size_t", self._mesh,
                                             self.PATH + '_physical_region.xml')

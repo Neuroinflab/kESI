@@ -11,22 +11,32 @@ logger.setLevel(logging.INFO)
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
-class GaussianSourceFactory(object):
-    SOLUTION_FILENAME = os.path.join(os.path.dirname(__file__),
-                                     'Gaussian.npz')
 
-    def __init__(self, standard_deviation=1., degree=3, _limit=np.inf,
+DIRNAME = os.path.dirname(__file__)
+SOLUTION_DIRECTORY = os.path.join(DIRNAME,
+                                  'solutions')
+SAMPLING_FREQUENCY = 5
+
+class GaussianSourceFactory(object):
+    def __init__(self, filename='eighth_of_sphere_gaussian.npz',
+                 standard_deviation=1., degree=3,
+                 _limit=np.inf,
                  ground_truth=False):
         self.standard_deviation = standard_deviation
+        with np.load(self.solution_path(filename)) as fh:
+            try:
+                sampling_frequency = fh['sampling_frequency']
+            except KeyError:
+                sampling_frequency = 1
 
-        with np.load(self.SOLUTION_FILENAME) as fh:
             N = min(_limit, fh['N'])
 
             self.a = fh['A_{:01.3f}_{}'.format(standard_deviation, degree)]
-            COMPRESSED = fh['Ground_truth_SD_{:01.3f}'.format(standard_deviation)
-                            if ground_truth else
-                            'Gaussian_SD_{:01.3f}_{}'.format(standard_deviation,
-                                                                         degree)]
+            COMPRESSED = fh[
+                'Ground_truth_SD_{:01.3f}'.format(standard_deviation)
+                if ground_truth else
+                'Gaussian_SD_{:01.3f}_{}'.format(standard_deviation,
+                                                 degree)]
 
             stride = 2 * N - 1
 
@@ -37,16 +47,17 @@ class GaussianSourceFactory(object):
 
             POTENTIAL = self.empty((stride, stride, stride))
 
-            for x in range(N):
-                for y in range(x + 1):
-                    for z in range(y + 1):
+            for x in range(0, N * sampling_frequency, sampling_frequency):
+                for y in range(0, x + 1, sampling_frequency):
+                    for z in range(0, y + 1, sampling_frequency):
                         val = COMPRESSED[x * (x + 1) * (x + 2) // 6
                                          + y * (y + 1) // 2
                                          + z]
 
-                        for xs, ys, zs in itertools.permutations([[x] if x == 0 else [-x, x],
-                                                                  [y] if y == 0 else [-y, y],
-                                                                  [z] if z == 0 else [-z, z]]):
+                        for xs, ys, zs in itertools.permutations(
+                                [[x // sampling_frequency] if x == 0 else [-x // sampling_frequency, x // sampling_frequency],
+                                 [y // sampling_frequency] if y == 0 else [-y // sampling_frequency, y // sampling_frequency],
+                                 [z // sampling_frequency] if z == 0 else [-z // sampling_frequency, z // sampling_frequency]]):
                             # if x == y, x == z or y == z may repeat xs, ys, zs
                             for i, j, k in itertools.product(xs, ys, zs):
                                 idx = ((N - 1 + i) * stride + N - 1 + j) * stride + N - 1 + k
@@ -64,6 +75,11 @@ class GaussianSourceFactory(object):
                                                      np.linspace(1 - N, N - 1, stride),
                                                      np.linspace(1 - N, N - 1, stride)),
                                                     POTENTIAL)
+
+    @classmethod
+    def solution_path(cls, solution_filename):
+        return os.path.join(SOLUTION_DIRECTORY,
+                            solution_filename)
 
     def empty(self, shape):
         X = np.empty(shape)
@@ -133,6 +149,7 @@ class GaussianSourceFactory(object):
 
 
 if __name__ == '__main__':
+    import sys
     from scipy.special import erf
 
     try:
@@ -147,7 +164,12 @@ if __name__ == '__main__':
         from _fem_common import _SymmetricFEM_Base
 
         class GaussianPotentialFEM(_SymmetricFEM_Base):
-            PATH = 'meshes/eighth_of_sphere'
+            def __init__(self, degree=3, mesh_name='eighth_of_sphere'):
+                super(GaussianPotentialFEM, self).__init__(
+                    degree=degree,
+                    mesh_path=os.path.join(DIRNAME,
+                                           'meshes',
+                                           mesh_name))
 
             def _make_csd(self, degree, standard_deviation):
                 return Expression(f'''
@@ -215,11 +237,18 @@ if __name__ == '__main__':
 
         logging.basicConfig(level=logging.INFO)
 
-        fem = GaussianPotentialFEM()
+        if not os.path.exists(SOLUTION_DIRECTORY):
+            os.makedirs(SOLUTION_DIRECTORY)
+
+        mesh_name = sys.argv[1]
+        solution_filename = '{}_gaussian.npz'.format(mesh_name)
+
+        fem = GaussianPotentialFEM(mesh_name=mesh_name)
         N = 1 + int(np.floor(fem.RADIUS / np.sqrt(3)))
         stats = []
         results = {'N': N,
                    'STATS': stats,
+                   'sampling_frequency': SAMPLING_FREQUENCY,
                    }
         for degree in [1, 2, 3]:
             for sd in [0.25, 0.5, 1, 2]:
@@ -238,15 +267,19 @@ if __name__ == '__main__':
                     POTENTIAL = np.empty(N * (N + 1) * (N + 2) // 6)
                     POTENTIAL.fill(np.nan)
                     GT = POTENTIAL.copy()
-                    for x in range(N):
+                    for x in range((N - 1) * SAMPLING_FREQUENCY + 1):
                         for y in range(x + 1):
                             for z in range(y + 1):
                                 idx = x * (x + 1) * (x + 2) // 6 + y * (
                                             y + 1) // 2 + z
-                                POTENTIAL[idx] = potential(x, y, z)
-                                GT[idx] = ground_truth.potential(x, y, z)
+                                POTENTIAL[idx] = potential(x / float(SAMPLING_FREQUENCY),
+                                                           y / float(SAMPLING_FREQUENCY),
+                                                           z / float(SAMPLING_FREQUENCY))
+                                GT[idx] = ground_truth.potential(x / float(SAMPLING_FREQUENCY),
+                                                                 y / float(SAMPLING_FREQUENCY),
+                                                                 z / float(SAMPLING_FREQUENCY))
                     results['Gaussian_SD_{:01.3f}_{}'.format(sd, degree)] = POTENTIAL
                     results['Ground_truth_SD_{:01.3f}'.format(sd)] = GT
                     results['A_{:01.3f}_{}'.format(sd, degree)] = fem.a
-                    np.savez_compressed(GaussianSourceFactory.SOLUTION_FILENAME,
+                    np.savez_compressed(GaussianSourceFactory.solution_path(solution_filename),
                                         **results)
