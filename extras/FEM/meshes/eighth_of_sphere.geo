@@ -55,7 +55,7 @@ Function EighthOfSphere
   surface5236 = news;  Plane Surface(surface5236) = {loop5236};
   surface6314 = news;  Plane Surface(surface6314) = {loop6314};
 
-  all_loops = newsl; Surface Loop(all_loops) = {surface321,surface012,surface023,surface031};
+  //all_loops = newsl; Surface Loop(all_loops) = {surface321,surface012,surface023,surface031};
   central_loops = newsl; Surface Loop(central_loops) = {surface654,surface045,surface056,surface064};
   external_loops = newsl; Surface Loop(external_loops) = {-surface654,surface4125,surface5236,surface6314,surface321};
 Return
@@ -73,16 +73,18 @@ Call EighthOfSphere ;
 
 Physical Surface("surface_boundary") = surface321;
 Physical Surface("middle") = surface654;
-Physical Surface("internal_boundary") = {surface012,surface023,surface031};
-whole_volume = newv;
-Volume(whole_volume) = {all_loops};
+//when uncommented while whole_volume is commented dolfin-convert crashes
+//Physical Surface("internal_boundary") = {surface012,surface023,surface031};
+//When uncommented doubles the integration space
+//and makes external_volume crashing everything
+//whole_volume = newv;
+//Volume(whole_volume) = {all_loops};
 central_volume = newv;
 Volume(central_volume) = {central_loops};
-// for some reason crashes when whole_volume is uncommented
-//external_volume = newv;
-//Volume(external_volume) = {external_loops};
+external_volume = newv;
+Volume(external_volume) = {external_loops};
 
-Physical Volume("whole") = whole_volume;
-Physical Volume("central") = central_volume;
-//Physical Volume("external") = external_volume;
+Physical Volume("whole") = {central_volume, external_volume};
+//Physical Volume("central") = {central_volume};
+//Physical Volume("external") = {external_volume};
 
