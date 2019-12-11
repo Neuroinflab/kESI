@@ -9,7 +9,8 @@ try:
     from dolfin import (Constant, Mesh, MeshFunction, FunctionSpace,
                         TestFunction, TrialFunction, Function,
                         Measure, inner, grad, assemble, KrylovSolver,
-                        Expression, DirichletBC)
+                        Expression, DirichletBC, XDMFFile, MeshValueCollection,
+                        cpp)
 
 except (ModuleNotFoundError, ImportError):
     logger.warning("Unable to import from dolfin")
@@ -25,6 +26,20 @@ else:
                 self.PATH = mesh_path
 
             logger.debug('Loading mesh...')
+
+            # with XDMFFile(self.PATH + '.xdmf') as fh:
+            #     self._mesh = Mesh()
+            #     fh.read(self._mesh)
+            #
+            # with XDMFFile(self.PATH + '_boundaries.xdmf') as fh:
+            #     mvc = MeshValueCollection("size_t", self._mesh, 2)
+            #     fh.read(mvc, "boundaries")
+            #     self._boundaries = cpp.mesh.MeshFunctionSizet(self._mesh, mvc)
+            #
+            # with XDMFFile(self.PATH + '_subdomains.xdmf') as fh:
+            #     mvc = MeshValueCollection("size_t", self._mesh, 3)
+            #     fh.read(mvc, "subdomains")
+            #     self._subdomains = cpp.mesh.MeshFunctionSizet(self._mesh, mvc)
 
             self._mesh = Mesh(self.PATH + '.xml')
             self._subdomains = MeshFunction("size_t", self._mesh,

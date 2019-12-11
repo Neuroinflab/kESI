@@ -1,22 +1,19 @@
 DC=dolfin-convert $< $@
+KC=python kesi_convert.py $< $@
 GMSH=gmsh -3 -optimize_netgen $<
 
 all: eighth_of_sphere.xml finite_slice.xml
 
-eighth_of_sphere.msh: eighth_of_sphere.geo
-	${GMSH}
+all: $(MESHES)
 
-eighth_of_sphere.xml: eighth_of_sphere.msh
-	${DC}
-
-finite_slice.msh: finite_slice.geo
+%.msh: %.geo
 	${GMSH}
 
 finite_slice.xml: finite_slice.msh
 	${DC}
 
-slice.msh: slice.geo
-	${GMSH}
-
-slice.xml: slice.msh
+%.xml %_physical_region.xml %_facet_region.xml: %.msh
 	${DC}
+
+%.xdmf %_boundaries.xdmf %_subdomains.xdmf: %.msh
+	${KC}
