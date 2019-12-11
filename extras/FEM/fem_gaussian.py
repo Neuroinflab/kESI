@@ -6,7 +6,7 @@ import logging
 import itertools
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
