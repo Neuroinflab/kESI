@@ -181,7 +181,7 @@ if __name__ == '__main__':
                                   degree=degree,
                                   a=1.0)
 
-            def _potential_behind_dome(self, radius, standard_deviation):
+            def potential_behind_dome(self, radius, standard_deviation):
                 return (0.25
                         * erf(radius
                               / (np.sqrt(2)
@@ -242,7 +242,7 @@ if __name__ == '__main__':
         mesh_name = sys.argv[1]
 
         fem = GaussianPotentialFEM(mesh_name=mesh_name)
-        N = 1 + int(np.floor(fem.RADIUS / np.sqrt(3)))
+        N = 1 + int(np.ceil(fem.RADIUS))
 
         for sd in [1, 2, 0.5, 0.25]:
             solution_filename = '{}_gaussian_{:04d}.npz'.format(mesh_name,
@@ -251,6 +251,7 @@ if __name__ == '__main__':
             results = {'N': N,
                        'standard_deviation': sd,
                        'STATS': stats,
+                       'radius': fem.RADIUS,
                        'sampling_frequency': SAMPLING_FREQUENCY,
                        }
             for degree in [1, 2, 3]:
@@ -268,7 +269,7 @@ if __name__ == '__main__':
                                  'SUCCEED' if potential is not None else 'FAILED',
                                  fem=fem))
                 if potential is not None:
-                    N_LIMIT = (N - 1) * SAMPLING_FREQUENCY + 1
+                    N_LIMIT = (N - 1) * SAMPLING_FREQUENCY + 1 # TODO: prove correctness
                     POTENTIAL = np.empty(N_LIMIT * (N_LIMIT + 1) * (N_LIMIT + 2) // 6)
                     POTENTIAL.fill(np.nan)
                     GT = POTENTIAL.copy()
@@ -277,12 +278,26 @@ if __name__ == '__main__':
                             for z in range(y + 1):
                                 idx = x * (x + 1) * (x + 2) // 6 + y * (
                                             y + 1) // 2 + z
-                                POTENTIAL[idx] = potential(x / float(SAMPLING_FREQUENCY),
-                                                           y / float(SAMPLING_FREQUENCY),
-                                                           z / float(SAMPLING_FREQUENCY))
-                                GT[idx] = ground_truth.potential(x / float(SAMPLING_FREQUENCY),
-                                                                 y / float(SAMPLING_FREQUENCY),
-                                                                 z / float(SAMPLING_FREQUENCY))
+                                xx = x / float(SAMPLING_FREQUENCY)
+                                yy = y / float(SAMPLING_FREQUENCY)
+                                zz = z / float(SAMPLING_FREQUENCY)
+                                r = np.sqrt(xx ** 2 + yy ** 2 + zz ** 2)
+                                if r >= fem.RADIUS:
+                                    v = fem.potential_behind_dome(r, sd)
+                                else:
+                                    try:
+                                        v = potential(xx, yy, zz)
+                                    except RuntimeError as e:
+                                        logger.warning("""
+                                potential({}, {}, {})
+                                (r = {})
+                                raised:
+                                {}""".format(xx, yy, zz, r, e))
+                                        v = fem.potential_behind_dome(r, sd)
+                                POTENTIAL[idx] = v
+                                GT[idx] = ground_truth.potential(xx,
+                                                                 yy,
+                                                                 zz)
                     results['Gaussian_{}'.format(degree)] = POTENTIAL
                     results['Ground_truth'.format(sd)] = GT
                     results['A_{}'.format(degree)] = fem.a

@@ -90,7 +90,7 @@ else:
             logger.debug('Done.  Defining boundary condition...')
             dirichlet_bc = DirichletBC(self._V,
                                        Constant(
-                                                self._potential_behind_dome(
+                                                self.potential_behind_dome(
                                                          self.RADIUS,
                                                          *args, **kwargs)),
                                        self._boundaries,
