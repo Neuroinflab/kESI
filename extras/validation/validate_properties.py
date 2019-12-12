@@ -29,7 +29,7 @@ class ValidateKESI(VerboseFFR):
         return eigenvalues, eigenvectors
 
 
-class MeasurementManager(MeasurementManagerBase):
+class MeasurementManager2d(MeasurementManagerBase):
     def __init__(self, ELECTRODES):
         self._ELECTRODES = ELECTRODES
         self.number_of_measurements = len(ELECTRODES)
@@ -38,6 +38,17 @@ class MeasurementManager(MeasurementManagerBase):
         return field.potential(self._ELECTRODES.X,
                                self._ELECTRODES.Y,
                                0)
+
+
+class MeasurementManager(MeasurementManagerBase):
+    def __init__(self, ELECTRODES):
+        self._ELECTRODES = ELECTRODES
+        self.number_of_measurements = len(ELECTRODES)
+
+    def probe(self, field):
+        return field.potential(self._ELECTRODES.X,
+                               self._ELECTRODES.Y,
+                               self._ELECTRODES.Z)
 
 
 def gaussian_source_factory_2d(xs, ys, sd, conductivity):
@@ -63,7 +74,7 @@ if __name__ == '__main__':
                                'Y': Y.flatten(),
                                })
 
-    measurement_manager = MeasurementManager(ELECTRODES)
+    measurement_manager = MeasurementManager2d(ELECTRODES)
     src_X, src_Y = np.mgrid[0.:1.:100j,
                             0.:1.:100j]
 
@@ -79,7 +90,7 @@ if __name__ == '__main__':
     EST_POINTS = pd.DataFrame({'X': est_X.flatten(),
                                'Y': est_Y.flatten(),
                                })
-    measurement_manager_basis = MeasurementManager(EST_POINTS)
+    measurement_manager_basis = MeasurementManager2d(EST_POINTS)
     eigensources = reconstructor._eigensources(measurement_manager_basis)
 
     fig = plt.figure(figsize=(18, 16))
