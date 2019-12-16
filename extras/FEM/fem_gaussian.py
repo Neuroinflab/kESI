@@ -5,82 +5,28 @@ import os
 import logging
 import itertools
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
+import _fem_common
 
-DIRNAME = os.path.dirname(__file__)
-SOLUTION_DIRECTORY = os.path.join(DIRNAME,
-                                  'solutions')
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# SOLUTION_DIRECTORY = _fem_common.SOLUTION_DIRECTORY
+
 SAMPLING_FREQUENCY = 5
 
-class GaussianSourceFactory(object):
-    def __init__(self, filename='eighth_of_sphere_gaussian.npz',
-                 degree=1,
-                 _limit=np.inf,
-                 ground_truth=False):
-        with np.load(self.solution_path(filename)) as fh:
-            sampling_frequency = fh['sampling_frequency']
-            self.standard_deviation = fh['standard_deviation']
+class GaussianSourceFactory(_fem_common._SymmetricSourceFactory_Base):
+    def load_specific_attributes(self, fh):
+        self.standard_deviation = fh['standard_deviation']
 
-            N = min(_limit, fh['N'])
+    def solution_array_name(self, degree, ground_truth):
+        if ground_truth:
+            return 'Ground_truth'
 
-            self.a = fh['A_{}'.format(degree)]
-            COMPRESSED = fh[
-                'Ground_truth'
-                if ground_truth else
-                'Gaussian_{}'.format(degree)]
-
-            stride = 2 * N - 1
-
-            self.POTENTIAL = self.empty(stride ** 3)
-            self.X = self.empty(stride ** 3)
-            self.Y = self.empty(stride ** 3)
-            self.Z = self.empty(stride ** 3)
-
-            POTENTIAL = self.empty((stride, stride, stride))
-
-            for x in range(0, N * sampling_frequency, sampling_frequency):
-                for y in range(0, x + 1, sampling_frequency):
-                    for z in range(0, y + 1, sampling_frequency):
-                        val = COMPRESSED[x * (x + 1) * (x + 2) // 6
-                                         + y * (y + 1) // 2
-                                         + z]
-
-                        for xs, ys, zs in itertools.permutations(
-                                [[x // sampling_frequency] if x == 0 else [-x // sampling_frequency, x // sampling_frequency],
-                                 [y // sampling_frequency] if y == 0 else [-y // sampling_frequency, y // sampling_frequency],
-                                 [z // sampling_frequency] if z == 0 else [-z // sampling_frequency, z // sampling_frequency]]):
-                            # if x == y, x == z or y == z may repeat xs, ys, zs
-                            for i, j, k in itertools.product(xs, ys, zs):
-                                idx = ((N - 1 + i) * stride + N - 1 + j) * stride + N - 1 + k
-
-                                self.POTENTIAL[idx] = val
-                                self.X[idx] = i
-                                self.Y[idx] = j
-                                self.Z[idx] = k
-
-                                POTENTIAL[N - 1 + i,
-                                          N - 1 + j,
-                                          N - 1 + k] = val
-
-        self.interpolator = RegularGridInterpolator((np.linspace(1 - N, N - 1, stride),
-                                                     np.linspace(1 - N, N - 1, stride),
-                                                     np.linspace(1 - N, N - 1, stride)),
-                                                    POTENTIAL)
-
-    @classmethod
-    def solution_path(cls, solution_filename):
-        return os.path.join(SOLUTION_DIRECTORY,
-                            solution_filename)
-
-    def empty(self, shape):
-        X = np.empty(shape)
-        X.fill(np.nan)
-        return X
+        return 'Gaussian_{}'.format(degree)
 
     def csd(self, X, Y, Z):
         return np.exp(-0.5
@@ -88,54 +34,6 @@ class GaussianSourceFactory(object):
                          + np.square(Y)
                          + np.square(Z))
                       / self.standard_deviation ** 2) * self.a
-
-    # TODO: handle cases of distant points
-    def potential_sinc(self, X, Y, Z):
-        return np.inner((np.sinc(np.subtract.outer(X, self.X))
-                         * np.sinc(np.subtract.outer(Y, self.Y))
-                         * np.sinc(np.subtract.outer(Z, self.Z))),
-                        self.POTENTIAL)
-
-    def potential_linear(self, X, Y, Z):
-        return self.interpolator(np.stack((X, Y, Z),
-                                          axis=-1))
-
-
-    class _Source(object):
-        def __init__(self,
-                     scale,
-                     conductivity,
-                     x,
-                     y,
-                     z,
-                     parent):
-            self._scale = scale
-            self._conductivity = conductivity
-            self._x = x
-            self._y = y
-            self._z = z
-            self._parent = parent
-
-        def csd(self, X, Y, Z):
-            return (self._parent.csd((X - self._x) / self._scale,
-                                     (Y - self._y) / self._scale,
-                                     (Z - self._z) / self._scale)
-                    / self._scale ** 3)
-
-        def _normalize(self, f, X, Y, Z):
-            return (f((X - self._x) / self._scale,
-                      (Y - self._y) / self._scale,
-                      (Z - self._z) / self._scale)
-                    / (self._scale * self._conductivity))
-
-        def potential_sinc(self, X, Y, Z):
-            return self._normalize(self._parent.potential_sinc, X, Y, Z)
-
-        def potential(self, X, Y, Z):
-            return self.potential_linear(X, Y, Z)
-
-        def potential_linear(self, X, Y, Z):
-            return self._normalize(self._parent.potential_linear, X, Y, Z)
 
     def Source(self, x=0, y=0, z=0, standard_deviation=1, conductivity=1):
         return self._Source(standard_deviation / self.standard_deviation,
@@ -233,8 +131,8 @@ if __name__ == '__main__':
 
         logging.basicConfig(level=logging.INFO)
 
-        if not os.path.exists(SOLUTION_DIRECTORY):
-            os.makedirs(SOLUTION_DIRECTORY)
+        if not os.path.exists(_fem_common.SOLUTION_DIRECTORY):
+            os.makedirs(_fem_common.SOLUTION_DIRECTORY)
 
         mesh_name = sys.argv[1]
 
