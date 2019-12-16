@@ -106,7 +106,7 @@ if __name__ == '__main__':
                     N_LIMIT = (N - 1) * SAMPLING_FREQUENCY + 1 # TODO: prove correctness
                     POTENTIAL = np.empty(N_LIMIT * (N_LIMIT + 1) * (N_LIMIT + 2) // 6)
                     POTENTIAL.fill(np.nan)
-                    for x in range(N):
+                    for x in range(N_LIMIT):
                         for y in range(x + 1):
                             for z in range(y + 1):
                                 idx = x * (x + 1) * (x + 2) // 6 + y * (

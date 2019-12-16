@@ -3,10 +3,8 @@
 
 import os
 import logging
-import itertools
 
 import numpy as np
-from scipy.interpolate import RegularGridInterpolator
 
 import _fem_common
 
@@ -22,7 +20,7 @@ class GaussianSourceFactory(_fem_common._SymmetricSourceFactory_Base):
     def load_specific_attributes(self, fh):
         self.standard_deviation = fh['standard_deviation']
 
-    def solution_array_name(self, degree, ground_truth):
+    def solution_array_name(self, degree, ground_truth=False):
         if ground_truth:
             return 'Ground_truth'
 
@@ -44,6 +42,7 @@ class GaussianSourceFactory(_fem_common._SymmetricSourceFactory_Base):
 
 if __name__ == '__main__':
     import sys
+
     from scipy.special import erf
 
     try:
@@ -55,15 +54,13 @@ if __name__ == '__main__':
         $ cd /home/fenics/shared/
         """)
     else:
-        from _fem_common import _SymmetricFEM_Base
-
-        class GaussianPotentialFEM(_SymmetricFEM_Base):
+        class GaussianPotentialFEM(_fem_common._SymmetricFEM_Base):
             def __init__(self, degree=1, mesh_name='eighth_of_sphere'):
-                super(GaussianPotentialFEM, self).__init__(
-                    degree=degree,
-                    mesh_path=os.path.join(DIRNAME,
-                                           'meshes',
-                                           mesh_name))
+                         super(GaussianPotentialFEM, self).__init__(
+                               degree=degree,
+                               mesh_path=os.path.join(_fem_common.DIRNAME,
+                                                      'meshes',
+                                                      mesh_name))
 
             def _make_csd(self, degree, standard_deviation):
                 return Expression(f'''

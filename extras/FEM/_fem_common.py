@@ -151,13 +151,16 @@ class _SymmetricSourceFactory_Base(object):
             self.a = fh['A_{}'.format(degree)]
 
             stride = 2 * N - 1
+            linear_stride = (N - 1) * sampling_frequency + 1
 
             self.POTENTIAL = self.empty(stride ** 3)
             self.X = self.empty(stride ** 3)
             self.Y = self.empty(stride ** 3)
             self.Z = self.empty(stride ** 3)
 
-            POTENTIAL = self.empty((stride, stride, stride))
+            POTENTIAL = self.empty((linear_stride,
+                                    linear_stride,
+                                    linear_stride))
 
             for x in range(0, N * sampling_frequency, sampling_frequency):
                 for y in range(0, x + 1, sampling_frequency):
@@ -179,13 +182,18 @@ class _SymmetricSourceFactory_Base(object):
                                 self.Y[idx] = j
                                 self.Z[idx] = k
 
-                                POTENTIAL[N - 1 + i,
-                                          N - 1 + j,
-                                          N - 1 + k] = val
+            for x in range(0, linear_stride):
+                for y in range(0, x + 1):
+                    for z in range(0, y + 1):
+                        val = COMPRESSED[x * (x + 1) * (x + 2) // 6
+                                         + y * (y + 1) // 2
+                                         + z]
+                        for i, j, k in itertools.permutations([x, y, z]):
+                            POTENTIAL[i, j, k] = val
 
-        self.interpolator = RegularGridInterpolator((np.linspace(1 - N, N - 1, stride),
-                                                     np.linspace(1 - N, N - 1, stride),
-                                                     np.linspace(1 - N, N - 1, stride)),
+        self.interpolator = RegularGridInterpolator((np.linspace(0, (linear_stride - 1.0) / sampling_frequency, linear_stride),
+                                                     np.linspace(0, (linear_stride - 1.0) / sampling_frequency, linear_stride),
+                                                     np.linspace(0, (linear_stride - 1.0) / sampling_frequency, linear_stride)),
                                                     POTENTIAL)
 
     @classmethod
@@ -206,7 +214,9 @@ class _SymmetricSourceFactory_Base(object):
 
     # TODO: handle cases of distant points
     def potential_linear(self, X, Y, Z):
-        return self.interpolator(np.stack((X, Y, Z),
+        return self.interpolator(np.stack((abs(X),
+                                           abs(Y),
+                                           abs(Z)),
                                           axis=-1))
 
     class _Source(object):
