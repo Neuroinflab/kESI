@@ -23,10 +23,7 @@ class GaussianSourceFactory(object):
                  _limit=np.inf,
                  ground_truth=False):
         with np.load(self.solution_path(filename)) as fh:
-            try:
-                sampling_frequency = fh['sampling_frequency']
-            except KeyError:
-                sampling_frequency = 1
+            sampling_frequency = fh['sampling_frequency']
             self.standard_deviation = fh['standard_deviation']
 
             N = min(_limit, fh['N'])
