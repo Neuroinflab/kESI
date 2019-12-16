@@ -41,8 +41,7 @@ class LanczosSourceFactory(_fem_common._SymmetricSourceFactory_Base):
 if __name__ == '__main__':
     import sys
     try:
-        from dolfin import Constant, Mesh, MeshFunction, FunctionSpace, TestFunction, TrialFunction, Function, Measure, inner, grad, assemble, KrylovSolver
-        from dolfin import Expression, DirichletBC
+        from dolfin import Expression
 
     except (ModuleNotFoundError, ImportError):
         print("""Run docker first:
@@ -52,11 +51,11 @@ if __name__ == '__main__':
     else:
         class LanczosPotentialFEM(_fem_common._SymmetricFEM_Base):
             def __init__(self, degree=1, mesh_name='eighth_of_sphere'):
-                super(LanczosPotentialFEM, self).__init__(
-                    degree=degree,
-                    mesh_path=os.path.join(_fem_common.DIRNAME,
-                                           'meshes',
-                                           mesh_name))
+                         super(LanczosPotentialFEM, self).__init__(
+                               degree=degree,
+                               mesh_path=os.path.join(_fem_common.DIRNAME,
+                                                      'meshes',
+                                                      mesh_name))
 
             def _make_csd(self, degree, n):
                 return Expression(f'''
