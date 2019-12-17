@@ -137,5 +137,7 @@ if __name__ == '__main__':
                                     POTENTIAL[idx] = v
                         results['Lanczos_{}'.format(degree)] = POTENTIAL
                         results['A_{}'.format(degree)] = fem.a
-                        np.savez_compressed(LanczosSourceFactory.solution_path(solution_filename),
+                        np.savez_compressed(LanczosSourceFactory.solution_path(
+                                                solution_filename,
+                                                False),
                                             **results)

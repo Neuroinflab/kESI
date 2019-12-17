@@ -200,5 +200,7 @@ if __name__ == '__main__':
                         results['Gaussian_{}'.format(degree)] = POTENTIAL
                         results['Ground_truth'] = GT
                         results['A_{}'.format(degree)] = fem.a
-                        np.savez_compressed(GaussianSourceFactory.solution_path(solution_filename),
+                        np.savez_compressed(GaussianSourceFactory.solution_path(
+                                                solution_filename,
+                                                False),
                                             **results)

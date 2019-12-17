@@ -131,6 +131,7 @@ else:
 class _SymmetricSourceFactory_Base(object):
     def __init__(self, filename=None,
                  degree=1,
+                 try_local_first=True,
                  _limit=np.inf,
                  *args, **kwargs):
         """
@@ -141,7 +142,8 @@ class _SymmetricSourceFactory_Base(object):
         _limit
         ground_truth : bool
         """
-        with np.load(self.solution_path(filename)) as fh:
+        with np.load(self.solution_path(filename,
+                                        try_local_first)) as fh:
             self.load_specific_attributes(fh)
             COMPRESSED = fh[self.solution_array_name(degree, *args, **kwargs)]
 
@@ -198,7 +200,10 @@ class _SymmetricSourceFactory_Base(object):
                                                     POTENTIAL)
 
     @classmethod
-    def solution_path(cls, solution_filename):
+    def solution_path(cls, solution_filename, try_local_first=True):
+        if try_local_first and os.path.exists(solution_filename):
+            return solution_filename
+
         return os.path.join(SOLUTION_DIRECTORY,
                             solution_filename)
 
