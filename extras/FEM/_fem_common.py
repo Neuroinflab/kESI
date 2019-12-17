@@ -241,22 +241,25 @@ class _SymmetricSourceFactory_Base(object):
             self._parent = parent
 
         def csd(self, X, Y, Z):
-            return (self._parent.csd((X - self._x) / self._scale,
-                                     (Y - self._y) / self._scale,
-                                     (Z - self._z) / self._scale)
+            return (self._pre_normalize(self._parent.csd, X, Y, Z)
                     / self._scale ** 3)
 
-        def _normalize(self, f, X, Y, Z):
-            return (f((X - self._x) / self._scale,
-                      (Y - self._y) / self._scale,
-                      (Z - self._z) / self._scale)
+        def _pre_normalize(self, f, X, Y, Z):
+            return f((X - self._x) / self._scale,
+                     (Y - self._y) / self._scale,
+                     (Z - self._z) / self._scale)
+
+        def _normalize_potential(self, f, X, Y, Z):
+            return (self._pre_normalize(f, X, Y, Z)
                     / (self._scale * self._conductivity))
 
         def potential_sinc(self, X, Y, Z):
-            return self._normalize(self._parent.potential_sinc, X, Y, Z)
+            return self._normalize_potential(self._parent.potential_sinc,
+                                             X, Y, Z)
 
         def potential(self, X, Y, Z):
             return self.potential_linear(X, Y, Z)
 
         def potential_linear(self, X, Y, Z):
-            return self._normalize(self._parent.potential_linear, X, Y, Z)
+            return self._normalize_potential(self._parent.potential_linear,
+                                             X, Y, Z)
