@@ -6,7 +6,15 @@ import logging
 
 import numpy as np
 
-import _fem_common
+try:
+    from . import _fem_common
+    # When run as script raises:
+    #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
+    #  - `SystemError` (Python 3.3-5), or
+    #  - `ValueError` (Python 2.7).
+
+except (ImportError, SystemError, ValueError):
+    import _fem_common
 
 
 logger = logging.getLogger(__name__)
