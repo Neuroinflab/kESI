@@ -8,6 +8,8 @@ EIGHTH_OF_SPHERE_XML=eighth_of_sphere.xml eighth_of_sphere_coarse.xml eighth_of_
 EIGHTH_OF_SPHERE_MESHES=$(EIGHTH_OF_SPHERE_XDMF) $(EIGHTH_OF_SPHERE_XML)
 MESHES=$(EIGHTH_OF_SPHERE_MESHES) finite_slice.xml
 
+.SECONDARY: eighth_of_sphere.msh eighth_of_sphere_coarse.msh eighth_of_sphere_coarser.msh eighth_of_sphere_coarsest.msh finite_slice.msh
+
 all: $(MESHES)
 
 %.msh: %.geo
