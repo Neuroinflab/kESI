@@ -3,15 +3,16 @@ KC=python kesi_convert.py $< $@
 GMSH=gmsh -3 -optimize_netgen $<
 SED=sed 's/$(1)/$(2)/g' $< > $@
 
-all: eighth_of_sphere.xml finite_slice.xml
+EIGHTH_OF_SPHERE_XDMF=eighth_of_sphere.xdmf
+EIGHTH_OF_SPHERE_XML=eighth_of_sphere.xml eighth_of_sphere_coarse.xml eighth_of_sphere_coarser.xml eighth_of_sphere_coarsest.xml
+EIGHTH_OF_SPHERE_MESHES=$(EIGHTH_OF_SPHERE_XDMF) $(EIGHTH_OF_SPHERE_XML)
+MESHES=$(EIGHTH_OF_SPHERE_MESHES) finite_slice.xml
 
 all: $(MESHES)
 
 %.msh: %.geo
 	${GMSH}
 
-finite_slice.xml: finite_slice.msh
-	${DC}
 
 %.xml %_physical_region.xml %_facet_region.xml: %.msh
 	${DC}
