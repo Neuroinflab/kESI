@@ -33,7 +33,7 @@ class GaussianSourceFactory(_fem_common._SymmetricSourceFactory_Base):
                          + np.square(Z))
                       / self.standard_deviation ** 2) * self.a
 
-    def Source(self, x=0, y=0, z=0, standard_deviation=1, conductivity=1):
+    def __call__(self, x=0, y=0, z=0, standard_deviation=1, conductivity=1):
         return self._Source(standard_deviation / self.standard_deviation,
                             conductivity,
                             x, y, z,

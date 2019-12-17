@@ -31,7 +31,7 @@ class LanczosSourceFactory(_fem_common._SymmetricSourceFactory_Base):
     def csd(self, X, Y, Z):
         return self._lanczos(X) * self._lanczos(Y) * self._lanczos(Z) * self.a
 
-    def Source(self, x=0, y=0, z=0, scale=1, conductivity=1):
+    def __call__(self, x=0, y=0, z=0, scale=1, conductivity=1):
         return self._Source(scale,
                             conductivity,
                             x, y, z,

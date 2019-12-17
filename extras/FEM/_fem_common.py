@@ -1,6 +1,7 @@
 import datetime
 import itertools
 import logging
+import warnings
 import os
 
 import numpy as np
@@ -218,6 +219,11 @@ class _SymmetricSourceFactory_Base(object):
                                            abs(Y),
                                            abs(Z)),
                                           axis=-1))
+
+    def Source(self, *args, **kwargs):
+        warnings.warn('The factory is a callable.  Call it instead.',
+                      DeprecationWarning)
+        return self(*args, **kwargs)
 
     class _Source(object):
         def __init__(self,
