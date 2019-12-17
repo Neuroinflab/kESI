@@ -131,67 +131,66 @@ if __name__ == '__main__':
         if not os.path.exists(_fem_common.SOLUTION_DIRECTORY):
             os.makedirs(_fem_common.SOLUTION_DIRECTORY)
 
-        mesh_name = sys.argv[1]
+        for mesh_name in sys.argv[1:]:
+            fem = GaussianPotentialFEM(mesh_name=mesh_name)
+            N = 1 + int(np.ceil(fem.RADIUS))
 
-        fem = GaussianPotentialFEM(mesh_name=mesh_name)
-        N = 1 + int(np.ceil(fem.RADIUS))
+            for sd in [1, 2, 0.5, 0.25]:
+                solution_filename = '{}_gaussian_{:04d}.npz'.format(mesh_name,
+                                                                    int(round(1000 * sd)))
+                stats = []
+                results = {'N': N,
+                           'standard_deviation': sd,
+                           'STATS': stats,
+                           'radius': fem.RADIUS,
+                           'sampling_frequency': SAMPLING_FREQUENCY,
+                           }
+                for degree in [1, 2, 3]:
+                    ground_truth = GaussianSourceKCSD3D(0, 0, 0, sd, 1)
+                    logger.info('Gaussian SD={} (deg={})'.format(sd, degree))
+                    potential = fem(degree, sd)
 
-        for sd in [1, 2, 0.5, 0.25]:
-            solution_filename = '{}_gaussian_{:04d}.npz'.format(mesh_name,
-                                                                int(round(1000 * sd)))
-            stats = []
-            results = {'N': N,
-                       'standard_deviation': sd,
-                       'STATS': stats,
-                       'radius': fem.RADIUS,
-                       'sampling_frequency': SAMPLING_FREQUENCY,
-                       }
-            for degree in [1, 2, 3]:
-                ground_truth = GaussianSourceKCSD3D(0, 0, 0, sd, 1)
-                logger.info('Gaussian SD={} (deg={})'.format(sd, degree))
-                potential = fem(degree, sd)
-
-                stats.append((degree,
-                              potential is not None,
-                              fem.iterations,
-                              fem.time.total_seconds()))
-                logger.info('Gaussian SD={} (deg={}): {}\t({fem.iterations}, {fem.time})'.format(
-                                 sd,
-                                 degree,
-                                 'SUCCEED' if potential is not None else 'FAILED',
-                                 fem=fem))
-                if potential is not None:
-                    N_LIMIT = (N - 1) * SAMPLING_FREQUENCY + 1 # TODO: prove correctness
-                    POTENTIAL = np.empty(N_LIMIT * (N_LIMIT + 1) * (N_LIMIT + 2) // 6)
-                    POTENTIAL.fill(np.nan)
-                    GT = POTENTIAL.copy()
-                    for x in range(N_LIMIT):
-                        for y in range(x + 1):
-                            for z in range(y + 1):
-                                idx = x * (x + 1) * (x + 2) // 6 + y * (
-                                            y + 1) // 2 + z
-                                xx = x / float(SAMPLING_FREQUENCY)
-                                yy = y / float(SAMPLING_FREQUENCY)
-                                zz = z / float(SAMPLING_FREQUENCY)
-                                r = np.sqrt(xx ** 2 + yy ** 2 + zz ** 2)
-                                if r >= fem.RADIUS:
-                                    v = fem.potential_behind_dome(r, sd)
-                                else:
-                                    try:
-                                        v = potential(xx, yy, zz)
-                                    except RuntimeError as e:
-                                        logger.warning("""
-                                potential({}, {}, {})
-                                (r = {})
-                                raised:
-                                {}""".format(xx, yy, zz, r, e))
+                    stats.append((degree,
+                                  potential is not None,
+                                  fem.iterations,
+                                  fem.time.total_seconds()))
+                    logger.info('Gaussian SD={} (deg={}): {}\t({fem.iterations}, {fem.time})'.format(
+                                     sd,
+                                     degree,
+                                     'SUCCEED' if potential is not None else 'FAILED',
+                                     fem=fem))
+                    if potential is not None:
+                        N_LIMIT = (N - 1) * SAMPLING_FREQUENCY + 1 # TODO: prove correctness
+                        POTENTIAL = np.empty(N_LIMIT * (N_LIMIT + 1) * (N_LIMIT + 2) // 6)
+                        POTENTIAL.fill(np.nan)
+                        GT = POTENTIAL.copy()
+                        for x in range(N_LIMIT):
+                            for y in range(x + 1):
+                                for z in range(y + 1):
+                                    idx = x * (x + 1) * (x + 2) // 6 + y * (
+                                                y + 1) // 2 + z
+                                    xx = x / float(SAMPLING_FREQUENCY)
+                                    yy = y / float(SAMPLING_FREQUENCY)
+                                    zz = z / float(SAMPLING_FREQUENCY)
+                                    r = np.sqrt(xx ** 2 + yy ** 2 + zz ** 2)
+                                    if r >= fem.RADIUS:
                                         v = fem.potential_behind_dome(r, sd)
-                                POTENTIAL[idx] = v
-                                GT[idx] = ground_truth.potential(xx,
-                                                                 yy,
-                                                                 zz)
-                    results['Gaussian_{}'.format(degree)] = POTENTIAL
-                    results['Ground_truth'.format(sd)] = GT
-                    results['A_{}'.format(degree)] = fem.a
-                    np.savez_compressed(GaussianSourceFactory.solution_path(solution_filename),
-                                        **results)
+                                    else:
+                                        try:
+                                            v = potential(xx, yy, zz)
+                                        except RuntimeError as e:
+                                            logger.warning("""
+                                    potential({}, {}, {})
+                                    (r = {})
+                                    raised:
+                                    {}""".format(xx, yy, zz, r, e))
+                                            v = fem.potential_behind_dome(r, sd)
+                                    POTENTIAL[idx] = v
+                                    GT[idx] = ground_truth.potential(xx,
+                                                                     yy,
+                                                                     zz)
+                        results['Gaussian_{}'.format(degree)] = POTENTIAL
+                        results['Ground_truth'] = GT
+                        results['A_{}'.format(degree)] = fem.a
+                        np.savez_compressed(GaussianSourceFactory.solution_path(solution_filename),
+                                            **results)
