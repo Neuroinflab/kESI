@@ -5,6 +5,7 @@ import os
 import logging
 
 import numpy as np
+from scipy.special import erf
 
 try:
     from . import _fem_common
@@ -41,6 +42,13 @@ class GaussianSourceFactory(_fem_common._SymmetricSourceFactory_Base):
                          + np.square(Z))
                       / self.standard_deviation ** 2) * self.a
 
+    def potential_behind_dome(self, radius):
+        return (0.25
+                * erf(radius
+                      / (np.sqrt(2)
+                         * self.standard_deviation))
+                / (radius * np.pi))
+
     def __call__(self, x=0, y=0, z=0, standard_deviation=1, conductivity=1):
         return self._Source(standard_deviation / self.standard_deviation,
                             conductivity,
@@ -50,8 +58,6 @@ class GaussianSourceFactory(_fem_common._SymmetricSourceFactory_Base):
 
 if __name__ == '__main__':
     import sys
-
-    from scipy.special import erf
 
     try:
         from dolfin import Expression
