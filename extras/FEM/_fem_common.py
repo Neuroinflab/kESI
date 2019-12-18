@@ -1,6 +1,7 @@
 import datetime
 import itertools
 import logging
+import warnings
 import os
 
 import numpy as np
@@ -130,6 +131,7 @@ else:
 class _SymmetricSourceFactory_Base(object):
     def __init__(self, filename=None,
                  degree=1,
+                 try_local_first=True,
                  _limit=np.inf,
                  *args, **kwargs):
         """
@@ -140,7 +142,8 @@ class _SymmetricSourceFactory_Base(object):
         _limit
         ground_truth : bool
         """
-        with np.load(self.solution_path(filename)) as fh:
+        with np.load(self.solution_path(filename,
+                                        try_local_first)) as fh:
             self.load_specific_attributes(fh)
             COMPRESSED = fh[self.solution_array_name(degree, *args, **kwargs)]
 
@@ -197,7 +200,10 @@ class _SymmetricSourceFactory_Base(object):
                                                     POTENTIAL)
 
     @classmethod
-    def solution_path(cls, solution_filename):
+    def solution_path(cls, solution_filename, try_local_first=True):
+        if try_local_first and os.path.exists(solution_filename):
+            return solution_filename
+
         return os.path.join(SOLUTION_DIRECTORY,
                             solution_filename)
 
@@ -219,6 +225,11 @@ class _SymmetricSourceFactory_Base(object):
                                            abs(Z)),
                                           axis=-1))
 
+    def Source(self, *args, **kwargs):
+        warnings.warn('The factory is a callable.  Call it instead.',
+                      DeprecationWarning)
+        return self(*args, **kwargs)
+
     class _Source(object):
         def __init__(self,
                      scale,
@@ -235,22 +246,25 @@ class _SymmetricSourceFactory_Base(object):
             self._parent = parent
 
         def csd(self, X, Y, Z):
-            return (self._parent.csd((X - self._x) / self._scale,
-                                     (Y - self._y) / self._scale,
-                                     (Z - self._z) / self._scale)
+            return (self._pre_normalize(self._parent.csd, X, Y, Z)
                     / self._scale ** 3)
 
-        def _normalize(self, f, X, Y, Z):
-            return (f((X - self._x) / self._scale,
-                      (Y - self._y) / self._scale,
-                      (Z - self._z) / self._scale)
+        def _pre_normalize(self, f, X, Y, Z):
+            return f((X - self._x) / self._scale,
+                     (Y - self._y) / self._scale,
+                     (Z - self._z) / self._scale)
+
+        def _normalize_potential(self, f, X, Y, Z):
+            return (self._pre_normalize(f, X, Y, Z)
                     / (self._scale * self._conductivity))
 
         def potential_sinc(self, X, Y, Z):
-            return self._normalize(self._parent.potential_sinc, X, Y, Z)
+            return self._normalize_potential(self._parent.potential_sinc,
+                                             X, Y, Z)
 
         def potential(self, X, Y, Z):
             return self.potential_linear(X, Y, Z)
 
         def potential_linear(self, X, Y, Z):
-            return self._normalize(self._parent.potential_linear, X, Y, Z)
+            return self._normalize_potential(self._parent.potential_linear,
+                                             X, Y, Z)
