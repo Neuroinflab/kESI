@@ -194,10 +194,13 @@ class _SymmetricSourceFactory_Base(object):
                         for i, j, k in itertools.permutations([x, y, z]):
                             POTENTIAL[i, j, k] = val
 
-        self.interpolator = RegularGridInterpolator((np.linspace(0, (linear_stride - 1.0) / sampling_frequency, linear_stride),
-                                                     np.linspace(0, (linear_stride - 1.0) / sampling_frequency, linear_stride),
-                                                     np.linspace(0, (linear_stride - 1.0) / sampling_frequency, linear_stride)),
-                                                    POTENTIAL)
+        self._radius = (linear_stride - 1.0) / sampling_frequency
+        LINSPACE = np.linspace(0, self._radius, linear_stride)
+        self._interpolator = RegularGridInterpolator((LINSPACE,
+                                                      LINSPACE,
+                                                      LINSPACE),
+                                                     POTENTIAL,
+                                                     bounds_error=False)
 
     @classmethod
     def solution_path(cls, solution_filename, try_local_first=True):
@@ -218,12 +221,24 @@ class _SymmetricSourceFactory_Base(object):
                          * np.sinc(np.subtract.outer(Z, self.Z))),
                         self.POTENTIAL)
 
+    def potential_behind_dome(self, r):
+        return 0.25 / np.pi / r
+
     # TODO: handle cases of distant points
     def potential_linear(self, X, Y, Z):
-        return self.interpolator(np.stack((abs(X),
-                                           abs(Y),
-                                           abs(Z)),
-                                          axis=-1))
+        abs_X = abs(X)
+        abs_Y = abs(Y)
+        abs_Z = abs(Z)
+        return np.where(((abs_X <= self._radius)
+                         & (abs_Y <= self._radius)
+                         & (abs_Z <= self._radius)),
+                        self._interpolator(np.stack((abs_X,
+                                                     abs_Y,
+                                                     abs_Z),
+                                                    axis=-1)),
+                        self.potential_behind_dome(np.sqrt(np.square(abs_X)
+                                                           + np.square(abs_Y)
+                                                           + np.square(abs_Y))))
 
     def Source(self, *args, **kwargs):
         warnings.warn('The factory is a callable.  Call it instead.',
