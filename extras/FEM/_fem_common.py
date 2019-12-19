@@ -132,6 +132,7 @@ class _SymmetricSourceFactory_Base(object):
     def __init__(self, filename=None,
                  degree=1,
                  try_local_first=True,
+                 approximation_mixing_threshold=0.5,
                  _limit=np.inf,
                  *args, **kwargs):
         """
@@ -142,6 +143,7 @@ class _SymmetricSourceFactory_Base(object):
         _limit
         ground_truth : bool
         """
+        self._appoximation_mixing_threshold = approximation_mixing_threshold
         with np.load(self.solution_path(filename,
                                         try_local_first)) as fh:
             self.load_specific_attributes(fh)
@@ -230,6 +232,27 @@ class _SymmetricSourceFactory_Base(object):
                          * np.sinc(np.subtract.outer(Y, self.Y))
                          * np.sinc(np.subtract.outer(Z, self.Z))),
                         self.POTENTIAL)
+
+    def potential_sinc_scalar(self, x, y, z):
+        w = max(abs(w) for w in [x, y, z])
+        if w < self._radius:
+            SINC_3D = (np.sinc(x - self.X)
+                       * np.sinc(y - self.Y)
+                       * np.sinc(z - self.Z))
+            # self.POTENTIAL is already downsampled thus there is no need
+            # of accounting for sampling frequency
+            interpolated = (SINC_3D * self.POTENTIAL).sum()
+
+            if w < self._appoximation_mixing_threshold * self._radius:
+                return interpolated
+
+        approximated = self.potential_behind_dome(np.sqrt(x**2 + y**2 + z**2))
+        if w >= self._radius:
+            return approximated
+
+        q = ((self._radius - w)
+             / ((1.0 - self._appoximation_mixing_threshold) * self._radius))
+        return q * interpolated + (1 - q) * approximated
 
     def potential_behind_dome(self, r):
         return 0.25 / np.pi / r
