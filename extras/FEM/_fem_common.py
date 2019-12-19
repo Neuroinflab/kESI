@@ -145,13 +145,12 @@ class _SymmetricSourceFactory_Base(object):
         with np.load(self.solution_path(filename,
                                         try_local_first)) as fh:
             self.load_specific_attributes(fh)
-            COMPRESSED = fh[self.solution_array_name(degree, *args, **kwargs)]
+            self.a = fh['A_{}'.format(degree)]
 
+            COMPRESSED = fh[self.solution_array_name(degree, *args, **kwargs)]
             sampling_frequency = fh['sampling_frequency']
 
             N = min(_limit, fh['N'])
-
-            self.a = fh['A_{}'.format(degree)]
 
             stride = 2 * N - 1
             linear_stride = (N - 1) * sampling_frequency + 1
@@ -165,20 +164,24 @@ class _SymmetricSourceFactory_Base(object):
                                     linear_stride,
                                     linear_stride))
 
+            # WARNING: subsampling without filtering
             for x in range(0, N * sampling_frequency, sampling_frequency):
                 for y in range(0, x + 1, sampling_frequency):
                     for z in range(0, y + 1, sampling_frequency):
                         val = COMPRESSED[x * (x + 1) * (x + 2) // 6
                                          + y * (y + 1) // 2
                                          + z]
-
+                        # NOTE: if x == y, x == z or y == z
+                        # itertools.permutations() may repeat xs, ys, zs
                         for xs, ys, zs in itertools.permutations(
-                                [[x // sampling_frequency] if x == 0 else [-x // sampling_frequency, x // sampling_frequency],
-                                 [y // sampling_frequency] if y == 0 else [-y // sampling_frequency, y // sampling_frequency],
-                                 [z // sampling_frequency] if z == 0 else [-z // sampling_frequency, z // sampling_frequency]]):
-                            # if x == y, x == z or y == z may repeat xs, ys, zs
+                                [self._abs_inv_list(x // sampling_frequency),
+                                 self._abs_inv_list(y // sampling_frequency),
+                                 self._abs_inv_list(z // sampling_frequency),
+                                 ]):
                             for i, j, k in itertools.product(xs, ys, zs):
-                                idx = ((N - 1 + i) * stride + N - 1 + j) * stride + N - 1 + k
+                                idx = (((N - 1 + i)
+                                        * stride + N - 1 + j)
+                                       * stride) + N - 1 + k
 
                                 self.POTENTIAL[idx] = val
                                 self.X[idx] = i
@@ -202,6 +205,11 @@ class _SymmetricSourceFactory_Base(object):
                                                      POTENTIAL,
                                                      bounds_error=False)
 
+    def _abs_inv_list(self, x):
+        if x == 0:
+            return [x]
+        return [-x, x]
+
     @classmethod
     def solution_path(cls, solution_filename, try_local_first=True):
         if try_local_first and os.path.exists(solution_filename):
@@ -216,6 +224,8 @@ class _SymmetricSourceFactory_Base(object):
         return X
 
     def potential_sinc(self, X, Y, Z):
+        # self.POTENTIAL is already downsampled thus there is no need
+        # of accounting for sampling frequency
         return np.inner((np.sinc(np.subtract.outer(X, self.X))
                          * np.sinc(np.subtract.outer(Y, self.Y))
                          * np.sinc(np.subtract.outer(Z, self.Z))),
