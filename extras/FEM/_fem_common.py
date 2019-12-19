@@ -25,9 +25,7 @@ except (ModuleNotFoundError, ImportError):
     logger.warning("Unable to import from dolfin")
 
 else:
-    class _SymmetricFEM_Base(object):
-        RADIUS = 55.5
-        EXTERNAL_SURFACE = 1
+    class _FEM_Base(object):
         MAX_ITER = 10000
 
         def __init__(self, degree=3, mesh_path=None):
@@ -71,8 +69,7 @@ else:
             logger.debug('Done.  Creating trial function...')
             self._potential_trial = TrialFunction(self._V)
             logger.debug('Done.  Creating LHS part of equation...')
-            self._a = inner(grad(self._potential_trial),
-                            grad(self._v)) * self._dx
+            self._a = self._lhs()
             logger.debug('Done.  Assembling linear equation matrix...')
             self._terms_with_unknown = assemble(self._a)
             self._degree = degree
@@ -90,20 +87,13 @@ else:
             logger.debug('Creating CSD expression...')
             csd = self._make_csd(degree, *args, **kwargs)
             logger.debug('Done.  Normalizing...')
-            self.a = csd.a = (0.125 / assemble(csd
-                                               * Measure("dx", self._mesh)))
+            self.a = csd.a = self._csd_normalization_factor(csd)
             logger.debug('Done.  Creating RHS part of equation...')
             L = csd * self._v * self._dx
             logger.debug('Done.  Assembling linear equation vector...')
             known_terms = assemble(L)
             logger.debug('Done.  Defining boundary condition...')
-            dirichlet_bc = DirichletBC(self._V,
-                                       Constant(
-                                                self.potential_behind_dome(
-                                                         self.RADIUS,
-                                                         *args, **kwargs)),
-                                       self._boundaries,
-                                       self.EXTERNAL_SURFACE)
+            dirichlet_bc = self._boundary_condition(*args, **kwargs)
             logger.debug('Done.  Copying linear equation matrix...')
             terms_with_unknown = self._terms_with_unknown.copy()
             logger.debug('Done.  Applying boundary condition...')
@@ -126,6 +116,32 @@ else:
 
             finally:
                 self.time = datetime.datetime.now() - start
+
+
+    class _SymmetricFEM_Base(_FEM_Base):
+        RADIUS = 55.5
+        EXTERNAL_SURFACE = 1
+
+        def _lhs(self):
+            return inner(grad(self._potential_trial),
+                         grad(self._v)) * self._dx
+
+        def _csd_normalization_factor(self, csd):
+            old_a = csd.a
+            csd.a = 1
+            a = (0.125 / assemble(csd
+                                  * Measure("dx", self._mesh)))
+            csd.a = old_a
+            return a
+
+        def _boundary_condition(self, *args, **kwargs):
+            return DirichletBC(self._V,
+                               Constant(
+                                   self.potential_behind_dome(
+                                       self.RADIUS,
+                                       *args, **kwargs)),
+                               self._boundaries,
+                               self.EXTERNAL_SURFACE)
 
 
 class _SymmetricSourceFactory_Base(object):
