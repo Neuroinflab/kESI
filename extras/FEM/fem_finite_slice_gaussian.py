@@ -68,9 +68,10 @@ if __name__ == '__main__':
             def _csd_normalization_factor(self, csd):
                 old_a = csd.a
                 csd.a = 1
-                a = 1.0 / assemble(csd * Measure("dx", self._mesh))
-                csd.a = old_a
-                return a
+                try:
+                    return 1.0 / assemble(csd * Measure("dx", self._mesh))
+                finally:
+                    csd.a = old_a
 
             def _boundary_condition(self, *args, **kwargs):
                 return DirichletBC(self._V,
