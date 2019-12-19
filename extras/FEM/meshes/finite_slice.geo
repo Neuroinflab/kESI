@@ -488,7 +488,7 @@ Return
 
 
 h = 0.0003;
-x = 0.; y = 0.; z = h;
+x = 0.; y = h; z = 0.;
 r = h;
 element_length = 0.03125*h;
 Call Roi ;
