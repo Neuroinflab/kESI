@@ -310,6 +310,10 @@ class _SymmetricSourceFactory_Base(object):
             return self._normalize_potential(self._parent.potential_sinc,
                                              X, Y, Z)
 
+        def potential_sinc_scalar(self, X, Y, Z):
+            return self._normalize_potential(self._parent.potential_sinc_scalar,
+                                             X, Y, Z)
+
         def potential(self, X, Y, Z):
             return self.potential_linear(X, Y, Z)
 
