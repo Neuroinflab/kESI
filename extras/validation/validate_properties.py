@@ -6,7 +6,14 @@ import numpy as np
 import sys
 sys.path.append('../')
 
-from api_stabilizer import VerboseFFR, MeasurementManagerBase
+try:
+    from api_stabilizer import VerboseFFR, MeasurementManagerBase
+    # When run as script raises:
+    #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
+    #  - `SystemError` (Python 3.3-5), or
+    #  - `ValueError` (Python 2.7).
+except (ImportError, SystemError, ValueError):
+    from .api_stabilizer import VerboseFFR, MeasurementManagerBase
 
 from _common_new import GaussianSourceKCSD3D
 
@@ -41,14 +48,16 @@ class MeasurementManager2d(MeasurementManagerBase):
 
 
 class MeasurementManager(MeasurementManagerBase):
-    def __init__(self, ELECTRODES):
+    def __init__(self, ELECTRODES, space='potential'):
+        self._space = space
         self._ELECTRODES = ELECTRODES
         self.number_of_measurements = len(ELECTRODES)
 
     def probe(self, field):
-        return field.potential(self._ELECTRODES.X,
-                               self._ELECTRODES.Y,
-                               self._ELECTRODES.Z)
+        return getattr(field, 
+                       self._space)(self._ELECTRODES.X,
+                                    self._ELECTRODES.Y,
+                                    self._ELECTRODES.Z)
 
 
 def gaussian_source_factory_2d(xs, ys, sd, conductivity):
