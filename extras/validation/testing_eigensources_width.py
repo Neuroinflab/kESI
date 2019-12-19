@@ -8,19 +8,19 @@ import matplotlib.gridspec as gridspec
 import matplotlib.cm as cm
 
 from validate_properties import (ValidateKESI,
-                                 MeasurementManager,
+                                 MeasurementManager2d,
                                  gaussian_source_factory_2d)
 
 
 H = 1e-2
 conductivity = 0.3
-X, Y = np.mgrid[0.05: 0.95: 10j,
-                0.05: 0.95: 10j]
+X, Y = np.mgrid[0.055: 0.955: 10j,
+                0.055: 0.955: 10j]
 ELECTRODES = pd.DataFrame({'X': X.flatten(),
                            'Y': Y.flatten(),
                            })
 
-measurement_manager = MeasurementManager(ELECTRODES)
+measurement_manager = MeasurementManager2d(ELECTRODES)
 src_X, src_Y = np.mgrid[0.:1.:101j,
                         0.:1.:101j]
 est_X, est_Y = np.mgrid[0.:1.:100j,
@@ -28,12 +28,12 @@ est_X, est_Y = np.mgrid[0.:1.:100j,
 EST_POINTS = pd.DataFrame({'X': est_X.flatten(),
                            'Y': est_Y.flatten(),
                            })
-measurement_manager_basis = MeasurementManager(EST_POINTS)
+measurement_manager_basis = MeasurementManager2d(EST_POINTS)
 
 RESULTS = pd.DataFrame(columns=['sigma', 'M'] + ['eigenvalue_{:03d}'.format(i)
                        for i in range(100)])
-sigma_min = H/5
-sigma_max = 1
+sigma_min = H/100000
+sigma_max = H
 R = sigma_max/sigma_min
 n = -1
 while True:
@@ -49,14 +49,16 @@ while True:
                                                  sigma,
                                                  conductivity)
             reconstructor = ValidateKESI(sources, measurement_manager)
+            # stop
             eigenvalues, _ = reconstructor._evd(reconstructor.kernel)
             RESULTS.loc[idx, 2:] = eigenvalues
         except Exception as e:
             print('failed', e, end='\t')
+            raise e
         else:
             print('success', end='\t')
         finally:
-            RESULTS.to_csv('eigenvalues_by_m_sd.csv')
+            RESULTS.to_csv('eigenvalues_by_m_sd_extremely_small_width.csv')
             print('saved')
 
 #            reconstructor_list.append(reconstructor)

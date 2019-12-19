@@ -6,7 +6,14 @@ import numpy as np
 import sys
 sys.path.append('../')
 
-from api_stabilizer import VerboseFFR, MeasurementManagerBase
+try:
+    from api_stabilizer import VerboseFFR, MeasurementManagerBase
+    # When run as script raises:
+    #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
+    #  - `SystemError` (Python 3.3-5), or
+    #  - `ValueError` (Python 2.7).
+except (ImportError, SystemError, ValueError):
+    from .api_stabilizer import VerboseFFR, MeasurementManagerBase
 
 from _common_new import GaussianSourceKCSD3D
 
@@ -29,7 +36,7 @@ class ValidateKESI(VerboseFFR):
         return eigenvalues, eigenvectors
 
 
-class MeasurementManager(MeasurementManagerBase):
+class MeasurementManager2d(MeasurementManagerBase):
     def __init__(self, ELECTRODES):
         self._ELECTRODES = ELECTRODES
         self.number_of_measurements = len(ELECTRODES)
@@ -40,9 +47,32 @@ class MeasurementManager(MeasurementManagerBase):
                                0)
 
 
+class MeasurementManager(MeasurementManagerBase):
+    def __init__(self, ELECTRODES, space='potential'):
+        self._space = space
+        self._ELECTRODES = ELECTRODES
+        self.number_of_measurements = len(ELECTRODES)
+
+    # def probe(self, field):
+    #     return getattr(field, 
+    #                    self._space)(self._ELECTRODES.X,
+    #                                 self._ELECTRODES.Y,
+    #                                 self._ELECTRODES.Z)
+
+    def probe(self, field):
+        return np.array([getattr(field, 
+                       self._space)(x, y, z) for x, y, z in zip(self._ELECTRODES.X,
+                                                                self._ELECTRODES.Y,
+                                                                self._ELECTRODES.Z)]).flatten()
+
+
 def gaussian_source_factory_2d(xs, ys, sd, conductivity):
     return [GaussianSourceKCSD3D(x, y, 0, sd, conductivity)
             for x, y in zip(xs, ys)]
+
+
+def lanczos_source_factory_2d(xs, ys, sd, conductivity):
+    return []
 
 
 if __name__ == '__main__':
@@ -59,7 +89,7 @@ if __name__ == '__main__':
                                'Y': Y.flatten(),
                                })
 
-    measurement_manager = MeasurementManager(ELECTRODES)
+    measurement_manager = MeasurementManager2d(ELECTRODES)
     src_X, src_Y = np.mgrid[0.:1.:100j,
                             0.:1.:100j]
 
@@ -75,7 +105,7 @@ if __name__ == '__main__':
     EST_POINTS = pd.DataFrame({'X': est_X.flatten(),
                                'Y': est_Y.flatten(),
                                })
-    measurement_manager_basis = MeasurementManager(EST_POINTS)
+    measurement_manager_basis = MeasurementManager2d(EST_POINTS)
     eigensources = reconstructor._eigensources(measurement_manager_basis)
 
     fig = plt.figure(figsize=(18, 16))
