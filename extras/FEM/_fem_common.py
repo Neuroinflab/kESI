@@ -274,21 +274,22 @@ class _SymmetricSourceFactory_Base(object):
     def potential_behind_dome(self, r):
         return 0.25 / np.pi / r
 
-    # TODO: handle cases of distant points
     def potential_linear(self, X, Y, Z):
         abs_X = abs(X)
         abs_Y = abs(Y)
         abs_Z = abs(Z)
-        return np.where(((abs_X <= self._radius)
-                         & (abs_Y <= self._radius)
-                         & (abs_Z <= self._radius)),
-                        self._interpolator(np.stack((abs_X,
-                                                     abs_Y,
-                                                     abs_Z),
-                                                    axis=-1)),
-                        self.potential_behind_dome(np.sqrt(np.square(abs_X)
-                                                           + np.square(abs_Y)
-                                                           + np.square(abs_Y))))
+        W = np.maximum(abs_X, np.maximum(abs_Y, abs_Z))
+        Q = (self._radius - W) / ((1.0 - self._appoximation_mixing_threshold) * self._radius)
+        INTERPOLATED = self._interpolator(np.stack((abs_X, abs_Y, abs_Z),
+                                                   axis=-1))
+        APPROXIMATED = self.potential_behind_dome(np.sqrt(np.square(abs_X)
+                                                          + np.square(abs_Y)
+                                                          + np.square(abs_Z)))
+        return np.where(W <= self._radius * self._appoximation_mixing_threshold,
+                        INTERPOLATED,
+                        np.where(W <= self._radius,
+                                 Q * INTERPOLATED + (1.0 - Q) * APPROXIMATED,
+                                 APPROXIMATED))
 
     def Source(self, *args, **kwargs):
         warnings.warn('The factory is a callable.  Call it instead.',
