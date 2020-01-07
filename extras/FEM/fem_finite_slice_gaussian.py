@@ -34,7 +34,8 @@ if __name__ == '__main__':
 
     try:
         from dolfin import (Expression, Constant, DirichletBC, Measure,
-                            inner, grad, assemble)
+                            inner, grad, assemble,
+                            HDF5File)
 
     except (ModuleNotFoundError, ImportError):
         print("""Run docker first:
@@ -129,7 +130,7 @@ if __name__ == '__main__':
                            'sampling_frequency': SAMPLING_FREQUENCY,
                            }
 
-                for degree in [1, 2]: #, 3]:
+                for degree in [1, 2]:  # 3 causes segmentation fault
                     logger.info('Gaussian SD={} (deg={})'.format(sd, degree))
                     POTENTIAL = np.empty((2**k,
                                           2**k * (2 ** k + 1) // 2,
@@ -161,6 +162,21 @@ if __name__ == '__main__':
                                               potential is not None,
                                               fem.iterations,
                                               fem.time.total_seconds()))
+
+                                # if potential is not None:
+                                #     with HDF5File(fem._mesh.mpi_comm(),
+                                #                   GaussianSourceFactory.solution_path(
+                                #             '{}_gaussian_{:04d}_{}_{}_{}_{}.h5'.format(
+                                #                 mesh_name,
+                                #                 int(round(1000 / 2 ** k)),
+                                #                 degree,
+                                #                 idx_y,
+                                #                 idx_x,
+                                #                 idx_z),
+                                #             False),
+                                #             'w') as fh:
+                                #         fh.write(potential, 'potential')
+
                                 AS[idx_y,
                                    idx_x * (idx_x - 1) // 2 + idx_z] = fem.a
                                 for i, x in enumerate(np.linspace(-fem.SLICE_THICKNESS,
