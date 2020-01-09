@@ -95,7 +95,7 @@ else:
             logger.debug('Done.  Defining boundary condition...')
             dirichlet_bc = self._boundary_condition(*args, **kwargs)
             logger.debug('Done.  Copying linear equation matrix...')
-            terms_with_unknown = self._terms_with_unknown.copy()
+            terms_with_unknown = self.get_linear_equation_matrix()
             logger.debug('Done.  Applying boundary condition...')
             dirichlet_bc.apply(terms_with_unknown, known_terms)
             logger.debug('Done.')
@@ -116,6 +116,9 @@ else:
 
             finally:
                 self.time = datetime.datetime.now() - start
+
+        def get_linear_equation_matrix(self):
+            return self._terms_with_unknown.copy()
 
 
     class _SymmetricFEM_Base(_FEM_Base):

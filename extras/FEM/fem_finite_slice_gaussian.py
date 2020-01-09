@@ -104,6 +104,11 @@ if __name__ == '__main__':
                 return (0.25 / np.pi / self.CONDUCTIVITY[self.SALINE_VOLUME]
                         / radius)
 
+            def get_linear_equation_matrix(self):
+                del self._terms_with_unknown
+                self._terms_with_unknown = assemble(self._a)
+                return self._terms_with_unknown
+
 
         logging.basicConfig(level=logging.INFO)
 
