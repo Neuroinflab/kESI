@@ -188,20 +188,21 @@ if __name__ == '__main__':
 
                                 AS[idx_y,
                                    idx_x * (idx_x - 1) // 2 + idx_z] = fem.a
-                                for i, x in enumerate(np.linspace(-fem.SLICE_THICKNESS,
-                                                        fem.SLICE_THICKNESS,
-                                                        2 * SAMPLING_FREQUENCY + 1)):
-                                    for j, y in enumerate(np.linspace(0,
+                                if potential is not None:
+                                    for i, x in enumerate(np.linspace(-fem.SLICE_THICKNESS,
                                                             fem.SLICE_THICKNESS,
-                                                            SAMPLING_FREQUENCY + 1)):
-                                        for kk, z in enumerate(np.linspace(-fem.SLICE_THICKNESS,
+                                                            2 * SAMPLING_FREQUENCY + 1)):
+                                        for j, y in enumerate(np.linspace(0,
                                                                 fem.SLICE_THICKNESS,
-                                                                2 * SAMPLING_FREQUENCY + 1)):
-                                            POTENTIAL[idx_y,
-                                                      idx_x * (idx_x - 1) // 2 + idx_z,
-                                                      i,
-                                                      j,
-                                                      kk] = potential(x, y, z)
+                                                                SAMPLING_FREQUENCY + 1)):
+                                            for kk, z in enumerate(np.linspace(-fem.SLICE_THICKNESS,
+                                                                    fem.SLICE_THICKNESS,
+                                                                    2 * SAMPLING_FREQUENCY + 1)):
+                                                POTENTIAL[idx_y,
+                                                          idx_x * (idx_x - 1) // 2 + idx_z,
+                                                          i,
+                                                          j,
+                                                          kk] = potential(x, y, z)
                                 logger.info('Gaussian SD={}, x={}, y={}, z={} (deg={}): {}\t({fem.iterations}, {fem.time})'.format(
                                             sd,
                                             src_x,
