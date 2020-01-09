@@ -44,7 +44,10 @@ if __name__ == '__main__':
         """)
     else:
         class GaussianPotentialFEM(_fem_common._FEM_Base):
-            RADIUS = 0.3  # m
+            _RADIUS = {'finite_slice': 0.3,
+                       'finite_slice_small': 0.03,
+                       'finite_slice_smaller': 0.003,
+                       }  # m
             SLICE_RADIUS = 3.0e-3  # m
             SLICE_THICKNESS = 0.3e-3  # m
             SLICE_VOLUME = 1
@@ -55,11 +58,12 @@ if __name__ == '__main__':
                             }
 
             def __init__(self, degree=1, mesh_name='finite_slice'):
-                         super(GaussianPotentialFEM, self).__init__(
-                               degree=degree,
-                               mesh_path=os.path.join(_fem_common.DIRNAME,
-                                                      'meshes',
-                                                      mesh_name))
+                super(GaussianPotentialFEM, self).__init__(
+                      degree=degree,
+                      mesh_path=os.path.join(_fem_common.DIRNAME,
+                                             'meshes',
+                                             mesh_name))
+                self.RADIUS = self._RADIUS[mesh_name]
 
             def _lhs(self):
                 return sum(inner(Constant(c) * grad(self._potential_trial),

@@ -6,9 +6,9 @@ SED=sed 's/$(1)/$(2)/g' $< > $@
 EIGHTH_OF_SPHERE_XDMF=eighth_of_sphere.xdmf
 EIGHTH_OF_SPHERE_XML=eighth_of_sphere.xml eighth_of_sphere_coarse.xml eighth_of_sphere_coarser.xml eighth_of_sphere_coarsest.xml
 EIGHTH_OF_SPHERE_MESHES=$(EIGHTH_OF_SPHERE_XDMF) $(EIGHTH_OF_SPHERE_XML)
-MESHES=$(EIGHTH_OF_SPHERE_MESHES) finite_slice.xml
+MESHES=$(EIGHTH_OF_SPHERE_MESHES) finite_slice.xml finite_slice_small.xml finite_slice_smaller.xml
 
-.SECONDARY: eighth_of_sphere.msh eighth_of_sphere_coarse.msh eighth_of_sphere_coarser.msh eighth_of_sphere_coarsest.msh finite_slice.msh
+.SECONDARY: eighth_of_sphere.msh eighth_of_sphere_coarse.msh eighth_of_sphere_coarser.msh eighth_of_sphere_coarsest.msh finite_slice.msh finite_slice_small.msh finite_slice_smaller.msh
 
 all: $(MESHES)
 
