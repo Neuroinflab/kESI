@@ -57,9 +57,8 @@ if __name__ == '__main__':
                             SALINE_VOLUME: 1.5,  # S / m
                             }
 
-            def __init__(self, degree=1, mesh_name='finite_slice'):
+            def __init__(self, mesh_name='finite_slice'):
                 super(GaussianPotentialFEM, self).__init__(
-                      degree=degree,
                       mesh_path=os.path.join(_fem_common.DIRNAME,
                                              'meshes',
                                              mesh_name))
@@ -107,11 +106,6 @@ if __name__ == '__main__':
             def potential_behind_dome(self, radius, *args, **kwargs):
                 return (0.25 / np.pi / self.CONDUCTIVITY[self.SALINE_VOLUME]
                         / radius)
-
-            def get_linear_equation_matrix(self):
-                del self._terms_with_unknown
-                self._terms_with_unknown = assemble(self._a)
-                return self._terms_with_unknown
 
 
         logging.basicConfig(level=logging.INFO)

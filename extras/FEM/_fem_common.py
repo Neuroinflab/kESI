@@ -3,6 +3,7 @@ import itertools
 import logging
 import warnings
 import os
+import gc
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
@@ -28,7 +29,7 @@ else:
     class _FEM_Base(object):
         MAX_ITER = 10000
 
-        def __init__(self, degree=3, mesh_path=None):
+        def __init__(self, mesh_path=None):
             if mesh_path is not None:
                 self.PATH = mesh_path
 
@@ -55,9 +56,10 @@ else:
                                             self.PATH + '_facet_region.xml')
 
             logger.debug('Done.')
-            self._change_degree(degree)
+            self._degree = None
 
-        def _change_degree(self, degree):
+        def _change_degree(self, degree, *args, **kwargs):
+            gc.collect()
             logger.debug('Creating function space...')
             self._V = FunctionSpace(self._mesh, "CG", degree)
             logger.debug('Done.  Creating integration subdomains...')
@@ -72,7 +74,10 @@ else:
             self._a = self._lhs()
             logger.debug('Done.  Assembling linear equation matrix...')
             self._terms_with_unknown = assemble(self._a)
-            self._degree = degree
+            logger.debug('Done.  Defining boundary condition...')
+            self._dirichlet_bc = self._boundary_condition(*args, **kwargs)
+            logger.debug('Done.  Applying boundary condition to the matrix...')
+            self._dirichlet_bc.apply(self._terms_with_unknown)
 
             logger.debug('Done.  Creating solver...')
             self._solver = KrylovSolver("cg", "ilu")
@@ -80,10 +85,13 @@ else:
             self._solver.parameters["absolute_tolerance"] = 1E-8
             logger.debug('Done.  Solver created.')
 
+            self._degree = degree
+
         def __call__(self, degree, *args, **kwargs):
             if degree != self._degree:
-                self._change_degree(degree)
+                self._change_degree(degree, *args, **kwargs)
 
+            gc.collect()
             logger.debug('Creating CSD expression...')
             csd = self._make_csd(degree, *args, **kwargs)
             logger.debug('Done.  Normalizing...')
@@ -92,20 +100,17 @@ else:
             L = csd * self._v * self._dx
             logger.debug('Done.  Assembling linear equation vector...')
             known_terms = assemble(L)
-            logger.debug('Done.  Defining boundary condition...')
-            dirichlet_bc = self._boundary_condition(*args, **kwargs)
-            logger.debug('Done.  Copying linear equation matrix...')
-            terms_with_unknown = self.get_linear_equation_matrix()
-            logger.debug('Done.  Applying boundary condition...')
-            dirichlet_bc.apply(terms_with_unknown, known_terms)
+            logger.debug('Done.  Applying boundary condition to the vector...')
+            self._dirichlet_bc.apply(known_terms)
             logger.debug('Done.')
 
             start = datetime.datetime.now()
             try:
                 logger.debug('Solving linear equation...')
-                self.iterations = self._solver.solve(terms_with_unknown,
-                                                    self._potential_function.vector(),
-                                                    known_terms)
+                gc.collect()
+                self.iterations = self._solver.solve(self._terms_with_unknown,
+                                                     self._potential_function.vector(),
+                                                     known_terms)
                 logger.debug('Done.')
                 return self._potential_function
 
@@ -116,9 +121,6 @@ else:
 
             finally:
                 self.time = datetime.datetime.now() - start
-
-        def get_linear_equation_matrix(self):
-            return self._terms_with_unknown.copy()
 
 
     class _SymmetricFEM_Base(_FEM_Base):

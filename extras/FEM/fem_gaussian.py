@@ -65,9 +65,8 @@ if __name__ == '__main__':
         """)
     else:
         class GaussianPotentialFEM(_fem_common._SymmetricFEM_Base):
-            def __init__(self, degree=1, mesh_name='eighth_of_sphere'):
+            def __init__(self, mesh_name='eighth_of_sphere'):
                          super(GaussianPotentialFEM, self).__init__(
-                               degree=degree,
                                mesh_path=os.path.join(_fem_common.DIRNAME,
                                                       'meshes',
                                                       mesh_name))
