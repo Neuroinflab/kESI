@@ -25,7 +25,7 @@ logger.setLevel(logging.DEBUG)
 SAMPLING_FREQUENCY = 64
 
 
-class GaussianSourceFactory(_fem_common._SymmetricSourceFactory_Base):
+class FiniteSliceGaussianSourceFactory(_fem_common._SourceFactory_Base):
     pass
 
 
@@ -212,13 +212,13 @@ if __name__ == '__main__':
                                             'SUCCEED' if potential is not None else 'FAILED',
                                             fem=fem))
 
-                                np.savez_compressed(GaussianSourceFactory.solution_path(
+                                np.savez_compressed(FiniteSliceGaussianSourceFactory.solution_path(
                                                         solution_filename,
                                                         False) + str(tmp_mark),
                                                     **results)
                                 tmp_mark = 1 - tmp_mark
 
-                np.savez_compressed(GaussianSourceFactory.solution_path(
+                np.savez_compressed(FiniteSliceGaussianSourceFactory.solution_path(
                                         solution_filename,
                                         False),
                                     **results)

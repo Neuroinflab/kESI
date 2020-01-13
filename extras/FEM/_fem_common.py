@@ -148,7 +148,17 @@ else:
                                self.EXTERNAL_SURFACE)
 
 
-class _SymmetricSourceFactory_Base(object):
+class _SourceFactory_Base(object):
+    @classmethod
+    def solution_path(cls, solution_filename, try_local_first=True):
+        if try_local_first and os.path.exists(solution_filename):
+            return solution_filename
+
+        return os.path.join(SOLUTION_DIRECTORY,
+                            solution_filename)
+
+
+class _SymmetricSourceFactory_Base(_SourceFactory_Base):
     def __init__(self, filename=None,
                  degree=1,
                  try_local_first=True,
@@ -231,14 +241,6 @@ class _SymmetricSourceFactory_Base(object):
         if x == 0:
             return [x]
         return [-x, x]
-
-    @classmethod
-    def solution_path(cls, solution_filename, try_local_first=True):
-        if try_local_first and os.path.exists(solution_filename):
-            return solution_filename
-
-        return os.path.join(SOLUTION_DIRECTORY,
-                            solution_filename)
 
     def empty(self, shape):
         X = np.empty(shape)
