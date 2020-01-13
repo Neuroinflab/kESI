@@ -5,7 +5,6 @@ import os
 import logging
 
 import numpy as np
-from scipy.special import erf
 
 try:
     from . import _fem_common
