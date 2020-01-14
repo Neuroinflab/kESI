@@ -55,7 +55,7 @@ class FiniteSliceGaussianSourceFactory(_fem_common._SourceFactory_Base):
         i_x = self.X.index(abs_x)
         i_z = self.X.index(abs_z)
         POTENTIAL = self.POTENTIAL[self.X.index(y),
-                                   i_x * (i_x - 1) // 2 + i_z,
+                                   i_x * (i_x + 1) // 2 + i_z,
                                    :, :, :]
         if x < 0:
             POTENTIAL = np.flip(POTENTIAL, 0)
@@ -221,7 +221,7 @@ if __name__ == '__main__':
                                 #         fh.write(potential, 'potential')
 
                                 AS[idx_y,
-                                   idx_x * (idx_x - 1) // 2 + idx_z] = fem.a
+                                   idx_x * (idx_x + 1) // 2 + idx_z] = fem.a
                                 if potential is not None:
                                     for i, x in enumerate(np.linspace(-fem.SLICE_THICKNESS,
                                                             fem.SLICE_THICKNESS,
@@ -233,7 +233,7 @@ if __name__ == '__main__':
                                                                     fem.SLICE_THICKNESS,
                                                                     2 * SAMPLING_FREQUENCY + 1)):
                                                 POTENTIAL[idx_y,
-                                                          idx_x * (idx_x - 1) // 2 + idx_z,
+                                                          idx_x * (idx_x + 1) // 2 + idx_z,
                                                           i,
                                                           j,
                                                           kk] = potential(x, y, z)
