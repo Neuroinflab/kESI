@@ -173,7 +173,7 @@ if __name__ == '__main__':
                            'sampling_frequency': SAMPLING_FREQUENCY,
                            }
 
-                for degree in [1, 2]:  # 3 causes segmentation fault
+                for degree in [1, 2]:  # 3 causes segmentation fault or takes 40 mins
                     logger.info('Gaussian SD={} (deg={})'.format(sd, degree))
                     POTENTIAL = np.empty((2**k,
                                           2**k * (2 ** k + 1) // 2,
