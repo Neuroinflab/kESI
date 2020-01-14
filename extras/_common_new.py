@@ -23,6 +23,7 @@
 ###############################################################################
 import logging
 import collections
+import operator
 import warnings
 
 import numpy as np
@@ -69,6 +70,97 @@ class GaussianSourceKCSD3D(GaussianSourceBase):
         return self._b * np.where(Rc >= self._radius_of_erf_to_x_limit_applicability,
                                   erf(Rc) / R,
                                   self._c * self._fraction_of_erf_to_x_limit_in_0)
+
+
+class InfiniteSliceSourceMOI(object):
+    def __init__(self, x, y, z,
+                 slice_thickness,
+                 slice_conductivity, saline_conductivity, glass_conductivity=0,
+                 amplitude=1,
+                 n=128,
+                 mask_invalid_space=True,
+                 SourceClass=GaussianSourceKCSD3D,
+                 **kwargs):
+        self.x = x
+        self.y = y
+        self.z = z
+        self.slice_thickness = slice_thickness
+        self.n = n
+        self.mask_invalid_space = mask_invalid_space
+        self.amplitude = amplitude
+
+        wtg = float(slice_conductivity - glass_conductivity) / (slice_conductivity + glass_conductivity)
+        wts = float(slice_conductivity - saline_conductivity) / (slice_conductivity + saline_conductivity)
+        self._source = SourceClass(x, y, z,
+                                   conductivity=slice_conductivity,
+                                   **kwargs)
+
+        weights = [1]
+        sources = [self._source]
+        for i in range(n):
+            weights.append(wtg**i * wts**(i+1))
+            sources.append(SourceClass(x,
+                                       2 * (i + 1) * slice_thickness - y,
+                                       z,
+                                       conductivity=slice_conductivity,
+                                       **kwargs))
+            weights.append(wtg**(i+1) * wts**i)
+            sources.append(SourceClass(x,
+                                       -2 * i * slice_thickness - y,
+                                       z,
+                                       conductivity=slice_conductivity,
+                                       **kwargs))
+
+        for i in range(1, n + 1):
+            weights.append((wtg * wts)**i)
+            sources.append(SourceClass(x,
+                                       y + 2 * i * slice_thickness,
+                                       z,
+                                       conductivity=slice_conductivity,
+                                       **kwargs))
+            weights.append((wtg * wts)**i)
+            sources.append(SourceClass(x,
+                                       y - 2 * i * slice_thickness,
+                                       z,
+                                       conductivity=slice_conductivity,
+                                       **kwargs))
+        self._positive = [(w, s) for w, s in zip(weights, sources)
+                          if w > 0]
+        self._positive.sort(key=operator.itemgetter(0), reverse=False)
+        self._negative = [(w, s) for w, s in zip(weights, sources)
+                          if w < 0]
+        self._negative.sort(key=operator.itemgetter(0), reverse=True)
+
+    def _calculate_field(self, name, *args, **kwargs):
+        return self.amplitude * (sum(w * getattr(s, name)(*args, **kwargs)
+                                     for w, s in self._positive)
+                                 + sum(w * getattr(s, name)(*args, **kwargs)
+                                       for w, s in self._negative))
+
+    def is_applicable(self, X, Y, Z):
+        return (Y >= 0) & (Y <= self.slice_thickness)
+
+    def _mask_invalid_space_if_requested(self, VALUE, MASK, fill_value=0):
+        if self.mask_invalid_space:
+            return np.where(MASK,
+                            VALUE,
+                            fill_value)
+        return VALUE
+
+    def csd(self, X, Y, Z):
+        return self._mask_invalid_space_if_requested(
+                        self._source.csd(X, Y, Z),
+                        self.is_applicable(X, Y, Z))
+
+    def actual_csd(self, X, Y, Z):
+        return self._mask_invalid_space_if_requested(
+                        self._calculate_field('csd', X, Y, Z),
+                        self.is_applicable(X, Y, Z))
+
+    def potential(self, X, Y, Z):
+        return np.where(self.is_applicable(X, Y, Z),
+                        self._calculate_field('potential', X, Y, Z),
+                        np.nan)
 
 
 class FourSphereModel(object):
