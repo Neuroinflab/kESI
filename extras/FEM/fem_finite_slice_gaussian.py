@@ -25,7 +25,48 @@ SAMPLING_FREQUENCY = 64
 
 
 class FiniteSliceGaussianSourceFactory(_fem_common._SourceFactory_Base):
-    pass
+    def __init__(self, filename=None,
+                 degree=1,
+                 try_local_first=True):
+         with np.load(self.solution_path(filename,
+                                         try_local_first)) as fh:
+             self.slice_thickness = fh['slice_thickness']
+             k = fh['k']
+             self.standard_deviation = self.slice_thickness / 2 ** k
+             self.X = list(np.linspace(self.standard_deviation / 2,
+                                       self.slice_thickness - self.standard_deviation / 2,
+                                       2**k))
+             self.sampling_frequency = fh['sampling_frequency']
+             self.a = fh['A_{}'.format(degree)]
+             self.POTENTIAL = fh[self.solution_array_name(degree)]
+
+    def solution_array_name(self, degree):
+        return 'Gaussian_{}'.format(degree)
+
+    def __call__(self, x, y, z):
+        abs_x = abs(x)
+        abs_z = abs(z)
+
+        swap_axes = False
+        if abs_x < abs_z:
+            swap_axes = True
+            abs_x, abs_z = abs_z, abs_x
+
+        i_x = self.X.index(abs_x)
+        i_z = self.X.index(abs_z)
+        POTENTIAL = self.POTENTIAL[self.X.index(y),
+                                   i_x * (i_x - 1) // 2 + i_z,
+                                   :, :, :]
+        if x < 0:
+            POTENTIAL = np.flip(POTENTIAL, 0)
+
+        if z < 0:
+            POTENTIAL = np.flip(POTENTIAL, 2)
+
+        if swap_axes:
+            POTENTIAL = np.swapaxes(POTENTIAL, 0, 2)
+
+        return POTENTIAL
 
 
 if __name__ == '__main__':
