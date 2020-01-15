@@ -5,6 +5,7 @@ import os
 import logging
 
 import numpy as np
+from scipy.interpolate import RegularGridInterpolator
 
 try:
     from . import _fem_common
@@ -40,6 +41,15 @@ class FiniteSliceGaussianSourceFactory(_fem_common._SourceFactory_Base):
              self.a = fh['A_{}'.format(degree)]
              self.POTENTIAL = fh[self.solution_array_name(degree)]
 
+             self.X_SAMPLE = np.linspace(-self.slice_thickness,
+                                         self.slice_thickness,
+                                         2 * self.sampling_frequency + 1)
+             self.Y_SAMPLE = np.linspace(0,
+                                         self.slice_thickness,
+                                         self.sampling_frequency + 1)
+
+         self.slice_radius = 3.0e-3  # m
+
     def solution_array_name(self, degree):
         return 'Gaussian_{}'.format(degree)
 
@@ -54,9 +64,10 @@ class FiniteSliceGaussianSourceFactory(_fem_common._SourceFactory_Base):
 
         i_x = self.X.index(abs_x)
         i_z = self.X.index(abs_z)
-        POTENTIAL = self.POTENTIAL[self.X.index(y),
-                                   i_x * (i_x + 1) // 2 + i_z,
-                                   :, :, :]
+        idx = i_x * (i_x + 1) // 2 + i_z
+        idx_y = self.X.index(y)
+
+        POTENTIAL = self.POTENTIAL[idx_y, idx, :, :, :]
         if x < 0:
             POTENTIAL = np.flip(POTENTIAL, 0)
 
@@ -66,7 +77,37 @@ class FiniteSliceGaussianSourceFactory(_fem_common._SourceFactory_Base):
         if swap_axes:
             POTENTIAL = np.swapaxes(POTENTIAL, 0, 2)
 
-        return POTENTIAL
+        return self._Source(x, y, z, self.a[idx_y, idx], POTENTIAL, self)
+
+    class _Source(object):
+        def __init__(self, x, y, z, a, POTENTIAL, parent):
+            self._x = x
+            self._y = y
+            self._z = z
+            self._a = a
+            self.parent = parent
+            self._POTENTIAL = POTENTIAL
+            self._interpolator = RegularGridInterpolator((parent.X_SAMPLE,
+                                                          parent.Y_SAMPLE,
+                                                          parent.X_SAMPLE),
+                                                         POTENTIAL,
+                                                         bounds_error=True)
+
+        def potential(self, X, Y, Z):
+            return self._interpolator(np.stack((X, Y, Z),
+                                               axis=-1))
+
+        def csd(self, X, Y, Z):
+            return np.where((Y < 0)
+                            | (Y > self.parent.slice_thickness)
+                            | (X**2 + Z**2 > self.parent.slice_radius),
+                            0,
+                            self._a
+                            * np.exp(-0.5
+                                     * (np.square(X - self._x)
+                                        + np.square(Y - self._y)
+                                        + np.square(Z - self._z))
+                                     / self.parent.standard_deviation ** 2))
 
 
 if __name__ == '__main__':
