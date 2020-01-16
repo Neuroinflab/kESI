@@ -197,25 +197,32 @@ if __name__ == '__main__':
         for mesh_name in sys.argv[1:]:
             fem = GaussianPotentialFEM(mesh_name=mesh_name)
 
-            K_MAX = 3  # as element size is SLICE_THICKNESS / 32,
-                       # the smallest sd considered safe is
-                       # SLICE_THICKNESS / (2 ** 3)
-            for k in range(K_MAX + 1):
-                sd = fem.SLICE_THICKNESS / 2 ** k
-                solution_filename = '{}_gaussian_{:04d}.npz'.format(mesh_name,
-                                                                    int(round(1000 / 2 ** k)))
-                tmp_mark = 0
-                X = np.linspace(sd / 2, fem.SLICE_THICKNESS - sd / 2, 2**k)
-                stats = []
-                results = {'k': k,
-                           'slice_thickness': fem.SLICE_THICKNESS,
-                           'slice_radius': fem.SLICE_RADIUS,
-                           'STATS': stats,
-                           'sampling_frequency': SAMPLING_FREQUENCY,
-                           }
-
-                for degree in [1, 2]:  # 3 causes segmentation fault or takes 40 mins
+            for degree in [1,
+                           2]:  # 3 causes segmentation fault or takes 40 mins
+                K_MAX = 3  # as element size is SLICE_THICKNESS / 32,
+                           # the smallest sd considered safe is
+                           # SLICE_THICKNESS / (2 ** 3)
+                for k in range(K_MAX + 1):
+                    sd = fem.SLICE_THICKNESS / 2 ** k
                     logger.info('Gaussian SD={} (deg={})'.format(sd, degree))
+
+                    solution_filename = '{}_gaussian_{:04d}_deg_{}.npz'.format(
+                                                          mesh_name,
+                                                          int(round(1000 / 2 ** k)),
+                                                          degree)
+                    tmp_mark = 0
+                    X = np.linspace(sd / 2, fem.SLICE_THICKNESS - sd / 2, 2**k)
+                    stats = []
+                    results = {'k': k,
+                               'slice_thickness': fem.SLICE_THICKNESS,
+                               'slice_radius': fem.SLICE_RADIUS,
+                               'slice_conductivity': fem.CONDUCTIVITY[fem.SLICE_VOLUME],
+                               'saline_conductivity': fem.CONDUCTIVITY[fem.SALINE_VOLUME],
+                               'degree': degree,
+                               'STATS': stats,
+                               'sampling_frequency': SAMPLING_FREQUENCY,
+                               }
+
                     POTENTIAL = np.empty((2**k,
                                           2**k * (2 ** k + 1) // 2,
                                           2 * SAMPLING_FREQUENCY + 1,
@@ -242,7 +249,7 @@ if __name__ == '__main__':
                                             degree))
                                     potential = fem(degree, src_x, src_y, src_z, sd)
 
-                                    stats.append((degree,
+                                    stats.append((# degree,
                                                   src_x,
                                                   src_y,
                                                   src_z,
