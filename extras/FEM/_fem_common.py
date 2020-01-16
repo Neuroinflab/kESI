@@ -15,6 +15,40 @@ SOLUTION_DIRECTORY = os.path.join(DIRNAME,
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
+class Stopwatch(object):
+    def __init__(self):
+        self.reset()
+        self._running = False
+
+    def reset(self):
+        self.start = datetime.datetime.now()
+        self._end = self.start
+
+    @property
+    def end(self):
+        if self.running:
+            return datetime.datetime.now()
+
+        return self._end
+
+    @property
+    def duration(self):
+        return self.end - self.start
+
+    def __float__(self):
+        return self.duration.total_seconds()
+
+    def __enter__(self):
+        self.reset()
+        self._running = True
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._end = datetime.datetime.now()
+        self._running = False
+
+
 try:
     from dolfin import (Constant, Mesh, MeshFunction, FunctionSpace,
                         TestFunction, TrialFunction, Function,
