@@ -143,9 +143,8 @@ else:
                 logger.debug('Solving linear equation...')
                 gc.collect()
                 with stopwatch:
-                    self.iterations = self._solver.solve(self._terms_with_unknown,
-                                                         self._potential_function.vector(),
-                                                         known_terms)
+                    self._solve(known_terms)
+
                 logger.debug('Done.')
                 return self._potential_function
 
@@ -156,6 +155,12 @@ else:
 
             finally:
                 self.time = stopwatch.duration
+
+        def _solve(self, known_terms):
+            self.iterations = self._solver.solve(
+                                              self._terms_with_unknown,
+                                              self._potential_function.vector(),
+                                              known_terms)
 
 
     class _SymmetricFEM_Base(_FEM_Base):
