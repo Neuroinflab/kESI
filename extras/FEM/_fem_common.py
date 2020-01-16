@@ -138,13 +138,14 @@ else:
             self._dirichlet_bc.apply(known_terms)
             logger.debug('Done.')
 
-            start = datetime.datetime.now()
+            stopwatch = Stopwatch()
             try:
                 logger.debug('Solving linear equation...')
                 gc.collect()
-                self.iterations = self._solver.solve(self._terms_with_unknown,
-                                                     self._potential_function.vector(),
-                                                     known_terms)
+                with stopwatch:
+                    self.iterations = self._solver.solve(self._terms_with_unknown,
+                                                         self._potential_function.vector(),
+                                                         known_terms)
                 logger.debug('Done.')
                 return self._potential_function
 
@@ -154,7 +155,7 @@ else:
                 return None
 
             finally:
-                self.time = datetime.datetime.now() - start
+                self.time = stopwatch.duration
 
 
     class _SymmetricFEM_Base(_FEM_Base):
