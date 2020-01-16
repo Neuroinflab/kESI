@@ -227,71 +227,76 @@ if __name__ == '__main__':
                     AS.fill(np.nan)
                     results['A_{}'.format(degree)] = AS
 
-                    for idx_y, src_y in enumerate(X):
-                        for idx_x, src_x in enumerate(X):
-                            for idx_z, src_z in enumerate(X[:idx_x+1]):
-                                logger.info(
-                                    'Gaussian SD={}, x={}, y={}, z={} (deg={})'.format(
-                                        sd,
-                                        src_x,
-                                        src_y,
-                                        src_z,
-                                        degree))
-                                potential = fem(degree, src_x, src_y, src_z, sd)
+                    save_stopwatch = _fem_common.Stopwatch()
 
-                                stats.append((degree,
-                                              src_x,
-                                              src_y,
-                                              src_z,
-                                              potential is not None,
-                                              fem.iterations,
-                                              fem.time.total_seconds()))
-
-                                # if potential is not None:
-                                #     with HDF5File(fem._mesh.mpi_comm(),
-                                #                   GaussianSourceFactory.solution_path(
-                                #             '{}_gaussian_{:04d}_{}_{}_{}_{}.h5'.format(
-                                #                 mesh_name,
-                                #                 int(round(1000 / 2 ** k)),
-                                #                 degree,
-                                #                 idx_y,
-                                #                 idx_x,
-                                #                 idx_z),
-                                #             False),
-                                #             'w') as fh:
-                                #         fh.write(potential, 'potential')
-
-                                AS[idx_y,
-                                   idx_x * (idx_x + 1) // 2 + idx_z] = fem.a
-                                if potential is not None:
-                                    for i, x in enumerate(np.linspace(-fem.SLICE_THICKNESS,
-                                                            fem.SLICE_THICKNESS,
-                                                            2 * SAMPLING_FREQUENCY + 1)):
-                                        for j, y in enumerate(np.linspace(0,
-                                                                fem.SLICE_THICKNESS,
-                                                                SAMPLING_FREQUENCY + 1)):
-                                            for kk, z in enumerate(np.linspace(-fem.SLICE_THICKNESS,
-                                                                    fem.SLICE_THICKNESS,
-                                                                    2 * SAMPLING_FREQUENCY + 1)):
-                                                POTENTIAL[idx_y,
-                                                          idx_x * (idx_x + 1) // 2 + idx_z,
-                                                          i,
-                                                          j,
-                                                          kk] = potential(x, y, z)
-                                logger.info('Gaussian SD={}, x={}, y={}, z={} (deg={}): {}\t({fem.iterations}, {fem.time})'.format(
+                    with _fem_common.Stopwatch() as unsaved_time:
+                        for idx_y, src_y in enumerate(X):
+                            for idx_x, src_x in enumerate(X):
+                                for idx_z, src_z in enumerate(X[:idx_x+1]):
+                                    logger.info(
+                                        'Gaussian SD={}, x={}, y={}, z={} (deg={})'.format(
                                             sd,
                                             src_x,
                                             src_y,
                                             src_z,
-                                            degree,
-                                            'SUCCEED' if potential is not None else 'FAILED',
-                                            fem=fem))
+                                            degree))
+                                    potential = fem(degree, src_x, src_y, src_z, sd)
 
-                                np.savez_compressed(FiniteSliceGaussianSourceFactory.solution_path(
-                                                        solution_filename,
-                                                        False) + str(tmp_mark),
-                                                    **results)
-                                tmp_mark = 1 - tmp_mark
+                                    stats.append((degree,
+                                                  src_x,
+                                                  src_y,
+                                                  src_z,
+                                                  potential is not None,
+                                                  fem.iterations,
+                                                  fem.time.total_seconds()))
+
+                                    # if potential is not None:
+                                    #     with HDF5File(fem._mesh.mpi_comm(),
+                                    #                   GaussianSourceFactory.solution_path(
+                                    #             '{}_gaussian_{:04d}_{}_{}_{}_{}.h5'.format(
+                                    #                 mesh_name,
+                                    #                 int(round(1000 / 2 ** k)),
+                                    #                 degree,
+                                    #                 idx_y,
+                                    #                 idx_x,
+                                    #                 idx_z),
+                                    #             False),
+                                    #             'w') as fh:
+                                    #         fh.write(potential, 'potential')
+
+                                    AS[idx_y,
+                                       idx_x * (idx_x + 1) // 2 + idx_z] = fem.a
+                                    if potential is not None:
+                                        for i, x in enumerate(np.linspace(-fem.SLICE_THICKNESS,
+                                                                fem.SLICE_THICKNESS,
+                                                                2 * SAMPLING_FREQUENCY + 1)):
+                                            for j, y in enumerate(np.linspace(0,
+                                                                    fem.SLICE_THICKNESS,
+                                                                    SAMPLING_FREQUENCY + 1)):
+                                                for kk, z in enumerate(np.linspace(-fem.SLICE_THICKNESS,
+                                                                        fem.SLICE_THICKNESS,
+                                                                        2 * SAMPLING_FREQUENCY + 1)):
+                                                    POTENTIAL[idx_y,
+                                                              idx_x * (idx_x + 1) // 2 + idx_z,
+                                                              i,
+                                                              j,
+                                                              kk] = potential(x, y, z)
+                                    logger.info('Gaussian SD={}, x={}, y={}, z={} (deg={}): {}\t({fem.iterations}, {fem.time})'.format(
+                                                sd,
+                                                src_x,
+                                                src_y,
+                                                src_z,
+                                                degree,
+                                                'SUCCEED' if potential is not None else 'FAILED',
+                                                fem=fem))
+                                    if float(unsaved_time) > 10 * float(save_stopwatch):
+                                        with save_stopwatch:
+                                            np.savez_compressed(FiniteSliceGaussianSourceFactory.solution_path(
+                                                                    solution_filename,
+                                                                    False) + str(tmp_mark),
+                                                                **results)
+                                        unsaved_time.reset()
+                                        tmp_mark = 1 - tmp_mark
 
                 np.savez_compressed(FiniteSliceGaussianSourceFactory.solution_path(
                                         solution_filename,
