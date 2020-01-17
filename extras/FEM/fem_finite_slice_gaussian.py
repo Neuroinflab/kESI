@@ -38,8 +38,8 @@ class FiniteSliceGaussianSourceFactory(_fem_common._SourceFactory_Base):
                                        self.slice_thickness - self.standard_deviation / 2,
                                        2**k))
              self.sampling_frequency = fh['sampling_frequency']
-             self.a = fh['A_{}'.format(degree)]
-             self.POTENTIAL = fh[self.solution_array_name(degree)]
+             self.a = fh['A']
+             self.POTENTIAL = fh['POTENTIAL']
 
              self.X_SAMPLE = np.linspace(-self.slice_thickness,
                                          self.slice_thickness,
@@ -49,9 +49,6 @@ class FiniteSliceGaussianSourceFactory(_fem_common._SourceFactory_Base):
                                          self.sampling_frequency + 1)
 
          self.slice_radius = 3.0e-3  # m
-
-    def solution_array_name(self, degree):
-        return 'Gaussian_{}'.format(degree)
 
     def __call__(self, x, y, z):
         abs_x = abs(x)
@@ -229,10 +226,10 @@ if __name__ == '__main__':
                                           SAMPLING_FREQUENCY + 1,
                                           2 * SAMPLING_FREQUENCY + 1))
                     POTENTIAL.fill(np.nan)
-                    results['Gaussian_{}'.format(degree)] = POTENTIAL
+                    results['POTENTIAL'] = POTENTIAL
                     AS = np.empty((2**k, 2**k * (2 ** k + 1) // 2))
                     AS.fill(np.nan)
-                    results['A_{}'.format(degree)] = AS
+                    results['A'] = AS
 
                     save_stopwatch = _fem_common.Stopwatch()
 
@@ -249,13 +246,14 @@ if __name__ == '__main__':
                                             degree))
                                     potential = fem(degree, src_x, src_y, src_z, sd)
 
-                                    stats.append((# degree,
-                                                  src_x,
+                                    stats.append((src_x,
                                                   src_y,
                                                   src_z,
                                                   potential is not None,
                                                   fem.iterations,
-                                                  fem.time.total_seconds()))
+                                                  fem.time.total_seconds(),
+                                                  np.nan,
+                                                  np.nan))
 
                                     # if potential is not None:
                                     #     with HDF5File(fem._mesh.mpi_comm(),
