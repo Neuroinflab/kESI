@@ -27,7 +27,7 @@ class Stopwatch(object):
 
     @property
     def end(self):
-        if self.running:
+        if self._running:
             return datetime.datetime.now()
 
         return self._end
