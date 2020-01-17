@@ -252,8 +252,8 @@ if __name__ == '__main__':
                                                   potential is not None,
                                                   fem.iterations,
                                                   float(fem.solving_time),
-                                                  np.nan,
-                                                  np.nan))
+                                                  float(fem.local_preprocessing_time),
+                                                  float(fem.global_preprocessing_time)))
 
                                     # if potential is not None:
                                     #     with HDF5File(fem._mesh.mpi_comm(),
@@ -286,7 +286,7 @@ if __name__ == '__main__':
                                                               i,
                                                               j,
                                                               kk] = potential(x, y, z)
-                                    logger.info('Gaussian SD={}, x={}, y={}, z={} (deg={}): {}\t({fem.iterations}, {fem.solving_time.duration})'.format(
+                                    logger.info('Gaussian SD={}, x={}, y={}, z={} (deg={}): {}\t({fem.iterations}, {fem.local_preprocessing_time.duration + fem.solving_time.duration})'.format(
                                                 sd,
                                                 src_x,
                                                 src_y,
