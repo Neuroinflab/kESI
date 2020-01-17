@@ -64,6 +64,10 @@ else:
         MAX_ITER = 10000
 
         def __init__(self, mesh_path=None):
+            self.global_preprocessing_time = Stopwatch()
+            self.local_preprocessing_time = Stopwatch()
+            self.solving_time = Stopwatch()
+
             if mesh_path is not None:
                 self.PATH = mesh_path
 
@@ -94,30 +98,32 @@ else:
 
         def _change_degree(self, degree, *args, **kwargs):
             gc.collect()
-            logger.debug('Creating function space...')
-            self._V = FunctionSpace(self._mesh, "CG", degree)
-            logger.debug('Done.  Creating integration subdomains...')
-            self._dx = Measure("dx")(subdomain_data=self._subdomains)
-            logger.debug('Done.  Creating test function...')
-            self._v = TestFunction(self._V)
-            logger.debug('Done.  Creating potential function...')
-            self._potential_function = Function(self._V)
-            logger.debug('Done.  Creating trial function...')
-            self._potential_trial = TrialFunction(self._V)
-            logger.debug('Done.  Creating LHS part of equation...')
-            self._a = self._lhs()
-            logger.debug('Done.  Assembling linear equation matrix...')
-            self._terms_with_unknown = assemble(self._a)
-            logger.debug('Done.  Defining boundary condition...')
-            self._dirichlet_bc = self._boundary_condition(*args, **kwargs)
-            logger.debug('Done.  Applying boundary condition to the matrix...')
-            self._dirichlet_bc.apply(self._terms_with_unknown)
 
-            logger.debug('Done.  Creating solver...')
-            self._solver = KrylovSolver("cg", "ilu")
-            self._solver.parameters["maximum_iterations"] = self.MAX_ITER
-            self._solver.parameters["absolute_tolerance"] = 1E-8
-            logger.debug('Done.  Solver created.')
+            with self.global_preprocessing_time:
+                logger.debug('Creating function space...')
+                self._V = FunctionSpace(self._mesh, "CG", degree)
+                logger.debug('Done.  Creating integration subdomains...')
+                self._dx = Measure("dx")(subdomain_data=self._subdomains)
+                logger.debug('Done.  Creating test function...')
+                self._v = TestFunction(self._V)
+                logger.debug('Done.  Creating potential function...')
+                self._potential_function = Function(self._V)
+                logger.debug('Done.  Creating trial function...')
+                self._potential_trial = TrialFunction(self._V)
+                logger.debug('Done.  Creating LHS part of equation...')
+                self._a = self._lhs()
+                logger.debug('Done.  Assembling linear equation matrix...')
+                self._terms_with_unknown = assemble(self._a)
+                logger.debug('Done.  Defining boundary condition...')
+                self._dirichlet_bc = self._boundary_condition(*args, **kwargs)
+                logger.debug('Done.  Applying boundary condition to the matrix...')
+                self._dirichlet_bc.apply(self._terms_with_unknown)
+
+                logger.debug('Done.  Creating solver...')
+                self._solver = KrylovSolver("cg", "ilu")
+                self._solver.parameters["maximum_iterations"] = self.MAX_ITER
+                self._solver.parameters["absolute_tolerance"] = 1E-8
+                logger.debug('Done.  Solver created.')
 
             self._degree = degree
 
@@ -126,23 +132,23 @@ else:
                 self._change_degree(degree, *args, **kwargs)
 
             gc.collect()
-            logger.debug('Creating CSD expression...')
-            csd = self._make_csd(degree, *args, **kwargs)
-            logger.debug('Done.  Normalizing...')
-            self.a = csd.a = self._csd_normalization_factor(csd)
-            logger.debug('Done.  Creating RHS part of equation...')
-            L = csd * self._v * self._dx
-            logger.debug('Done.  Assembling linear equation vector...')
-            known_terms = assemble(L)
-            logger.debug('Done.  Applying boundary condition to the vector...')
-            self._dirichlet_bc.apply(known_terms)
-            logger.debug('Done.')
+            with self.local_preprocessing_time:
+                logger.debug('Creating CSD expression...')
+                csd = self._make_csd(degree, *args, **kwargs)
+                logger.debug('Done.  Normalizing...')
+                self.a = csd.a = self._csd_normalization_factor(csd)
+                logger.debug('Done.  Creating RHS part of equation...')
+                L = csd * self._v * self._dx
+                logger.debug('Done.  Assembling linear equation vector...')
+                known_terms = assemble(L)
+                logger.debug('Done.  Applying boundary condition to the vector...')
+                self._dirichlet_bc.apply(known_terms)
+                logger.debug('Done.')
 
-            stopwatch = Stopwatch()
             try:
                 logger.debug('Solving linear equation...')
                 gc.collect()
-                with stopwatch:
+                with self.solving_time:
                     self._solve(known_terms)
 
                 logger.debug('Done.')
@@ -152,9 +158,6 @@ else:
                 self.iterations = self.MAX_ITER
                 logger.warning("Solver failed: {}".format(repr(e)))
                 return None
-
-            finally:
-                self.time = stopwatch.duration
 
         def _solve(self, known_terms):
             self.iterations = self._solver.solve(

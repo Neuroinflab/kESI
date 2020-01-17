@@ -251,7 +251,7 @@ if __name__ == '__main__':
                                                   src_z,
                                                   potential is not None,
                                                   fem.iterations,
-                                                  fem.time.total_seconds(),
+                                                  float(fem.solving_time),
                                                   np.nan,
                                                   np.nan))
 
@@ -286,7 +286,7 @@ if __name__ == '__main__':
                                                               i,
                                                               j,
                                                               kk] = potential(x, y, z)
-                                    logger.info('Gaussian SD={}, x={}, y={}, z={} (deg={}): {}\t({fem.iterations}, {fem.time})'.format(
+                                    logger.info('Gaussian SD={}, x={}, y={}, z={} (deg={}): {}\t({fem.iterations}, {fem.solving_time.duration})'.format(
                                                 sd,
                                                 src_x,
                                                 src_y,
