@@ -286,14 +286,15 @@ if __name__ == '__main__':
                                                               i,
                                                               j,
                                                               kk] = potential(x, y, z)
-                                    logger.info('Gaussian SD={}, x={}, y={}, z={} (deg={}): {}\t({fem.iterations}, {fem.local_preprocessing_time.duration + fem.solving_time.duration})'.format(
+                                    logger.info('Gaussian SD={}, x={}, y={}, z={} (deg={}): {}\t({fem.iterations}, {time})'.format(
                                                 sd,
                                                 src_x,
                                                 src_y,
                                                 src_z,
                                                 degree,
                                                 'SUCCEED' if potential is not None else 'FAILED',
-                                                fem=fem))
+                                                fem=fem,
+                                                time=fem.local_preprocessing_time.duration + fem.solving_time.duration))
                                     if float(unsaved_time) > 10 * float(save_stopwatch):
                                         with save_stopwatch:
                                             np.savez_compressed(FiniteSliceGaussianSourceFactory.solution_path(
