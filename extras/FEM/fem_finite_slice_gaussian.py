@@ -48,11 +48,13 @@ SAMPLING_FREQUENCY = 64
 
 class FiniteSliceGaussianSourceFactory(_fem_common._SourceFactory_Base):
     def __init__(self, filename=None,
-                 degree=1,
                  try_local_first=True):
          with np.load(self.solution_path(filename,
                                          try_local_first)) as fh:
              self.slice_thickness = fh['slice_thickness']
+             self.slice_conductivity = fh['slice_conductivity']
+             self.saline_conductivity = fh['saline_conductivity']
+             self.degree = fh['degree']
              k = fh['k']
              self.standard_deviation = self.slice_thickness / 2 ** k
              self.X = list(np.linspace(self.standard_deviation / 2,
