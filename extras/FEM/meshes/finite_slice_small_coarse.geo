@@ -490,7 +490,7 @@ Return
 h = 0.0003;
 x = 0.; y = h; z = 0.;
 r = h;
-element_length = 1 * 0.03125*h;
+element_length = 2 * 0.03125*h;
 Call Roi ;
 slice_volumes = {volume};
 
