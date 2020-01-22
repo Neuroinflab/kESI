@@ -327,7 +327,7 @@ if __name__ == '__main__':
                                         unsaved_time.reset()
                                         tmp_mark = 1 - tmp_mark
 
-                np.savez_compressed(FiniteSliceGaussianSourceFactory.solution_path(
-                                        solution_filename,
-                                        False),
-                                    **results)
+                    np.savez_compressed(FiniteSliceGaussianSourceFactory.solution_path(
+                                            solution_filename,
+                                            False),
+                                        **results)
