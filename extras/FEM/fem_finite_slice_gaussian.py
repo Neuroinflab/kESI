@@ -147,7 +147,9 @@ if __name__ == '__main__':
         class GaussianPotentialFEM(_fem_common._FEM_Base):
             _RADIUS = {'finite_slice': 0.3,
                        'finite_slice_small': 0.03,
+                       'finite_slice_small_coarse': 0.03,
                        'finite_slice_smaller': 0.003,
+                       'finite_slice_smaller_coarse': 0.003,
                        }  # m
             SLICE_RADIUS = 3.0e-3  # m
             SLICE_THICKNESS = 0.3e-3  # m
