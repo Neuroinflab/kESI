@@ -75,7 +75,7 @@ try:
             factory.slice_thickness,
             slice_conductivity=factory.slice_conductivity,
             saline_conductivity=factory.saline_conductivity,
-            amplitude=(factory.a[idx_y, idx_xz]
+            amplitude=(factory.A[idx_y, idx_xz]
                        / (2 * np.pi * factory.standard_deviation**2)**-1.5),
             standard_deviation=factory.standard_deviation)
 
