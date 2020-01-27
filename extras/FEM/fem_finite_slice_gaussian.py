@@ -46,31 +46,153 @@ logger.setLevel(logging.DEBUG)
 SAMPLING_FREQUENCY = 64
 
 
+class _FiniteSliceGaussianDecorator(object):
+    def __call__(self, obj):
+        obj.standard_deviation = obj.slice_thickness / 2 ** obj.k
+        obj.X = list(np.linspace(obj.standard_deviation / 2,
+                                 obj.slice_thickness - obj.standard_deviation / 2,
+                                 2 ** obj.k))
+        obj.X_SAMPLE = np.linspace(-obj.slice_thickness,
+                                   obj.slice_thickness,
+                                   2 * obj.sampling_frequency + 1)
+        obj.Y_SAMPLE = np.linspace(0,
+                                   obj.slice_thickness,
+                                   obj.sampling_frequency + 1)
+
+
+class _FiniteSliceGaussianDataFileDecorator(
+          _FiniteSliceGaussianDecorator):
+    ATTRIBUTES = ['slice_thickness',
+                  'slice_conductivity',
+                  'saline_conductivity',
+                  'slice_radius',
+
+                  'sampling_frequency',
+                  'k',
+                  'degree',
+
+                  'A',
+                  'POTENTIAL']
+
+    def __init__(self, path):
+        self.path = path
+
+    def __call__(self, obj):
+         self._load(obj)
+
+         super(_FiniteSliceGaussianDataFileDecorator,
+               self).__call__(obj)
+
+    def _load(self, obj):
+        with np.load(self.path) as fh:
+            for attr in self.ATTRIBUTES:
+                # logger.debug('setting attr ' + attr)
+                setattr(obj, attr, fh[attr])
+                # logger.debug('done')
+            self.STATS = list(fh['STATS'])
+
+
+class _FailsafeFiniteSliceGaussianController(
+          _FiniteSliceGaussianDataFileDecorator):
+    sampling_frequency = SAMPLING_FREQUENCY
+
+    def __init__(self, fem):
+        self._fem = fem
+        self.k = None
+
+    @property
+    def slice_thickness(self):
+        try:
+            return self.__dict__['slice_thickness']
+        except KeyError:
+            return self._fem.slice_thickness
+
+    @slice_thickness.setter
+    def slice_thickness(self, value):
+        self.__dict__['slice_thickness'] = value
+
+    @property
+    def slice_radius(self):
+        try:
+            return self.__dict__['slice_radius']
+        except KeyError:
+            return self._fem.slice_radius
+
+    @slice_radius.setter
+    def slice_radius(self, value):
+        self.__dict__['slice_radius'] = value
+
+    @property
+    def slice_conductivity(self):
+        try:
+            return self.__dict__['slice_conductivity']
+        except KeyError:
+            return self._fem.slice_conductivity
+
+    @slice_conductivity.setter
+    def slice_conductivity(self, value):
+        self.__dict__['slice_conductivity'] = value
+
+    @property
+    def saline_conductivity(self):
+        try:
+            return self.__dict__['saline_conductivity']
+        except KeyError:
+            return self._fem.saline_conductivity
+
+    @saline_conductivity.setter
+    def saline_conductivity(self, value):
+        self.__dict__['saline_conductivity'] = value
+
+    @property
+    def path(self):
+        fn = '{0._fem.mesh_name}_gaussian_{1:04d}_deg_{0.degree}.npz'.format(
+                   self,
+                   int(round(1000 / 2 ** self.k)))
+
+        return FiniteSliceGaussianSourceFactory.solution_path(fn, False)
+
+    def _load(self, obj):
+        try:
+            super(_FailsafeFiniteSliceGaussianController,
+                  self)._load(obj)
+        except Exception as e:
+            logger.warning(str(e))
+            obj.STATS = []
+
+            obj.POTENTIAL = np.empty((2 ** obj.k,
+                                      2 ** obj.k * (2 ** obj.k + 1) // 2,
+                                      2 * obj.sampling_frequency + 1,
+                                      obj.sampling_frequency + 1,
+                                      2 * obj.sampling_frequency + 1))
+            obj.POTENTIAL.fill(np.nan)
+
+            obj.A = np.empty((2 ** obj.k, 2 ** obj.k * (2 ** obj.k + 1) // 2))
+            obj.A.fill(np.nan)
+
+    @property
+    def K(self):
+        return self.k
+
+    @K.setter
+    def K(self, k):
+        if self.k != k:
+            self.k = k
+            self(self)
+
+    def fem(self, x, y, z):
+        return self._fem(int(self.degree), x, y, z, self.standard_deviation)
+
+
+
+
 class FiniteSliceGaussianSourceFactory(_fem_common._SourceFactory_Base):
     def __init__(self, filename=None,
                  try_local_first=True):
-         with np.load(self.solution_path(filename,
-                                         try_local_first)) as fh:
-             self.slice_thickness = fh['slice_thickness']
-             self.slice_conductivity = fh['slice_conductivity']
-             self.saline_conductivity = fh['saline_conductivity']
-             self.degree = fh['degree']
-             k = fh['k']
-             self.standard_deviation = self.slice_thickness / 2 ** k
-             self.X = list(np.linspace(self.standard_deviation / 2,
-                                       self.slice_thickness - self.standard_deviation / 2,
-                                       2**k))
-             self.sampling_frequency = fh['sampling_frequency']
-             self.a = fh['A']
-             self.POTENTIAL = fh['POTENTIAL']
-
-             self.X_SAMPLE = np.linspace(-self.slice_thickness,
-                                         self.slice_thickness,
-                                         2 * self.sampling_frequency + 1)
-             self.Y_SAMPLE = np.linspace(0,
-                                         self.slice_thickness,
-                                         self.sampling_frequency + 1)
-
+         decorate = _FiniteSliceGaussianDataFileDecorator(
+                        self.solution_path(filename,
+                                           try_local_first))
+         decorate(self)
          self.slice_radius = 3.0e-3  # m
 
     def __call__(self, x, y, z):
@@ -97,7 +219,7 @@ class FiniteSliceGaussianSourceFactory(_fem_common._SourceFactory_Base):
         if swap_axes:
             POTENTIAL = np.swapaxes(POTENTIAL, 0, 2)
 
-        return self._Source(x, y, z, self.a[idx_y, idx], POTENTIAL, self)
+        return self._Source(x, y, z, self.A[idx_y, idx], POTENTIAL, self)
 
     class _Source(object):
         def __init__(self, x, y, z, a, POTENTIAL, parent):
@@ -151,13 +273,17 @@ if __name__ == '__main__':
                        'finite_slice_smaller': 0.003,
                        'finite_slice_smaller_coarse': 0.003,
                        }  # m
-            SLICE_RADIUS = 3.0e-3  # m
-            SLICE_THICKNESS = 0.3e-3  # m
+
+            slice_thickness = 0.3e-3  # m
+            slice_conductivity = 0.3  # S / m
+            slice_radius = 3.0e-3  # m
+            saline_conductivity = 1.5  # S / m
+
             SLICE_VOLUME = 1
             SALINE_VOLUME = 2
             EXTERNAL_SURFACE = 3
-            CONDUCTIVITY = {SLICE_VOLUME: 0.3,  # S / m
-                            SALINE_VOLUME: 1.5,  # S / m
+            CONDUCTIVITY = {SLICE_VOLUME: slice_conductivity,
+                            SALINE_VOLUME: saline_conductivity,
                             }
 
             def __init__(self, mesh_name='finite_slice'):
@@ -166,6 +292,8 @@ if __name__ == '__main__':
                                              'meshes',
                                              mesh_name))
                 self.RADIUS = self._RADIUS[mesh_name]
+                # self._k = 0
+                self.mesh_name = mesh_name
 
             def _lhs(self):
                 return sum(inner(Constant(c) * grad(self._potential_trial),
@@ -192,8 +320,8 @@ if __name__ == '__main__':
 
             def _make_csd(self, degree, x, y, z, standard_deviation):
                 return Expression(f'''
-                                   x[1] > {self.SLICE_THICKNESS}
-                                   || x[0] * x[0] + x[2] * x[2] > {self.SLICE_RADIUS ** 2}
+                                   x[1] > {self.slice_thickness}
+                                   || x[0] * x[0] + x[2] * x[2] > {self.slice_radius ** 2}
                                    ?
                                    0.0
                                    :
@@ -210,6 +338,29 @@ if __name__ == '__main__':
                 return (0.25 / np.pi / self.CONDUCTIVITY[self.SALINE_VOLUME]
                         / radius)
 
+            @property
+            def degree(self):
+                return self._degree
+
+            # @degree.setter
+            # def degree(self, value):
+            #     if self._degree != value:
+            #         self._change_degree(value)
+            #
+            # def __call__(self, x, y, z):
+            #     super(GaussianPotentialFEM,
+            #           self)(self._degree, x, y, z)
+            #
+            # @property
+            # def k(self):
+            #     return self._k
+            #
+            # @k.setter
+            # def k(self, value):
+            #     if self._k != value:
+            #         self._k = value
+            #         _FiniteSliceGaussianDecorator()(self)
+
 
         logging.basicConfig(level=logging.INFO)
 
@@ -218,58 +369,69 @@ if __name__ == '__main__':
 
         for mesh_name in sys.argv[1:]:
             fem = GaussianPotentialFEM(mesh_name=mesh_name)
+            controller = _FailsafeFiniteSliceGaussianController(fem)
 
-            for degree in [1,
-                           2]:  # 3 causes segmentation fault or takes 40 mins
+            for controller.degree in [1,
+                                      2]:  # 3 causes segmentation fault
+                                           # or takes 40 mins
+
                 K_MAX = 3  # as element size is SLICE_THICKNESS / 32,
                            # the smallest sd considered safe is
                            # SLICE_THICKNESS / (2 ** 3)
-                for k in range(K_MAX + 1):
-                    sd = fem.SLICE_THICKNESS / 2 ** k
-                    logger.info('Gaussian SD={} (deg={})'.format(sd, degree))
+                for controller.K in range(K_MAX + 1):
 
-                    solution_filename = '{}_gaussian_{:04d}_deg_{}.npz'.format(
-                                                          mesh_name,
-                                                          int(round(1000 / 2 ** k)),
-                                                          degree)
+                    degree = controller.degree
+                    k = controller.k
+                    sd = controller.standard_deviation
+                    X = controller.X
+
+                    logger.info('Gaussian SD={} ({}; deg={})'.format(sd,
+                                                                     mesh_name,
+                                                                     degree))
+
+                    # solution_filename = '{}_gaussian_{:04d}_deg_{}.npz'.format(
+                    #                                       mesh_name,
+                    #                                       int(round(1000 / 2 ** k)),
+                    #                                       degree)
                     tmp_mark = 0
-                    X = np.linspace(sd / 2, fem.SLICE_THICKNESS - sd / 2, 2**k)
-                    stats = []
+                    stats = controller.STATS
                     results = {'k': k,
-                               'slice_thickness': fem.SLICE_THICKNESS,
-                               'slice_radius': fem.SLICE_RADIUS,
-                               'slice_conductivity': fem.CONDUCTIVITY[fem.SLICE_VOLUME],
-                               'saline_conductivity': fem.CONDUCTIVITY[fem.SALINE_VOLUME],
+                               'slice_thickness': controller.slice_thickness,
+                               'slice_radius': controller.slice_radius,
+                               'slice_conductivity': controller.slice_conductivity,
+                               'saline_conductivity': controller.saline_conductivity,
                                'degree': degree,
                                'STATS': stats,
-                               'sampling_frequency': SAMPLING_FREQUENCY,
+                               'sampling_frequency': controller.sampling_frequency,
                                }
 
-                    POTENTIAL = np.empty((2**k,
-                                          2**k * (2 ** k + 1) // 2,
-                                          2 * SAMPLING_FREQUENCY + 1,
-                                          SAMPLING_FREQUENCY + 1,
-                                          2 * SAMPLING_FREQUENCY + 1))
-                    POTENTIAL.fill(np.nan)
+                    POTENTIAL = controller.POTENTIAL
                     results['POTENTIAL'] = POTENTIAL
-                    AS = np.empty((2**k, 2**k * (2 ** k + 1) // 2))
-                    AS.fill(np.nan)
+                    AS = controller.A
                     results['A'] = AS
 
                     save_stopwatch = _fem_common.Stopwatch()
 
+                    anything_new = False
                     with _fem_common.Stopwatch() as unsaved_time:
                         for idx_y, src_y in enumerate(X):
                             for idx_x, src_x in enumerate(X):
                                 for idx_z, src_z in enumerate(X[:idx_x+1]):
                                     logger.info(
-                                        'Gaussian SD={}, x={}, y={}, z={} (deg={})'.format(
+                                        'Gaussian SD={}, x={}, y={}, z={} ({}, deg={})'.format(
                                             sd,
                                             src_x,
                                             src_y,
                                             src_z,
+                                            mesh_name,
                                             degree))
-                                    potential = fem(degree, src_x, src_y, src_z, sd)
+                                    idx_xz = idx_x * (idx_x + 1) // 2 + idx_z
+                                    if not np.isnan(AS[idx_y, idx_xz]):
+                                        logger.info('Already found, skipping')
+                                        continue
+
+                                    anything_new = True
+                                    potential = controller.fem(src_x, src_y, src_z)
 
                                     stats.append((src_x,
                                                   src_y,
@@ -294,20 +456,13 @@ if __name__ == '__main__':
                                     #             'w') as fh:
                                     #         fh.write(potential, 'potential')
 
-                                    AS[idx_y,
-                                       idx_x * (idx_x + 1) // 2 + idx_z] = fem.a
+                                    AS[idx_y, idx_xz] = fem.a
                                     if potential is not None:
-                                        for i, x in enumerate(np.linspace(-fem.SLICE_THICKNESS,
-                                                                fem.SLICE_THICKNESS,
-                                                                2 * SAMPLING_FREQUENCY + 1)):
-                                            for j, y in enumerate(np.linspace(0,
-                                                                    fem.SLICE_THICKNESS,
-                                                                    SAMPLING_FREQUENCY + 1)):
-                                                for kk, z in enumerate(np.linspace(-fem.SLICE_THICKNESS,
-                                                                        fem.SLICE_THICKNESS,
-                                                                        2 * SAMPLING_FREQUENCY + 1)):
+                                        for i, x in enumerate(controller.X_SAMPLE):
+                                            for j, y in enumerate(controller.Y_SAMPLE):
+                                                for kk, z in enumerate(controller.X_SAMPLE):
                                                     POTENTIAL[idx_y,
-                                                              idx_x * (idx_x + 1) // 2 + idx_z,
+                                                              idx_xz,
                                                               i,
                                                               j,
                                                               kk] = potential(x, y, z)
@@ -322,14 +477,12 @@ if __name__ == '__main__':
                                                 time=fem.local_preprocessing_time.duration + fem.solving_time.duration))
                                     if float(unsaved_time) > 10 * float(save_stopwatch):
                                         with save_stopwatch:
-                                            np.savez_compressed(FiniteSliceGaussianSourceFactory.solution_path(
-                                                                    solution_filename,
-                                                                    False) + str(tmp_mark),
+                                            np.savez_compressed(controller.path
+                                                                + str(tmp_mark),
                                                                 **results)
                                         unsaved_time.reset()
                                         tmp_mark = 1 - tmp_mark
 
-                    np.savez_compressed(FiniteSliceGaussianSourceFactory.solution_path(
-                                            solution_filename,
-                                            False),
-                                        **results)
+                    if anything_new:
+                        np.savez_compressed(controller.path,
+                                            **results)
