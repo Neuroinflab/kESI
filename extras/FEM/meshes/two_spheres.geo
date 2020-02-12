@@ -105,10 +105,10 @@ Function MakeCircle
 Return
 
 
-Function SphereWithROI
+Function MakeCapROI
   // Arguments
   // ---------
-  //   z, y, z, r, roi_r, element_length, roi_element_length
+  //   z, y, z, r, roi_r, roi_element_length
   //      float
   //   center,
   //      Point
@@ -119,7 +119,7 @@ Function SphereWithROI
   //   roi_north_west_arc, roi_north_east_arc,
   //   roi_south_east_arc, roi_south_west_arc
   //      Circle
-  //   roi_sector_surfaces, surrounding_sector_surfaces
+  //   roi_sector_surfaces
   //      Surface[]
 
   h = Sqrt(r * r - roi_r * roi_r);
@@ -152,6 +152,70 @@ Function SphereWithROI
   cap_top = newp; Point(cap_top) = {x, y + r, z, roi_element_length};
   Call SphericalCap;
   roi_sector_surfaces = cap_surfaces[];
+Return
+
+
+Function RingOfROI
+  // Arguments
+  // ---------
+  //   roi_top_north, roi_top_south, roi_top_west, roi_top_east,
+  //   roi_bottom_north, roi_bottom_south, roi_bottom_west, roi_bottom_east
+  //      Point
+  //   roi_north_west_upper_arc, roi_north_east_upper_arc,
+  //   roi_south_east_upper_arc, roi_south_west_upper_arc,
+  //   roi_north_west_lower_arc, roi_north_east_lower_arc,
+  //   roi_south_east_lower_arc, roi_south_west_lower_arc
+  //      Circle
+  // Returns
+  // -------
+  //   roi_ring_surfaces
+  //      Surface[]
+
+  roi_north_line = newl; Line(roi_north_line) = {roi_bottom_north, roi_top_north};
+  roi_south_line = newl; Line(roi_south_line) = {roi_bottom_south, roi_top_south};
+  roi_east_line = newl; Line(roi_east_line) = {roi_bottom_east, roi_top_east};
+  roi_west_line = newl; Line(roi_west_line) = {roi_bottom_west, roi_top_west};
+
+  roi_north_west_loop = newll;
+  Line Loop(roi_north_west_loop) = {roi_north_line,roi_north_west_upper_arc,-roi_west_line,-roi_north_west_lower_arc};
+  roi_north_east_loop = newll;
+  Line Loop(roi_north_east_loop) = {roi_north_line,roi_north_east_upper_arc,-roi_east_line,-roi_north_east_lower_arc};
+  roi_south_west_loop = newll;
+  Line Loop(roi_south_west_loop) = {roi_south_line,roi_south_west_upper_arc,-roi_west_line,-roi_south_west_lower_arc};
+  roi_south_east_loop = newll;
+  Line Loop(roi_south_east_loop) = {roi_south_line,roi_south_east_upper_arc,-roi_east_line,-roi_south_east_lower_arc};
+
+  roi_north_west_surface = news;
+  Surface(roi_north_west_surface) = {roi_north_west_loop};
+  roi_north_east_surface = news;
+  Surface(roi_north_east_surface) = {roi_north_east_loop};
+  roi_south_west_surface = news;
+  Surface(roi_south_west_surface) = {roi_south_west_loop};
+  roi_south_east_surface = news;
+  Surface(roi_south_east_surface) = {roi_south_east_loop};
+
+  roi_ring_surfaces = {roi_north_west_surface, roi_north_east_surface, roi_south_west_surface, roi_south_east_surface};
+Return
+
+
+Function SphereWithROI
+  // Arguments
+  // ---------
+  //   z, y, z, r, roi_r, element_length, roi_element_length
+  //      float
+  //   center,
+  //      Point
+  // Returns
+  // -------
+  //   roi_north, roi_south, roi_west, roi_east
+  //      Point
+  //   roi_north_west_arc, roi_north_east_arc,
+  //   roi_south_east_arc, roi_south_west_arc
+  //      Circle
+  //   roi_sector_surfaces, surrounding_sector_surfaces
+  //      Surface[]
+
+  Call MakeCapROI;
 
   segment_lower_west = newp; Point(segment_lower_west) = {x+r, y, z, element_length};
   segment_lower_south = newp; Point(segment_lower_south) = {x, y, z-r, element_length};
@@ -179,7 +243,7 @@ Function SphereWithROI
   cap_north_east_arc = segment_lower_north_east_arc;
   cap_south_east_arc = segment_lower_south_east_arc;
   cap_south_west_arc = segment_lower_south_west_arc;
-  cap_top = newp; Point(cap_top) = {x, y - r, z, roi_element_length};
+  cap_top = newp; Point(cap_top) = {x, y - r, z, element_length};
   Call SphericalCap;
 
   _bottom_hemisphere_surfaces = cap_surfaces[];
@@ -200,12 +264,51 @@ Return
 
 x = 0.; y = 0.; z = 0.;
 r = 0.079;
-roi_r = 0.012;
+roi_r = 0.006;
 element_length = 0.01;
 min_sd = 0.001;
 roi_element_length = min_sd / 4;
 
 center = newp; Point(center) = {x, y, z, element_length};
 Call SphereWithROI;
-volume_surfaces = {surrounding_sector_surfaces[], roi_sector_surfaces[]};
+
+roi_top_north = roi_north;
+roi_top_south = roi_south;
+roi_top_west = roi_west;
+roi_top_east = roi_east;
+roi_north_west_upper_arc = roi_north_west_arc;
+roi_north_east_upper_arc = roi_north_east_arc;
+roi_south_east_upper_arc = roi_south_east_arc;
+roi_south_west_upper_arc = roi_south_west_arc;
+roi_sector_upper_surfaces = roi_sector_surfaces[];
+
+r = r - 2 * roi_r;
+roi_r = roi_r * r / (r + 2 * roi_r);
+
+Call MakeCapROI;
+roi_bottom_north = roi_north;
+roi_bottom_south = roi_south;
+roi_bottom_west = roi_west;
+roi_bottom_east = roi_east;
+roi_north_west_lower_arc = roi_north_west_arc;
+roi_north_east_lower_arc = roi_north_east_arc;
+roi_south_east_lower_arc = roi_south_east_arc;
+roi_south_west_lower_arc = roi_south_west_arc;
+roi_sector_lower_surfaces = roi_sector_surfaces[];
+
+Call RingOfROI;
+
+volume_surfaces = {surrounding_sector_surfaces[],
+                   roi_sector_lower_surfaces[],
+                   roi_ring_surfaces[]};
 Call MakeVolume;
+surrounding_brain_volume = volume;
+
+volume_surfaces = {roi_sector_upper_surfaces[],
+                   roi_sector_lower_surfaces[],
+                   roi_ring_surfaces[]};
+Call MakeVolume;
+roi_volume = volume;
+
+Physical Volume ("roi") = roi_volume;
+Physical Volume ("surrounding_brain") = surrounding_brain_volume;
