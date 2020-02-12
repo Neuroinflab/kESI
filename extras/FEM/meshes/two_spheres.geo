@@ -262,8 +262,58 @@ Function SphereWithROI
   surrounding_sector_surfaces = {segment_surfaces[], _bottom_hemisphere_surfaces[]};
 Return
 
+
+Function MakeSphere
+  // Arguments
+  // ---------
+  //   z, y, z, r, element_length
+  //      float
+  //   center
+  //      Point
+  // Returns
+  // -------
+  //   sphere_surfaces
+  //      Surface[]
+
+  sphere_west = newp; Point(sphere_west) = {x+r, y, z, element_length};
+  sphere_south = newp; Point(sphere_south) = {x, y, z-r, element_length};
+  sphere_north = newp; Point(sphere_north) = {x, y, z+r, element_length};
+  sphere_east = newp; Point(sphere_east) = {x-r, y, z, element_length};
+  sphere_top = newp; Point(sphere_top) = {x, y+r, z, element_length};
+  sphere_bottom = newp; Point(sphere_bottom) = {x, y-r, z, element_length};
+
+  circle_north = sphere_north;
+  circle_south = sphere_south;
+  circle_west = sphere_west;
+  circle_east = sphere_east;
+  circle_center = center;
+
+  Call MakeCircle;
+  cap_north_west_arc = circle_north_west_arc;
+  cap_north_east_arc = circle_north_east_arc;
+  cap_south_east_arc = circle_south_east_arc;
+  cap_south_west_arc = circle_south_west_arc;
+
+  cap_north = sphere_north;
+  cap_south = sphere_south;
+  cap_west = sphere_west;
+  cap_east = sphere_east;
+
+  cap_top = sphere_top;
+  Call SphericalCap;
+  _upper_hemisphere_surfaces = cap_surfaces[];
+
+  cap_top = sphere_bottom;
+  Call SphericalCap;
+  _lower_hemisphere_surfaces = cap_surfaces[];
+
+  sphere_surfaces = {_upper_hemisphere_surfaces[], _lower_hemisphere_surfaces[]};
+Return
+
+r_brain = 0.079;
+r_scalp = 0.090;
 x = 0.; y = 0.; z = 0.;
-r = 0.079;
+r = r_brain;
 roi_r = 0.006;
 element_length = 0.01;
 min_sd = 0.001;
@@ -282,8 +332,8 @@ roi_south_east_upper_arc = roi_south_east_arc;
 roi_south_west_upper_arc = roi_south_west_arc;
 roi_sector_upper_surfaces = roi_sector_surfaces[];
 
-r = r - 2 * roi_r;
-roi_r = roi_r * r / (r + 2 * roi_r);
+r = r_brain - 2 * roi_r;
+roi_r = roi_r * r / r_brain;
 
 Call MakeCapROI;
 roi_bottom_north = roi_north;
@@ -310,5 +360,18 @@ volume_surfaces = {roi_sector_upper_surfaces[],
 Call MakeVolume;
 roi_volume = volume;
 
+brain_surfaces = {surrounding_sector_surfaces[], roi_sector_upper_surfaces[]};
+r = r_scalp;
+Call MakeSphere;
+scalp_surfaces = sphere_surfaces[];
+
+brain_loop = newsl; Surface Loop(brain_loop) = brain_surfaces[];
+scalp_loop = newsl; Surface Loop(scalp_loop) = scalp_surfaces[];
+
+scalp_volume = newv; Volume(scalp_volume) = {scalp_loop, brain_loop};
+
 Physical Volume ("roi") = roi_volume;
 Physical Volume ("surrounding_brain") = surrounding_brain_volume;
+Physical Volume ("scalp") = scalp_volume;
+Physical Surface ("brain_surface") = brain_surfaces[];
+Physical Surface ("scalp_surface") = scalp_surfaces[];
