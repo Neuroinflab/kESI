@@ -212,7 +212,7 @@ Function MakeSphereWithROI
   //   roi_north_west_arc, roi_north_east_arc,
   //   roi_south_east_arc, roi_south_west_arc
   //      Circle
-  //   roi_sector_surfaces, surrounding_sector_surfaces
+  //   sphere_surfaces, roi_sector_surfaces, surrounding_sector_surfaces
   //      Surface[]
 
   Call MakeCapROI;
@@ -259,7 +259,10 @@ Function MakeSphereWithROI
   segment_upper_south_west_arc = roi_south_west_arc;
   Call SphericalSegment;
 
-  surrounding_sector_surfaces = {segment_surfaces[], _bottom_hemisphere_surfaces[]};
+  surrounding_sector_surfaces = {segment_surfaces[],
+                                 _bottom_hemisphere_surfaces[]};
+  sphere_surfaces = {roi_sector_surfaces[],
+                     surrounding_sector_surfaces[]};
 Return
 
 
@@ -315,11 +318,12 @@ scalp_r = 0.090;
 
 brain_roi_r = 0.006;
 
-brain_element_length = 0.01;
-scalp_element_length = brain_element_length;
+brain_element_length = 0.015;  // from Chaitanya's sphere_4_lowres.geo
+scalp_element_length = scalp_r - brain_r;
 
 min_sd = 0.001;
 brain_roi_element_length = min_sd / 4;
+scalp_roi_element_length = 0.0025;  // from Chaitanya's sphere_4_lowres.geo
 
 x = 0.; y = 0.; z = 0.;
 
@@ -373,8 +377,10 @@ brain_surfaces = {surrounding_sector_surfaces[], roi_sector_upper_surfaces[]};
 brain_loop = newsl; Surface Loop(brain_loop) = brain_surfaces[];
 
 r = scalp_r;
+roi_r = brain_roi_r * r / brain_r;
 element_length = scalp_element_length;
-Call MakeSphere;
+roi_element_length = scalp_roi_element_length;
+Call MakeSphereWithROI;
 scalp_surfaces = sphere_surfaces[];
 
 scalp_loop = newsl; Surface Loop(scalp_loop) = scalp_surfaces[];
