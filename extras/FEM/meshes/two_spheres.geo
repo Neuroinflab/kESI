@@ -198,7 +198,7 @@ Function RingOfROI
 Return
 
 
-Function SphereWithROI
+Function MakeSphereWithROI
   // Arguments
   // ---------
   //   z, y, z, r, roi_r, element_length, roi_element_length
@@ -310,17 +310,26 @@ Function MakeSphere
   sphere_surfaces = {_upper_hemisphere_surfaces[], _lower_hemisphere_surfaces[]};
 Return
 
-r_brain = 0.079;
-r_scalp = 0.090;
-x = 0.; y = 0.; z = 0.;
-r = r_brain;
-roi_r = 0.006;
-element_length = 0.01;
+brain_r = 0.079;
+scalp_r = 0.090;
+
+brain_roi_r = 0.006;
+
+brain_element_length = 0.01;
+scalp_element_length = brain_element_length;
+
 min_sd = 0.001;
-roi_element_length = min_sd / 4;
+brain_roi_element_length = min_sd / 4;
+
+x = 0.; y = 0.; z = 0.;
+
+r = brain_r;
+roi_r = brain_roi_r;
+element_length = brain_element_length;
+roi_element_length = brain_roi_element_length;
 
 center = newp; Point(center) = {x, y, z, element_length};
-Call SphereWithROI;
+Call MakeSphereWithROI;
 
 roi_top_north = roi_north;
 roi_top_south = roi_south;
@@ -332,8 +341,8 @@ roi_south_east_upper_arc = roi_south_east_arc;
 roi_south_west_upper_arc = roi_south_west_arc;
 roi_sector_upper_surfaces = roi_sector_surfaces[];
 
-r = r_brain - 2 * roi_r;
-roi_r = roi_r * r / r_brain;
+r = brain_r - 2 * roi_r;
+roi_r = roi_r * r / brain_r;
 
 Call MakeCapROI;
 roi_bottom_north = roi_north;
@@ -361,13 +370,14 @@ Call MakeVolume;
 roi_volume = volume;
 
 brain_surfaces = {surrounding_sector_surfaces[], roi_sector_upper_surfaces[]};
-r = r_scalp;
+brain_loop = newsl; Surface Loop(brain_loop) = brain_surfaces[];
+
+r = scalp_r;
+element_length = scalp_element_length;
 Call MakeSphere;
 scalp_surfaces = sphere_surfaces[];
 
-brain_loop = newsl; Surface Loop(brain_loop) = brain_surfaces[];
 scalp_loop = newsl; Surface Loop(scalp_loop) = scalp_surfaces[];
-
 scalp_volume = newv; Volume(scalp_volume) = {scalp_loop, brain_loop};
 
 Physical Volume ("roi") = roi_volume;
