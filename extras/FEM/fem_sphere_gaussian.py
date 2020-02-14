@@ -313,6 +313,31 @@ if __name__ == '__main__':
                             }
 
 
+        class FourSpheresGaussianPotentialFEM(_SphericalGaussianPotential):
+            startswith = 'four_spheres'
+
+            brain_conductivity = 0.33  # S / m
+            csf_conductivity = brain_conductivity * 5
+            skull_conductivity = brain_conductivity / 20
+            scalp_conductivity = brain_conductivity
+
+            brain_radius = 0.079
+            # roi_radius_min = 0.067
+            # roi_radius_tangent = 0.006
+
+            _ROI_VOLUME = 1
+            _BRAIN_VOLUME = 2
+            _CSF_VOLUME = 3
+            _SKULL_VOLUME = 4
+            _SCALP_VOLUME = 5
+
+            CONDUCTIVITY = {_ROI_VOLUME: brain_conductivity,
+                            _BRAIN_VOLUME: brain_conductivity,
+                            _CSF_VOLUME: csf_conductivity,
+                            _SKULL_VOLUME: skull_conductivity,
+                            _SCALP_VOLUME: scalp_conductivity,
+                            }
+
 
         logging.basicConfig(level=logging.INFO)
 

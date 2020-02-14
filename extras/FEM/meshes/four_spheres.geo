@@ -415,6 +415,8 @@ scalp_volume = newv; Volume(scalp_volume) = {scalp_loop, skull_loop};
 
 Physical Volume ("roi") = roi_volume;
 Physical Volume ("surrounding_brain") = surrounding_brain_volume;
+Physical Volume ("csf") = csf_volume;
+Physical Volume ("skull") = skull_volume;
 Physical Volume ("scalp") = scalp_volume;
 Physical Surface ("brain_surface") = brain_surfaces[];
 Physical Surface ("scalp_surface") = scalp_surfaces[];
