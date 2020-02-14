@@ -413,8 +413,7 @@ scalp_surfaces = sphere_surfaces[];
 scalp_loop = newsl; Surface Loop(scalp_loop) = scalp_surfaces[];
 scalp_volume = newv; Volume(scalp_volume) = {scalp_loop, skull_loop};
 
-Physical Volume ("roi") = roi_volume;
-Physical Volume ("surrounding_brain") = surrounding_brain_volume;
+Physical Volume ("brain") = {roi_volume, surrounding_brain_volume};
 Physical Volume ("csf") = csf_volume;
 Physical Volume ("skull") = skull_volume;
 Physical Volume ("scalp") = scalp_volume;

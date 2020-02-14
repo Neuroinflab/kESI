@@ -285,10 +285,9 @@ if __name__ == '__main__':
             # roi_radius_min = 0.067
             # roi_radius_tangent = 0.006
 
-            _ROI_VOLUME = 1
-            _BRAIN_VOLUME = 2
+            _BRAIN_VOLUME = 1
 
-            CONDUCTIVITY = {_ROI_VOLUME: brain_conductivity,
+            CONDUCTIVITY = {
                             _BRAIN_VOLUME: brain_conductivity,
                             }
 
@@ -303,11 +302,10 @@ if __name__ == '__main__':
             # roi_radius_min = 0.067
             # roi_radius_tangent = 0.006
 
-            _ROI_VOLUME = 1
-            _BRAIN_VOLUME = 2
-            _SKULL_VOLUME = 3
+            _BRAIN_VOLUME = 1
+            _SKULL_VOLUME = 2
 
-            CONDUCTIVITY = {_ROI_VOLUME: brain_conductivity,
+            CONDUCTIVITY = {
                             _BRAIN_VOLUME: brain_conductivity,
                             _SKULL_VOLUME: skull_conductivity,
                             }
@@ -325,13 +323,13 @@ if __name__ == '__main__':
             # roi_radius_min = 0.067
             # roi_radius_tangent = 0.006
 
-            _ROI_VOLUME = 1
-            _BRAIN_VOLUME = 2
-            _CSF_VOLUME = 3
-            _SKULL_VOLUME = 4
-            _SCALP_VOLUME = 5
 
-            CONDUCTIVITY = {_ROI_VOLUME: brain_conductivity,
+            _BRAIN_VOLUME = 1
+            _CSF_VOLUME = 2
+            _SKULL_VOLUME = 3
+            _SCALP_VOLUME = 4
+
+            CONDUCTIVITY = {
                             _BRAIN_VOLUME: brain_conductivity,
                             _CSF_VOLUME: csf_conductivity,
                             _SKULL_VOLUME: skull_conductivity,
