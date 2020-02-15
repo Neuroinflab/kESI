@@ -89,7 +89,8 @@ class _FiniteSliceGaussianDataFileDecorator(
                 # logger.debug('setting attr ' + attr)
                 setattr(obj, attr, fh[attr])
                 # logger.debug('done')
-            self.STATS = list(fh['STATS'])
+
+            obj.STATS = list(fh['STATS'])
 
 
 class _FailsafeFiniteSliceGaussianController(
@@ -194,6 +195,21 @@ class FiniteSliceGaussianSourceFactory(_fem_common._SourceFactory_Base):
                                            try_local_first))
          decorate(self)
          self.slice_radius = 3.0e-3  # m
+
+    @property
+    def DF(self):
+        import pandas as pd
+        return pd.DataFrame({name: [type(row[i]) for row in self.STATS[:, i]]
+                             for i, (name, type)
+                             in enumerate([('X', float),
+                                           ('Y', float),
+                                           ('Z', float),
+                                           ('SUCCESS', bool),
+                                           ('ITERATIONS', int),
+                                           ('SOLVING_TIME', float),
+                                           ('LOCAL_PREPROCESSING_TIME', float),
+                                           ('GLOBAL_PREPROCESSING_TIME', float),
+                                           ])})
 
     def __call__(self, x, y, z):
         abs_x = abs(x)
