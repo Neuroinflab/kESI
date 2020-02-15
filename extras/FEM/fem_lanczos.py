@@ -74,7 +74,11 @@ if __name__ == '__main__':
 
     except (ModuleNotFoundError, ImportError):
         print("""Run docker first:
-        $ docker run -ti --env HOST_UID=$(id -u) --env HOST_GID=$(id -g) -v $(pwd):/home/fenics/shared:Z  -w /home/fenics/shared quay.io/fenicsproject/stable
+        $ docker run -ti --env HOST_UID=$(id -u) --env HOST_GID=$(id -g) \\
+                     -v $(pwd):/home/fenics/shared:Z \\
+                     -v $(pwd)/solutions:/home/fenics/shared/solutions:Z \\
+                     -w /home/fenics/shared \\
+                     quay.io/fenicsproject/stable
         """)
     else:
         class LanczosPotentialFEM(_fem_common._SymmetricFEM_Base):
