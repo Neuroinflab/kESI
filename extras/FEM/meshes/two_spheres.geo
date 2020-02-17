@@ -386,7 +386,7 @@ scalp_surfaces = sphere_surfaces[];
 scalp_loop = newsl; Surface Loop(scalp_loop) = scalp_surfaces[];
 scalp_volume = newv; Volume(scalp_volume) = {scalp_loop, brain_loop};
 
-Physical Volume ("brain") = {roi, surrounding_brain_volume};
+Physical Volume ("brain") = {roi_volume, surrounding_brain_volume};
 Physical Volume ("scalp") = scalp_volume;
 Physical Surface ("brain_surface") = brain_surfaces[];
 Physical Surface ("scalp_surface") = scalp_surfaces[];
