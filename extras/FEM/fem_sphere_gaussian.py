@@ -440,12 +440,17 @@ if __name__ == '__main__':
                                              [0, 0, 1]],
                                             [[cos_az, 0, -sin_az],
                                              [0, 1, 0],
-                                             [sin_az , 0, cos_az]]
+                                             [sin_az, 0, cos_az]]
                                             ))
                                     for i, (x, y, z) in enumerate(ELECTRODES):
-                                        POTENTIAL[idx_r,
-                                                  idx_polar,
-                                                  i] = potential(x, y, z)
+                                        try:
+                                            POTENTIAL[idx_r,
+                                                      idx_polar,
+                                                      i] = potential(x, y, z)
+                                        except Exception as e:
+                                            logger.error("Exception {!r}".format(e))
+                                            logger.error("({}, {}, {})".format(x, y, z))
+                                            logger.error("(r={})".format(np.sqrt(x**2 + y**2 + z**2)))
 
                             logger.info('Gaussian SD={}, r={}, (deg={}): {}\t({fem.iterations}, {time})'.format(
                                         sd,
