@@ -288,7 +288,7 @@ Function MakeSphere
                        _lower_hemisphere_surfaces[]};
 Return
 
-n_meridians = 4;
+n_meridians = 6;
 brain_r = 0.079;
 scalp_r = 0.090;
 
