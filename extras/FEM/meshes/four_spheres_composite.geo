@@ -16,92 +16,91 @@ Function MakeVolume
 Return
 
 
-Function SphericalCap
+Function MakeSphericalCap
   // Arguments
   // ---------
-  //   cap_center, cap_top, cap_north, cap_south, cap_west, cap_east
+  //   cap_center, cap_top, cap_nodes[]
   //      Point
-  //   cap_north_west_arc, cap_north_east_arc,
-  //   cap_south_east_arc, cap_south_west_arc,
+  //   cap_arcs[]
   //      Circle
   // Returns
   // -------
-  //   cap_surfaces
-  //      Surface[]
+  //   cap_surfaces[]
+  //      Surface
 
-  cap_north_arc = newl; Circle(cap_north_arc) = {cap_north,cap_center,cap_top};
-  cap_south_arc = newl; Circle(cap_south_arc) = {cap_south,cap_center,cap_top};
-  cap_east_arc = newl; Circle(cap_east_arc) = {cap_east,cap_center,cap_top};
-  cap_west_arc = newl; Circle(cap_west_arc) = {cap_west,cap_center,cap_top};
+  _n = # cap_nodes[];
+  For _i In {0: _n - 1}
+    _cap_radii[_i] = newl;
+    Circle(_cap_radii[_i]) = {cap_nodes[_i], cap_center, cap_top};
+  EndFor
 
-  cap_north_west_loop = newll; Line Loop(cap_north_west_loop) = {cap_north_west_arc,cap_west_arc,-cap_north_arc};
-  cap_north_west_surface = news; Surface(cap_north_west_surface) = {cap_north_west_loop};
-  cap_north_east_loop = newll; Line Loop(cap_north_east_loop) = {cap_north_east_arc,cap_east_arc,-cap_north_arc};
-  cap_north_east_surface = news; Surface(cap_north_east_surface) = {cap_north_east_loop};
-  cap_south_west_loop = newll; Line Loop(cap_south_west_loop) = {cap_south_west_arc,cap_west_arc,-cap_south_arc};
-  cap_south_west_surface = news; Surface(cap_south_west_surface) = {cap_south_west_loop};
-  cap_south_east_loop = newll; Line Loop(cap_south_east_loop) = {cap_south_east_arc,cap_east_arc,-cap_south_arc};
-  cap_south_east_surface = news; Surface(cap_south_east_surface) = {cap_south_east_loop};
+  For _i In {0: _n - 1}
+    _loop = newll;
+    _surface = news;
 
-  cap_surfaces = {cap_north_west_surface,
-                  cap_north_east_surface,
-                  cap_south_west_surface,
-                  cap_south_east_surface};
+    Line Loop(_loop) = {-_cap_radii[_i],
+                        cap_arcs[_i],
+                        _cap_radii[(_i+1) % _n]};
+    Surface(_surface) = {_loop};
+
+    cap_surfaces[_i] = _surface;
+  EndFor
 Return
 
 
-Function SphericalSegment
+Function MakeSphericalSegment
   // Arguments
   // ---------
-  //   segment_center,
-  //   segment_upper_north, segment_upper_south, segment_upper_west, segment_upper_east
-  //   segment_lower_north, segment_lower_south, segment_lower_west, segment_lower_east
+  //   segment_center, segment_upper_nodes[], segment_lower_nodes[]
   //      Point
-  //   segment_upper_north_west_arc, segment_upper_north_east_arc,
-  //   segment_upper_south_east_arc, segment_upper_south_west_arc,
-  //   segment_lower_north_west_arc, segment_lower_north_east_arc,
-  //   segment_lower_south_east_arc, segment_lower_south_west_arc,
+  //   segment_upper_arcs[], segment_lower_arcs[]
   //      Circle
   // Returns
   // -------
-  //   segment_surfaces
-  //      Surface[]
+  //   segment_surfaces[]
+  //      Surface
 
-  segment_north_arc = newl; Circle(segment_north_arc) = {segment_lower_north,segment_center,segment_upper_north};
-  segment_south_arc = newl; Circle(segment_south_arc) = {segment_lower_south,segment_center,segment_upper_south};
-  segment_east_arc = newl; Circle(segment_east_arc) = {segment_lower_east,segment_center,segment_upper_east};
-  segment_west_arc = newl; Circle(segment_west_arc) = {segment_lower_west,segment_center,segment_upper_west};
+  _n = # segment_upper_nodes[];
+  For _i In {0: _n - 1}
+    _meridians[_i] = newl;
+    Circle(_meridians[_i]) = {segment_lower_nodes[_i],
+                              segment_center,
+                              segment_upper_nodes[_i]};
+  EndFor
 
-  segment_north_west_loop = newll; Line Loop(segment_north_west_loop) = {segment_lower_north_west_arc,segment_west_arc,-segment_upper_north_west_arc,-segment_north_arc};
-  segment_north_west_surface = news; Surface(segment_north_west_surface) = {segment_north_west_loop};
-  segment_north_east_loop = newll; Line Loop(segment_north_east_loop) = {segment_lower_north_east_arc,segment_east_arc,-segment_upper_north_east_arc,-segment_north_arc};
-  segment_north_east_surface = news; Surface(segment_north_east_surface) = {segment_north_east_loop};
-  segment_south_west_loop = newll; Line Loop(segment_south_west_loop) = {segment_lower_south_west_arc,segment_west_arc,-segment_upper_south_west_arc,-segment_south_arc};
-  segment_south_west_surface = news; Surface(segment_south_west_surface) = {segment_south_west_loop};
-  segment_south_east_loop = newll; Line Loop(segment_south_east_loop) = {segment_lower_south_east_arc,segment_east_arc,-segment_upper_south_east_arc,-segment_south_arc};
-  segment_south_east_surface = news; Surface(segment_south_east_surface) = {segment_south_east_loop};
+  For _i In {0: _n - 1}
+    _loop = newll;
+    _surface = news;
 
-  segment_surfaces = {segment_north_west_surface,
-                      segment_north_east_surface,
-                      segment_south_west_surface,
-                      segment_south_east_surface};
+    Line Loop(_loop) = {segment_lower_arcs[_i],
+                        _meridians[(_i + 1) % _n],
+                        -segment_upper_arcs[_i],
+                        -_meridians[_i]};
+    Surface(_surface) = {_loop};
+
+    segment_surfaces[_i] = _surface;
+  EndFor
 Return
 
 
 Function MakeCircle
   // Arguments
   // ---------
-  //   circle_center, circle_north, circle_south, circle_west, circle_east 
+  //   circle_center, circle_nodes[]
   //      Point
   // Returns
   // -------
-  //   circle_north_west_arc, circle_north_east_arc,
-  //   circle_south_east_arc, circle_south_west_arc
+  //   circle_arcs[]
   //      Circle
-  circle_north_west_arc = newl; Circle(circle_north_west_arc) = {circle_north, circle_center, circle_west};
-  circle_north_east_arc = newl; Circle(circle_north_east_arc) = {circle_north, circle_center, circle_east};
-  circle_south_west_arc = newl; Circle(circle_south_west_arc) = {circle_south, circle_center, circle_west};
-  circle_south_east_arc = newl; Circle(circle_south_east_arc) = {circle_south, circle_center, circle_east};
+
+  _n = # circle_nodes[];
+  For _i In {0: _n - 1}
+    _arc = newl;
+    circle_arcs[_i] = _arc;
+    Circle(_arc) = {circle_nodes[_i],
+                    circle_center,
+                    circle_nodes[(_i + 1) % _n]};
+  EndFor
 Return
 
 
@@ -110,91 +109,77 @@ Function MakeCapROI
   // ---------
   //   z, y, z, r, roi_r, roi_element_length
   //      float
-  //   center,
+  //   n_meridians
+  //      int
+  //   center
   //      Point
   // Returns
   // -------
-  //   roi_north, roi_south, roi_west, roi_east
+  //   roi_nodes[]
   //      Point
-  //   roi_north_west_arc, roi_north_east_arc,
-  //   roi_south_east_arc, roi_south_west_arc
+  //   roi_arcs[]
   //      Circle
-  //   roi_sector_surfaces
-  //      Surface[]
+  //   roi_sector_surfaces[]
+  //      Surface
 
   h = Sqrt(r * r - roi_r * roi_r);
-  roi_west = newp; Point(roi_west) = {x+roi_r, y+h, z, roi_element_length};
-  roi_south = newp; Point(roi_south) = {x, y+h, z-roi_r, roi_element_length};
-  roi_north = newp; Point(roi_north) = {x, y+h, z+roi_r, roi_element_length};
-  roi_east = newp; Point(roi_east) = {x-roi_r, y+h, z, roi_element_length};
+  For _i In {0: n_meridians-1}
+    _point = newp;
 
-  circle_north = roi_north;
-  circle_south = roi_south;
-  circle_west = roi_west;
-  circle_east = roi_east;
+    _arc = 2 * Pi * _i / n_meridians;
+    Point(_point) =  {x + roi_r * Sin(_arc),
+                      y + h,
+                      z + roi_r * Cos(_arc),
+                      roi_element_length};
+
+     roi_nodes[_i] = _point;
+  EndFor
+
   circle_center = center;
+  circle_nodes[] = roi_nodes[];
   Call MakeCircle;
+  roi_arcs[] = circle_arcs[];
 
-  roi_north_west_arc = circle_north_west_arc;
-  roi_north_east_arc = circle_north_east_arc;
-  roi_south_east_arc = circle_south_east_arc;
-  roi_south_west_arc = circle_south_west_arc;
-
-  cap_north_west_arc = roi_north_west_arc;
-  cap_north_east_arc = roi_north_east_arc;
-  cap_south_east_arc = roi_south_east_arc;
-  cap_south_west_arc = roi_south_west_arc;
-  cap_north = roi_north;
-  cap_south = roi_south;
-  cap_west = roi_west;
-  cap_east = roi_east;
   cap_center = center;
   cap_top = newp; Point(cap_top) = {x, y + r, z, roi_element_length};
-  Call SphericalCap;
-  roi_sector_surfaces = cap_surfaces[];
+  cap_nodes[] = roi_nodes[];
+  cap_arcs[] = roi_arcs[];
+  Call MakeSphericalCap;
+  roi_sector_surfaces[] = cap_surfaces[];
 Return
 
 
-Function RingOfROI
+Function MakeSidesOfROI
   // Arguments
   // ---------
-  //   roi_top_north, roi_top_south, roi_top_west, roi_top_east,
-  //   roi_bottom_north, roi_bottom_south, roi_bottom_west, roi_bottom_east
+  //   roi_upper_nodes[], roi_lower_nodes[]
   //      Point
-  //   roi_north_west_upper_arc, roi_north_east_upper_arc,
-  //   roi_south_east_upper_arc, roi_south_west_upper_arc,
-  //   roi_north_west_lower_arc, roi_north_east_lower_arc,
-  //   roi_south_east_lower_arc, roi_south_west_lower_arc
+  //   roi_upper_arcs[], roi_lower_arcs[]
   //      Circle
   // Returns
   // -------
-  //   roi_ring_surfaces
+  //   roi_side_surfaces
   //      Surface[]
 
-  roi_north_line = newl; Line(roi_north_line) = {roi_bottom_north, roi_top_north};
-  roi_south_line = newl; Line(roi_south_line) = {roi_bottom_south, roi_top_south};
-  roi_east_line = newl; Line(roi_east_line) = {roi_bottom_east, roi_top_east};
-  roi_west_line = newl; Line(roi_west_line) = {roi_bottom_west, roi_top_west};
+  _n = # roi_upper_nodes[];
+  For _i In {0: _n - 1}
+    _meridians[_i] = newl;
+    Line(_meridians[_i]) = {roi_lower_nodes[_i],
+                            roi_upper_nodes[_i]};
+  EndFor
 
-  roi_north_west_loop = newll;
-  Line Loop(roi_north_west_loop) = {roi_north_line,roi_north_west_upper_arc,-roi_west_line,-roi_north_west_lower_arc};
-  roi_north_east_loop = newll;
-  Line Loop(roi_north_east_loop) = {roi_north_line,roi_north_east_upper_arc,-roi_east_line,-roi_north_east_lower_arc};
-  roi_south_west_loop = newll;
-  Line Loop(roi_south_west_loop) = {roi_south_line,roi_south_west_upper_arc,-roi_west_line,-roi_south_west_lower_arc};
-  roi_south_east_loop = newll;
-  Line Loop(roi_south_east_loop) = {roi_south_line,roi_south_east_upper_arc,-roi_east_line,-roi_south_east_lower_arc};
+  For _i In {0: _n - 1}
+    _loop = newll;
+    _surface = news;
 
-  roi_north_west_surface = news;
-  Surface(roi_north_west_surface) = {roi_north_west_loop};
-  roi_north_east_surface = news;
-  Surface(roi_north_east_surface) = {roi_north_east_loop};
-  roi_south_west_surface = news;
-  Surface(roi_south_west_surface) = {roi_south_west_loop};
-  roi_south_east_surface = news;
-  Surface(roi_south_east_surface) = {roi_south_east_loop};
+    Line Loop(_loop) = {roi_lower_arcs[_i],
+                        _meridians[(_i + 1) % _n],
+                        -roi_upper_arcs[_i],
+                        -_meridians[_i]};
+    Surface(_surface) = {_loop};
 
-  roi_ring_surfaces = {roi_north_west_surface, roi_north_east_surface, roi_south_west_surface, roi_south_east_surface};
+    roi_side_surfaces[_i] = _surface;
+  EndFor
 Return
 
 
@@ -203,61 +188,51 @@ Function MakeSphereWithROI
   // ---------
   //   z, y, z, r, roi_r, element_length, roi_element_length
   //      float
-  //   center,
+  //   n_meridians
+  //      int
+  //   center
   //      Point
   // Returns
   // -------
-  //   roi_north, roi_south, roi_west, roi_east
+  //   roi_nodes[]
   //      Point
-  //   roi_north_west_arc, roi_north_east_arc,
-  //   roi_south_east_arc, roi_south_west_arc
+  //   roi_arcs[]
   //      Circle
-  //   sphere_surfaces, roi_sector_surfaces, surrounding_sector_surfaces
-  //      Surface[]
+  //   sphere_surfaces[], roi_sector_surfaces[], surrounding_sector_surfaces[]
+  //      Surface
 
   Call MakeCapROI;
+  segment_upper_nodes[] = roi_nodes[];
+  segment_upper_arcs[] = roi_arcs[];
 
-  segment_lower_west = newp; Point(segment_lower_west) = {x+r, y, z, element_length};
-  segment_lower_south = newp; Point(segment_lower_south) = {x, y, z-r, element_length};
-  segment_lower_north = newp; Point(segment_lower_north) = {x, y, z+r, element_length};
-  segment_lower_east = newp; Point(segment_lower_east) = {x-r, y, z, element_length};
+  For _i In {0: n_meridians-1}
+    _point = newp;
 
-  circle_north = segment_lower_north;
-  circle_south = segment_lower_south;
-  circle_west = segment_lower_west;
-  circle_east = segment_lower_east;
+    _arc = 2 * Pi * _i / n_meridians;
+    Point(_point) =  {x + r * Sin(_arc),
+                      y,
+                      z + r * Cos(_arc),
+                      element_length};
+
+     segment_lower_nodes[_i] = _point;
+  EndFor
+
   circle_center = center;
+  circle_nodes[] = segment_lower_nodes[];
 
   Call MakeCircle;
 
-  segment_lower_north_west_arc = circle_north_west_arc;
-  segment_lower_north_east_arc = circle_north_east_arc;
-  segment_lower_south_east_arc = circle_south_east_arc;
-  segment_lower_south_west_arc = circle_south_west_arc;
-
-  cap_north = segment_lower_north;
-  cap_south = segment_lower_south;
-  cap_west = segment_lower_west;
-  cap_east = segment_lower_east;
-  cap_north_west_arc = segment_lower_north_west_arc;
-  cap_north_east_arc = segment_lower_north_east_arc;
-  cap_south_east_arc = segment_lower_south_east_arc;
-  cap_south_west_arc = segment_lower_south_west_arc;
+  segment_lower_arcs[] = circle_arcs[];
+  cap_nodes[] = segment_lower_nodes[];
+  cap_arcs[] = segment_lower_arcs[];
   cap_top = newp; Point(cap_top) = {x, y - r, z, element_length};
-  Call SphericalCap;
+  cap_center = center;
+  Call MakeSphericalCap;
 
   _bottom_hemisphere_surfaces = cap_surfaces[];
 
   segment_center = center;
-  segment_upper_north = roi_north;
-  segment_upper_south = roi_south;
-  segment_upper_west = roi_west;
-  segment_upper_east = roi_east;
-  segment_upper_north_west_arc = roi_north_west_arc;
-  segment_upper_north_east_arc = roi_north_east_arc;
-  segment_upper_south_east_arc = roi_south_east_arc;
-  segment_upper_south_west_arc = roi_south_west_arc;
-  Call SphericalSegment;
+  Call MakeSphericalSegment;
 
   surrounding_sector_surfaces = {segment_surfaces[],
                                  _bottom_hemisphere_surfaces[]};
@@ -271,48 +246,49 @@ Function MakeSphere
   // ---------
   //   z, y, z, r, element_length
   //      float
+  //   n_meridians
+  //      int
   //   center
   //      Point
   // Returns
   // -------
-  //   sphere_surfaces
-  //      Surface[]
+  //   sphere_surfaces[]
+  //      Surface
 
-  sphere_west = newp; Point(sphere_west) = {x+r, y, z, element_length};
-  sphere_south = newp; Point(sphere_south) = {x, y, z-r, element_length};
-  sphere_north = newp; Point(sphere_north) = {x, y, z+r, element_length};
-  sphere_east = newp; Point(sphere_east) = {x-r, y, z, element_length};
+  For _i In {0: n_meridians-1}
+    _point = newp;
+
+    _arc = 2 * Pi * _i / n_meridians;
+    Point(_point) =  {x + r * Sin(_arc),
+                      y,
+                      z + r * Cos(_arc),
+                      element_length};
+
+     circle_nodes[_i] = _point;
+  EndFor
+
   sphere_top = newp; Point(sphere_top) = {x, y+r, z, element_length};
   sphere_bottom = newp; Point(sphere_bottom) = {x, y-r, z, element_length};
 
-  circle_north = sphere_north;
-  circle_south = sphere_south;
-  circle_west = sphere_west;
-  circle_east = sphere_east;
   circle_center = center;
 
   Call MakeCircle;
-  cap_north_west_arc = circle_north_west_arc;
-  cap_north_east_arc = circle_north_east_arc;
-  cap_south_east_arc = circle_south_east_arc;
-  cap_south_west_arc = circle_south_west_arc;
-
-  cap_north = sphere_north;
-  cap_south = sphere_south;
-  cap_west = sphere_west;
-  cap_east = sphere_east;
+  cap_nodes[] = circle_nodes[];
+  cap_arcs[] = circle_arcs[];
 
   cap_top = sphere_top;
-  Call SphericalCap;
+  Call MakeSphericalCap;
   _upper_hemisphere_surfaces = cap_surfaces[];
 
   cap_top = sphere_bottom;
-  Call SphericalCap;
+  Call MakeSphericalCap;
   _lower_hemisphere_surfaces = cap_surfaces[];
 
-  sphere_surfaces = {_upper_hemisphere_surfaces[], _lower_hemisphere_surfaces[]};
+  sphere_surfaces[] = {_upper_hemisphere_surfaces[],
+                       _lower_hemisphere_surfaces[]};
 Return
 
+n_meridians = 4;
 brain_r = 0.079;
 csf_r   = 0.080;
 skull_r = 0.085;
@@ -341,17 +317,11 @@ roi_element_length = brain_roi_element_length;
 center = newp; Point(center) = {x, y, z, element_length};
 Call MakeSphereWithROI;
 
-roi_top_north = roi_north;
-roi_top_south = roi_south;
-roi_top_west = roi_west;
-roi_top_east = roi_east;
-roi_north_west_upper_arc = roi_north_west_arc;
-roi_north_east_upper_arc = roi_north_east_arc;
-roi_south_east_upper_arc = roi_south_east_arc;
-roi_south_west_upper_arc = roi_south_west_arc;
-roi_sector_upper_surfaces = roi_sector_surfaces[];
-external_surrounding_sector_surfaces = surrounding_sector_surfaces[];
-cortex_surfaces = sphere_surfaces[];
+roi_upper_nodes[] = roi_nodes[];
+roi_upper_arcs[] = roi_arcs[];
+roi_upper_surfaces[] = roi_sector_surfaces[];
+external_surrounding_sector_surfaces[] = surrounding_sector_surfaces[];
+cortex_surfaces[] = sphere_surfaces[];
 cortex_loop = newsl; Surface Loop(cortex_loop) = cortex_surfaces[];
 
 r = brain_r - 2 * roi_r;
@@ -359,35 +329,28 @@ roi_r = roi_r * r / brain_r;
 element_length = brain_element_length;
 
 Call MakeSphereWithROI;
-roi_bottom_north = roi_north;
-roi_bottom_south = roi_south;
-roi_bottom_west = roi_west;
-roi_bottom_east = roi_east;
-roi_north_west_lower_arc = roi_north_west_arc;
-roi_north_east_lower_arc = roi_north_east_arc;
-roi_south_east_lower_arc = roi_south_east_arc;
-roi_south_west_lower_arc = roi_south_west_arc;
-roi_sector_lower_surfaces = roi_sector_surfaces[];
-internal_surrounding_sector_surfaces = surrounding_sector_surfaces[];
+roi_lower_nodes[] = roi_nodes[];
+roi_lower_arcs[] = roi_arcs[];
+roi_lower_surfaces[] = roi_sector_surfaces[];
+internal_surrounding_sector_surfaces[] = surrounding_sector_surfaces[];
 
-volume_surfaces = sphere_surfaces[];
+volume_surfaces[] = sphere_surfaces[];
 Call MakeVolume;
 subcortex_volume = volume;
 
-Call RingOfROI;
+Call MakeSidesOfROI;
 
-volume_surfaces = {external_surrounding_sector_surfaces[],
-                   internal_surrounding_sector_surfaces[],
-                   roi_ring_surfaces[]};
+volume_surfaces[] = {external_surrounding_sector_surfaces[],
+                     internal_surrounding_sector_surfaces[],
+                     roi_side_surfaces[]};
 Call MakeVolume;
 surrounding_cortex_volume = volume;
 
-volume_surfaces = {roi_sector_upper_surfaces[],
-                   roi_sector_lower_surfaces[],
-                   roi_ring_surfaces[]};
+volume_surfaces[] = {roi_upper_surfaces[],
+                     roi_lower_surfaces[],
+                     roi_side_surfaces[]};
 Call MakeVolume;
 roi_volume = volume;
-
 
 r = csf_r;
 roi_r = brain_roi_r * r / brain_r;
@@ -413,8 +376,8 @@ roi_r = brain_roi_r * r / brain_r;
 element_length = scalp_element_length;
 roi_element_length = scalp_roi_element_length;
 Call MakeSphereWithROI;
+scalp_surfaces[] = sphere_surfaces[];
 
-scalp_surfaces = sphere_surfaces[];
 scalp_loop = newsl; Surface Loop(scalp_loop) = scalp_surfaces[];
 scalp_volume = newv; Volume(scalp_volume) = {scalp_loop, skull_loop};
 
