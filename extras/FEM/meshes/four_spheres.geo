@@ -132,7 +132,7 @@ Function MakeCapROI
   circle_south = roi_south;
   circle_west = roi_west;
   circle_east = roi_east;
-  circle_center = newp; Point(circle_center) = {x, y+h, z, roi_element_length};
+  circle_center = center;
   Call MakeCircle;
 
   roi_north_west_arc = circle_north_west_arc;
