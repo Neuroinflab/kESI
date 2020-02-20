@@ -13,6 +13,8 @@ MESHES=$(EIGHTH_OF_SPHERE_MESHES) $(FINITE_SLICE_MESHES) $(SPHERICAL_MESHES)
 
 .SECONDARY: eighth_of_sphere.msh eighth_of_sphere_coarse.msh eighth_of_sphere_coarser.msh eighth_of_sphere_coarsest.msh finite_slice.msh finite_slice_small_coarse.msh finite_slice_smaller_coarse.msh one_sphere.msh two_spheres.msh four_spheres.msh four_spheres_composite.msh
 
+.PHONY: all
+
 all: $(MESHES)
 
 %_coarsest.msh: %_coarsest.geo
