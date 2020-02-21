@@ -49,15 +49,26 @@ SAMPLING_FREQUENCY = 64
 class _FiniteSliceGaussianDecorator(object):
     def __call__(self, obj):
         obj.standard_deviation = obj.slice_thickness / 2 ** obj.k
-        obj.X = list(np.linspace(obj.standard_deviation / 2,
-                                 obj.slice_thickness - obj.standard_deviation / 2,
-                                 2 ** obj.k))
+        self._decorate_centroid_locations(obj)
+        self._decorate_sampling_nodes(obj)
+
+    def _decorate_sampling_nodes(self, obj):
         obj.X_SAMPLE = np.linspace(-obj.slice_thickness,
                                    obj.slice_thickness,
                                    2 * obj.sampling_frequency + 1)
         obj.Y_SAMPLE = np.linspace(0,
                                    obj.slice_thickness,
                                    obj.sampling_frequency + 1)
+        obj.Z_SAMPLE = obj.X_SAMPLE
+
+    def _decorate_centroid_locations(self, obj):
+        X = np.linspace(obj.standard_deviation / 2,
+                        obj.slice_thickness - obj.standard_deviation / 2,
+                        2 ** obj.k)
+        obj.X = list(X)
+        obj.X_CENTROID = list(-X[::-1]) + obj.X
+        obj.Y_CENTROID = obj.X
+        obj.Z_CENTROID = obj.X_CENTROID
 
 
 class _FiniteSliceGaussianDataFileDecorator(
@@ -479,7 +490,7 @@ if __name__ == '__main__':
                                     if potential is not None:
                                         for i, x in enumerate(controller.X_SAMPLE):
                                             for j, y in enumerate(controller.Y_SAMPLE):
-                                                for kk, z in enumerate(controller.X_SAMPLE):
+                                                for kk, z in enumerate(controller.Z_SAMPLE):
                                                     POTENTIAL[idx_y,
                                                               idx_xz,
                                                               i,
