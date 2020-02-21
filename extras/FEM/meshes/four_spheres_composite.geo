@@ -290,22 +290,28 @@ Return
 
 n_meridians = 6;
 brain_r = 0.079;
+csf_r   = 0.080;
+skull_r = 0.085;
 scalp_r = 0.090;
 
 brain_roi_r = 0.006;
 
 brain_element_length = 0.015;  // from Chaitanya's sphere_4_lowres.geo
-scalp_element_length = scalp_r - brain_r;
+csf_element_length   = csf_r - brain_r;
+skull_element_length = skull_r - csf_r;
+scalp_element_length = scalp_r - skull_r;
 
 min_sd = 0.001;
 brain_roi_element_length = min_sd / 4;
+csf_roi_element_length   = 0.0050;  // from Chaitanya's sphere_4_lowres.geo
+skull_roi_element_length = 0.0025;  // from Chaitanya's sphere_4_lowres.geo
 scalp_roi_element_length = 0.0025;  // from Chaitanya's sphere_4_lowres.geo
 
 x = 0.; y = 0.; z = 0.;
 
 r = brain_r;
 roi_r = brain_roi_r;
-element_length = brain_element_length;
+element_length = csf_element_length;
 roi_element_length = brain_roi_element_length;
 
 center = newp; Point(center) = {x, y, z, element_length};
@@ -314,22 +320,31 @@ Call MakeSphereWithROI;
 roi_upper_nodes[] = roi_nodes[];
 roi_upper_arcs[] = roi_arcs[];
 roi_upper_surfaces[] = roi_sector_surfaces[];
+external_surrounding_sector_surfaces[] = surrounding_sector_surfaces[];
+cortex_surfaces[] = sphere_surfaces[];
+cortex_loop = newsl; Surface Loop(cortex_loop) = cortex_surfaces[];
 
 r = brain_r - 2 * roi_r;
 roi_r = roi_r * r / brain_r;
+element_length = brain_element_length;
 
-Call MakeCapROI;
+Call MakeSphereWithROI;
 roi_lower_nodes[] = roi_nodes[];
 roi_lower_arcs[] = roi_arcs[];
 roi_lower_surfaces[] = roi_sector_surfaces[];
+internal_surrounding_sector_surfaces[] = surrounding_sector_surfaces[];
+
+volume_surfaces[] = sphere_surfaces[];
+Call MakeVolume;
+subcortex_volume = volume;
 
 Call MakeSidesOfROI;
 
-volume_surfaces[] = {surrounding_sector_surfaces[],
-                     roi_lower_surfaces[],
+volume_surfaces[] = {external_surrounding_sector_surfaces[],
+                     internal_surrounding_sector_surfaces[],
                      roi_side_surfaces[]};
 Call MakeVolume;
-surrounding_brain_volume = volume;
+surrounding_cortex_volume = volume;
 
 volume_surfaces[] = {roi_upper_surfaces[],
                      roi_lower_surfaces[],
@@ -337,8 +352,24 @@ volume_surfaces[] = {roi_upper_surfaces[],
 Call MakeVolume;
 roi_volume = volume;
 
-brain_surfaces[] = {surrounding_sector_surfaces[], roi_upper_surfaces[]};
-brain_loop = newsl; Surface Loop(brain_loop) = brain_surfaces[];
+r = csf_r;
+roi_r = brain_roi_r * r / brain_r;
+element_length = csf_element_length;
+roi_element_length = csf_roi_element_length;
+Call MakeSphereWithROI;
+
+csf_loop = newsl; Surface Loop(csf_loop) = sphere_surfaces[];
+csf_volume = newv; Volume(csf_volume) = {csf_loop, cortex_loop};
+
+r = skull_r;
+roi_r = brain_roi_r * r / brain_r;
+element_length = skull_element_length;
+roi_element_length = skull_roi_element_length;
+Call MakeSphereWithROI;
+
+skull_loop = newsl; Surface Loop(skull_loop) = sphere_surfaces[];
+skull_volume = newv; Volume(skull_volume) = {skull_loop, csf_loop};
+
 
 r = scalp_r;
 roi_r = brain_roi_r * r / brain_r;
@@ -348,9 +379,13 @@ Call MakeSphereWithROI;
 scalp_surfaces[] = sphere_surfaces[];
 
 scalp_loop = newsl; Surface Loop(scalp_loop) = scalp_surfaces[];
-scalp_volume = newv; Volume(scalp_volume) = {scalp_loop, brain_loop};
+scalp_volume = newv; Volume(scalp_volume) = {scalp_loop, skull_loop};
 
-Physical Volume ("brain") = {roi_volume, surrounding_brain_volume};
+Physical Volume ("brain") = {roi_volume,
+                             surrounding_cortex_volume,
+                             subcortex_volume};
+Physical Volume ("csf") = csf_volume;
+Physical Volume ("skull") = skull_volume;
 Physical Volume ("scalp") = scalp_volume;
-Physical Surface ("brain_surface") = brain_surfaces[];
+Physical Surface ("brain_surface") = cortex_surfaces[];
 Physical Surface ("scalp_surface") = scalp_surfaces[];

@@ -294,8 +294,7 @@ scalp_r = 0.090;
 
 brain_roi_r = 0.006;
 
-brain_element_length = 0.015;  // from Chaitanya's sphere_4_lowres.geo
-scalp_element_length = scalp_r - brain_r;
+scalp_element_length = 0.015;  // from Chaitanya's sphere_4_lowres.geo
 
 min_sd = 0.001;
 brain_roi_element_length = min_sd / 4;
@@ -305,11 +304,10 @@ x = 0.; y = 0.; z = 0.;
 
 r = brain_r;
 roi_r = brain_roi_r;
-element_length = brain_element_length;
 roi_element_length = brain_roi_element_length;
 
-center = newp; Point(center) = {x, y, z, element_length};
-Call MakeSphereWithROI;
+center = newp; Point(center) = {x, y, z, scalp_element_length};
+Call MakeCapROI;
 
 roi_upper_nodes[] = roi_nodes[];
 roi_upper_arcs[] = roi_arcs[];
@@ -325,20 +323,14 @@ roi_lower_surfaces[] = roi_sector_surfaces[];
 
 Call MakeSidesOfROI;
 
-volume_surfaces[] = {surrounding_sector_surfaces[],
-                     roi_lower_surfaces[],
-                     roi_side_surfaces[]};
-Call MakeVolume;
-surrounding_brain_volume = volume;
-
-volume_surfaces[] = {roi_upper_surfaces[],
-                     roi_lower_surfaces[],
-                     roi_side_surfaces[]};
+roi_surfaces[] = {roi_upper_surfaces[],
+                  roi_lower_surfaces[],
+                  roi_side_surfaces[]};
+volume_surfaces[] = roi_surfaces[];
 Call MakeVolume;
 roi_volume = volume;
 
-brain_surfaces[] = {surrounding_sector_surfaces[], roi_upper_surfaces[]};
-brain_loop = newsl; Surface Loop(brain_loop) = brain_surfaces[];
+roi_loop = newsl; Surface Loop(roi_loop) = roi_surfaces[];
 
 r = scalp_r;
 roi_r = brain_roi_r * r / brain_r;
@@ -348,9 +340,7 @@ Call MakeSphereWithROI;
 scalp_surfaces[] = sphere_surfaces[];
 
 scalp_loop = newsl; Surface Loop(scalp_loop) = scalp_surfaces[];
-scalp_volume = newv; Volume(scalp_volume) = {scalp_loop, brain_loop};
+scalp_volume = newv; Volume(scalp_volume) = {scalp_loop, roi_loop};
 
-Physical Volume ("brain") = {roi_volume, surrounding_brain_volume};
-Physical Volume ("scalp") = scalp_volume;
-Physical Surface ("brain_surface") = brain_surfaces[];
+Physical Volume ("brain") = {roi_volume, scalp_volume};
 Physical Surface ("scalp_surface") = scalp_surfaces[];

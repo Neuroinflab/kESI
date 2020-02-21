@@ -4,7 +4,7 @@
 #                                                                             #
 #    kESI                                                                     #
 #                                                                             #
-#    Copyright (C) 2019 Jakub M. Dzik (Laboratory of Neuroinformatics;        #
+#    Copyright (C) 2019-2020 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
 #    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
 #                                                                             #
 #    This software is free software: you can redistribute it and/or modify    #
@@ -49,15 +49,26 @@ SAMPLING_FREQUENCY = 64
 class _FiniteSliceGaussianDecorator(object):
     def __call__(self, obj):
         obj.standard_deviation = obj.slice_thickness / 2 ** obj.k
-        obj.X = list(np.linspace(obj.standard_deviation / 2,
-                                 obj.slice_thickness - obj.standard_deviation / 2,
-                                 2 ** obj.k))
+        self._decorate_centroid_locations(obj)
+        self._decorate_sampling_nodes(obj)
+
+    def _decorate_sampling_nodes(self, obj):
         obj.X_SAMPLE = np.linspace(-obj.slice_thickness,
                                    obj.slice_thickness,
                                    2 * obj.sampling_frequency + 1)
         obj.Y_SAMPLE = np.linspace(0,
                                    obj.slice_thickness,
                                    obj.sampling_frequency + 1)
+        obj.Z_SAMPLE = obj.X_SAMPLE
+
+    def _decorate_centroid_locations(self, obj):
+        X = np.linspace(obj.standard_deviation / 2,
+                        obj.slice_thickness - obj.standard_deviation / 2,
+                        2 ** obj.k)
+        obj.X = list(X)
+        obj.X_CENTROID = list(-X[::-1]) + obj.X
+        obj.Y_CENTROID = obj.X
+        obj.Z_CENTROID = obj.X_CENTROID
 
 
 class _FiniteSliceGaussianDataFileDecorator(
@@ -89,7 +100,8 @@ class _FiniteSliceGaussianDataFileDecorator(
                 # logger.debug('setting attr ' + attr)
                 setattr(obj, attr, fh[attr])
                 # logger.debug('done')
-            self.STATS = list(fh['STATS'])
+
+            obj.STATS = list(fh['STATS'])
 
 
 class _FailsafeFiniteSliceGaussianController(
@@ -195,6 +207,21 @@ class FiniteSliceGaussianSourceFactory(_fem_common._SourceFactory_Base):
          decorate(self)
          self.slice_radius = 3.0e-3  # m
 
+    @property
+    def DF(self):
+        import pandas as pd
+        return pd.DataFrame({name: [type(row[i]) for row in self.STATS[:, i]]
+                             for i, (name, type)
+                             in enumerate([('X', float),
+                                           ('Y', float),
+                                           ('Z', float),
+                                           ('SUCCESS', bool),
+                                           ('ITERATIONS', int),
+                                           ('SOLVING_TIME', float),
+                                           ('LOCAL_PREPROCESSING_TIME', float),
+                                           ('GLOBAL_PREPROCESSING_TIME', float),
+                                           ])})
+
     def __call__(self, x, y, z):
         abs_x = abs(x)
         abs_z = abs(z)
@@ -262,8 +289,11 @@ if __name__ == '__main__':
 
     except (ModuleNotFoundError, ImportError):
         print("""Run docker first:
-        $ docker run -ti --env HOST_UID=$(id -u) --env HOST_GID=$(id -g) -v $(pwd):/home/fenics/shared:Z quay.io/fenicsproject/stable
-        $ cd /home/fenics/shared/
+        $ docker run -ti --env HOST_UID=$(id -u) --env HOST_GID=$(id -g) \\
+                     -v $(pwd):/home/fenics/shared:Z \\
+                     -v $(pwd)/solutions:/home/fenics/shared/solutions:Z \\
+                     -w /home/fenics/shared \\
+                     quay.io/fenicsproject/stable
         """)
     else:
         class GaussianPotentialFEM(_fem_common._FEM_Base):
@@ -460,7 +490,7 @@ if __name__ == '__main__':
                                     if potential is not None:
                                         for i, x in enumerate(controller.X_SAMPLE):
                                             for j, y in enumerate(controller.Y_SAMPLE):
-                                                for kk, z in enumerate(controller.X_SAMPLE):
+                                                for kk, z in enumerate(controller.Z_SAMPLE):
                                                     POTENTIAL[idx_y,
                                                               idx_xz,
                                                               i,
