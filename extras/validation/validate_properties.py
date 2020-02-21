@@ -4,16 +4,17 @@
 
 import numpy as np
 import sys
+import scipy
 sys.path.append('../')
 
 try:
-    from api_stabilizer import VerboseFFR, MeasurementManagerBase
+    from api_stabilizer import VerboseFFR, MeasurementManagerBase, LinearMixture
     # When run as script raises:
     #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
     #  - `SystemError` (Python 3.3-5), or
     #  - `ValueError` (Python 2.7).
 except (ImportError, SystemError, ValueError):
-    from .api_stabilizer import VerboseFFR, MeasurementManagerBase
+    from .api_stabilizer import VerboseFFR, MeasurementManagerBase, LinearMixture
 
 from _common_new import GaussianSourceKCSD3D
 
@@ -26,6 +27,19 @@ class ValidateKESI(VerboseFFR):
         self.eigenvalues, self.eigenvectors = self._evd(kernel,
                                                         regularization_parameter)
         return np.dot(cross_kernel, self.eigenvectors)
+    
+    def _FieldEigenSource(self, EV):
+        return LinearMixture(zip(self._field_components,
+                                 np.dot(self._pre_kernel,
+                                        EV)))
+    
+    def _field_eigensources(self, measurement_manager_basis,
+                      regularization_parameter=0):
+        kernel = self.kernel
+        self.eigenvalues, self.eigenvectors = self._evd(kernel,
+                                                        regularization_parameter)
+        return [self._FieldEigenSource(EV)
+                for EV in self.eigenvectors.T]
 
     def _evd(self, K, regularization_parameter=0):
         eigenvalues, eigenvectors = np.linalg.eigh(K + np.identity(K.shape[0])
@@ -34,6 +48,17 @@ class ValidateKESI(VerboseFFR):
         eigenvalues = eigenvalues[idx]
         eigenvectors = eigenvectors[:, idx]
         return eigenvalues, eigenvectors
+
+    def _orthonormalize_matrix(matrix):
+        orthn = scipy.linalg.orth(matrix)
+        return orthn
+
+    def _csd_into_eigensource_projection(csd, eigensources):
+        orthn = scipy.linalg.orth(eigensources)
+        return np.dot(csd, orthn)
+    
+    def _calculate_diff(a, b):
+        return np.abs(a - b)
 
 
 class MeasurementManager2d(MeasurementManagerBase):
@@ -52,12 +77,6 @@ class MeasurementManager(MeasurementManagerBase):
         self._space = space
         self._ELECTRODES = ELECTRODES
         self.number_of_measurements = len(ELECTRODES)
-
-    # def probe(self, field):
-    #     return getattr(field, 
-    #                    self._space)(self._ELECTRODES.X,
-    #                                 self._ELECTRODES.Y,
-    #                                 self._ELECTRODES.Z)
 
     def probe(self, field):
         return np.array([getattr(field, 
@@ -86,25 +105,25 @@ if __name__ == '__main__':
     X, Y = np.mgrid[0.05: 0.95: 10j,
                     0.05: 0.95: 10j]
     ELECTRODES = pd.DataFrame({'X': X.flatten(),
-                               'Y': Y.flatten(),
-                               })
+                                'Y': Y.flatten(),
+                                })
 
     measurement_manager = MeasurementManager2d(ELECTRODES)
     src_X, src_Y = np.mgrid[0.:1.:100j,
                             0.:1.:100j]
 
     sources = gaussian_source_factory_2d(src_X.flatten(),
-                                         src_Y.flatten(),
-                                         standard_deviation,
-                                         conductivity)
+                                          src_Y.flatten(),
+                                          standard_deviation,
+                                          conductivity)
 
     reconstructor = ValidateKESI(sources, measurement_manager)
 
     est_X, est_Y = np.mgrid[0.:1.:100j,
                             0.:1.:100j]
     EST_POINTS = pd.DataFrame({'X': est_X.flatten(),
-                               'Y': est_Y.flatten(),
-                               })
+                                'Y': est_Y.flatten(),
+                                })
     measurement_manager_basis = MeasurementManager2d(EST_POINTS)
     eigensources = reconstructor._eigensources(measurement_manager_basis)
 
