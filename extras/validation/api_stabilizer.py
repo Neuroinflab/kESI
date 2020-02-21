@@ -22,6 +22,6 @@
 #                                                                             #
 ###############################################################################
 
-from kesi._verbose import VerboseFFR
+from kesi._verbose import VerboseFFR, LinearMixture
 
 MeasurementManagerBase = VerboseFFR.MeasurementManagerBase
