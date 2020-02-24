@@ -49,16 +49,16 @@ class ValidateKESI(VerboseFFR):
         eigenvectors = eigenvectors[:, idx]
         return eigenvalues, eigenvectors
 
-    def _orthonormalize_matrix(matrix):
-        orthn = scipy.linalg.orth(matrix)
-        return orthn
+    # def _orthonormalize_matrix(self, matrix):
+    #     orthn = scipy.linalg.orth(matrix)
+    #     return orthn
 
-    def _csd_into_eigensource_projection(csd, eigensources):
-        orthn = scipy.linalg.orth(eigensources)
-        return np.dot(csd, orthn)
+    # def _csd_into_eigensource_projection(self, csd, eigensources):
+    #     orthn = scipy.linalg.orth(eigensources)
+    #     return np.dot(csd, orthn)
     
-    def _calculate_diff(a, b):
-        return np.abs(a - b)
+    # def _calculate_diff(self, a, b):
+    #     return np.abs(a - b)
 
 
 class MeasurementManager2d(MeasurementManagerBase):
