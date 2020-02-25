@@ -393,7 +393,7 @@ class _SomeSphereControllerBase(object):
 
     cortex_radius_external = 0.079
     cortex_radius_internal = 0.067
-    source_resolution = 1
+    source_resolution = 4
 
     def __init__(self, fem):
         self._fem = fem
