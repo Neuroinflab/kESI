@@ -26,6 +26,7 @@ import os
 import logging
 
 import numpy as np
+from scipy.interpolate import RegularGridInterpolator
 
 try:
     from . import _fem_common
@@ -50,7 +51,6 @@ class _SomeSphereGaussianLoaderBase(object):
                   'brain_conductivity',
                   'brain_radius',
                   'degree',
-                  'ELECTRODES',
                   'POTENTIAL',
                   'A',
                   # 'STATS',
@@ -69,18 +69,7 @@ class _SomeSphereGaussianLoaderBase(object):
                              self.cortex_radius_external - sd / 2 / self.source_resolution,
                              n * self.source_resolution)
 
-        self.ALTITUDE = []
-        self.AZIMUTH = []
-        for i, altitude in enumerate(
-                             np.linspace(
-                                  0,
-                                  np.pi / 2,
-                                  int(np.ceil(self.source_resolution * self.cortex_radius_external * np.pi / 2 / sd)) + 1)):
-            for azimuth in np.linspace(0 if i % 2 else 2 * np.pi,
-                                       2 * np.pi if i % 2 else 0,
-                                       int(np.ceil(self.source_resolution * self.cortex_radius_external * np.cos(altitude) * np.pi * 2 / sd)) + 1)[:-1]:
-                self.ALTITUDE.append(altitude)
-                self.AZIMUTH.append(azimuth)
+
 
     def _load_solutions(self):
         with np.load(self.path) as fh:
@@ -91,6 +80,7 @@ class _SomeSphereGaussianLoaderBase(object):
 
 
 class _FixedElectrodesGaussianLoaderBase(_SomeSphereGaussianLoaderBase):
+    ATTRIBUTES = _SomeSphereGaussianLoaderBase.ATTRIBUTES + ['ELECTRODES']
     _REGISTRATION_RADIUS = 0.079
     _RADIUS = 73.21604532
     _CENTER = np.array([[82.40997559, 118.14496578, 104.73314426]])
@@ -178,8 +168,77 @@ class _FixedElectrodesGaussianLoaderBase(_SomeSphereGaussianLoaderBase):
                                  [118.8, 176.917, 70.4688]])
     ELECTRODES = (_COORDS_NW_LATER - _CENTER) / _RADIUS * _REGISTRATION_RADIUS
 
+    def _load(self):
+        super(_FixedElectrodesGaussianLoaderBase, self)._load()
+        sd = self.standard_deviation
 
-class SomeSphereGaussianSourceFactory(_FixedElectrodesGaussianLoaderBase):
+        self.ALTITUDE = []
+        self.AZIMUTH = []
+        for i, altitude in enumerate(
+                             np.linspace(
+                                  0,
+                                  np.pi / 2,
+                                  int(np.ceil(self.source_resolution * self.cortex_radius_external * np.pi / 2 / sd)) + 1)):
+            for azimuth in np.linspace(0 if i % 2 else 2 * np.pi,
+                                       2 * np.pi if i % 2 else 0,
+                                       int(np.ceil(self.source_resolution * self.cortex_radius_external * np.cos(altitude) * np.pi * 2 / sd)) + 1)[:-1]:
+                self.ALTITUDE.append(altitude)
+                self.AZIMUTH.append(azimuth)
+
+
+class _GaussianLoaderBase(_SomeSphereGaussianLoaderBase):
+    ATTRIBUTES = _SomeSphereGaussianLoaderBase.ATTRIBUTES +\
+                 ['scalp_radius',
+                  'sampling_frequency',
+                  ]
+
+    def _load(self):
+        super(_GaussianLoaderBase, self)._load()
+
+        self.X_SAMPLE = np.linspace(-self.scalp_radius,
+                                    self.scalp_radius,
+                                    2 * self.sampling_frequency + 1)
+        self.Y_SAMPLE = self.X_SAMPLE
+        self.Z_SAMPLE = self.X_SAMPLE
+
+
+class _SourceBase(object):
+    def csd(self, X, Y, Z):
+        return np.where((X**2 + Y**2 + Z**2 > self.parent.brain_radius ** 2),
+                        0,
+                        self._a
+                        * np.exp(-0.5
+                                 * (np.square(X - self._x)
+                                    + np.square(Y - self._y)
+                                    + np.square(Z - self._z))
+                                 / self.parent.standard_deviation ** 2))
+
+    @property
+    def x(self):
+        return self._x
+
+    @property
+    def y(self):
+        return self._y
+
+    @property
+    def z(self):
+        return self._z
+
+    @property
+    def r(self):
+        return self._r
+
+    @property
+    def altitude(self):
+        return self._altitude
+
+    @property
+    def azimuth(self):
+        return self._azimuth
+
+
+class SomeSphereFixedElectrodesGaussianSourceFactory(_FixedElectrodesGaussianLoaderBase):
     def __init__(self, filename):
         self.path = filename
         self._load()
@@ -199,7 +258,7 @@ class SomeSphereGaussianSourceFactory(_FixedElectrodesGaussianLoaderBase):
         a = self.A[i_r]
         return self._Source(r, altitude, azimuth, a, POTENTIAL, self)
 
-    class _Source(object):
+    class _Source(_SourceBase):
         def __init__(self, r, altitude, azimuth, a, POTENTIAL, parent):
             self._r = r
             self._altitude = altitude
@@ -215,42 +274,69 @@ class SomeSphereGaussianSourceFactory(_FixedElectrodesGaussianLoaderBase):
         def potential(self):
             return self._POTENTIAL
 
-        def csd(self, X, Y, Z):
-            return np.where((X**2 + Y**2 + Z**2 > self.parent.brain_radius ** 2),
-                            0,
-                            self._a
-                            * np.exp(-0.5
-                                     * (np.square(X - self._x)
-                                        + np.square(Y - self._y)
-                                        + np.square(Z - self._z))
-                                     / self.parent.standard_deviation ** 2))
 
-        @property
-        def x(self):
-            return self._x
+class SomeSphereGaussianSourceFactory(_GaussianLoaderBase):
+    def __init__(self, filename):
+        self.path = filename
+        self._load()
+        self._r_index = {r: i for i, r in enumerate(self.R)}
+        self._interpolator = [RegularGridInterpolator(
+                                     (self.X_SAMPLE,
+                                      self.Y_SAMPLE,
+                                      self.Z_SAMPLE),
+                                     P,
+                                     bounds_error=False,
+                                     fill_value=np.nan)
+                              for P in self.POTENTIAL
+                              ]
 
-        @property
-        def y(self):
-            return self._y
+    def _populate_solutions(self):
+        self._load_solutions()
 
-        @property
-        def z(self):
-            return self._z
+    def __call__(self, r, altitude, azimuth):
+        i_r = self._r_index[r]
+        a = self.A[i_r]
+        return self._Source(r, altitude, azimuth, a,
+                            self._interpolator[i_r],
+                            self)
 
-        @property
-        def r(self):
-            return self._r
+    class _Source(_SourceBase):
+        def __init__(self, r, altitude, azimuth, a, interpolator, parent):
+            self._r = r
+            self._altitude = altitude
+            self._azimuth = azimuth
 
-        @property
-        def altitude(self):
-            return self._altitude
+            sin_alt = np.sin(altitude)  # np.cos(np.pi / 2 - altitude)
+            cos_alt = np.cos(altitude)  # np.sin(np.pi / 2 - altitude)
+            sin_az = np.sin(azimuth)  # -np.sin(-azimuth)
+            cos_az = np.cos(azimuth)  # np.cos(-azimuth)
 
-        @property
-        def azimuth(self):
-            return self._azimuth
+            self._ROT = np.matmul([[sin_alt, cos_alt, 0],
+                                   [-cos_alt, sin_alt, 0],
+                                   [0, 0, 1]],
+                                  [[cos_az, 0, sin_az],
+                                   [0, 1, 0],
+                                   [-sin_az, 0, cos_az]]
+                                  )
+
+            r2 = r * cos_alt
+            self._x = r2 * cos_az
+            self._y = r * sin_alt
+            self._z = -r2 * sin_az
+            self._a = a
+            self.parent = parent
+
+            self._interpolator = interpolator
+
+        def potential(self, X, Y, Z):
+            _X = self._ROT[0, 0] * X + self._ROT[1, 0] * Y + self._ROT[2, 0] * Z
+            _Y = self._ROT[0, 1] * X + self._ROT[1, 1] * Y + self._ROT[2, 1] * Z
+            _Z = self._ROT[0, 2] * X + self._ROT[1, 2] * Y + self._ROT[2, 2] * Z
+            return self._interpolator(np.stack((_X, _Y, _Z),
+                                               axis=-1))
 
 
-class _SomeSphereGaussianController(_FixedElectrodesGaussianLoaderBase):
+class _SomeSphereControllerBase(object):
     FEM_ATTRIBUTES = ['brain_conductivity',
                       'brain_radius',
                       ]
@@ -264,6 +350,36 @@ class _SomeSphereGaussianController(_FixedElectrodesGaussianLoaderBase):
         self._fem = fem
         self.k = None
 
+    def __enter__(self):
+        self._load()
+        self._anything_new = False
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._anything_new:
+            self.save(self.path)
+
+    def _results(self):
+        return {attr: getattr(self, attr)
+                for attr in self.ATTRIBUTES
+                }
+
+    def save(self, path):
+        results = self._results()
+        results['STATS'] = self.STATS
+        np.savez_compressed(path, **results)
+
+    def fem(self, y):
+        self._anything_new = True
+        return self._fem(int(self.degree), y, self.standard_deviation)
+
+    def _validate_attributes(self):
+        for attr, value in self._fem_attributes:
+            loaded = getattr(self, attr)
+            err = (loaded - value) / value
+            msg = "self.{0} / self._fem.{0} - 1 = {1:.2e}".format(attr, err)
+
+            assert abs(err) < self.TOLERANCE, msg
+
     @property
     def path(self):
         fn = '{0._fem.mesh_name}_gaussian_{1:04d}_deg_{0.degree}.npz'.format(
@@ -271,24 +387,6 @@ class _SomeSphereGaussianController(_FixedElectrodesGaussianLoaderBase):
                    int(round(1000 / 2 ** self.k)))
 
         return _fem_common._SourceFactory_Base.solution_path(fn, False)
-
-    def __enter__(self):
-        self._load()
-        self._anything_new = False
-
-    def _results(self):
-        return {attr: getattr(self, attr)
-                for attr in self.ATTRIBUTES
-                }
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self._anything_new:
-            self.save(self.path)
-
-    def save(self, path):
-        results = self._results()
-        results['STATS'] = self.STATS
-        np.savez_compressed(path, **results)
 
     def _populate_solutions(self):
         try:
@@ -304,26 +402,15 @@ class _SomeSphereGaussianController(_FixedElectrodesGaussianLoaderBase):
         else:
             self._validate_attributes()
 
-    def _validate_attributes(self):
-        for attr, value in self._fem_attributes:
-            loaded = getattr(self, attr)
-            err = (loaded - value) / value
-            msg = "self.{0} / self._fem.{0} - 1 = {1:.2e}".format(attr, err)
-
-            assert abs(err) < self.TOLERANCE, msg
+    def _empty_solutions(self):
+        n = 2 ** self.k
+        self.A = self.empty(n * self.source_resolution)
 
     @property
     def _fem_attributes(self):
         for attr in self.FEM_ATTRIBUTES:
+            logger.debug(attr)
             yield attr, getattr(self._fem, attr)
-
-    def _empty_solutions(self):
-        n = 2 ** self.k
-        self.STATS = []
-        self.POTENTIAL = self.empty((n * self.source_resolution,
-                                     len(self.AZIMUTH),
-                                     len(self.ELECTRODES)))
-        self.A = self.empty(n * self.source_resolution)
 
     @staticmethod
     def empty(shape):
@@ -331,9 +418,35 @@ class _SomeSphereGaussianController(_FixedElectrodesGaussianLoaderBase):
         A.fill(np.nan)
         return A
 
-    def fem(self, y):
-        self._anything_new = True
-        return self._fem(int(self.degree), y, self.standard_deviation)
+
+class _SomeSphereFixedElectrodesGaussianController(
+          _FixedElectrodesGaussianLoaderBase,
+          _SomeSphereControllerBase):
+    def _empty_solutions(self):
+        super(_SomeSphereFixedElectrodesGaussianController,
+              self)._empty_solutions()
+        n = 2 ** self.k
+        self.STATS = []
+        self.POTENTIAL = self.empty((n * self.source_resolution,
+                                     len(self.AZIMUTH),
+                                     len(self.ELECTRODES)))
+
+
+class _SomeSphereGaussianController(_GaussianLoaderBase,
+                                    _SomeSphereControllerBase):
+    FEM_ATTRIBUTES = _SomeSphereControllerBase.FEM_ATTRIBUTES + ['scalp_radius']
+
+    sampling_frequency = 256
+
+    def _empty_solutions(self):
+        super(_SomeSphereGaussianController, self)._empty_solutions()
+        n = 2 ** self.k
+        self.STATS = []
+        self.POTENTIAL = self.empty((n * self.source_resolution,
+                                     2 * self.sampling_frequency + 1,
+                                     2 * self.sampling_frequency + 1,
+                                     2 * self.sampling_frequency + 1))
+        # can be 8-fold compressed
 
 
 if __name__ == '__main__':
@@ -354,6 +467,8 @@ if __name__ == '__main__':
         """)
     else:
         class _SphericalGaussianPotential(_fem_common._FEM_Base):
+            scalp_radius = 0.090
+
             def __init__(self, mesh_name='finite_slice'):
                 super(_SphericalGaussianPotential, self).__init__(
                       mesh_path=os.path.join(_fem_common.DIRNAME,
@@ -526,34 +641,45 @@ if __name__ == '__main__':
                                               float(fem.local_preprocessing_time),
                                               float(fem.global_preprocessing_time)))
 
-                                AS[idx_r] = fem.a
                                 if potential is not None:
-                                    for idx_polar, (altitude, azimuth) in enumerate(zip(controller.ALTITUDE,
-                                                                                        controller.AZIMUTH)):
-                                        negative_d_altitude = np.pi / 2 - altitude
-                                        sin_alt = np.sin(negative_d_altitude)
-                                        cos_alt = np.cos(negative_d_altitude)
-                                        sin_az = np.sin(-azimuth)
-                                        cos_az = np.cos(-azimuth)
-                                        ELECTRODES = np.matmul(
-                                            controller.ELECTRODES,
-                                            np.matmul(
-                                                [[cos_alt, sin_alt, 0],
-                                                 [-sin_alt, cos_alt, 0],
-                                                 [0, 0, 1]],
-                                                [[cos_az, 0, -sin_az],
-                                                 [0, 1, 0],
-                                                 [sin_az, 0, cos_az]]
-                                                ))
-                                        for i, (x, y, z) in enumerate(ELECTRODES):
-                                            try:
-                                                POTENTIAL[idx_r,
-                                                          idx_polar,
-                                                          i] = potential(x, y, z)
-                                            except Exception as e:
-                                                logger.error("Exception {!r}".format(e))
-                                                logger.error("({}, {}, {})".format(x, y, z))
-                                                logger.error("(r={})".format(np.sqrt(x**2 + y**2 + z**2)))
+                                    # for idx_polar, (altitude, azimuth) in enumerate(zip(controller.ALTITUDE,
+                                    #                                                     controller.AZIMUTH)):
+                                    #     negative_d_altitude = np.pi / 2 - altitude
+                                    #     sin_alt = np.sin(negative_d_altitude)
+                                    #     cos_alt = np.cos(negative_d_altitude)
+                                    #     sin_az = np.sin(-azimuth)
+                                    #     cos_az = np.cos(-azimuth)
+                                    #     ELECTRODES = np.matmul(
+                                    #         controller.ELECTRODES,
+                                    #         np.matmul(
+                                    #             [[cos_alt, sin_alt, 0],
+                                    #              [-sin_alt, cos_alt, 0],
+                                    #              [0, 0, 1]],
+                                    #             [[cos_az, 0, -sin_az],
+                                    #              [0, 1, 0],
+                                    #              [sin_az, 0, cos_az]]
+                                    #             ))
+                                    r2 = controller.scalp_radius ** 2
+                                    for idx_x, x in enumerate(
+                                            controller.X_SAMPLE):
+                                        logger.info(str(x / controller.scalp_radius))
+                                        for idx_y, y in enumerate(
+                                                controller.Y_SAMPLE):
+                                            r_xy_2 = x ** 2 + y ** 2
+                                            if r_xy_2 > r2:
+                                                continue
+                                            for idx_z, z in enumerate(
+                                                    controller.Z_SAMPLE):
+                                                if r_xy_2 + z ** 2 > r2:
+                                                    continue
+                                                try:
+                                                    POTENTIAL[idx_r,
+                                                              idx_x,
+                                                              idx_y,
+                                                              idx_z] = potential(x, y, z)
+                                                except Exception as e:
+                                                    pass
+                                AS[idx_r] = fem.a
 
                                 logger.info(
                                     'Gaussian SD={}, r={}, (deg={}): {}\t({fem.iterations}, {time})'.format(
