@@ -669,12 +669,14 @@ if __name__ == '__main__':
                                                     if r_xy_2 + z ** 2 > r2:
                                                         continue
                                                     try:
+                                                        v = potential(x, y, z)
+                                                    except Exception as e:
+                                                        pass
+                                                    else:
                                                         POTENTIAL[idx_r,
                                                                   idx_x,
                                                                   idx_y,
-                                                                  idx_z] = potential(x, y, z)
-                                                    except Exception as e:
-                                                        pass
+                                                                  idx_z] = v
 
                                 AS[idx_r] = fem.a
                                 stats.append((src_r,
