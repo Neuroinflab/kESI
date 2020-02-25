@@ -43,6 +43,12 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+def empty_array(shape):
+    A = np.empty(shape)
+    A.fill(np.nan)
+    return A
+
+
 class _SomeSphereGaussianLoaderBase(object):
     ATTRIBUTES = ['k',
                   'source_resolution',
@@ -404,19 +410,13 @@ class _SomeSphereControllerBase(object):
 
     def _empty_solutions(self):
         n = 2 ** self.k
-        self.A = self.empty(n * self.source_resolution)
+        self.A = empty_array(n * self.source_resolution)
 
     @property
     def _fem_attributes(self):
         for attr in self.FEM_ATTRIBUTES:
             logger.debug(attr)
             yield attr, getattr(self._fem, attr)
-
-    @staticmethod
-    def empty(shape):
-        A = np.empty(shape)
-        A.fill(np.nan)
-        return A
 
 
 class _SomeSphereFixedElectrodesGaussianController(
@@ -427,9 +427,9 @@ class _SomeSphereFixedElectrodesGaussianController(
               self)._empty_solutions()
         n = 2 ** self.k
         self.STATS = []
-        self.POTENTIAL = self.empty((n * self.source_resolution,
-                                     len(self.AZIMUTH),
-                                     len(self.ELECTRODES)))
+        self.POTENTIAL = empty_array((n * self.source_resolution,
+                                      len(self.AZIMUTH),
+                                      len(self.ELECTRODES)))
 
 
 class _SomeSphereGaussianController(_GaussianLoaderBase,
@@ -442,10 +442,10 @@ class _SomeSphereGaussianController(_GaussianLoaderBase,
         super(_SomeSphereGaussianController, self)._empty_solutions()
         n = 2 ** self.k
         self.STATS = []
-        self.POTENTIAL = self.empty((n * self.source_resolution,
-                                     2 * self.sampling_frequency + 1,
-                                     2 * self.sampling_frequency + 1,
-                                     2 * self.sampling_frequency + 1))
+        self.POTENTIAL = empty_array((n * self.source_resolution,
+                                      2 * self.sampling_frequency + 1,
+                                      2 * self.sampling_frequency + 1,
+                                      2 * self.sampling_frequency + 1))
         # can be 8-fold compressed
 
 
