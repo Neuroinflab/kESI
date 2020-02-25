@@ -198,6 +198,22 @@ class _GaussianLoaderBase(_SomeSphereGaussianLoaderBase):
                   'sampling_frequency',
                   ]
 
+    @property
+    def _xz(self):
+        sf = self.sampling_frequency
+        for x_idx, z_idx in self._xz_idx:
+            yield self.X_SAMPLE[sf + x_idx], self.Z_SAMPLE[sf + z_idx]
+
+    @property
+    def _xz_idx(self):
+        _idx = 0
+        for x_idx in range(self.sampling_frequency + 1):
+            for z_idx in range(x_idx + 1):
+                assert _idx == x_idx * (x_idx + 1) // 2 + z_idx
+                yield x_idx, z_idx
+                _idx += 1
+
+
     def _load(self):
         super(_GaussianLoaderBase, self)._load()
 
@@ -286,25 +302,52 @@ class SomeSphereGaussianSourceFactory(_GaussianLoaderBase):
         self.path = filename
         self._load()
         self._r_index = {r: i for i, r in enumerate(self.R)}
-        self._interpolator = [RegularGridInterpolator(
-                                     (self.X_SAMPLE,
-                                      self.Y_SAMPLE,
-                                      self.Z_SAMPLE),
-                                     P,
-                                     bounds_error=False,
-                                     fill_value=np.nan)
-                              for P in self.POTENTIAL
-                              ]
+        self._interpolator = [None] * len(self.R)
 
     def _populate_solutions(self):
         self._load_solutions()
 
     def __call__(self, r, altitude, azimuth):
-        i_r = self._r_index[r]
-        a = self.A[i_r]
+        a, interpolator = self._source_prefabricates(r)
         return self._Source(r, altitude, azimuth, a,
-                            self._interpolator[i_r],
+                            interpolator,
                             self)
+
+    def _source_prefabricates(self, r):
+        r_idx = self._r_index[r]
+        return self.A[r_idx], self._get_interpolator(r_idx)
+
+    def _get_interpolator(self, r_idx):
+        interpolator = self._interpolator[r_idx]
+        if interpolator is None:
+            interpolator = self._make_interpolator(self.POTENTIAL[r_idx, :, :])
+            self._interpolator[r_idx] = interpolator
+        return interpolator
+
+    def _make_interpolator(self, COMPRESSED):
+        POTENTIAL = empty_array((len(self.X_SAMPLE),
+                                 len(self.Y_SAMPLE),
+                                 len(self.Z_SAMPLE)))
+        sf = self.sampling_frequency
+        for xz_idx, (x_idx, z_idx) in enumerate(self._xz_idx):
+            P = COMPRESSED[xz_idx, :]
+            POTENTIAL[sf + x_idx, :, sf + z_idx] = P
+            POTENTIAL[sf - x_idx, :, sf - z_idx] = P
+            POTENTIAL[sf + x_idx, :, sf - z_idx] = P
+            POTENTIAL[sf - x_idx, :, sf + z_idx] = P
+            if x_idx > z_idx:
+                POTENTIAL[sf + z_idx, :, sf + x_idx] = P
+                POTENTIAL[sf - z_idx, :, sf - x_idx] = P
+                POTENTIAL[sf + z_idx, :, sf - x_idx] = P
+                POTENTIAL[sf - z_idx, :, sf + x_idx] = P
+        interpolator = RegularGridInterpolator((self.X_SAMPLE,
+                                                self.Y_SAMPLE,
+                                                self.Z_SAMPLE),
+                                               POTENTIAL,
+                                               bounds_error=False,
+                                               fill_value=np.nan)
+        return interpolator
+
 
     class _Source(_SourceBase):
         def __init__(self, r, altitude, azimuth, a, interpolator, parent):
@@ -442,11 +485,10 @@ class _SomeSphereGaussianController(_GaussianLoaderBase,
         super(_SomeSphereGaussianController, self)._empty_solutions()
         n = 2 ** self.k
         self.STATS = []
+        xz_size = (self.sampling_frequency + 1) * (self.sampling_frequency + 2) // 2
         self.POTENTIAL = empty_array((n * self.source_resolution,
-                                      2 * self.sampling_frequency + 1,
-                                      2 * self.sampling_frequency + 1,
+                                      xz_size,
                                       2 * self.sampling_frequency + 1))
-        # can be 8-fold compressed
 
 
 if __name__ == '__main__':
@@ -656,27 +698,21 @@ if __name__ == '__main__':
                                         #              [sin_az, 0, cos_az]]
                                         #             ))
                                         r2 = controller.scalp_radius ** 2
-                                        for idx_x, x in enumerate(
-                                                controller.X_SAMPLE):
-                                            logger.info(str(x / controller.scalp_radius))
-                                            for idx_y, y in enumerate(
-                                                    controller.Y_SAMPLE):
-                                                r_xy_2 = x ** 2 + y ** 2
-                                                if r_xy_2 > r2:
+                                        for idx_xz, (x, z) in enumerate(controller._xz):
+                                            r_xz_2 = x ** 2 + z ** 2
+                                            if r_xz_2 > r2:
+                                                continue
+                                            for idx_y, y in enumerate(controller.Y_SAMPLE):
+                                                if r_xz_2 + y ** 2 > r2:
                                                     continue
-                                                for idx_z, z in enumerate(
-                                                        controller.Z_SAMPLE):
-                                                    if r_xy_2 + z ** 2 > r2:
-                                                        continue
-                                                    try:
-                                                        v = potential(x, y, z)
-                                                    except Exception as e:
-                                                        pass
-                                                    else:
-                                                        POTENTIAL[idx_r,
-                                                                  idx_x,
-                                                                  idx_y,
-                                                                  idx_z] = v
+                                                try:
+                                                    v = potential(x, y, z)
+                                                except Exception as e:
+                                                    pass
+                                                else:
+                                                    POTENTIAL[idx_r,
+                                                              idx_xz,
+                                                              idx_y] = v
 
                                 AS[idx_r] = fem.a
                                 stats.append((src_r,
