@@ -620,6 +620,7 @@ if __name__ == '__main__':
                         AS = controller.A
 
                         save_stopwatch = _fem_common.Stopwatch()
+                        sample_stopwatch = _fem_common.Stopwatch()
 
                         with _fem_common.Stopwatch() as unsaved_time:
                             for idx_r, src_r in enumerate(controller.R):
@@ -634,61 +635,64 @@ if __name__ == '__main__':
                                     continue
 
                                 potential = controller.fem(src_r)
+
+                                if potential is not None:
+                                    with sample_stopwatch:
+                                        # for idx_polar, (altitude, azimuth) in enumerate(zip(controller.ALTITUDE,
+                                        #                                                     controller.AZIMUTH)):
+                                        #     negative_d_altitude = np.pi / 2 - altitude
+                                        #     sin_alt = np.sin(negative_d_altitude)
+                                        #     cos_alt = np.cos(negative_d_altitude)
+                                        #     sin_az = np.sin(-azimuth)
+                                        #     cos_az = np.cos(-azimuth)
+                                        #     ELECTRODES = np.matmul(
+                                        #         controller.ELECTRODES,
+                                        #         np.matmul(
+                                        #             [[cos_alt, sin_alt, 0],
+                                        #              [-sin_alt, cos_alt, 0],
+                                        #              [0, 0, 1]],
+                                        #             [[cos_az, 0, -sin_az],
+                                        #              [0, 1, 0],
+                                        #              [sin_az, 0, cos_az]]
+                                        #             ))
+                                        r2 = controller.scalp_radius ** 2
+                                        for idx_x, x in enumerate(
+                                                controller.X_SAMPLE):
+                                            logger.info(str(x / controller.scalp_radius))
+                                            for idx_y, y in enumerate(
+                                                    controller.Y_SAMPLE):
+                                                r_xy_2 = x ** 2 + y ** 2
+                                                if r_xy_2 > r2:
+                                                    continue
+                                                for idx_z, z in enumerate(
+                                                        controller.Z_SAMPLE):
+                                                    if r_xy_2 + z ** 2 > r2:
+                                                        continue
+                                                    try:
+                                                        POTENTIAL[idx_r,
+                                                                  idx_x,
+                                                                  idx_y,
+                                                                  idx_z] = potential(x, y, z)
+                                                    except Exception as e:
+                                                        pass
+
+                                AS[idx_r] = fem.a
                                 stats.append((src_r,
-                                              potential is not None,
+                                              np.nan if potential is None else float(sample_stopwatch),
                                               fem.iterations,
                                               float(fem.solving_time),
                                               float(fem.local_preprocessing_time),
                                               float(fem.global_preprocessing_time)))
 
-                                if potential is not None:
-                                    # for idx_polar, (altitude, azimuth) in enumerate(zip(controller.ALTITUDE,
-                                    #                                                     controller.AZIMUTH)):
-                                    #     negative_d_altitude = np.pi / 2 - altitude
-                                    #     sin_alt = np.sin(negative_d_altitude)
-                                    #     cos_alt = np.cos(negative_d_altitude)
-                                    #     sin_az = np.sin(-azimuth)
-                                    #     cos_az = np.cos(-azimuth)
-                                    #     ELECTRODES = np.matmul(
-                                    #         controller.ELECTRODES,
-                                    #         np.matmul(
-                                    #             [[cos_alt, sin_alt, 0],
-                                    #              [-sin_alt, cos_alt, 0],
-                                    #              [0, 0, 1]],
-                                    #             [[cos_az, 0, -sin_az],
-                                    #              [0, 1, 0],
-                                    #              [sin_az, 0, cos_az]]
-                                    #             ))
-                                    r2 = controller.scalp_radius ** 2
-                                    for idx_x, x in enumerate(
-                                            controller.X_SAMPLE):
-                                        logger.info(str(x / controller.scalp_radius))
-                                        for idx_y, y in enumerate(
-                                                controller.Y_SAMPLE):
-                                            r_xy_2 = x ** 2 + y ** 2
-                                            if r_xy_2 > r2:
-                                                continue
-                                            for idx_z, z in enumerate(
-                                                    controller.Z_SAMPLE):
-                                                if r_xy_2 + z ** 2 > r2:
-                                                    continue
-                                                try:
-                                                    POTENTIAL[idx_r,
-                                                              idx_x,
-                                                              idx_y,
-                                                              idx_z] = potential(x, y, z)
-                                                except Exception as e:
-                                                    pass
-                                AS[idx_r] = fem.a
-
                                 logger.info(
-                                    'Gaussian SD={}, r={}, (deg={}): {}\t({fem.iterations}, {time})'.format(
+                                    'Gaussian SD={}, r={}, (deg={}): {}\t({fem.iterations}, {time}, {sampling})'.format(
                                         controller.standard_deviation,
                                         src_r,
                                         controller.degree,
                                         'SUCCEED' if potential is not None else 'FAILED',
                                         fem=fem,
-                                        time=fem.local_preprocessing_time.duration + fem.solving_time.duration))
+                                        time=fem.local_preprocessing_time.duration + fem.solving_time.duration,
+                                        sampling=sample_stopwatch.duration))
 
                                 if float(unsaved_time) > 10 * float(save_stopwatch):
                                     with save_stopwatch:
