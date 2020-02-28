@@ -325,24 +325,18 @@ class SomeSphereGaussianSourceFactory(_GaussianLoaderBase):
         return interpolator
 
     def _make_interpolator(self, COMPRESSED):
-        POTENTIAL = empty_array((len(self.X_SAMPLE),
-                                 len(self.Y_SAMPLE),
-                                 len(self.Z_SAMPLE)))
         sf = self.sampling_frequency
+        POTENTIAL = empty_array((sf + 1,
+                                 len(self.Y_SAMPLE),
+                                 sf + 1))
         for xz_idx, (x_idx, z_idx) in enumerate(self._xz_idx):
             P = COMPRESSED[xz_idx, :]
-            POTENTIAL[sf + x_idx, :, sf + z_idx] = P
-            POTENTIAL[sf - x_idx, :, sf - z_idx] = P
-            POTENTIAL[sf + x_idx, :, sf - z_idx] = P
-            POTENTIAL[sf - x_idx, :, sf + z_idx] = P
+            POTENTIAL[x_idx, :, z_idx] = P
             if x_idx > z_idx:
-                POTENTIAL[sf + z_idx, :, sf + x_idx] = P
-                POTENTIAL[sf - z_idx, :, sf - x_idx] = P
-                POTENTIAL[sf + z_idx, :, sf - x_idx] = P
-                POTENTIAL[sf - z_idx, :, sf + x_idx] = P
-        interpolator = RegularGridInterpolator((self.X_SAMPLE,
+                POTENTIAL[z_idx, :, x_idx] = P
+        interpolator = RegularGridInterpolator((self.X_SAMPLE[sf:],
                                                 self.Y_SAMPLE,
-                                                self.Z_SAMPLE),
+                                                self.Z_SAMPLE[sf:]),
                                                POTENTIAL,
                                                bounds_error=False,
                                                fill_value=np.nan)
@@ -381,7 +375,7 @@ class SomeSphereGaussianSourceFactory(_GaussianLoaderBase):
             _X = self._ROT[0, 0] * X + self._ROT[1, 0] * Y + self._ROT[2, 0] * Z
             _Y = self._ROT[0, 1] * X + self._ROT[1, 1] * Y + self._ROT[2, 1] * Z
             _Z = self._ROT[0, 2] * X + self._ROT[1, 2] * Y + self._ROT[2, 2] * Z
-            return self._interpolator(np.stack((_X, _Y, _Z),
+            return self._interpolator(np.stack((abs(_X), _Y, abs(_Z)),
                                                axis=-1))
 
 
