@@ -12,7 +12,9 @@ SPHERICAL_MESHES=one_sphere.xml two_spheres.xml four_spheres.xml four_spheres_co
 WEDGE_MESHES=eighth_wedge_of_one_sphere.xml
 MESHES=$(EIGHTH_OF_SPHERE_MESHES) $(FINITE_SLICE_MESHES) $(SPHERICAL_MESHES) $(WEDGE_MESHES)
 
-.SECONDARY: eighth_of_sphere.msh eighth_of_sphere_coarse.msh eighth_of_sphere_coarser.msh eighth_of_sphere_coarsest.msh finite_slice.msh finite_slice_small_coarse.msh finite_slice_smaller_coarse.msh one_sphere.msh two_spheres.msh four_spheres.msh four_spheres_composite.msh eighth_wedge_of_one_sphere.msh
+MESHES_MSH=$(MESHES:.xml=.msh)
+
+.SECONDARY: $(MESHES_MSH)
 
 .PHONY: all
 
