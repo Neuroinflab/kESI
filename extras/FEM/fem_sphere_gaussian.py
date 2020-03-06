@@ -503,6 +503,7 @@ if __name__ == '__main__':
         """)
     else:
         class _SphericalGaussianPotential(_fem_common._FEM_Base):
+            FRACTION_OF_SPACE = 1.0
             scalp_radius = 0.090
 
             def __init__(self, mesh_name='finite_slice'):
@@ -521,7 +522,7 @@ if __name__ == '__main__':
                 old_a = csd.a
                 csd.a = 1
                 try:
-                    return 1.0 / assemble(csd * Measure("dx", self._mesh))
+                    return self.FRACTION_OF_SPACE / assemble(csd * Measure("dx", self._mesh))
                 finally:
                     csd.a = old_a
 
@@ -574,6 +575,12 @@ if __name__ == '__main__':
                             }
 
 
+        class EighthWedgeOfOneSphereGaussianPotentialFEM(
+                  OneSphereGaussianPotentialFEM):
+            startswith = 'eighth_wedge_of_one_sphere'
+            FRACTION_OF_SPACE = 0.125
+
+
         class TwoSpheresGaussianPotentialFEM(_SphericalGaussianPotential):
             startswith = 'two_spheres'
 
@@ -591,6 +598,12 @@ if __name__ == '__main__':
                             _BRAIN_VOLUME: brain_conductivity,
                             _SKULL_VOLUME: skull_conductivity,
                             }
+
+
+        class EighthWedgeOfTwoSpheresGaussianPotentialFEM(
+                  TwoSpheresGaussianPotentialFEM):
+            startswith = 'eighth_wedge_of_two_spheres'
+            FRACTION_OF_SPACE = 0.125
 
 
         class FourSpheresGaussianPotentialFEM(_SphericalGaussianPotential):
@@ -619,6 +632,12 @@ if __name__ == '__main__':
                             }
 
 
+        class EighthWedgeOfFourSpheresGaussianPotentialFEM(
+                  FourSpheresGaussianPotentialFEM):
+            startswith = 'eighth_wedge_of_four_spheres'
+            FRACTION_OF_SPACE = 0.125
+
+
         logging.basicConfig(level=logging.INFO)
 
         if not os.path.exists(_fem_common.SOLUTION_DIRECTORY):
@@ -628,6 +647,9 @@ if __name__ == '__main__':
             for SphereGaussianFEM in [OneSphereGaussianPotentialFEM,
                                       TwoSpheresGaussianPotentialFEM,
                                       FourSpheresGaussianPotentialFEM,
+                                      EighthWedgeOfOneSphereGaussianPotentialFEM,
+                                      EighthWedgeOfTwoSpheresGaussianPotentialFEM,
+                                      EighthWedgeOfFourSpheresGaussianPotentialFEM,
                                       ]:
                 if mesh_name.startswith(SphereGaussianFEM.startswith):
                     fem = SphereGaussianFEM(mesh_name=mesh_name)
