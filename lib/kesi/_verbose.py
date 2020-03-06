@@ -308,8 +308,8 @@ class _Eigenreconstructor(object):
     def __init__(self, reconstructor):
         self._reconstructor = reconstructor
         self.EIGENVALUES, self.EIGENVECTORS = np.linalg.eigh(reconstructor.kernel)
-        self._EIGENPROJECTION = np.matmul(np.diagflat(1. / self.EIGENVALUES),
-                                          self.EIGENVECTORS.T)
+        self._EIGENPROJECTION = np.matmul(self.EIGENVECTORS,
+                                          np.diagflat(1. / self.EIGENVALUES))
 
     def __call__(self, measurements, mask=None):
         return self._wrap_kernel_solution(
@@ -324,10 +324,10 @@ class _Eigenreconstructor(object):
         return self._reconstructor._wrap_kernel_solution(solution)
 
     def _solve_kernel(self, measurements, mask):
-        return np.matmul(np.matmul(measurements,
-                                   (self.EIGENVECTORS
-                                    if mask is None
-                                    else self.EIGENVECTORS[:, mask])),
-                         (self._EIGENPROJECTION
+        return np.matmul((self._EIGENPROJECTION
                           if mask is None
-                          else self._EIGENPROJECTION[mask, :]))
+                          else self._EIGENPROJECTION[:, mask]),
+                         np.matmul((self.EIGENVECTORS.T
+                                    if mask is None
+                                    else self.EIGENVECTORS.T[mask, :]),
+                                   measurements))

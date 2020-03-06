@@ -58,13 +58,13 @@ class _ReconstructorStub(object):
     def _wrap_kernel_solution(self, solution):
         self._wrap_kernel_solution_called += 1
         self.parent.checkArrayAlmostEqual(self._solution,
-                                          solution)
+                                          solution.reshape(np.shape(self._solution)))
         return self
 
     def _measurement_vector(self, measurements):
         self._measurement_vector_called += 1
         self.parent.assertIs(measurements, self._measurements)
-        return measurements
+        return np.reshape(measurements, (-1, 1))
 
 
 class _TestEigenreconstructorGivenEigenvectorsBase(TestCase):
