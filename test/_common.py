@@ -22,6 +22,10 @@
 #                                                                             #
 ###############################################################################
 
+import unittest
+
+import numpy as np
+
 
 class Stub(object):
     def __init__(self, **kwargs):
@@ -43,3 +47,24 @@ class FunctionFieldComponent(Stub):
             return f(arg)
 
         return wrapper
+
+
+class TestCase(unittest.TestCase):
+    def checkArrayEqual(self, expected, observed,
+                        cmp=np.testing.assert_array_equal):
+        self.assertIsInstance(observed, np.ndarray)
+        self.checkArrayLikeEqual(expected, observed, cmp=cmp)
+
+    def checkArrayAlmostEqual(self, expected, observed):
+        self.checkArrayEqual(expected, observed,
+                             cmp=np.testing.assert_array_almost_equal)
+
+    def checkArrayLikeEqual(self, expected, observed,
+                            cmp=np.testing.assert_array_equal):
+        self.assertEqual(np.shape(expected),
+                         np.shape(observed))
+        cmp(expected, observed)
+
+    def checkArrayLikeAlmostEqual(self, expected, observed):
+        self.checkArrayLikeEqual(expected, observed,
+                                 cmp=np.testing.assert_array_almost_equal)

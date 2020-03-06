@@ -27,6 +27,8 @@ import collections
 
 import numpy as np
 
+from _common import TestCase
+
 try:
     from . import testMeasurementManagerBase, testEngine
     # When run as script raises:
@@ -119,7 +121,7 @@ class _TrueBasesMatrixMM(_PlainMatrixMM):
                                  np.eye(len(self._measurements_of_basis_functions))))]
 
 
-class TestKernelMatricesOfVerboseFFR(unittest.TestCase):
+class TestKernelMatricesOfVerboseFFR(TestCase):
     MM = _PlainMatrixMM
 
     _PROBED_POTENTIAL_BASIS = [[1, 2],
@@ -165,21 +167,6 @@ class TestKernelMatricesOfVerboseFFR(unittest.TestCase):
         self.measurement_mgr = self.MM(measurements_of_basis_functions)
         return VerboseFFR(self.measurement_mgr.bases(),
                           self.measurement_mgr)
-
-
-    def checkArrayEqual(self, expected, observed):
-        self.assertIsInstance(observed, np.ndarray)
-        self.assertEqual(np.shape(expected),
-                         observed.shape)
-        np.testing.assert_array_equal(expected,
-                                      observed)
-
-    def checkArrayAlmostEqual(self, expected, observed):
-        self.assertIsInstance(observed, np.ndarray)
-        self.assertEqual(np.shape(expected),
-                         observed.shape)
-        np.testing.assert_array_almost_equal(expected,
-                                             observed)
 
     def testIsSubclassOfFunctionalFieldReconstructor(self):
         self.assertTrue(issubclass(VerboseFFR,
