@@ -411,6 +411,13 @@ class _SomeSphereControllerBase(object):
         results['STATS'] = self.STATS
         np.savez_compressed(path, **results)
 
+    def save2D(self, path):
+        results = self._results()
+        results['STATS'] = self.STATS
+        results['POTENTIAL'] = self.POTENTIAL_2D
+        results['sampling_frequency'] = self.sampling_frequency_2D
+        np.savez_compressed(path, **results)
+
     def fem(self, y):
         self._anything_new = True
         return self._fem(int(self.degree), y, self.standard_deviation)
@@ -474,6 +481,7 @@ class _SomeSphereGaussianController(_GaussianLoaderBase,
     FEM_ATTRIBUTES = _SomeSphereControllerBase.FEM_ATTRIBUTES + ['scalp_radius']
 
     sampling_frequency = 256
+    sampling_frequency_2D = 1024
 
     def _empty_solutions(self):
         super(_SomeSphereGaussianController, self)._empty_solutions()
@@ -483,6 +491,10 @@ class _SomeSphereGaussianController(_GaussianLoaderBase,
         self.POTENTIAL = empty_array((n * self.source_resolution,
                                       xz_size,
                                       2 * self.sampling_frequency + 1))
+
+        self.POTENTIAL_2D = empty_array((n * self.source_resolution,
+                                         self.sampling_frequency_2D + 1,
+                                         2 * self.sampling_frequency_2D + 1))
 
 
 if __name__ == '__main__':
@@ -497,7 +509,6 @@ if __name__ == '__main__':
         print("""Run docker first:
         $ docker run -ti --env HOST_UID=$(id -u) --env HOST_GID=$(id -g) \\
                      -v $(pwd):/home/fenics/shared:Z \\
-                     -v $(pwd)/solutions:/home/fenics/shared/solutions:Z \\
                      -w /home/fenics/shared \\
                      quay.io/fenicsproject/stable
         """)
@@ -730,6 +741,32 @@ if __name__ == '__main__':
                                                               idx_xz,
                                                               idx_y] = v
 
+                                        if fem.FRACTION_OF_SPACE < 1:
+                                            logging.info('Sampling 2D')
+                                            POTENTIAL_2D = controller.POTENTIAL_2D
+                                            angle = fem.FRACTION_OF_SPACE * np.pi
+                                            SIN_COS = np.array([np.sin(angle),
+                                                                np.cos(angle)])
+
+                                            for idx_xz, xz in enumerate(
+                                                    np.linspace(0,
+                                                                controller.scalp_radius,
+                                                                controller.sampling_frequency_2D + 1)):
+                                                x, z = SIN_COS * xz
+                                                xz2 = xz ** 2
+                                                for idx_y, y in enumerate(np.linspace(-controller.scalp_radius,
+                                                                                      controller.scalp_radius,
+                                                                                      2 * controller.sampling_frequency_2D + 1)):
+                                                    if xz2 + y ** 2 > r2:
+                                                        continue
+                                                    try:
+                                                        v = potential(x, y, z)
+                                                    except Exception as e:
+                                                        pass
+                                                    else:
+                                                        POTENTIAL_2D[idx_r,
+                                                                     idx_xz,
+                                                                     idx_y] = v
                                 AS[idx_r] = fem.a
                                 stats.append((src_r,
                                               np.nan if potential is None else float(sample_stopwatch),
@@ -751,5 +788,11 @@ if __name__ == '__main__':
                                 if float(unsaved_time) > 10 * float(save_stopwatch):
                                     with save_stopwatch:
                                         controller.save(controller.path + str(tmp_mark))
+                                        if fem.FRACTION_OF_SPACE < 1:
+                                            logging.info('Saving 2D')
+                                            controller.save2D(controller.path.replace('.npz', '_2D.npz') + str(tmp_mark))
                                     unsaved_time.reset()
                                     tmp_mark = 1 - tmp_mark
+
+                        if fem.FRACTION_OF_SPACE < 1:
+                            controller.save2D(controller.path.replace('.npz', '_2D.npz'))
