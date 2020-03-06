@@ -319,6 +319,113 @@ Function MakeSphere
                        _lower_hemisphere_surfaces[]};
 Return
 
+
+Function MakeCrustVolumeWithROI
+  // Arguments
+  // ---------
+  //   z, y, z, r, roi_r, element_length, roi_element_length, dihedral_angle
+  //      float
+  //   n_meridians
+  //      int
+  //   center,
+  //   external_top, external_bottom, external_roi_nodes[],
+  //   external_equatorial_nodes[]
+  //      Point
+  //   external_roi_radii[], external_upper_meridians[],
+  //   external_lower_meridians[]
+  //      Circle
+  //   external_surfaces[]
+  //      Surface
+  // Returns
+  // -------
+  //   external_top, external_bottom, external_roi_nodes[],
+  //   external_equatorial_nodes[]
+  //      Point
+  //   external_roi_radii[], external_upper_meridians[],
+  //   external_lower_meridians[]
+  //      Circle
+  //   external_surfaces[]
+  //      Surface
+  //   volume
+  //      Volume
+  // Alters
+  // ----
+  //   equatorial_nodes[], external_bottom, external_equatorial_nodes[],
+  //   external_lower_meridians[], external_roi_nodes[], external_roi_radii[],
+  //   external_surfaces[], external_top, external_upper_meridians[],
+  //   lower_hemisphere_meridians[],
+  //   roi_arcs[], roi_nodes[], roi_radii[], roi_sector_surfaces[],
+  //   segment_upper_arcs[], segment_upper_nodes[],
+  //   sphere_lower_pole, sphere_segment_meridians[], sphere_upper_pole,
+  //   sphere_surfaces[], surrounding_sector_surfaces[],
+  //   volume, volume_surfaces[]
+  _internal_surfaces[] = external_surfaces[];
+  _internal_top = external_top;
+  _internal_bottom = external_bottom;
+  _internal_roi_radii[] = external_roi_radii[];
+  _internal_roi_nodes[] = external_roi_nodes[];
+  _internal_equatorial_nodes[] = external_equatorial_nodes[];
+  _internal_upper_meridians[] = external_upper_meridians[];
+  _internal_lower_meridians[] = external_lower_meridians[];
+
+  Call MakeSphereWithROI;
+
+  external_surfaces[] = sphere_surfaces[];
+  external_top = roi_top;
+  external_bottom = sphere_lower_pole;
+  external_roi_radii[] = roi_radii[];
+  external_roi_nodes[] = roi_nodes[];
+  external_equatorial_nodes[] = equatorial_nodes[];
+  external_upper_meridians[] = sphere_segment_meridians[];
+  external_lower_meridians[] = lower_hemisphere_meridians[];
+
+  _top_axis = newl; Line(_top_axis) = {_internal_top, external_top};
+  _bottom_axis = newl; Line(_bottom_axis) = {external_bottom, _internal_bottom};
+
+  For _i In {0: 1}
+    _idx = _i * (n_meridians - 1);
+
+    _roi_meridian = newl; Line(_roi_meridian) = {_internal_roi_nodes[_idx],
+                                                 external_roi_nodes[_idx]};
+    _equatorial_line = newl; Line(_equatorial_line) = {_internal_equatorial_nodes[_idx],
+                                                       external_equatorial_nodes[_idx]};
+
+    _loop = newll;
+    _surface = news;
+    Line Loop(_loop) = {_top_axis,
+                        -external_roi_radii[_idx],
+                        -_roi_meridian,
+                        _internal_roi_radii[_idx]};
+    Plane Surface(_surface) = {_loop};
+    _dihedral_surfaces[_i * 3] = _surface;
+
+    _loop = newll;
+    _surface = news;
+    Line Loop(_loop) = {_roi_meridian,
+                        -external_upper_meridians[_idx],
+                        -_equatorial_line,
+                        _internal_upper_meridians[_idx]};
+    Plane Surface(_surface) = {_loop};
+    _dihedral_surfaces[_i * 3 + 1] = _surface;
+
+    _loop = newll;
+    _surface = news;
+    Line Loop(_loop) = {_bottom_axis,
+                        external_lower_meridians[_idx],
+                        _equatorial_line,
+                        -_internal_lower_meridians[_idx]};
+    Plane Surface(_surface) = {_loop};
+    _dihedral_surfaces[_i * 3 + 2] = _surface;
+  EndFor
+
+  volume_surfaces[] = {_dihedral_surfaces[],
+                       external_surfaces[],
+                       _internal_surfaces[]};
+  Call MakeVolume;
+
+Return
+
+
 n_meridians = 2;
 dihedral_angle = 2 * Pi / 8;
 brain_r = 0.079;
@@ -415,73 +522,21 @@ surrounding_brain_volume = volume;
 
 brain_surfaces[] = {surrounding_sector_surfaces[], roi_upper_surfaces[]};
 
-internal_surfaces[] = brain_surfaces[];
-internal_top = roi_upper_pole;
-internal_bottom = sphere_lower_pole;
-internal_roi_radii[] = roi_upper_radii[];
-internal_roi_nodes[] = roi_upper_nodes[];
-internal_equatorial_nodes[] = equatorial_nodes[];
-internal_upper_meridians[] = sphere_segment_meridians[];
-internal_lower_meridians[] = lower_hemisphere_meridians[];
+external_surfaces[] = brain_surfaces[];
+external_top = roi_upper_pole;
+external_bottom = sphere_lower_pole;
+external_roi_radii[] = roi_upper_radii[];
+external_roi_nodes[] = roi_upper_nodes[];
+external_equatorial_nodes[] = equatorial_nodes[];
+external_upper_meridians[] = sphere_segment_meridians[];
+external_lower_meridians[] = lower_hemisphere_meridians[];
 
 r = scalp_r;
 roi_r = brain_roi_r * r / brain_r;
 element_length = scalp_element_length;
 roi_element_length = scalp_roi_element_length;
-Call MakeSphereWithROI;
 
-external_surfaces[] = sphere_surfaces[];
-external_top = roi_top;
-external_bottom = sphere_lower_pole;
-external_roi_radii[] = roi_radii[];
-external_roi_nodes[] = roi_nodes[];
-external_equatorial_nodes[] = equatorial_nodes[];
-external_upper_meridians[] = sphere_segment_meridians[];
-external_lower_meridians[] = lower_hemisphere_meridians[];
-
-_top_axis = newl; Line(_top_axis) = {internal_top, external_top};
-_bottom_axis = newl; Line(_bottom_axis) = {external_bottom, internal_bottom};
-
-For _i In {0: 1}
-  _idx = _i * (n_meridians - 1);
-
-  _roi_meridian = newl; Line(_roi_meridian) = {internal_roi_nodes[_idx],
-                                               external_roi_nodes[_idx]};
-  _equatorial_line = newl; Line(_equatorial_line) = {internal_equatorial_nodes[_idx],
-                                                     external_equatorial_nodes[_idx]};
-
-  _loop = newll;
-  _surface = news;
-  Line Loop(_loop) = {_top_axis,
-                      -external_roi_radii[_idx],
-                      -_roi_meridian,
-                      internal_roi_radii[_idx]};
-  Plane Surface(_surface) = {_loop};
-  _dihedral_surfaces[_i * 3] = _surface;
-
-  _loop = newll;
-  _surface = news;
-  Line Loop(_loop) = {_roi_meridian,
-                      -external_upper_meridians[_idx],
-                      -_equatorial_line,
-                      internal_upper_meridians[_idx]};
-  Plane Surface(_surface) = {_loop};
-  _dihedral_surfaces[_i * 3 + 1] = _surface;
-
-  _loop = newll;
-  _surface = news;
-  Line Loop(_loop) = {_bottom_axis,
-                      external_lower_meridians[_idx],
-                      _equatorial_line,
-                      -internal_lower_meridians[_idx]};
-  Plane Surface(_surface) = {_loop};
-  _dihedral_surfaces[_i * 3 + 2] = _surface;
-EndFor
-
-volume_surfaces[] = {_dihedral_surfaces[],
-                     external_surfaces[],
-                     internal_surfaces[]};
-Call MakeVolume;
+Call MakeCrustVolumeWithROI;
 
 scalp_volume = volume;
 scalp_surfaces[] = external_surfaces[];
