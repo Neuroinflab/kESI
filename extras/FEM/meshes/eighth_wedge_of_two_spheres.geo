@@ -125,14 +125,20 @@ Function MakeCapROI
   //      Circle
   //   roi_sector_surfaces[]
   //      Surface
+  // Alters
+  // ______
+  //   cap_arcs[], cap_center, cap_nodes[], cap_top,
+  //   circle_arcs[], circle_center, circle_nodes[],
+  //   roi_arcs[], roi_nodes[], roi_radii[], roi_sector_surfaces[], roi_top,
+  //   segment_meridians[], segment_surfaces[]
 
-  h = Sqrt(r * r - roi_r * roi_r);
+  _h = Sqrt(r * r - roi_r * roi_r);
   For _i In {0: n_meridians-1}
     _point = newp;
 
     _arc = dihedral_angle * _i / (n_meridians - 1);
     Point(_point) =  {x + roi_r * Sin(_arc),
-                      y + h,
+                      y + _h,
                       z + roi_r * Cos(_arc),
                       roi_element_length};
 
