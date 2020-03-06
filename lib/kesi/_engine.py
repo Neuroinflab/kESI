@@ -163,12 +163,14 @@ class FunctionalFieldReconstructor(object):
             values[i, :] = probe(component)
 
     def __call__(self, measurements, regularization_parameter=0):
+        return self._wrap_kernel_solution(
+                        self._solve_kernel(
+                                 self._measurement_vector(measurements),
+                                 regularization_parameter))
+
+    def _wrap_kernel_solution(self, solution):
         return LinearMixture(zip(self._field_components,
-                                 np.dot(self._pre_kernel,
-                                        self._solve_kernel(
-                                              self._measurement_vector(measurements),
-                                              regularization_parameter)
-                                        ).flatten()))
+                                 np.dot(self._pre_kernel, solution).flatten()))
 
     def _measurement_vector(self, values):
         measurements = self._ensure_is_array(
