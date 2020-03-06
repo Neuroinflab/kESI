@@ -9,6 +9,10 @@ Function MakeVolume
   // -------
   //   volume
   //      Volume
+  // Alters
+  // ------
+  //   volume
+
   _volume_loop = newsl;
   Surface Loop(_volume_loop) = volume_surfaces[];
   volume = newv;
@@ -29,6 +33,9 @@ Function MakeSphericalCap
   //      Circle
   //   cap_surfaces[]
   //      Surface
+  // Alters
+  // ------
+  //   cap_radii[], cap_surfaces[]
 
   _n = # cap_nodes[];
   For _i In {0: _n - 1}
@@ -63,6 +70,9 @@ Function MakeSphericalSegment
   //      Circle
   //   segment_surfaces[]
   //      Surface
+  // Alters
+  // ------
+  //   segment_meridians[], segment_surfaces[]
 
   _n = # segment_upper_nodes[];
   For _i In {0: _n - 1}
@@ -96,6 +106,9 @@ Function MakeCircle
   // -------
   //   circle_arcs[]
   //      Circle
+  // Alters
+  // ------
+  //   circle_arcs[]
 
   _n = # circle_nodes[];
   For _i In {0: _n - 1}
@@ -175,8 +188,11 @@ Function MakeSidesOfROI
   // -------
   //   roi_meridians[]
   //      Line
-  //   roi_side_surfaces, roi_dihedral_surfaces[]
-  //      Surface[]
+  //   roi_side_surfaces[], roi_dihedral_surfaces[]
+  //      Surface
+  // Alters
+  // ------
+  //   roi_dihedral_surfaces[], roi_meridians[], roi_side_surfaces
 
   _n = # roi_upper_nodes[];
   For _i In {0: _n - 1}
@@ -232,6 +248,17 @@ Function MakeSphereWithROI
   //      Circle
   //   sphere_surfaces[], roi_sector_surfaces[], surrounding_sector_surfaces[]
   //      Surface
+  // Alters
+  // ------
+  //   cap_arcs[], cap_center, cap_nodes[], cap_radii[], cap_top, cap_surfaces[],
+  //   circle_arcs[], circle_center, circle_nodes[],
+  //   equatorial_nodes[], lower_hemisphere_meridians[],
+  //   roi_arcs[], roi_nodes[], roi_radii[], roi_sector_surfaces[], roi_top,
+  //   segment_center, segment_lower_arcs[], segment_lower_nodes[],
+  //   segment_meridians[], segment_surfaces[], segment_upper_arcs[],
+  //   segment_upper_nodes[],
+  //   sphere_lower_pole, sphere_segment_meridians[], sphere_surfaces[],
+  //   sphere_upper_pole, surrounding_sector_surfaces[]
 
   Call MakeCapROI;
   segment_upper_nodes[] = roi_nodes[];
@@ -291,6 +318,9 @@ Function MakeSphere
   // -------
   //   sphere_surfaces[]
   //      Surface
+  // Alters
+  // ------
+  //   sphere_surfaces[]
 
   For _i In {0: n_meridians-1}
     _point = newp;
@@ -355,7 +385,7 @@ Function MakeCrustVolumeWithROI
   //   volume
   //      Volume
   // Alters
-  // ----
+  // ------
   //   equatorial_nodes[], external_bottom, external_equatorial_nodes[],
   //   external_lower_meridians[], external_roi_nodes[], external_roi_radii[],
   //   external_surfaces[], external_top, external_upper_meridians[],
