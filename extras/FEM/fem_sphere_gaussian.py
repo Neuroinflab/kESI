@@ -75,8 +75,6 @@ class _SomeSphereGaussianLoaderBase(object):
                              self.cortex_radius_external - sd / 2 / self.source_resolution,
                              n * self.source_resolution)
 
-
-
     def _load_solutions(self):
         with np.load(self.path) as fh:
             for attr in self.ATTRIBUTES:
@@ -198,6 +196,8 @@ class _GaussianLoaderBase(_SomeSphereGaussianLoaderBase):
                   'sampling_frequency',
                   ]
 
+
+class _GaussianLoaderBase3D(_GaussianLoaderBase):
     @property
     def _xz(self):
         sf = self.sampling_frequency
@@ -213,15 +213,25 @@ class _GaussianLoaderBase(_SomeSphereGaussianLoaderBase):
                 yield x_idx, z_idx
                 _idx += 1
 
-
     def _load(self):
-        super(_GaussianLoaderBase, self)._load()
+        super(_GaussianLoaderBase3D, self)._load()
 
         self.X_SAMPLE = np.linspace(-self.scalp_radius,
                                     self.scalp_radius,
                                     2 * self.sampling_frequency + 1)
         self.Y_SAMPLE = self.X_SAMPLE
         self.Z_SAMPLE = self.X_SAMPLE
+
+
+class _GaussianLoaderBase2D(_GaussianLoaderBase):
+    def _load(self):
+        super(_GaussianLoaderBase2D, self)._load()
+        self.X_SAMPLE = np.linspace(0,
+                                    self.scalp_radius,
+                                    self.sampling_frequency + 1)
+        self.Y_SAMPLE = np.linspace(-self.scalp_radius,
+                                    self.scalp_radius,
+                                    2 * self.sampling_frequency + 1)
 
 
 class _SourceBase(object):
@@ -258,6 +268,41 @@ class _SourceBase(object):
     @property
     def azimuth(self):
         return self._azimuth
+
+
+class _RotatingSourceBase(_SourceBase):
+    def __init__(self, r, altitude, azimuth, a, interpolator, parent):
+        self._r = r
+        self._altitude = altitude
+        self._azimuth = azimuth
+
+        sin_alt = np.sin(altitude)  # np.cos(np.pi / 2 - altitude)
+        cos_alt = np.cos(altitude)  # np.sin(np.pi / 2 - altitude)
+        sin_az = np.sin(azimuth)  # -np.sin(-azimuth)
+        cos_az = np.cos(azimuth)  # np.cos(-azimuth)
+
+        self._ROT = np.matmul([[sin_alt, cos_alt, 0],
+                               [-cos_alt, sin_alt, 0],
+                               [0, 0, 1]],
+                              [[cos_az, 0, sin_az],
+                               [0, 1, 0],
+                               [-sin_az, 0, cos_az]]
+                              )
+
+        r2 = r * cos_alt
+        self._x = r2 * cos_az
+        self._y = r * sin_alt
+        self._z = -r2 * sin_az
+        self._a = a
+        self.parent = parent
+
+        self._interpolator = interpolator
+
+    def _rotated(self, X, Y, Z):
+        _X = self._ROT[0, 0] * X + self._ROT[1, 0] * Y + self._ROT[2, 0] * Z
+        _Y = self._ROT[0, 1] * X + self._ROT[1, 1] * Y + self._ROT[2, 1] * Z
+        _Z = self._ROT[0, 2] * X + self._ROT[1, 2] * Y + self._ROT[2, 2] * Z
+        return _X, _Y, _Z
 
 
 class SomeSphereFixedElectrodesGaussianSourceFactory(_FixedElectrodesGaussianLoaderBase):
@@ -297,7 +342,7 @@ class SomeSphereFixedElectrodesGaussianSourceFactory(_FixedElectrodesGaussianLoa
             return self._POTENTIAL
 
 
-class SomeSphereGaussianSourceFactory(_GaussianLoaderBase):
+class _SomeSphereGaussianSourceFactoryBase(object):
     def __init__(self, filename):
         self.path = filename
         self._load()
@@ -324,6 +369,9 @@ class SomeSphereGaussianSourceFactory(_GaussianLoaderBase):
             self._interpolator[r_idx] = interpolator
         return interpolator
 
+
+class SomeSphereGaussianSourceFactory3D(_SomeSphereGaussianSourceFactoryBase,
+                                        _GaussianLoaderBase3D):
     def _make_interpolator(self, COMPRESSED):
         sf = self.sampling_frequency
         POTENTIAL = empty_array((sf + 1,
@@ -342,40 +390,28 @@ class SomeSphereGaussianSourceFactory(_GaussianLoaderBase):
                                                fill_value=np.nan)
         return interpolator
 
-
-    class _Source(_SourceBase):
-        def __init__(self, r, altitude, azimuth, a, interpolator, parent):
-            self._r = r
-            self._altitude = altitude
-            self._azimuth = azimuth
-
-            sin_alt = np.sin(altitude)  # np.cos(np.pi / 2 - altitude)
-            cos_alt = np.cos(altitude)  # np.sin(np.pi / 2 - altitude)
-            sin_az = np.sin(azimuth)  # -np.sin(-azimuth)
-            cos_az = np.cos(azimuth)  # np.cos(-azimuth)
-
-            self._ROT = np.matmul([[sin_alt, cos_alt, 0],
-                                   [-cos_alt, sin_alt, 0],
-                                   [0, 0, 1]],
-                                  [[cos_az, 0, sin_az],
-                                   [0, 1, 0],
-                                   [-sin_az, 0, cos_az]]
-                                  )
-
-            r2 = r * cos_alt
-            self._x = r2 * cos_az
-            self._y = r * sin_alt
-            self._z = -r2 * sin_az
-            self._a = a
-            self.parent = parent
-
-            self._interpolator = interpolator
-
+    class _Source(_RotatingSourceBase):
         def potential(self, X, Y, Z):
-            _X = self._ROT[0, 0] * X + self._ROT[1, 0] * Y + self._ROT[2, 0] * Z
-            _Y = self._ROT[0, 1] * X + self._ROT[1, 1] * Y + self._ROT[2, 1] * Z
-            _Z = self._ROT[0, 2] * X + self._ROT[1, 2] * Y + self._ROT[2, 2] * Z
+            _X, _Y, _Z = self._rotated(X, Y, Z)
             return self._interpolator(np.stack((abs(_X), _Y, abs(_Z)),
+                                               axis=-1))
+
+
+class SomeSphereGaussianSourceFactory2D(_SomeSphereGaussianSourceFactoryBase,
+                                        _GaussianLoaderBase2D):
+    def _make_interpolator(self, POTENTIAL):
+        return RegularGridInterpolator((self.X_SAMPLE,
+                                        self.Y_SAMPLE),
+                                       POTENTIAL,
+                                       bounds_error=False,
+                                       fill_value=np.nan)
+
+    class _Source(_RotatingSourceBase):
+        def potential(self, X, Y, Z):
+            _X, _Y, _Z = self._rotated(X, Y, Z)
+            return self._interpolator(np.stack((np.sqrt(np.square(_X)
+                                                        + np.square(_Z)),
+                                                _Y),
                                                axis=-1))
 
 
@@ -476,15 +512,15 @@ class _SomeSphereFixedElectrodesGaussianController(
                                       len(self.ELECTRODES)))
 
 
-class _SomeSphereGaussianController(_GaussianLoaderBase,
-                                    _SomeSphereControllerBase):
+class _SomeSphereGaussianController3D(_GaussianLoaderBase3D,
+                                      _SomeSphereControllerBase):
     FEM_ATTRIBUTES = _SomeSphereControllerBase.FEM_ATTRIBUTES + ['scalp_radius']
 
     sampling_frequency = 256
     sampling_frequency_2D = 1024
 
     def _empty_solutions(self):
-        super(_SomeSphereGaussianController, self)._empty_solutions()
+        super(_SomeSphereGaussianController3D, self)._empty_solutions()
         n = 2 ** self.k
         self.STATS = []
         xz_size = (self.sampling_frequency + 1) * (self.sampling_frequency + 2) // 2
@@ -669,7 +705,7 @@ if __name__ == '__main__':
                 logger.warning('Missing appropriate FEM class for {}'.format(mesh_name))
                 continue
 
-            controller = _SomeSphereGaussianController(fem)
+            controller = _SomeSphereGaussianController3D(fem)
 
             for controller.degree in [1, 2, 3]:
                 K_MAX = 4  # as element size is 0.25 mm,
