@@ -24,6 +24,7 @@ def csd_into_eigensource_projection(csd, eigensources):
     orthn = scipy.linalg.orth(eigensources)
     return np.dot(np.dot(csd, orthn), orthn.T) 
 
+
 def calculate_diff(csd, projection):
     return np.abs(csd - projection)/np.max(csd)
     
