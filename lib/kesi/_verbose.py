@@ -4,7 +4,7 @@
 #                                                                             #
 #    kESI                                                                     #
 #                                                                             #
-#    Copyright (C) 2019 Jakub M. Dzik (Laboratory of Neuroinformatics;        #
+#    Copyright (C) 2019-2020 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
 #    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
 #                                                                             #
 #    This software is free software: you can redistribute it and/or modify    #
@@ -302,3 +302,32 @@ class VerboseFFR(FunctionalFieldReconstructor):
         return (LinearMixture([(component, probe(component, *args, **kwargs))
                                for component in self._field_components])
                 / self.number_of_basis)
+
+
+class _Eigenreconstructor(object):
+    def __init__(self, reconstructor):
+        self._reconstructor = reconstructor
+        self.EIGENVALUES, self.EIGENVECTORS = np.linalg.eigh(reconstructor.kernel)
+        self._EIGENPROJECTION = np.matmul(self.EIGENVECTORS,
+                                          np.diagflat(1. / self.EIGENVALUES))
+
+    def __call__(self, measurements, mask=None):
+        return self._wrap_kernel_solution(
+                        self._solve_kernel(
+                                 self._measurement_vector(measurements),
+                                 mask))
+
+    def _measurement_vector(self, measurements):
+        return self._reconstructor._measurement_vector(measurements)
+
+    def _wrap_kernel_solution(self, solution):
+        return self._reconstructor._wrap_kernel_solution(solution)
+
+    def _solve_kernel(self, measurements, mask):
+        return np.matmul((self._EIGENPROJECTION
+                          if mask is None
+                          else self._EIGENPROJECTION[:, mask]),
+                         np.matmul((self.EIGENVECTORS.T
+                                    if mask is None
+                                    else self.EIGENVECTORS.T[mask, :]),
+                                   measurements))

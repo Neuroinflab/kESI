@@ -75,8 +75,6 @@ class _SomeSphereGaussianLoaderBase(object):
                              self.cortex_radius_external - sd / 2 / self.source_resolution,
                              n * self.source_resolution)
 
-
-
     def _load_solutions(self):
         with np.load(self.path) as fh:
             for attr in self.ATTRIBUTES:
@@ -198,6 +196,8 @@ class _GaussianLoaderBase(_SomeSphereGaussianLoaderBase):
                   'sampling_frequency',
                   ]
 
+
+class _GaussianLoaderBase3D(_GaussianLoaderBase):
     @property
     def _xz(self):
         sf = self.sampling_frequency
@@ -213,15 +213,25 @@ class _GaussianLoaderBase(_SomeSphereGaussianLoaderBase):
                 yield x_idx, z_idx
                 _idx += 1
 
-
     def _load(self):
-        super(_GaussianLoaderBase, self)._load()
+        super(_GaussianLoaderBase3D, self)._load()
 
         self.X_SAMPLE = np.linspace(-self.scalp_radius,
                                     self.scalp_radius,
                                     2 * self.sampling_frequency + 1)
         self.Y_SAMPLE = self.X_SAMPLE
         self.Z_SAMPLE = self.X_SAMPLE
+
+
+class _GaussianLoaderBase2D(_GaussianLoaderBase):
+    def _load(self):
+        super(_GaussianLoaderBase2D, self)._load()
+        self.X_SAMPLE = np.linspace(0,
+                                    self.scalp_radius,
+                                    self.sampling_frequency + 1)
+        self.Y_SAMPLE = np.linspace(-self.scalp_radius,
+                                    self.scalp_radius,
+                                    2 * self.sampling_frequency + 1)
 
 
 class _SourceBase(object):
@@ -258,6 +268,41 @@ class _SourceBase(object):
     @property
     def azimuth(self):
         return self._azimuth
+
+
+class _RotatingSourceBase(_SourceBase):
+    def __init__(self, r, altitude, azimuth, a, interpolator, parent):
+        self._r = r
+        self._altitude = altitude
+        self._azimuth = azimuth
+
+        sin_alt = np.sin(altitude)  # np.cos(np.pi / 2 - altitude)
+        cos_alt = np.cos(altitude)  # np.sin(np.pi / 2 - altitude)
+        sin_az = np.sin(azimuth)  # -np.sin(-azimuth)
+        cos_az = np.cos(azimuth)  # np.cos(-azimuth)
+
+        self._ROT = np.matmul([[sin_alt, cos_alt, 0],
+                               [-cos_alt, sin_alt, 0],
+                               [0, 0, 1]],
+                              [[cos_az, 0, sin_az],
+                               [0, 1, 0],
+                               [-sin_az, 0, cos_az]]
+                              )
+
+        r2 = r * cos_alt
+        self._x = r2 * cos_az
+        self._y = r * sin_alt
+        self._z = -r2 * sin_az
+        self._a = a
+        self.parent = parent
+
+        self._interpolator = interpolator
+
+    def _rotated(self, X, Y, Z):
+        _X = self._ROT[0, 0] * X + self._ROT[1, 0] * Y + self._ROT[2, 0] * Z
+        _Y = self._ROT[0, 1] * X + self._ROT[1, 1] * Y + self._ROT[2, 1] * Z
+        _Z = self._ROT[0, 2] * X + self._ROT[1, 2] * Y + self._ROT[2, 2] * Z
+        return _X, _Y, _Z
 
 
 class SomeSphereFixedElectrodesGaussianSourceFactory(_FixedElectrodesGaussianLoaderBase):
@@ -297,7 +342,7 @@ class SomeSphereFixedElectrodesGaussianSourceFactory(_FixedElectrodesGaussianLoa
             return self._POTENTIAL
 
 
-class SomeSphereGaussianSourceFactory(_GaussianLoaderBase):
+class _SomeSphereGaussianSourceFactoryBase(object):
     def __init__(self, filename):
         self.path = filename
         self._load()
@@ -324,6 +369,9 @@ class SomeSphereGaussianSourceFactory(_GaussianLoaderBase):
             self._interpolator[r_idx] = interpolator
         return interpolator
 
+
+class SomeSphereGaussianSourceFactory3D(_SomeSphereGaussianSourceFactoryBase,
+                                        _GaussianLoaderBase3D):
     def _make_interpolator(self, COMPRESSED):
         sf = self.sampling_frequency
         POTENTIAL = empty_array((sf + 1,
@@ -342,40 +390,28 @@ class SomeSphereGaussianSourceFactory(_GaussianLoaderBase):
                                                fill_value=np.nan)
         return interpolator
 
-
-    class _Source(_SourceBase):
-        def __init__(self, r, altitude, azimuth, a, interpolator, parent):
-            self._r = r
-            self._altitude = altitude
-            self._azimuth = azimuth
-
-            sin_alt = np.sin(altitude)  # np.cos(np.pi / 2 - altitude)
-            cos_alt = np.cos(altitude)  # np.sin(np.pi / 2 - altitude)
-            sin_az = np.sin(azimuth)  # -np.sin(-azimuth)
-            cos_az = np.cos(azimuth)  # np.cos(-azimuth)
-
-            self._ROT = np.matmul([[sin_alt, cos_alt, 0],
-                                   [-cos_alt, sin_alt, 0],
-                                   [0, 0, 1]],
-                                  [[cos_az, 0, sin_az],
-                                   [0, 1, 0],
-                                   [-sin_az, 0, cos_az]]
-                                  )
-
-            r2 = r * cos_alt
-            self._x = r2 * cos_az
-            self._y = r * sin_alt
-            self._z = -r2 * sin_az
-            self._a = a
-            self.parent = parent
-
-            self._interpolator = interpolator
-
+    class _Source(_RotatingSourceBase):
         def potential(self, X, Y, Z):
-            _X = self._ROT[0, 0] * X + self._ROT[1, 0] * Y + self._ROT[2, 0] * Z
-            _Y = self._ROT[0, 1] * X + self._ROT[1, 1] * Y + self._ROT[2, 1] * Z
-            _Z = self._ROT[0, 2] * X + self._ROT[1, 2] * Y + self._ROT[2, 2] * Z
+            _X, _Y, _Z = self._rotated(X, Y, Z)
             return self._interpolator(np.stack((abs(_X), _Y, abs(_Z)),
+                                               axis=-1))
+
+
+class SomeSphereGaussianSourceFactory2D(_SomeSphereGaussianSourceFactoryBase,
+                                        _GaussianLoaderBase2D):
+    def _make_interpolator(self, POTENTIAL):
+        return RegularGridInterpolator((self.X_SAMPLE,
+                                        self.Y_SAMPLE),
+                                       POTENTIAL,
+                                       bounds_error=False,
+                                       fill_value=np.nan)
+
+    class _Source(_RotatingSourceBase):
+        def potential(self, X, Y, Z):
+            _X, _Y, _Z = self._rotated(X, Y, Z)
+            return self._interpolator(np.stack((np.sqrt(np.square(_X)
+                                                        + np.square(_Z)),
+                                                _Y),
                                                axis=-1))
 
 
@@ -409,6 +445,13 @@ class _SomeSphereControllerBase(object):
     def save(self, path):
         results = self._results()
         results['STATS'] = self.STATS
+        np.savez_compressed(path, **results)
+
+    def save2D(self, path):
+        results = self._results()
+        results['STATS'] = self.STATS
+        results['POTENTIAL'] = self.POTENTIAL_2D
+        results['sampling_frequency'] = self.sampling_frequency_2D
         np.savez_compressed(path, **results)
 
     def fem(self, y):
@@ -469,20 +512,25 @@ class _SomeSphereFixedElectrodesGaussianController(
                                       len(self.ELECTRODES)))
 
 
-class _SomeSphereGaussianController(_GaussianLoaderBase,
-                                    _SomeSphereControllerBase):
+class _SomeSphereGaussianController3D(_GaussianLoaderBase3D,
+                                      _SomeSphereControllerBase):
     FEM_ATTRIBUTES = _SomeSphereControllerBase.FEM_ATTRIBUTES + ['scalp_radius']
 
     sampling_frequency = 256
+    sampling_frequency_2D = 1024
 
     def _empty_solutions(self):
-        super(_SomeSphereGaussianController, self)._empty_solutions()
+        super(_SomeSphereGaussianController3D, self)._empty_solutions()
         n = 2 ** self.k
         self.STATS = []
         xz_size = (self.sampling_frequency + 1) * (self.sampling_frequency + 2) // 2
         self.POTENTIAL = empty_array((n * self.source_resolution,
                                       xz_size,
                                       2 * self.sampling_frequency + 1))
+
+        self.POTENTIAL_2D = empty_array((n * self.source_resolution,
+                                         self.sampling_frequency_2D + 1,
+                                         2 * self.sampling_frequency_2D + 1))
 
 
 if __name__ == '__main__':
@@ -497,12 +545,12 @@ if __name__ == '__main__':
         print("""Run docker first:
         $ docker run -ti --env HOST_UID=$(id -u) --env HOST_GID=$(id -g) \\
                      -v $(pwd):/home/fenics/shared:Z \\
-                     -v $(pwd)/solutions:/home/fenics/shared/solutions:Z \\
                      -w /home/fenics/shared \\
                      quay.io/fenicsproject/stable
         """)
     else:
         class _SphericalGaussianPotential(_fem_common._FEM_Base):
+            FRACTION_OF_SPACE = 1.0
             scalp_radius = 0.090
 
             def __init__(self, mesh_name='finite_slice'):
@@ -521,7 +569,7 @@ if __name__ == '__main__':
                 old_a = csd.a
                 csd.a = 1
                 try:
-                    return 1.0 / assemble(csd * Measure("dx", self._mesh))
+                    return self.FRACTION_OF_SPACE / assemble(csd * Measure("dx", self._mesh))
                 finally:
                     csd.a = old_a
 
@@ -574,6 +622,12 @@ if __name__ == '__main__':
                             }
 
 
+        class EighthWedgeOfOneSphereGaussianPotentialFEM(
+                  OneSphereGaussianPotentialFEM):
+            startswith = 'eighth_wedge_of_one_sphere'
+            FRACTION_OF_SPACE = 0.125
+
+
         class TwoSpheresGaussianPotentialFEM(_SphericalGaussianPotential):
             startswith = 'two_spheres'
 
@@ -591,6 +645,12 @@ if __name__ == '__main__':
                             _BRAIN_VOLUME: brain_conductivity,
                             _SKULL_VOLUME: skull_conductivity,
                             }
+
+
+        class EighthWedgeOfTwoSpheresGaussianPotentialFEM(
+                  TwoSpheresGaussianPotentialFEM):
+            startswith = 'eighth_wedge_of_two_spheres'
+            FRACTION_OF_SPACE = 0.125
 
 
         class FourSpheresGaussianPotentialFEM(_SphericalGaussianPotential):
@@ -619,6 +679,12 @@ if __name__ == '__main__':
                             }
 
 
+        class EighthWedgeOfFourSpheresGaussianPotentialFEM(
+                  FourSpheresGaussianPotentialFEM):
+            startswith = 'eighth_wedge_of_four_spheres'
+            FRACTION_OF_SPACE = 0.125
+
+
         logging.basicConfig(level=logging.INFO)
 
         if not os.path.exists(_fem_common.SOLUTION_DIRECTORY):
@@ -628,6 +694,9 @@ if __name__ == '__main__':
             for SphereGaussianFEM in [OneSphereGaussianPotentialFEM,
                                       TwoSpheresGaussianPotentialFEM,
                                       FourSpheresGaussianPotentialFEM,
+                                      EighthWedgeOfOneSphereGaussianPotentialFEM,
+                                      EighthWedgeOfTwoSpheresGaussianPotentialFEM,
+                                      EighthWedgeOfFourSpheresGaussianPotentialFEM,
                                       ]:
                 if mesh_name.startswith(SphereGaussianFEM.startswith):
                     fem = SphereGaussianFEM(mesh_name=mesh_name)
@@ -636,7 +705,7 @@ if __name__ == '__main__':
                 logger.warning('Missing appropriate FEM class for {}'.format(mesh_name))
                 continue
 
-            controller = _SomeSphereGaussianController(fem)
+            controller = _SomeSphereGaussianController3D(fem)
 
             for controller.degree in [1, 2, 3]:
                 K_MAX = 4  # as element size is 0.25 mm,
@@ -708,6 +777,32 @@ if __name__ == '__main__':
                                                               idx_xz,
                                                               idx_y] = v
 
+                                        if fem.FRACTION_OF_SPACE < 1:
+                                            logging.info('Sampling 2D')
+                                            POTENTIAL_2D = controller.POTENTIAL_2D
+                                            angle = fem.FRACTION_OF_SPACE * np.pi
+                                            SIN_COS = np.array([np.sin(angle),
+                                                                np.cos(angle)])
+
+                                            for idx_xz, xz in enumerate(
+                                                    np.linspace(0,
+                                                                controller.scalp_radius,
+                                                                controller.sampling_frequency_2D + 1)):
+                                                x, z = SIN_COS * xz
+                                                xz2 = xz ** 2
+                                                for idx_y, y in enumerate(np.linspace(-controller.scalp_radius,
+                                                                                      controller.scalp_radius,
+                                                                                      2 * controller.sampling_frequency_2D + 1)):
+                                                    if xz2 + y ** 2 > r2:
+                                                        continue
+                                                    try:
+                                                        v = potential(x, y, z)
+                                                    except Exception as e:
+                                                        pass
+                                                    else:
+                                                        POTENTIAL_2D[idx_r,
+                                                                     idx_xz,
+                                                                     idx_y] = v
                                 AS[idx_r] = fem.a
                                 stats.append((src_r,
                                               np.nan if potential is None else float(sample_stopwatch),
@@ -729,5 +824,11 @@ if __name__ == '__main__':
                                 if float(unsaved_time) > 10 * float(save_stopwatch):
                                     with save_stopwatch:
                                         controller.save(controller.path + str(tmp_mark))
+                                        if fem.FRACTION_OF_SPACE < 1:
+                                            logging.info('Saving 2D')
+                                            controller.save2D(controller.path.replace('.npz', '_2D.npz') + str(tmp_mark))
                                     unsaved_time.reset()
                                     tmp_mark = 1 - tmp_mark
+
+                        if fem.FRACTION_OF_SPACE < 1:
+                            controller.save2D(controller.path.replace('.npz', '_2D.npz'))

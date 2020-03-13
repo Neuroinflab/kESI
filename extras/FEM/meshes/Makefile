@@ -8,16 +8,25 @@ EIGHTH_OF_SPHERE_XDMF=eighth_of_sphere.xdmf
 EIGHTH_OF_SPHERE_XML=eighth_of_sphere.xml eighth_of_sphere_coarse.xml eighth_of_sphere_coarser.xml eighth_of_sphere_coarsest.xml
 EIGHTH_OF_SPHERE_MESHES=$(EIGHTH_OF_SPHERE_XDMF) $(EIGHTH_OF_SPHERE_XML)
 FINITE_SLICE_MESHES=finite_slice.xml finite_slice_small.xml finite_slice_smaller.xml finite_slice_small_coarse.xml finite_slice_smaller_coarse.xml
-SPHERICAL_MESHES=one_sphere.msh two_spheres.xml four_spheres.xml four_spheres_composite.xml
-MESHES=$(EIGHTH_OF_SPHERE_MESHES) $(FINITE_SLICE_MESHES) $(SPHERICAL_MESHES)
+SPHERICAL_MESHES=one_sphere.xml two_spheres.xml four_spheres.xml four_spheres_composite.xml
+WEDGE_MESHES=eighth_wedge_of_one_sphere.xml eighth_wedge_of_two_spheres.xml eighth_wedge_of_four_spheres.xml eighth_wedge_of_four_spheres_composite.xml
+MESHES=$(EIGHTH_OF_SPHERE_MESHES) $(FINITE_SLICE_MESHES) $(SPHERICAL_MESHES) $(WEDGE_MESHES)
 
-.SECONDARY: eighth_of_sphere.msh eighth_of_sphere_coarse.msh eighth_of_sphere_coarser.msh eighth_of_sphere_coarsest.msh finite_slice.msh finite_slice_small_coarse.msh finite_slice_smaller_coarse.msh one_sphere.msh two_spheres.msh four_spheres.msh four_spheres_composite.msh
+MESHES_MSH=$(MESHES:.xml=.msh)
+
+.SECONDARY: $(MESHES_MSH)
 
 .PHONY: all
 
 all: $(MESHES)
 
 %_coarsest.msh: %_coarsest.geo
+	${GMSH_NOOPT}
+
+eighth_wedge_of_two_spheres.msh: eighth_wedge_of_two_spheres.geo
+	${GMSH_NOOPT}
+
+eighth_wedge_of_four_spheres.msh: eighth_wedge_of_four_spheres.geo
 	${GMSH_NOOPT}
 
 %.msh: %.geo
