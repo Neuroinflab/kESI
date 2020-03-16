@@ -25,7 +25,15 @@
 import unittest
 import numpy as np
 
-from _common import TestCase
+try:
+    from ._common import TestCase
+    # When run as script raises:
+    #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
+    #  - `SystemError` (Python 3.3-5), or
+    #  - `ValueError` (Python 2.7).
+
+except (ImportError, SystemError, ValueError):
+    from _common import TestCase
 
 from kesi._verbose import _Eigenreconstructor
 

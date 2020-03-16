@@ -27,10 +27,9 @@ import collections
 
 import numpy as np
 
-from _common import TestCase
-
 try:
     from . import testMeasurementManagerBase, testEngine
+    from ._common import TestCase
     # When run as script raises:
     #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
     #  - `SystemError` (Python 3.3-5), or
@@ -38,6 +37,7 @@ try:
 
 except (ImportError, SystemError, ValueError):
     import testMeasurementManagerBase, testEngine
+    from _common import TestCase
 
 from kesi._engine import FunctionalFieldReconstructor
 from kesi._verbose import VerboseFFR
