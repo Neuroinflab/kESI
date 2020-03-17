@@ -61,7 +61,7 @@ def source_scanning(sources, reconstructor, measurement_manager):
     return
 
     
-factory = SomeSphereGaussianSourceFactory3D('/home/jdzik/FEM_soultions/'
+factory = SomeSphereGaussianSourceFactory3D('/home/mbejtka/Data_Kuba/'
                                           'one_sphere_gaussian_0062_deg_1.npz')
 Altitude = list(np.linspace(-0.5*np.pi, 0.5*np.pi, 40))
 Azimuth = list(np.linspace(0, 2*np.pi, 40))
