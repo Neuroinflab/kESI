@@ -66,7 +66,7 @@ factory = SomeSphereGaussianSourceFactory3D('/home/mbejtka/Data_Kuba/'
 Altitude = list(np.linspace(-0.5*np.pi, 0.5*np.pi, 40))
 Azimuth = list(np.linspace(0, 2*np.pi, 40))
 sources = all_sources(factory.R[::2], Altitude, Azimuth)
-np.save('all_sources_spherical_grid.npy', sources)
+#np.save('all_sources_spherical_grid.npy', sources)
 
 R, altitude, azimuth = np.meshgrid(factory.R[::2],
                                    Altitude,
