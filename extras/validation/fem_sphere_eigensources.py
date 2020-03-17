@@ -29,37 +29,6 @@ def csd_into_eigensource_projection(csd, eigensources):
 def calculate_diff(csd, projection):
     return np.abs(csd - projection)/np.max(csd)
 
-
-def calculate_point_error(true_csd, est_csd):
-    """
-    Calculates normalized error of reconstruction at every point of
-    estimation space separetly.
-
-    Parameters
-    ----------
-    true_csd: numpy array
-        Values of true csd at points of kCSD estimation.
-    est_csd: numpy array
-        CSD estimated with kCSD method.
-
-    Returns
-    -------
-    point_error: numpy array
-        Normalized error of reconstruction calculated separetly at every
-        point of estimation space.
-    """
-    epsilon = np.finfo(np.float64).eps
-    point_error = np.linalg.norm(true_csd.reshape(true_csd.size, 1) -
-                                 est_csd.reshape(est_csd.size, 1), axis=1)
-    point_error /= np.linalg.norm(true_csd.reshape(true_csd.size, 1),
-                                  axis=1) + \
-                                  epsilon*np.max(np.linalg.norm(true_csd.reshape(true_csd.size, 1), axis=1))
-    return point_error
-
-def source_scanning(sources, reconstructor, measurement_manager):
-
-    return
-
     
 factory = SomeSphereGaussianSourceFactory3D('/home/mbejtka/Data_Kuba/'
                                           'one_sphere_gaussian_0062_deg_1.npz')
