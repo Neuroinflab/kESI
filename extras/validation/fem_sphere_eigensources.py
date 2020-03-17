@@ -76,11 +76,11 @@ Y = R*np.cos(altitude)*np.sin(azimuth)
 Z = R*np.sin(altitude)
 
 # Plotting
-mlab.figure('All sources')
-mlab.points3d(X, Y, Z, opacity=0.2, scale_mode='none')
-mlab.xlabel('X')
-mlab.ylabel('Y')
-mlab.savefig('All_sources_spherical_grid.png')
+# mlab.figure('All sources')
+# mlab.points3d(X, Y, Z, opacity=0.2, scale_mode='none')
+# mlab.xlabel('X')
+# mlab.ylabel('Y')
+# mlab.savefig('All_sources_spherical_grid.png')
 
 # Determine positions of electrodes
 theta, phi, r = np.meshgrid(np.linspace(-0.5*np.pi, 0.5*np.pi, 15),
@@ -94,11 +94,11 @@ ELECTRODES = pd.DataFrame({'X': ELE_X.flatten(),
                            'Z': ELE_Z.flatten()})
 
 
-mlab.figure('Electrodes')
-mlab.points3d(ELE_X, ELE_Y, ELE_Z)
-mlab.xlabel('X')
-mlab.ylabel('Y')
-mlab.savefig('Electrodes_positions_spherical_grid.png')
+# mlab.figure('Electrodes')
+# mlab.points3d(ELE_X, ELE_Y, ELE_Z)
+# mlab.xlabel('X')
+# mlab.ylabel('Y')
+# mlab.savefig('Electrodes_positions_spherical_grid.png')
 
 measurement_manager = MeasurementManager(ELECTRODES, space='potential')
 
@@ -122,12 +122,12 @@ EST_POINTS =pd.DataFrame({'X': EST_X.flatten(),
                           'Y': EST_Y.flatten(),
                           'Z': EST_Z.flatten()})
 
-mlab.figure('regular grid')
-mlab.points3d(EST_X, EST_Y, EST_Z)
-# mlab.colorbar(nb_labels=3)
-mlab.xlabel('X')
-mlab.ylabel('Y')
-mlab.savefig('regular_grid_cube.png')
+# mlab.figure('regular grid')
+# mlab.points3d(EST_X, EST_Y, EST_Z)
+# # mlab.colorbar(nb_labels=3)
+# mlab.xlabel('X')
+# mlab.ylabel('Y')
+# mlab.savefig('regular_grid_cube.png')
 
 measurement_manager_basis = MeasurementManager(EST_POINTS, space='csd')
 eigensources = reconstructor._eigensources(measurement_manager_basis)
@@ -135,14 +135,14 @@ np.save('eigensources_whole_sphere_regular_grid_20.npy', eigensources)
 
 potential_0_source = measurement_manager.probe(sources[10])
 source10 = measurement_manager_basis.probe(sources[10])
-vmax = np.max(abs(source10))
-mlab.figure('Source regular grid')
-mlab.points3d(EST_X, EST_Y, EST_Z, source10.reshape(EST_X.shape), colormap='bwr',
-              vmax=vmax, vmin=-vmax)
-mlab.colorbar(nb_labels=3)
-mlab.xlabel('X')
-mlab.ylabel('Y')
-mlab.savefig('single_true_csd_regular_grid_sphere.png')
+# vmax = np.max(abs(source10))
+# mlab.figure('Source regular grid')
+# mlab.points3d(EST_X, EST_Y, EST_Z, source10.reshape(EST_X.shape), colormap='bwr',
+#               vmax=vmax, vmin=-vmax)
+# mlab.colorbar(nb_labels=3)
+# mlab.xlabel('X')
+# mlab.ylabel('Y')
+# mlab.savefig('single_true_csd_regular_grid_sphere.png')
 
 a0 = eigensources[:, 0].reshape(EST_X.shape)
 a1 = eigensources[:, 1].reshape(EST_X.shape)
@@ -150,29 +150,29 @@ a2 = eigensources[:, 2].reshape(EST_X.shape)
 a3 = eigensources[:, 3].reshape(EST_X.shape)
 visible_eigensources = eigensources[:, :8]
 
-mlab.figure('1st eigensource regular grid')
-mlab.points3d(EST_X, EST_Y, EST_Z, a0, colormap='bwr',
-              vmax=np.max(abs(a0)), vmin=-np.max(abs(a0)), opacity=0.3, scale_mode='none', resolution=3)
-mlab.colorbar(nb_labels=3)
-mlab.xlabel('X')
-mlab.ylabel('Y')
-mlab.savefig('1st_eigensource_regular_grid.png')
+# mlab.figure('1st eigensource regular grid')
+# mlab.points3d(EST_X, EST_Y, EST_Z, a0, colormap='bwr',
+#               vmax=np.max(abs(a0)), vmin=-np.max(abs(a0)), opacity=0.3, scale_mode='none', resolution=3)
+# mlab.colorbar(nb_labels=3)
+# mlab.xlabel('X')
+# mlab.ylabel('Y')
+# mlab.savefig('1st_eigensource_regular_grid.png')
 
-mlab.figure('2nd eigensource')
-mlab.points3d(EST_X, EST_Y, EST_Z, a1, colormap='bwr',
-              vmax=np.max(abs(a1)), vmin=-np.max(abs(a1)), opacity=0.1, scale_mode='none')
-mlab.colorbar(nb_labels=3)
-mlab.xlabel('X')
-mlab.ylabel('Y')
-mlab.savefig('2nd_eigensource_regular_grid.png')
+# mlab.figure('2nd eigensource')
+# mlab.points3d(EST_X, EST_Y, EST_Z, a1, colormap='bwr',
+#               vmax=np.max(abs(a1)), vmin=-np.max(abs(a1)), opacity=0.1, scale_mode='none')
+# mlab.colorbar(nb_labels=3)
+# mlab.xlabel('X')
+# mlab.ylabel('Y')
+# mlab.savefig('2nd_eigensource_regular_grid.png')
 
-mlab.figure('3rd eigensource')
-mlab.points3d(EST_X, EST_Y, EST_Z, a2, colormap='bwr',
-              vmax=np.max(abs(a2)), vmin=-np.max(abs(a2)))
-mlab.colorbar(nb_labels=3)
-mlab.xlabel('X')
-mlab.ylabel('Y')
-mlab.savefig('3rd_eigensource_regular_grid.png')
+# mlab.figure('3rd eigensource')
+# mlab.points3d(EST_X, EST_Y, EST_Z, a2, colormap='bwr',
+#               vmax=np.max(abs(a2)), vmin=-np.max(abs(a2)))
+# mlab.colorbar(nb_labels=3)
+# mlab.xlabel('X')
+# mlab.ylabel('Y')
+# mlab.savefig('3rd_eigensource_regular_grid.png')
 
 charge0 = np.sum(a0)
 charge1 = np.sum(a1)
@@ -181,38 +181,41 @@ charge3 = np.sum(a3)
 
 approximator = reconstructor(potential_0_source, regularization_parameter=100)
 est_csd = approximator.csd(EST_X, EST_Y, EST_Z)
-vmax = np.max(abs(est_csd))
-mlab.figure('Reconstruction 10 lambda 100 scale none')
-mlab.points3d(EST_X, EST_Y, EST_Z, est_csd, colormap='bwr',
-              vmax=vmax, vmin=-vmax, opacity=0.3, scale_mode='none')
-mlab.colorbar(nb_labels=3)
-mlab.xlabel('X')
-mlab.ylabel('Y')
-mlab.savefig('Reconstruction_regular_grid.png')
+np.save('est_csd_regular_grid_sphere_20.npy', est_csd)
+# vmax = np.max(abs(est_csd))
+# mlab.figure('Reconstruction 10 lambda 100 scale none')
+# mlab.points3d(EST_X, EST_Y, EST_Z, est_csd, colormap='bwr',
+#               vmax=vmax, vmin=-vmax, opacity=0.3, scale_mode='none')
+# mlab.colorbar(nb_labels=3)
+# mlab.xlabel('X')
+# mlab.ylabel('Y')
+# mlab.savefig('Reconstruction_regular_grid.png')
 
 projection = csd_into_eigensource_projection(source10, eigensources)
-vmax = np.max(abs(projection))
-mlab.figure('Projection 10')
-mlab.points3d(EST_X, EST_Y, EST_Z, projection.reshape(EST_X.shape),
-              colormap='bwr', vmax=vmax, vmin=-vmax)
-mlab.colorbar(nb_labels=3)
-mlab.xlabel('X')
-mlab.ylabel('Y')
-mlab.savefig('Projection_regular_grid.png')
+np.save('projection_regular_grid_sphere_20.npy', projection)
+# vmax = np.max(abs(projection))
+# mlab.figure('Projection 10')
+# mlab.points3d(EST_X, EST_Y, EST_Z, projection.reshape(EST_X.shape),
+#               colormap='bwr', vmax=vmax, vmin=-vmax)
+# mlab.colorbar(nb_labels=3)
+# mlab.xlabel('X')
+# mlab.ylabel('Y')
+# mlab.savefig('Projection_regular_grid.png')
 
 new_projection = csd_into_eigensource_projection(source10, visible_eigensources)
-vmax = np.max(abs(new_projection))
-mlab.figure('New Projection 10')
-mlab.points3d(EST_X, EST_Y, EST_Z, new_projection.reshape(EST_X.shape),
-              colormap='bwr', vmax=vmax, vmin=-vmax)
-mlab.colorbar(nb_labels=3)
-mlab.xlabel('X')
-mlab.ylabel('Y')
+# vmax = np.max(abs(new_projection))
+# mlab.figure('New Projection 10')
+# mlab.points3d(EST_X, EST_Y, EST_Z, new_projection.reshape(EST_X.shape),
+#               colormap='bwr', vmax=vmax, vmin=-vmax)
+# mlab.colorbar(nb_labels=3)
+# mlab.xlabel('X')
+# mlab.ylabel('Y')
 
 err = calculate_diff(source10, projection)
-mlab.figure('Error 10')
-mlab.points3d(EST_X, EST_Y, EST_Z, err.reshape(EST_X.shape), colormap='Greys')
-mlab.colorbar()
-mlab.xlabel('X')
-mlab.ylabel('Y')
-mlab.savefig('Source_projection_error_regular_grid.png')
+np.save('error_source_projection_regular_grid_sphere_20.npy', err)
+# mlab.figure('Error 10')
+# mlab.points3d(EST_X, EST_Y, EST_Z, err.reshape(EST_X.shape), colormap='Greys')
+# mlab.colorbar()
+# mlab.xlabel('X')
+# mlab.ylabel('Y')
+# mlab.savefig('Source_projection_error_regular_grid.png')
