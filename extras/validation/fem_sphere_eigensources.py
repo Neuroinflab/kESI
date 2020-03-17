@@ -5,15 +5,15 @@
 import numpy as np
 import pandas as pd
 import itertools
-import matplotlib.pyplot as plt
-from mayavi import mlab
+#import matplotlib.pyplot as plt
+#from mayavi import mlab
 import kesi
 import scipy
 
 from validate_properties import (ValidateKESI,
                                  MeasurementManager)
 
-from FEM.fem_sphere_gaussian import SomeSphereGaussianSourceFactory
+from FEM.fem_sphere_gaussian import SomeSphereGaussianSourceFactory3D
 
 
 def all_sources(r, altitude, azimuth):
@@ -61,7 +61,7 @@ def source_scanning(sources, reconstructor, measurement_manager):
     return
 
     
-factory = SomeSphereGaussianSourceFactory('/home/jdzik/FEM_soultions/'
+factory = SomeSphereGaussianSourceFactory3D('/home/jdzik/FEM_soultions/'
                                           'one_sphere_gaussian_0062_deg_1.npz')
 Altitude = list(np.linspace(-0.5*np.pi, 0.5*np.pi, 40))
 Azimuth = list(np.linspace(0, 2*np.pi, 40))
