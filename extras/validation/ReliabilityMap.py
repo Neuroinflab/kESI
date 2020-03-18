@@ -7,6 +7,7 @@ import pandas as pd
 import itertools
 import kesi
 import scipy
+import time
 
 from validate_properties import (ValidateKESI,
                                  MeasurementManager)
@@ -89,7 +90,8 @@ def source_scanning(sources, reconstructor, measurement_manager, measurement_man
     error_mean = sigmoid_mean(point_error)
     return error_mean
 
-    
+
+start_time = time.time()    
 factory = SomeSphereGaussianSourceFactory3D('/home/mbejtka/Data_Kuba/'
                                           'one_sphere_gaussian_0062_deg_1.npz')
 Altitude = list(np.linspace(-0.5*np.pi, 0.5*np.pi, 40))
@@ -135,3 +137,4 @@ measurement_manager_basis = MeasurementManager(EST_POINTS, space='csd')
 
 source_scanning_error = source_scanning(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z)
 np.save('source_scanning_error_whole_sphere_20.npy', source_scanning_error)
+print("--- %s seconds ---" % (time.time() - start_time))
