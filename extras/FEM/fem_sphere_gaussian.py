@@ -24,6 +24,7 @@
 
 import os
 import logging
+import warnings
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
@@ -397,8 +398,8 @@ class SomeSphereGaussianSourceFactory3D(_SomeSphereGaussianSourceFactoryBase,
                                                axis=-1))
 
 
-class SomeSphereGaussianSourceFactory2D(_SomeSphereGaussianSourceFactoryBase,
-                                        _GaussianLoaderBase2D):
+class SomeSphereGaussianSourceFactoryLinear2D(_SomeSphereGaussianSourceFactoryBase,
+                                              _GaussianLoaderBase2D):
     def _make_interpolator(self, POTENTIAL):
         return RegularGridInterpolator((self.X_SAMPLE,
                                         self.Y_SAMPLE),
@@ -413,6 +414,15 @@ class SomeSphereGaussianSourceFactory2D(_SomeSphereGaussianSourceFactoryBase,
                                                         + np.square(_Z)),
                                                 _Y),
                                                axis=-1))
+
+
+class SomeSphereGaussianSourceFactory2D(SomeSphereGaussianSourceFactoryLinear2D):
+    def __init__(self, *args, **kwargs):
+        warnings.warn('SomeSphereGaussianSourceFactory2D is deprecated; use SomeSphereGaussianSourceFactoryLinear2D instead',
+                      DeprecationWarning,
+                      stacklevel=2)
+        super(SomeSphereGaussianSourceFactory2D,
+              self).__init__(*args, **kwargs)
 
 
 class _SomeSphereControllerBase(object):
