@@ -84,7 +84,7 @@ def source_scanning(sources, reconstructor, measurement_manager, measurement_man
         all_est_csd.append(est_csd)
     point_error = np.array(point_error)
     np.save('all_point_errors_whole_sphere_20.npy', point_error)
-    np.save('all_potentials_whole_sphere_20.npy', np.array(all_potential))
+    np.save('all_potentials_whole_sphere_20.npy', np.array(all_potentials))
     np.save('all_true_csd_whole_sphere_20.npy', np.array(all_true_csd))
     np.save('all_est_csd_whole_sphere_20.npy', np.array(all_est_csd))
     error_mean = sigmoid_mean(point_error)
