@@ -57,6 +57,15 @@ class _MissingAttributeError(TypeError):
             raise cls
 
 
+class _LinearKernelSolver(object):
+    def __init__(self, kernel):
+        self._kernel = kernel
+
+    def __call__(self, rhs, regularization_parameter=0):
+        return np.linalg.solve(self._kernel + regularization_parameter * np.identity(self._kernel.shape[0]),
+                               rhs)
+
+
 class FunctionalFieldReconstructor(object):
     class MeasurementManagerBase(object):
         """
