@@ -141,11 +141,13 @@ class FunctionalFieldReconstructor(object):
                       MeasurementManagerHasNoNumberOfMeasurementsAttributeError,
                       ]
 
-    def __init__(self, field_components, measurement_manager):
+    def __init__(self, field_components, measurement_manager,
+                 KernelSolverClass=_LinearKernelSolver):
         self._field_components = field_components
         self._measurement_manager = measurement_manager
         self._validate_measurement_manager()
         self._generate_kernels()
+        self._solve_kernel = KernelSolverClass(self._kernel)
 
     def _validate_measurement_manager(self):
         for validator in self._mm_validators:
@@ -195,12 +197,6 @@ class FunctionalFieldReconstructor(object):
             return values
 
         return np.array(values)
-
-    def _solve_kernel(self, measurements, regularization_parameter=0):
-        K = self._kernel
-        return np.linalg.solve((K + np.identity(K.shape[0])
-                                    * regularization_parameter),
-                               measurements)
 
     def leave_one_out_errors(self, measured, regularization_parameter):
         """

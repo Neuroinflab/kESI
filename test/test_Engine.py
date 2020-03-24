@@ -23,17 +23,19 @@
 ###############################################################################
 
 import unittest
+import collections
+
 import numpy as np
 
 try:
-    from ._common import Stub
+    from ._common import Stub, TestCase
     # When run as script raises:
     #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
     #  - `SystemError` (Python 3.3-5), or
     #  - `ValueError` (Python 2.7).
 
 except (ImportError, SystemError, ValueError):
-    from _common import Stub
+    from _common import Stub, TestCase
 
 from kesi._engine import FunctionalFieldReconstructor, LinearMixture
 
@@ -329,6 +331,85 @@ class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase,
                                                          'two': -1,
                                                          'three': -1}.get),
                         }
+
+
+class TestFunctionalFieldReconstructorUsesFunctionalFieldReconstructor(TestCase):
+    class MatrixMeasurementManager(FunctionalFieldReconstructor.MeasurementManagerBase):
+        def __init__(self, probed):
+            self._probed = np.array(probed)
+
+        @property
+        def number_of_measurements(self):
+            return self._probed.shape[1]
+
+        def probe(self, field):
+            return self._probed[field]
+
+
+    class PlainKernelSolutionFFR(FunctionalFieldReconstructor):
+        def _wrap_kernel_solution(self, solution):
+            return solution
+
+
+    class SpyKernelSolverClass(object):
+        def __init__(self, solution=None):
+            self.kernel = None
+            self.rhs = None
+            self.regularization_parameter = None
+            self.call_counter = collections.Counter()
+            self.set_solution(solution)
+
+        def set_solution(self, solution):
+            self._solution = solution
+
+        def __call__(self, kernel):
+            self.call_counter['__init__'] += 1
+            self.kernel = kernel
+            return self._callable
+
+        def _callable(self, rhs, regularization_parameter=None):
+            self.call_counter['__call__'] += 1
+            self.rhs = rhs
+            self.regularization_parameter = regularization_parameter
+            return self._solution
+
+    PROBED = [[1], [2], [3]]
+
+    def setUp(self):
+        self.measurement_manager = self.MatrixMeasurementManager(self.PROBED)
+        self.kernel_solver = self.SpyKernelSolverClass()
+        self.reconstructor = self.PlainKernelSolutionFFR(range(self.measurement_manager.number_of_measurements),
+                                                         self.measurement_manager,
+                                                         KernelSolverClass=self.kernel_solver)
+
+    def testNoRegularization(self):
+        measurements = [42]
+        solution = 'The answer to the universe, life, and everything else'
+        self.kernel_solver.set_solution(solution)
+        self.assertIs(self.reconstructor(measurements), solution)
+        self.assertEqual(1, self.kernel_solver.call_counter['__init__'])
+        self.assertEqual(1, self.kernel_solver.call_counter['__call__'])
+        self.checkArrayLikeAlmostEqual(self.reconstructor._kernel,
+                                       self.kernel_solver.kernel)
+        self.checkArrayLikeAlmostEqual(np.reshape(measurements, (-1, 1)),
+                                       self.kernel_solver.rhs)
+        self.assertEqual(0, self.kernel_solver.regularization_parameter)
+
+    def testRegularization(self):
+        measurements = [42]
+        regularization_parameter = 1
+        solution = 'What do you get if you multiply six by nine?'
+        self.kernel_solver.set_solution(solution)
+        self.assertIs(self.reconstructor(measurements,
+                                         regularization_parameter=regularization_parameter),
+                      solution)
+        self.assertEqual(1, self.kernel_solver.call_counter['__init__'])
+        self.assertEqual(1, self.kernel_solver.call_counter['__call__'])
+        self.checkArrayLikeAlmostEqual(self.reconstructor._kernel,
+                                       self.kernel_solver.kernel)
+        self.checkArrayLikeAlmostEqual(np.reshape(measurements, (-1, 1)),
+                                       self.kernel_solver.rhs)
+        self.assertEqual(regularization_parameter, self.kernel_solver.regularization_parameter)
 
 
 if __name__ == '__main__':
