@@ -187,6 +187,8 @@ class FunctionalFieldReconstructor(object):
         measurements = self._ensure_is_array(
                                 self._measurement_manager.load(values))
 
+        # required by *.*.testLeaveOneOut* and
+        # TestFunctionalFieldReconstructorMayUseArbitraryKernelSolverClass
         if len(measurements.shape) == 1:
             return measurements.reshape(-1, 1)
 

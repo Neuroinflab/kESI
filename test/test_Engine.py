@@ -332,7 +332,7 @@ class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase,
                         }
 
 
-class TestFunctionalFieldReconstructorUsesFunctionalFieldReconstructor(TestCase):
+class TestFunctionalFieldReconstructorMayUseArbitraryKernelSolverClass(TestCase):
     class MatrixMeasurementManager(FunctionalFieldReconstructor.MeasurementManagerBase):
         def __init__(self, probed):
             self._probed = np.array(probed)
