@@ -158,8 +158,8 @@ class FunctionalFieldReconstructor(object):
         self._generate_kernel()
 
     def _generate_kernel(self):
-        self._kernel = np.dot(self._pre_kernel.T,
-                              self._pre_kernel) * self._pre_kernel.shape[0]
+        self._kernel = np.matmul(self._pre_kernel.T,
+                                 self._pre_kernel) * self._pre_kernel.shape[0]
 
     def _generate_pre_kernel(self):
         m = len(self._field_components)
@@ -181,7 +181,7 @@ class FunctionalFieldReconstructor(object):
 
     def _wrap_kernel_solution(self, solution):
         return LinearMixture(zip(self._field_components,
-                                 np.dot(self._pre_kernel, solution).flatten()))
+                                 np.matmul(self._pre_kernel, solution).flatten()))
 
     def _measurement_vector(self, values):
         measurements = self._ensure_is_array(
