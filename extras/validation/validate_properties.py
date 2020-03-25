@@ -79,10 +79,10 @@ class MeasurementManager(MeasurementManagerBase):
         self.number_of_measurements = len(ELECTRODES)
 
     def probe(self, field):
-        return np.array([getattr(field, 
-                       self._space)(x, y, z) for x, y, z in zip(self._ELECTRODES.X,
-                                                                self._ELECTRODES.Y,
-                                                                self._ELECTRODES.Z)]).flatten()
+        return getattr(field, 
+                       self._space)(self._ELECTRODES.X,
+                                    self._ELECTRODES.Y,
+                                    self._ELECTRODES.Z)
 
 
 def gaussian_source_factory_2d(xs, ys, sd, conductivity):
