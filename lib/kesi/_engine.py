@@ -57,6 +57,15 @@ class _MissingAttributeError(TypeError):
             raise cls
 
 
+class _LinearKernelSolver(object):
+    def __init__(self, kernel):
+        self._kernel = kernel
+
+    def __call__(self, rhs, regularization_parameter=0):
+        return np.linalg.solve(self._kernel + regularization_parameter * np.identity(self._kernel.shape[0]),
+                               rhs)
+
+
 class FunctionalFieldReconstructor(object):
     class MeasurementManagerBase(object):
         """
@@ -132,11 +141,13 @@ class FunctionalFieldReconstructor(object):
                       MeasurementManagerHasNoNumberOfMeasurementsAttributeError,
                       ]
 
-    def __init__(self, field_components, measurement_manager):
+    def __init__(self, field_components, measurement_manager,
+                 KernelSolverClass=_LinearKernelSolver):
         self._field_components = field_components
         self._measurement_manager = measurement_manager
         self._validate_measurement_manager()
         self._generate_kernels()
+        self._solve_kernel = KernelSolverClass(self._kernel)
 
     def _validate_measurement_manager(self):
         for validator in self._mm_validators:
@@ -147,8 +158,8 @@ class FunctionalFieldReconstructor(object):
         self._generate_kernel()
 
     def _generate_kernel(self):
-        self._kernel = np.dot(self._pre_kernel.T,
-                              self._pre_kernel) * self._pre_kernel.shape[0]
+        self._kernel = np.matmul(self._pre_kernel.T,
+                                 self._pre_kernel) * self._pre_kernel.shape[0]
 
     def _generate_pre_kernel(self):
         m = len(self._field_components)
@@ -170,12 +181,14 @@ class FunctionalFieldReconstructor(object):
 
     def _wrap_kernel_solution(self, solution):
         return LinearMixture(zip(self._field_components,
-                                 np.dot(self._pre_kernel, solution).flatten()))
+                                 np.matmul(self._pre_kernel, solution).flatten()))
 
     def _measurement_vector(self, values):
         measurements = self._ensure_is_array(
                                 self._measurement_manager.load(values))
 
+        # required by *.*.testLeaveOneOut* and
+        # TestFunctionalFieldReconstructorMayUseArbitraryKernelSolverClass
         if len(measurements.shape) == 1:
             return measurements.reshape(-1, 1)
 
@@ -186,12 +199,6 @@ class FunctionalFieldReconstructor(object):
             return values
 
         return np.array(values)
-
-    def _solve_kernel(self, measurements, regularization_parameter=0):
-        K = self._kernel
-        return np.linalg.solve((K + np.identity(K.shape[0])
-                                    * regularization_parameter),
-                               measurements)
 
     def leave_one_out_errors(self, measured, regularization_parameter):
         """

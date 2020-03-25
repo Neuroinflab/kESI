@@ -331,3 +331,13 @@ class _Eigenreconstructor(object):
                                     if mask is None
                                     else self.EIGENVECTORS.T[mask, :]),
                                    measurements))
+
+
+class _CrossKernelReconstructor(object):
+    def __init__(self, kernel_solver, cross_kernel):
+        self._cross_kernel = cross_kernel
+        self._solve_kernel = kernel_solver
+
+    def __call__(self, measured, *args, **kwargs):
+        return np.matmul(self._cross_kernel,
+                         self._solve_kernel(measured, *args, **kwargs))

@@ -28,7 +28,7 @@ import collections
 import numpy as np
 
 try:
-    from . import testMeasurementManagerBase, testEngine
+    from . import test_MeasurementManagerBase, test_Engine
     from ._common import TestCase
     # When run as script raises:
     #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
@@ -36,7 +36,7 @@ try:
     #  - `ValueError` (Python 2.7).
 
 except (ImportError, SystemError, ValueError):
-    import testMeasurementManagerBase, testEngine
+    import test_MeasurementManagerBase, test_Engine
     from _common import TestCase
 
 from kesi._engine import FunctionalFieldReconstructor
@@ -256,16 +256,16 @@ class MockTestKernelFunctionsOfVerboseFFR(TestKernelFunctionsOfVerboseFFR):
                                  {c[0][0].id() for c in calls})
 
 
-class TestsOfInitializationErrors(testEngine.TestsOfInitializationErrors):
+class TestsOfInitializationErrors(test_Engine.TestsOfInitializationErrors):
     CLASS = VerboseFFR
 
     MM_MISSING_ATTRIBUTE_ERRORS = (
-        testEngine.TestsOfInitializationErrors.MM_MISSING_ATTRIBUTE_ERRORS
-        + [('probe_at_single_point', 'ProbeAtSinglePointMethod')])
+            test_Engine.TestsOfInitializationErrors.MM_MISSING_ATTRIBUTE_ERRORS
+            + [('probe_at_single_point', 'ProbeAtSinglePointMethod')])
 
 
 
-class TestMeasurementManagerBase(testMeasurementManagerBase.TestMeasurementManagerBase):
+class TestMeasurementManagerBase(test_MeasurementManagerBase.TestMeasurementManagerBase):
     CLASS = VerboseFFR.MeasurementManagerBase
 
     def testMethod_probe_at_single_point_isAbstract(self):

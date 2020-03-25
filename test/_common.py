@@ -23,6 +23,7 @@
 ###############################################################################
 
 import unittest
+import collections
 
 import numpy as np
 
@@ -68,3 +69,26 @@ class TestCase(unittest.TestCase):
     def checkArrayLikeAlmostEqual(self, expected, observed):
         self.checkArrayLikeEqual(expected, observed,
                                  cmp=np.testing.assert_array_almost_equal)
+
+
+class SpyKernelSolverClass(object):
+    def __init__(self, solution=None):
+        self.kernel = None
+        self.rhs = None
+        self.regularization_parameter = None
+        self.call_counter = collections.Counter()
+        self.set_solution(solution)
+
+    def set_solution(self, solution):
+        self._solution = solution
+
+    def __call__(self, kernel):
+        self.call_counter['__init__'] += 1
+        self.kernel = kernel
+        return self._callable
+
+    def _callable(self, rhs, regularization_parameter=None):
+        self.call_counter['__call__'] += 1
+        self.rhs = rhs
+        self.regularization_parameter = regularization_parameter
+        return self._solution
