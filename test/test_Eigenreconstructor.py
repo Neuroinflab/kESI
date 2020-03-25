@@ -97,18 +97,17 @@ class _TestEigenreconstructorGivenEigenvectorsBase(TestCase):
     def testCalledWithoutParametersDividesEigenvectorsByEigenvalues(self):
         for eigenvalue, eigenvector in zip(self.EIGENVALUES,
                                            self.EIGENVECTORS.T):
-            self.checkSolution(eigenvector, eigenvector / eigenvalue)
+            self.checkSolution(eigenvector / eigenvalue, eigenvector)
 
     def testCalledWithoutParametersSolvesEigenvectorMixture(self):
-        measurements, solution = 0, 0
+        rhs, solution = 0, 0
         for i, (eigenvalue, eigenvector) in enumerate(zip(self.EIGENVALUES,
                                                           self.EIGENVECTORS.T),
                                                       start=1):
-            measurements += i * eigenvector
+            rhs += i * eigenvector
             solution += i * eigenvector / eigenvalue
 
-        self.checkSolution(measurements, solution)
-
+        self.checkSolution(solution, rhs)
 
     def testCalledWithMaskZeroesMaskedEigenvalues(self):
         n = len(self.EIGENVALUES)
@@ -117,34 +116,30 @@ class _TestEigenreconstructorGivenEigenvectorsBase(TestCase):
             for i, (m, eigenvalue, eigenvector) in enumerate(zip(mask,
                                                                  self.EIGENVALUES,
                                                                  self.EIGENVECTORS.T)):
-                self.checkSolution(eigenvector,
-                                   m * eigenvector / eigenvalue,
-                                   mask=mask)
+                self.checkSolution(m * eigenvector / eigenvalue, eigenvector, mask=mask)
 
     def testCalledWithMaskSolvesEigenvectorMixture(self):
         n = len(self.EIGENVALUES)
         for n_components in range(n):
             mask = np.arange(n) <= n_components
-            measurements, solution = 0, 0
+            rhs, solution = 0, 0
             for i, (m, eigenvalue, eigenvector) in enumerate(zip(mask,
                                                                  self.EIGENVALUES,
-                                                                  self.EIGENVECTORS.T),
+                                                                 self.EIGENVECTORS.T),
                                                              start=1):
-                measurements += i * eigenvector
+                rhs += i * eigenvector
                 solution += m * i * eigenvector / eigenvalue
 
-        self.checkSolution(measurements, solution)
+        self.checkSolution(solution, rhs)
 
-    def checkSolution(self, measurements, solution, **kwargs):
+    def checkSolution(self, solution, rhs, **kwargs):
         print('checkSolution()')
-        print('IN:  ', measurements)
+        print('IN:  ', rhs)
         print('OUT:  ', solution)
-        if 'mask' in kwargs:
-            print('MASK:', kwargs['mask'])
-        with self.rec(measurements=measurements,
+        with self.rec(measurements=rhs,
                       solution=solution):
             self.assertIs(self.rec,
-                          self.reconstructor(measurements, **kwargs))
+                          self.reconstructor(rhs, **kwargs))
 
 
 class TestEigenreconstructorGivenIdentityEigenvectors(
@@ -152,6 +147,7 @@ class TestEigenreconstructorGivenIdentityEigenvectors(
     EIGENVALUES = [2., 4.]
     _EIGENVECTORS = [[1., 0.],
                      [0., 1.]]
+
 
 class TestEigenreconstructorGivenNonidentityEigenvectors(
           _TestEigenreconstructorGivenEigenvectorsBase):
