@@ -66,6 +66,24 @@ class _LinearKernelSolver(object):
                                rhs)
 
 
+class _EigenvectorKernelSolver(object):
+    def __init__(self, kernel):
+        self.EIGENVALUES, self.EIGENVECTORS = np.linalg.eigh(kernel)
+        self._SCALED_EIGENVECTORS = np.matmul(self.EIGENVECTORS,
+                                              np.diag(1. / self.EIGENVALUES))
+
+    def __call__(self, rhs, mask=None):
+        EIGENVECTORS = (self.EIGENVECTORS
+                        if mask is None
+                        else self.EIGENVECTORS[:, mask])
+        SCALED = (self._SCALED_EIGENVECTORS
+                  if mask is None
+                  else self._SCALED_EIGENVECTORS[:, mask])
+        return np.matmul(SCALED,
+                         np.matmul(EIGENVECTORS.T,
+                                   rhs))
+
+
 class FunctionalFieldReconstructor(object):
     class MeasurementManagerBase(object):
         """
