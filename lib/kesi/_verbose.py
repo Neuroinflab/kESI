@@ -25,7 +25,7 @@
 import numpy as np
 
 from ._engine import (FunctionalFieldReconstructor, LinearMixture,
-                      _MissingAttributeError)
+                      _MissingAttributeError, _EigenvectorKernelSolver)
 
 class VerboseFFR(FunctionalFieldReconstructor):
     """
@@ -307,9 +307,11 @@ class VerboseFFR(FunctionalFieldReconstructor):
 class _Eigenreconstructor(object):
     def __init__(self, reconstructor):
         self._reconstructor = reconstructor
-        self.EIGENVALUES, self.EIGENVECTORS = np.linalg.eigh(reconstructor.kernel)
-        self._EIGENPROJECTION = np.matmul(self.EIGENVECTORS,
-                                          np.diagflat(1. / self.EIGENVALUES))
+        self._solve_kernel = _EigenvectorKernelSolver(reconstructor.kernel)
+
+    @property
+    def EIGENVALUES(self):
+        return self._solve_kernel.EIGENVALUES
 
     def __call__(self, measurements, mask=None):
         return self._wrap_kernel_solution(
@@ -322,15 +324,6 @@ class _Eigenreconstructor(object):
 
     def _wrap_kernel_solution(self, solution):
         return self._reconstructor._wrap_kernel_solution(solution)
-
-    def _solve_kernel(self, measurements, mask):
-        return np.matmul((self._EIGENPROJECTION
-                          if mask is None
-                          else self._EIGENPROJECTION[:, mask]),
-                         np.matmul((self.EIGENVECTORS.T
-                                    if mask is None
-                                    else self.EIGENVECTORS.T[mask, :]),
-                                   measurements))
 
 
 class _CrossKernelReconstructor(object):
