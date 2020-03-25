@@ -130,12 +130,9 @@ class _TestEigenreconstructorGivenEigenvectorsBase(TestCase):
                 rhs += i * eigenvector
                 solution += m * i * eigenvector / eigenvalue
 
-        self.checkSolution(solution, rhs)
+            self.checkSolution(solution, rhs, mask=mask)
 
     def checkSolution(self, solution, rhs, **kwargs):
-        print('checkSolution()')
-        print('IN:  ', rhs)
-        print('OUT:  ', solution)
         with self.rec(measurements=rhs,
                       solution=solution):
             self.assertIs(self.rec,
