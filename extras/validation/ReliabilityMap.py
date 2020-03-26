@@ -14,6 +14,15 @@ from validate_properties import (ValidateKESI,
 
 from FEM.fem_sphere_gaussian import SomeSphereGaussianSourceFactory3D
 
+try:
+    from joblib import Parallel, delayed
+    import multiprocessing
+    NUM_CORES = multiprocessing.cpu_count() - 1
+    PARALLEL_AVAILABLE = True
+except ImportError:
+    PARALLEL_AVAILABLE = False
+print('PARALLEL_AVAILABLE: ', PARALLEL_AVAILABLE)
+
 
 def all_sources(r, altitude, azimuth):
     return [factory(x, y, z)
@@ -83,12 +92,43 @@ def source_scanning(sources, reconstructor, measurement_manager, measurement_man
         all_true_csd.append(true_csd)
         all_est_csd.append(est_csd)
     point_error = np.array(point_error)
-    np.save('all_point_errors_whole_sphere_20.npy', point_error)
-    np.save('all_potentials_whole_sphere_20.npy', np.array(all_potentials))
-    np.save('all_true_csd_whole_sphere_20.npy', np.array(all_true_csd))
-    np.save('all_est_csd_whole_sphere_20.npy', np.array(all_est_csd))
     error_mean = sigmoid_mean(point_error)
+    np.savez_compressed('whole_sphere.npz',
+    					POTS= potential,
+    					TRUE_CSD = true_csd,
+    					EST_CSD = est_csd,
+    					ERROR = point_error,
+    					ERROR_MEAN = error_mean)
     return error_mean
+
+
+def make_reconstruction(source, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z):
+	pots = measurement_manager.probe(source)
+    true_csd = measurement_manager_basis.probe(source)
+    approximator = reconstructor(pots)
+    est_csd = approximator.csd(EST_X, EST_Y, EST_Z)
+    error = calculate_point_error(true_csd, est_csd)
+	return pots, true_csd, est_csd, error
+
+
+def source_scanning_parallel(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z):
+	results = Parallel(n_jobs=NUM_CORES)(delayed(make_reconstruction)
+                                          (source, reconstructor,
+                                           measurement_manager, measurement_manager_basis,
+                                           EST_X, EST_Y, EST_Z)
+                                          for source in sources)
+	pots = np.array([item[0] for item in results])
+    true_csd = np.array([item[1] for item in results])
+    est_csd = np.array([item[2] for item in results])
+    error = np.array([item[3] for item in results])
+    error_mean = sigmoid_mean(error)
+    np.savez_compressed('whole_sphere_parallel.npz',
+    					POTS= pots,
+    					TRUE_CSD = true_csd,
+    					EST_CSD = est_csd,
+    					ERROR = error,
+    					ERROR_MEAN = error_mean)
+	return error_mean
 
 
 start_time = time.time()    
@@ -137,14 +177,16 @@ EST_POINTS =pd.DataFrame({'X': EST_X.flatten(),
 
 measurement_manager_basis = MeasurementManager(EST_POINTS, space='csd')
 
-save_time = time.time()
-np.savez_compressed('reconstructor_sphere.npz',
-                    KERNEL=reconstructor.kernel,
-                    CROSS_KERNEL=reconstructor.get_kernel_matrix(measurement_manager_basis))
-print("Saved Reconstructor --- %s seconds ---" % (time.time() - save_time))
+# save_time = time.time()
+# np.savez_compressed('reconstructor_sphere.npz',
+#                     KERNEL=reconstructor.kernel,
+#                     CROSS_KERNEL=reconstructor.get_kernel_matrix(measurement_manager_basis))
+# print("Saved Reconstructor --- %s seconds ---" % (time.time() - save_time))
 
 error_time = time.time()
-source_scanning_error = source_scanning(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z)
-np.save('source_scanning_error_whole_sphere_20.npy', source_scanning_error)
+if PARALLEL_AVAILABLE:
+	source_scanning_error = source_scanning_parallel(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z)
+else:
+	source_scanning_error = source_scanning(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z)
 print("Error --- %s seconds ---" % (time.time() - error_time))
 
