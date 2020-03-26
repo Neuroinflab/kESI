@@ -94,9 +94,11 @@ def source_scanning(sources, reconstructor, measurement_manager, measurement_man
 start_time = time.time()    
 factory = SomeSphereGaussianSourceFactory3D('/home/mbejtka/Data_Kuba/'
                                           'one_sphere_gaussian_0062_deg_1.npz')
+print("Loading data --- %s seconds ---" % (time.time() - start_time))
 Altitude = list(np.linspace(-0.5*np.pi, 0.5*np.pi, 40))
 Azimuth = list(np.linspace(0, 2*np.pi, 40))
 sources = all_sources(factory.R[::2], Altitude, Azimuth)
+print("Sources --- %s seconds ---" % (time.time() - start_time))
 
 R, altitude, azimuth = np.meshgrid(factory.R[::2],
                                    Altitude,
@@ -119,6 +121,7 @@ ELECTRODES = pd.DataFrame({'X': ELE_X.flatten(),
 measurement_manager = MeasurementManager(ELECTRODES, space='potential')
 
 reconstructor = ValidateKESI(sources, measurement_manager)
+print("Reconstructor --- %s seconds ---" % (time.time() - start_time))
 
 r = factory.scalp_radius
 EST_X, EST_Y, EST_Z = np.meshgrid(np.linspace(-r, r, 20),
@@ -134,7 +137,14 @@ EST_POINTS =pd.DataFrame({'X': EST_X.flatten(),
 
 measurement_manager_basis = MeasurementManager(EST_POINTS, space='csd')
 
+save_time = time.time()
+np.savez_compressed('reconstructor_sphere.npz',
+                    KERNEL=reconstructor.kernel,
+                    CROSS_KERNEL=reconstructor.get_kernel_matrix(measurement_manager_basis))
+print("Saved Reconstructor --- %s seconds ---" % (time.time() - save_time))
 
+error_time = time.time()
 source_scanning_error = source_scanning(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z)
 np.save('source_scanning_error_whole_sphere_20.npy', source_scanning_error)
-print("--- %s seconds ---" % (time.time() - start_time))
+print("Error --- %s seconds ---" % (time.time() - error_time))
+
