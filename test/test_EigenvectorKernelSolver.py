@@ -35,64 +35,48 @@ try:
 except (ImportError, SystemError, ValueError):
     from _common import TestCase
 
-from kesi._verbose import _Eigenreconstructor
+
+from kesi._engine import _EigenvectorKernelSolver
 
 
-class _ReconstructorStub(object):
-    def __init__(self, parent, eigenvalues, eigenvectors):
-        self.parent = parent
-        self._EIGENVALUES = np.array(eigenvalues)
-        self._EIGENVECTORS = np.array(eigenvectors)
-
-    def __call__(self, measurements, solution):
-        self._measurements = measurements
-        self._solution = solution
-        return self
-
-    def __enter__(self):
-        self._measurement_vector_called = 0
-        self._wrap_kernel_solution_called = 0
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.parent.assertEqual(1, self._measurement_vector_called)
-        self.parent.assertEqual(1, self._wrap_kernel_solution_called)
-
-    @property
-    def kernel(self):
-        return np.matmul(self._EIGENVECTORS,
-                         np.matmul(np.diagflat(self._EIGENVALUES),
-                                   self._EIGENVECTORS.T))
-
-    def _wrap_kernel_solution(self, solution):
-        self._wrap_kernel_solution_called += 1
-        self.parent.checkArrayAlmostEqual(self._solution,
-                                          solution.reshape(np.shape(self._solution)))
-        return self
-
-    def _measurement_vector(self, measurements):
-        self._measurement_vector_called += 1
-        self.parent.assertIs(measurements, self._measurements)
-        return np.reshape(measurements, (-1, 1))
-
-
-class _TestEigenreconstructorGivenEigenvectorsBase(TestCase):
+class _TestEigenvectorKernelSolverBase(TestCase):
     @property
     def EIGENVECTORS(self):
         return np.array(self._EIGENVECTORS)
+
+    @property
+    def EIGENVALUES(self):
+        return np.array(self._EIGENVALUES)
+
+    @property
+    def SIGMA(self):
+        return np.diag(self.EIGENVALUES)
+
+    @property
+    def KERNEL(self):
+        return np.matmul(self.EIGENVECTORS,
+                         np.matmul(self.SIGMA,
+                                   self.EIGENVECTORS.T))
 
     def setUp(self):
         if not hasattr(self, 'EIGENVALUES'):
             self.skipTest('test in abstract class called')
             return
 
-        self.rec = _ReconstructorStub(self,
-                                      self.EIGENVALUES,
-                                      self.EIGENVECTORS)
-        self.reconstructor = _Eigenreconstructor(self.rec)
+        self.solver = _EigenvectorKernelSolver(self.KERNEL)
 
-    def testHasEigenvalues(self):
+    def testExtractsEigenvalues(self):
         self.checkArrayLikeAlmostEqual(sorted(self.EIGENVALUES),
-                                       sorted(self.reconstructor.EIGENVALUES))
+                                       sorted(self.solver.EIGENVALUES))
+
+    def testExtractsEigenvectors(self):
+        # Neither order nor sign of eigenvectors are defined
+        E_IDX = np.argsort(self.EIGENVALUES)
+        O_IDX = np.argsort(self.solver.EIGENVALUES)
+        EXPECTED = self.EIGENVECTORS[:, E_IDX]
+        OBSERVED = self.solver.EIGENVECTORS[:, O_IDX]
+        self.checkArrayAlmostEqual(np.identity(len(E_IDX)),
+                                   abs(np.matmul(EXPECTED.T, OBSERVED)))
 
     def testCalledWithoutParametersDividesEigenvectorsByEigenvalues(self):
         for eigenvalue, eigenvector in zip(self.EIGENVALUES,
@@ -114,8 +98,8 @@ class _TestEigenreconstructorGivenEigenvectorsBase(TestCase):
         for n_components in range(n):
             mask = np.arange(n) <= n_components
             for i, (m, eigenvalue, eigenvector) in enumerate(zip(mask,
-                                                                 self.EIGENVALUES,
-                                                                 self.EIGENVECTORS.T)):
+                                                                 self.solver.EIGENVALUES,
+                                                                 self.solver.EIGENVECTORS.T)):
                 self.checkSolution(m * eigenvector / eigenvalue, eigenvector, mask=mask)
 
     def testCalledWithMaskSolvesEigenvectorMixture(self):
@@ -124,33 +108,41 @@ class _TestEigenreconstructorGivenEigenvectorsBase(TestCase):
             mask = np.arange(n) <= n_components
             rhs, solution = 0, 0
             for i, (m, eigenvalue, eigenvector) in enumerate(zip(mask,
-                                                                 self.EIGENVALUES,
-                                                                 self.EIGENVECTORS.T),
+                                                                 self.solver.EIGENVALUES,
+                                                                 self.solver.EIGENVECTORS.T),
                                                              start=1):
                 rhs += i * eigenvector
                 solution += m * i * eigenvector / eigenvalue
 
             self.checkSolution(solution, rhs, mask=mask)
 
-    def checkSolution(self, solution, rhs, **kwargs):
-        with self.rec(measurements=rhs,
-                      solution=solution):
-            self.assertIs(self.rec,
-                          self.reconstructor(rhs, **kwargs))
+    def testSolvesManyRightHandSidesAtOnce(self):
+        SCALED = np.matmul(self.EIGENVECTORS, np.diag(1. / self.EIGENVALUES))
+        self.checkSolution(np.hstack((SCALED, np.cumsum(SCALED, axis=1))),
+                           np.hstack((self.EIGENVECTORS,
+                                      np.cumsum(self.EIGENVECTORS, axis=1))))
+
+    def checkSolution(self, expected, rhs, **kwargs):
+        self.checkArrayAlmostEqual(expected,
+                                   self.solver(rhs, **kwargs))
 
 
-class TestEigenreconstructorGivenIdentityEigenvectors(
-          _TestEigenreconstructorGivenEigenvectorsBase):
-    EIGENVALUES = [2., 4.]
-    _EIGENVECTORS = [[1., 0.],
-                     [0., 1.]]
+class TestGivenIdentityKernel(_TestEigenvectorKernelSolverBase):
+    _EIGENVECTORS = [[1, 0],
+                     [0, 1]]
+    _EIGENVALUES = [1, 1]
 
 
-class TestEigenreconstructorGivenNonidentityEigenvectors(
-          _TestEigenreconstructorGivenEigenvectorsBase):
-    EIGENVALUES = [2., 4.]
-    _EIGENVECTORS = [[1., 1.],
-                     [-1., 1.]] * np.sqrt([0.5])
+class TestGivenDiagonalKernel(_TestEigenvectorKernelSolverBase):
+    _EIGENVECTORS = [[0, 1],
+                     [1, 0]]
+    _EIGENVALUES = [4, 0.25]
+
+
+class TestGivenNontrivialKernel(_TestEigenvectorKernelSolverBase):
+    _EIGENVECTORS = [[2**-0.5, 2**-0.5],
+                     [2**-0.5, -2**-0.5]]
+    _EIGENVALUES = [4, 0.25]
 
 
 if __name__ == '__main__':
