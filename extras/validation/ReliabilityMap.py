@@ -56,25 +56,25 @@ def calculate_point_error(true_csd, est_csd):
     return point_error
 
 def sigmoid_mean(error):
-        '''
-        Calculates sigmoidal mean across errors of reconstruction for many
-        different sources - used for error maps.
+    '''
+    Calculates sigmoidal mean across errors of reconstruction for many
+    different sources - used for error maps.
 
-        Parameters
-        ----------
-        error: numpy array
-            Normalized point error of reconstruction.
+    Parameters
+    ----------
+    error: numpy array
+    Normalized point error of reconstruction.
 
-        Returns
-        -------
-        error_mean: numpy array
-            Sigmoidal mean error of reconstruction.
-            error_mean -> 1    - very poor reconstruction
-            error_mean -> 0    - perfect reconstruction
-        '''
-        sig_error = 2*(1./(1 + np.exp((-error))) - 1/2.)
-        error_mean = np.mean(sig_error, axis=0)
-        return error_mean
+    Returns
+    -------
+    error_mean: numpy array
+    Sigmoidal mean error of reconstruction.
+    error_mean -> 1    - very poor reconstruction
+    error_mean -> 0    - perfect reconstruction
+    '''
+    sig_error = 2*(1./(1 + np.exp((-error))) - 1/2.)
+    error_mean = np.mean(sig_error, axis=0)
+    return error_mean
 
 
 def source_scanning(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z):
@@ -94,41 +94,41 @@ def source_scanning(sources, reconstructor, measurement_manager, measurement_man
     point_error = np.array(point_error)
     error_mean = sigmoid_mean(point_error)
     np.savez_compressed('whole_sphere.npz',
-    					POTS= potential,
-    					TRUE_CSD = true_csd,
-    					EST_CSD = est_csd,
-    					ERROR = point_error,
-    					ERROR_MEAN = error_mean)
+    			POTS= potential,
+    			TRUE_CSD = true_csd,
+    			EST_CSD = est_csd,
+    			ERROR = point_error,
+    			ERROR_MEAN = error_mean)
     return error_mean
 
 
 def make_reconstruction(source, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z):
-	pots = measurement_manager.probe(source)
+    pots = measurement_manager.probe(source)
     true_csd = measurement_manager_basis.probe(source)
     approximator = reconstructor(pots)
     est_csd = approximator.csd(EST_X, EST_Y, EST_Z)
     error = calculate_point_error(true_csd, est_csd)
-	return pots, true_csd, est_csd, error
+    return pots, true_csd, est_csd, error
 
 
 def source_scanning_parallel(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z):
-	results = Parallel(n_jobs=NUM_CORES)(delayed(make_reconstruction)
-                                          (source, reconstructor,
-                                           measurement_manager, measurement_manager_basis,
-                                           EST_X, EST_Y, EST_Z)
-                                          for source in sources)
-	pots = np.array([item[0] for item in results])
+    results = Parallel(n_jobs=NUM_CORES)(delayed(make_reconstruction)
+                                         (source, reconstructor,
+                                          measurement_manager, measurement_manager_basis,
+                                          EST_X, EST_Y, EST_Z)
+                                         for source in sources)
+    pots = np.array([item[0] for item in results])
     true_csd = np.array([item[1] for item in results])
     est_csd = np.array([item[2] for item in results])
     error = np.array([item[3] for item in results])
     error_mean = sigmoid_mean(error)
     np.savez_compressed('whole_sphere_parallel.npz',
-    					POTS= pots,
-    					TRUE_CSD = true_csd,
-    					EST_CSD = est_csd,
-    					ERROR = error,
-    					ERROR_MEAN = error_mean)
-	return error_mean
+    			POTS= pots,
+    			TRUE_CSD = true_csd,
+    			EST_CSD = est_csd,
+    			ERROR = error,
+    			ERROR_MEAN = error_mean)
+    return error_mean
 
 
 start_time = time.time()    
@@ -185,8 +185,8 @@ measurement_manager_basis = MeasurementManager(EST_POINTS, space='csd')
 
 error_time = time.time()
 if PARALLEL_AVAILABLE:
-	source_scanning_error = source_scanning_parallel(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z)
+    source_scanning_error = source_scanning_parallel(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z)
 else:
-	source_scanning_error = source_scanning(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z)
+    source_scanning_error = source_scanning(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z)
 print("Error --- %s seconds ---" % (time.time() - error_time))
 
