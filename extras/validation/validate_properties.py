@@ -84,6 +84,22 @@ class MeasurementManager(MeasurementManagerBase):
                                     self._ELECTRODES.Y,
                                     self._ELECTRODES.Z)
 
+class MeasurementManagerFast(MeasurementManagerBase):
+    def __init__(self, ELECTRODES, space='potential'):
+        self._space = space
+        self._ELECTRODES = ELECTRODES
+        self.number_of_measurements = len(ELECTRODES)
+
+    def probe(self, field):
+	if space == 'potential':
+	    return field.potential(self._ELECTRODES.X,
+		                   self._ELECTRODES.Y,
+		                   self._ELECTRODES.Z)
+        elif space == 'csd':
+            return field.csd(self._ELECTRODES.X,
+		             self._ELECTRODES.Y,
+		             self._ELECTRODES.Z)
+
 
 def gaussian_source_factory_2d(xs, ys, sd, conductivity):
     return [GaussianSourceKCSD3D(x, y, 0, sd, conductivity)
