@@ -23,11 +23,16 @@
 ###############################################################################
 
 import unittest
+from io import BytesIO
+from unittest.case import TestCase
 
 import numpy as np
 
+from kesi import FunctionalFieldReconstructor
+
 try:
     from ._common import Stub, TestCase, SpyKernelSolverClass
+    from .test_Engine import _TestsOfInitializationErrorsBase
     # When run as script raises:
     #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
     #  - `SystemError` (Python 3.3-5), or
@@ -35,8 +40,11 @@ try:
 
 except (ImportError, SystemError, ValueError):
     from _common import Stub, TestCase, SpyKernelSolverClass
+    from test_Engine import _TestsOfInitializationErrorsBase
 
-from kesi._engine import FunctionalFieldReconstructor, LinearMixture
+from kesi._engine import (FunctionalFieldReconstructor,
+                          LoadableFunctionalFieldReconstructor,
+                          LinearMixture)
 
 
 class FunctionFieldComponent(Stub):
@@ -46,41 +54,32 @@ class FunctionFieldComponent(Stub):
                              fprime=fprime)
 
 
-class _TestsOfInitializationErrorsBase(unittest.TestCase):
-    def setUp(self):
-        if not hasattr(self, 'CLASS'):
-            self.skipTest('test in abstract class called')
-
-    def testWhenMeasurementManagerLacksAttributesThenRaisesException(self):
-        for missing, exception in self.MM_MISSING_ATTRIBUTE_ERRORS:
-            measurement_manager = self.getIncompleteMeasurementManager(missing)
-            exception_name = 'MeasurementManagerHasNo{}Error'.format(exception)
-            for ExceptionClass in [getattr(self.CLASS,
-                                           exception_name),
-                                   TypeError]:
-                with self.assertRaises(ExceptionClass):
-                    self.makeReconstructor(measurement_manager)
-
-    def getIncompleteMeasurementManager(self, missing):
-        return Stub(**{attr: None
-                       for attr, _ in self.MM_MISSING_ATTRIBUTE_ERRORS
-                       if attr != missing})
-
-
 class TestsOfInitializationErrors(_TestsOfInitializationErrorsBase):
-    CLASS = FunctionalFieldReconstructor
+    CLASS = LoadableFunctionalFieldReconstructor
 
-    MM_MISSING_ATTRIBUTE_ERRORS = [('probe', 'ProbeMethod'),
-                                   ('load', 'LoadMethod'),
+    MM_MISSING_ATTRIBUTE_ERRORS = [('load', 'LoadMethod'),
                                    ('number_of_measurements',
                                     'NumberOfMeasurementsAttribute'),
                                    ]
 
     def makeReconstructor(self, measurement_manager):
-        self.CLASS([], measurement_manager)
+        buffer = BytesIO()
+        np.savez_compressed(buffer, KERNEL=[], PRE_KERNREL=[])
+        self.CLASS(buffer, [], measurement_manager)
 
 
-class _GivenComponentsAndNodesBase(unittest.TestCase):
+class _TestCase(TestCase):
+    def createLoadableReconstructor(self, cls, field_components, measurement_manager, **kwargs):
+        reconstructor = FunctionalFieldReconstructor(
+                            field_components,
+                            measurement_manager)
+        buffer = BytesIO()
+        reconstructor.save(buffer)
+        buffer.seek(0)
+        return cls(buffer, field_components, measurement_manager, **kwargs)
+
+
+class _GivenComponentsAndNodesBase(_TestCase):
     def setUp(self):
         if not hasattr(self, 'FIELD_COMPONENTS'):
             self.skipTest('test in abstract class called')
@@ -100,9 +99,11 @@ class _GivenComponentsAndNodesBase(unittest.TestCase):
                 }
 
     def createReconstructor(self, nodes):
-        return FunctionalFieldReconstructor(
-                        self.FIELD_COMPONENTS.values(),
-                        self.MeasurementManager(nodes))
+        cls = LoadableFunctionalFieldReconstructor
+
+        field_components = self.FIELD_COMPONENTS.values()
+        measurement_manager = self.MeasurementManager(nodes)
+        return self.createLoadableReconstructor(cls, field_components, measurement_manager)
 
     def _checkApproximation(self, expected, measured,
                             regularization_parameter=None):
@@ -341,8 +342,8 @@ class GivenTwoNodesAndThreeLinearFieldComponents(_GivenTwoNodesBase,
                         }
 
 
-class TestFunctionalFieldReconstructorMayUseArbitraryKernelSolverClass(TestCase):
-    class MatrixMeasurementManager(FunctionalFieldReconstructor.MeasurementManagerBase):
+class TestFunctionalFieldReconstructorMayUseArbitraryKernelSolverClass(_TestCase):
+    class MatrixMeasurementManager(LoadableFunctionalFieldReconstructor.MeasurementManagerBase):
         def __init__(self, probed):
             self._probed = np.array(probed)
 
@@ -353,7 +354,7 @@ class TestFunctionalFieldReconstructorMayUseArbitraryKernelSolverClass(TestCase)
         def probe(self, field):
             return self._probed[field]
 
-    class PlainKernelSolutionFFR(FunctionalFieldReconstructor):
+    class PlainKernelSolutionFFR(LoadableFunctionalFieldReconstructor):
         def _wrap_kernel_solution(self, solution):
             return solution
 
@@ -362,9 +363,11 @@ class TestFunctionalFieldReconstructorMayUseArbitraryKernelSolverClass(TestCase)
     def setUp(self):
         self.measurement_manager = self.MatrixMeasurementManager(self.PROBED)
         self.kernel_solver = SpyKernelSolverClass()
-        self.reconstructor = self.PlainKernelSolutionFFR(range(self.measurement_manager.number_of_measurements),
-                                                         self.measurement_manager,
-                                                         KernelSolverClass=self.kernel_solver)
+        self.reconstructor = self.createLoadableReconstructor(
+                                      self.PlainKernelSolutionFFR,
+                                      range(self.measurement_manager.number_of_measurements),
+                                      self.measurement_manager,
+                                      KernelSolverClass=self.kernel_solver)
 
     def testNoRegularization(self):
         measurements = [42]
