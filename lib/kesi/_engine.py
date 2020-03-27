@@ -84,7 +84,7 @@ class _EigenvectorKernelSolver(object):
                                    rhs))
 
 
-class FunctionalFieldReconstructor(object):
+class _FunctionalFieldReconstructorBase(object):
     class MeasurementManagerBase(object):
         """
         Base class for measurement managers.
@@ -161,45 +161,31 @@ class FunctionalFieldReconstructor(object):
 
     def __init__(self, field_components, measurement_manager,
                  KernelSolverClass=_LinearKernelSolver):
+        self._basic_setup(field_components, measurement_manager)
+        self._provide_kernels()
+        self._process_kernels(KernelSolverClass)
+
+    def _basic_setup(self, field_components, measurement_manager):
         self._field_components = field_components
         self._measurement_manager = measurement_manager
         self._validate_measurement_manager()
-        self._generate_kernels()
-        self._solve_kernel = KernelSolverClass(self._kernel)
 
     def _validate_measurement_manager(self):
         for validator in self._mm_validators:
             validator._validate(self._measurement_manager)
 
-    def _generate_kernels(self):
-        self._generate_pre_kernel()
-        self._generate_kernel()
+    def _process_kernels(self, KernelSolverClass):
+        self._solve_kernel = KernelSolverClass(self._kernel)
 
-    def _generate_kernel(self):
-        self._kernel = np.matmul(self._pre_kernel.T,
-                                 self._pre_kernel) * self._pre_kernel.shape[0]
-
-    def _generate_pre_kernel(self):
-        m = len(self._field_components)
-        n = self._measurement_manager.number_of_measurements
-        self._pre_kernel = np.empty((m, n))
-        self._fill_probed_components(self._pre_kernel,
-                                     self._measurement_manager.probe)
-        self._pre_kernel /= m
-
-    def _fill_probed_components(self, values, probe):
-        for i, component in enumerate(self._field_components):
-            values[i, :] = probe(component)
+    def _wrap_kernel_solution(self, solution):
+        return LinearMixture(zip(self._field_components,
+                                 np.matmul(self._pre_kernel, solution).flatten()))
 
     def __call__(self, measurements, regularization_parameter=0):
         return self._wrap_kernel_solution(
                         self._solve_kernel(
                                  self._measurement_vector(measurements),
                                  regularization_parameter))
-
-    def _wrap_kernel_solution(self, solution):
-        return LinearMixture(zip(self._field_components,
-                                 np.matmul(self._pre_kernel, solution).flatten()))
 
     def _measurement_vector(self, values):
         measurements = self._ensure_is_array(
@@ -237,6 +223,28 @@ class FunctionalFieldReconstructor(object):
         return np.matmul(KERNEL[np.ix_([i], IDX)],
                          np.linalg.solve(KERNEL[np.ix_(IDX, IDX)],
                                          X[IDX, :]))[0, :]
+
+
+class FunctionalFieldReconstructor(_FunctionalFieldReconstructorBase):
+    def _provide_kernels(self):
+        self._generate_pre_kernel()
+        self._generate_kernel()
+
+    def _generate_kernel(self):
+        self._kernel = np.matmul(self._pre_kernel.T,
+                                 self._pre_kernel) * self._pre_kernel.shape[0]
+
+    def _generate_pre_kernel(self):
+        m = len(self._field_components)
+        n = self._measurement_manager.number_of_measurements
+        self._pre_kernel = np.empty((m, n))
+        self._fill_probed_components(self._pre_kernel,
+                                     self._measurement_manager.probe)
+        self._pre_kernel /= m
+
+    def _fill_probed_components(self, values, probe):
+        for i, component in enumerate(self._field_components):
+            values[i, :] = probe(component)
 
 
 class LinearMixture(object):
