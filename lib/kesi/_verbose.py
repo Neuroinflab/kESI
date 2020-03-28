@@ -88,10 +88,10 @@ class _VerboseFunctionalFieldReconstructorBase(object):
             """
             raise NotImplementedError
 
-    class MeasurementManagerHasNoProbeAtSinglePointMethodError(_MissingAttributeError):
-        _missing = 'probe_at_single_point'
+        class MeasurementManagerHasNoProbeAtSinglePointMethodError(_MissingAttributeError):
+            _missing = 'probe_at_single_point'
 
-    _mm_validators = [MeasurementManagerHasNoProbeAtSinglePointMethodError]
+    _mm_validators = [MeasurementManagerBase.MeasurementManagerHasNoProbeAtSinglePointMethodError]
 
     def get_probed_basis(self, measurement_manager):
         r"""

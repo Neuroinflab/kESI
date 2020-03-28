@@ -55,7 +55,7 @@ class _TestsOfInitializationErrorsBase(unittest.TestCase):
         for missing, exception in self.MM_MISSING_ATTRIBUTE_ERRORS:
             measurement_manager = self.getIncompleteMeasurementManager(missing)
             exception_name = 'MeasurementManagerHasNo{}Error'.format(exception)
-            for ExceptionClass in [getattr(self.CLASS,
+            for ExceptionClass in [getattr(self.CLASS.MeasurementManagerBase,
                                            exception_name),
                                    TypeError]:
                 with self.assertRaises(ExceptionClass):

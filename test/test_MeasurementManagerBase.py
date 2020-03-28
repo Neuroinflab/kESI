@@ -35,12 +35,23 @@ class TestMeasurementManagerBaseBase(TestCase):
         else:
             self.skipTest('Test in virtual class called')
 
+    def testHas_MeasurementManagerHasNoLoadMethodError_TypeErrorAttribute(self):
+        self.checkTypeErrorAttribute('MeasurementManagerHasNoLoadMethodError')
+
+    def testHas_MeasurementManagerHasNoNumberOfMeasurementsAttributeError_TypeErrorAttribute(self):
+        self.checkTypeErrorAttribute('MeasurementManagerHasNoNumberOfMeasurementsAttributeError')
+
     def testLoadMethodIsIdentity(self):
         self.assertIs(self,
                       self.manager.load(self))
 
     def testNumberOfMeasurementsIsNone(self):
         self.assertIsNone(self.manager.number_of_measurements)
+
+    def checkTypeErrorAttribute(self, attribute):
+        self.assertTrue(hasattr(self.CLASS, attribute))
+        self.assertTrue(issubclass(getattr(self.CLASS, attribute),
+                                   TypeError))
 
 
 class TestMeasurementManagerBase(TestMeasurementManagerBaseBase):
@@ -49,6 +60,9 @@ class TestMeasurementManagerBase(TestMeasurementManagerBaseBase):
     def testProbeMethodIsAbstract(self):
         with self.assertRaises(NotImplementedError):
             self.manager.probe(None)
+
+    def testHas_MeasurementManagerHasNoProbeMethodError_TypeErrorAttribute(self):
+        self.checkTypeErrorAttribute('MeasurementManagerHasNoProbeMethodError')
 
 
 if __name__ == '__main__':

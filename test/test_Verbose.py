@@ -276,6 +276,9 @@ class TestMeasurementManagerBase(test_MeasurementManagerBase.TestMeasurementMana
             with self.assertRaises(NotImplementedError):
                 self.manager.probe_at_single_point(None, *args, **kwargs)
 
+    def testHas_MeasurementManagerHasNoProbeAtSinglePointMethodError_TypeErrorAttribute(self):
+        self.checkTypeErrorAttribute('MeasurementManagerHasNoProbeAtSinglePointMethodError')
+
 
 if __name__ == '__main__':
     unittest.main()

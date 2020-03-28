@@ -119,14 +119,14 @@ class _FunctionalFieldReconstructorBase(object):
             """
             return measurements
 
-    class MeasurementManagerHasNoLoadMethodError(_MissingAttributeError):
-        _missing = 'load'
+        class MeasurementManagerHasNoLoadMethodError(_MissingAttributeError):
+            _missing = 'load'
 
-    class MeasurementManagerHasNoNumberOfMeasurementsAttributeError(_MissingAttributeError):
-        _missing = 'number_of_measurements'
+        class MeasurementManagerHasNoNumberOfMeasurementsAttributeError(_MissingAttributeError):
+            _missing = 'number_of_measurements'
 
-    _mm_validators = [MeasurementManagerHasNoLoadMethodError,
-                      MeasurementManagerHasNoNumberOfMeasurementsAttributeError,
+    _mm_validators = [MeasurementManagerBase.MeasurementManagerHasNoLoadMethodError,
+                      MeasurementManagerBase.MeasurementManagerHasNoNumberOfMeasurementsAttributeError,
                       ]
 
     def _basic_setup(self, field_components, measurement_manager):
@@ -199,9 +199,6 @@ class _FunctionalFieldReconstructorBase(object):
 
 
 class FunctionalFieldReconstructor(_FunctionalFieldReconstructorBase):
-    class MeasurementManagerHasNoProbeMethodError(_MissingAttributeError):
-        _missing = 'probe'
-
     class MeasurementManagerBase(_FunctionalFieldReconstructorBase.MeasurementManagerBase):
         def probe(self, field):
             """
@@ -229,8 +226,11 @@ class FunctionalFieldReconstructor(_FunctionalFieldReconstructorBase):
             """
             raise NotImplementedError
 
+        class MeasurementManagerHasNoProbeMethodError(_MissingAttributeError):
+            _missing = 'probe'
+
     _mm_validators = _FunctionalFieldReconstructorBase._mm_validators + \
-                     [MeasurementManagerHasNoProbeMethodError,
+                     [MeasurementManagerBase.MeasurementManagerHasNoProbeMethodError,
                       ]
 
     def __init__(self, field_components, measurement_manager,
