@@ -28,7 +28,8 @@ from ._engine import (FunctionalFieldReconstructor,
                       LoadableFunctionalFieldReconstructor,
                       LinearMixture,
                       _MissingAttributeError,
-                      _EigenvectorKernelSolver)
+                      _EigenvectorKernelSolver,
+                      _ValidableMeasurementManagerBase)
 
 
 class _VerboseFunctionalFieldReconstructorBase(object):
@@ -62,7 +63,7 @@ class _VerboseFunctionalFieldReconstructorBase(object):
        doi: 10.1101/708511
     """
 
-    class MeasurementManagerBase(object):
+    class MeasurementManagerBase(_ValidableMeasurementManagerBase):
         def probe_at_single_point(self, field, *args, **kwargs):
             """
             Probe the field at single point.
@@ -91,7 +92,11 @@ class _VerboseFunctionalFieldReconstructorBase(object):
         class MeasurementManagerHasNoProbeAtSinglePointMethodError(_MissingAttributeError):
             _missing = 'probe_at_single_point'
 
-    _mm_validators = [MeasurementManagerBase.MeasurementManagerHasNoProbeAtSinglePointMethodError]
+        @classmethod
+        def validate(cls, measurement_manager):
+            super(_VerboseFunctionalFieldReconstructorBase.MeasurementManagerBase,
+                  cls).validate(measurement_manager)
+            cls.MeasurementManagerHasNoProbeAtSinglePointMethodError._validate(measurement_manager)
 
     def get_probed_basis(self, measurement_manager):
         r"""
@@ -314,19 +319,12 @@ class VerboseFFR(_VerboseFunctionalFieldReconstructorBase,
                                  FunctionalFieldReconstructor.MeasurementManagerBase):
         pass
 
-    _mm_validators = FunctionalFieldReconstructor._mm_validators + \
-                     _VerboseFunctionalFieldReconstructorBase._mm_validators
-
 
 class LoadableVerboseFFR(_VerboseFunctionalFieldReconstructorBase,
                          LoadableFunctionalFieldReconstructor):
     class MeasurementManagerBase(_VerboseFunctionalFieldReconstructorBase.MeasurementManagerBase,
                                  LoadableFunctionalFieldReconstructor.MeasurementManagerBase):
         pass
-
-    _mm_validators = LoadableFunctionalFieldReconstructor._mm_validators + \
-                     _VerboseFunctionalFieldReconstructorBase._mm_validators
-
 
 
 class _Eigenreconstructor(object):

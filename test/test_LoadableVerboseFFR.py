@@ -279,16 +279,8 @@ class TestsOfInitializationErrors(test_LoadableFunctionalFieldReconstructor.Test
             + [('probe_at_single_point', 'ProbeAtSinglePointMethod')])
 
 
-class TestMeasurementManagerBase(test_MeasurementManagerBase.TestMeasurementManagerBaseBase):
+class TestMeasurementManagerBase(test_Verbose.TestVerboseMeasurementManagerBase):
     CLASS = LoadableVerboseFFR.MeasurementManagerBase
-
-    def testMethod_probe_at_single_point_isAbstract(self):
-        for args, kwargs in [((), {}),
-                             ((0,), {}),
-                             ((), {'a': 1}),
-                             ]:
-            with self.assertRaises(NotImplementedError):
-                self.manager.probe_at_single_point(None, *args, **kwargs)
 
 
 if __name__ == '__main__':

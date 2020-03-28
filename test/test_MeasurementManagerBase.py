@@ -23,12 +23,26 @@
 ###############################################################################
 
 import unittest
-from unittest.case import TestCase
+
+try:
+    from ._common import Stub
+    # When run as script raises:
+    #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
+    #  - `SystemError` (Python 3.3-5), or
+    #  - `ValueError` (Python 2.7).
+
+except (ImportError, SystemError, ValueError):
+    from _common import Stub
 
 from kesi._engine import FunctionalFieldReconstructor
 
 
-class TestMeasurementManagerBaseBase(TestCase):
+class TestMeasurementManagerBaseBase(unittest.TestCase):
+    @property
+    def MM_MISSING_ATTRIBUTE_ERRORS(self):
+        yield 'load', 'LoadMethod'
+        yield 'number_of_measurements', 'NumberOfMeasurementsAttribute'
+
     def setUp(self):
         if hasattr(self, 'CLASS'):
             self.manager = self.CLASS()
@@ -48,6 +62,20 @@ class TestMeasurementManagerBaseBase(TestCase):
     def testNumberOfMeasurementsIsNone(self):
         self.assertIsNone(self.manager.number_of_measurements)
 
+    def testWhenMeasurementManagerLacksAttributesThenRaisesException(self):
+        for missing, exception in self.MM_MISSING_ATTRIBUTE_ERRORS:
+            measurement_manager = self.getIncompleteMeasurementManager(missing)
+            exception_name = 'MeasurementManagerHasNo{}Error'.format(exception)
+            for ExceptionClass in [getattr(self.CLASS, exception_name),
+                                   TypeError]:
+                with self.assertRaises(ExceptionClass):
+                    self.CLASS.validate(measurement_manager)
+
+    def getIncompleteMeasurementManager(self, missing):
+        return Stub(**{attr: None
+                       for attr, _ in self.MM_MISSING_ATTRIBUTE_ERRORS
+                       if attr != missing})
+
     def checkTypeErrorAttribute(self, attribute):
         self.assertTrue(hasattr(self.CLASS, attribute))
         self.assertTrue(issubclass(getattr(self.CLASS, attribute),
@@ -56,6 +84,14 @@ class TestMeasurementManagerBaseBase(TestCase):
 
 class TestMeasurementManagerBase(TestMeasurementManagerBaseBase):
     CLASS = FunctionalFieldReconstructor.MeasurementManagerBase
+
+    @property
+    def MM_MISSING_ATTRIBUTE_ERRORS(self):
+        for row in super(TestMeasurementManagerBase,
+                         self).MM_MISSING_ATTRIBUTE_ERRORS:
+            yield row
+
+        yield 'probe', 'ProbeMethod'
 
     def testProbeMethodIsAbstract(self):
         with self.assertRaises(NotImplementedError):

@@ -84,8 +84,14 @@ class _EigenvectorKernelSolver(object):
                                    rhs))
 
 
+class _ValidableMeasurementManagerBase(object):
+    @classmethod
+    def validate(cls, measurement_manager):
+        pass
+
+
 class _FunctionalFieldReconstructorBase(object):
-    class MeasurementManagerBase(object):
+    class MeasurementManagerBase(_ValidableMeasurementManagerBase):
         """
         Base class for measurement managers.
 
@@ -125,9 +131,12 @@ class _FunctionalFieldReconstructorBase(object):
         class MeasurementManagerHasNoNumberOfMeasurementsAttributeError(_MissingAttributeError):
             _missing = 'number_of_measurements'
 
-    _mm_validators = [MeasurementManagerBase.MeasurementManagerHasNoLoadMethodError,
-                      MeasurementManagerBase.MeasurementManagerHasNoNumberOfMeasurementsAttributeError,
-                      ]
+        @classmethod
+        def validate(cls, measurement_manager):
+            super(_FunctionalFieldReconstructorBase.MeasurementManagerBase,
+                  cls).validate(measurement_manager)
+            cls.MeasurementManagerHasNoLoadMethodError._validate(measurement_manager)
+            cls.MeasurementManagerHasNoNumberOfMeasurementsAttributeError._validate(measurement_manager)
 
     def _basic_setup(self, field_components, measurement_manager):
         self._field_components = field_components
@@ -135,8 +144,7 @@ class _FunctionalFieldReconstructorBase(object):
         self._validate_measurement_manager()
 
     def _validate_measurement_manager(self):
-        for validator in self._mm_validators:
-            validator._validate(self._measurement_manager)
+        self.MeasurementManagerBase.validate(self._measurement_manager)
 
     def _process_kernels(self, KernelSolverClass):
         self._solve_kernel = KernelSolverClass(self._kernel)
@@ -229,9 +237,11 @@ class FunctionalFieldReconstructor(_FunctionalFieldReconstructorBase):
         class MeasurementManagerHasNoProbeMethodError(_MissingAttributeError):
             _missing = 'probe'
 
-    _mm_validators = _FunctionalFieldReconstructorBase._mm_validators + \
-                     [MeasurementManagerBase.MeasurementManagerHasNoProbeMethodError,
-                      ]
+        @classmethod
+        def validate(cls, measurement_manager):
+            super(FunctionalFieldReconstructor.MeasurementManagerBase,
+                  cls).validate(measurement_manager)
+            cls.MeasurementManagerHasNoProbeMethodError._validate(measurement_manager)
 
     def __init__(self, field_components, measurement_manager,
                  KernelSolverClass=_LinearKernelSolver):

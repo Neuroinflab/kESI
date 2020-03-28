@@ -264,10 +264,7 @@ class TestsOfInitializationErrors(test_Engine.TestsOfInitializationErrors):
             + [('probe_at_single_point', 'ProbeAtSinglePointMethod')])
 
 
-
-class TestMeasurementManagerBase(test_MeasurementManagerBase.TestMeasurementManagerBase):
-    CLASS = VerboseFFR.MeasurementManagerBase
-
+class TestVerboseMeasurementManagerBase(test_MeasurementManagerBase.TestMeasurementManagerBaseBase):
     def testMethod_probe_at_single_point_isAbstract(self):
         for args, kwargs in [((), {}),
                              ((0,), {}),
@@ -278,6 +275,19 @@ class TestMeasurementManagerBase(test_MeasurementManagerBase.TestMeasurementMana
 
     def testHas_MeasurementManagerHasNoProbeAtSinglePointMethodError_TypeErrorAttribute(self):
         self.checkTypeErrorAttribute('MeasurementManagerHasNoProbeAtSinglePointMethodError')
+
+    @property
+    def MM_MISSING_ATTRIBUTE_ERRORS(self):
+        for row in super(TestVerboseMeasurementManagerBase,
+                         self).MM_MISSING_ATTRIBUTE_ERRORS:
+            yield row
+
+        yield 'probe_at_single_point', 'ProbeAtSinglePointMethod'
+
+
+class TestMeasurementManagerBase(test_MeasurementManagerBase.TestMeasurementManagerBase,
+                                 TestVerboseMeasurementManagerBase):
+    CLASS = VerboseFFR.MeasurementManagerBase
 
 
 if __name__ == '__main__':
