@@ -119,32 +119,6 @@ class _FunctionalFieldReconstructorBase(object):
             """
             return measurements
 
-        def probe(self, field):
-            """
-            Probe the field.
-
-            An abstract method implementing probing the field in the measurement
-            points.
-
-            Parameters
-            ----------
-            field : object
-                An object implementing the field. It is up to the measurement
-                manager to interpret the object and use its API.
-
-            Returns
-            -------
-            Sequence
-                A sequence of the field quantities measured at the measurement
-                points.
-
-            Raises
-            ------
-            NotImplementedError
-                Always (unless overriden in a subclass).
-            """
-            raise NotImplementedError
-
     class MeasurementManagerHasNoLoadMethodError(_MissingAttributeError):
         _missing = 'load'
 
@@ -223,6 +197,33 @@ class _FunctionalFieldReconstructorBase(object):
 class FunctionalFieldReconstructor(_FunctionalFieldReconstructorBase):
     class MeasurementManagerHasNoProbeMethodError(_MissingAttributeError):
         _missing = 'probe'
+
+    class MeasurementManagerBase(_FunctionalFieldReconstructorBase.MeasurementManagerBase):
+        def probe(self, field):
+            """
+            Probe the field.
+
+            An abstract method implementing probing the field in the measurement
+            points.
+
+            Parameters
+            ----------
+            field : object
+                An object implementing the field. It is up to the measurement
+                manager to interpret the object and use its API.
+
+            Returns
+            -------
+            Sequence
+                A sequence of the field quantities measured at the measurement
+                points.
+
+            Raises
+            ------
+            NotImplementedError
+                Always (unless overriden in a subclass).
+            """
+            raise NotImplementedError
 
     _mm_validators = _FunctionalFieldReconstructorBase._mm_validators + \
                      [MeasurementManagerHasNoProbeMethodError,

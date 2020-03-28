@@ -27,37 +27,9 @@ import numpy as np
 from ._engine import (FunctionalFieldReconstructor, LinearMixture,
                       _MissingAttributeError, _EigenvectorKernelSolver)
 
-class VerboseFFR(FunctionalFieldReconstructor):
-    """
-    Attributes
-    ----------
-    number_of_basis
-    number_of_electrodes
-    probed_basis
-    kernel
 
-    Methods
-    -------
-    get_probed_basis(measurement_manager)
-    get_kernel_matrix(measurement_manager)
-
-    Class attributes
-    ----------------
-    MeasurementManagerBase
-    MeasurementManagerHasNoProbeAtSinglePointMethodError
-
-    Notes
-    -----
-    This class extends its parent, providing access to theoretical concepts
-    presented in our publication [1]_, thus some names follow convention used
-    therein.
-
-    .. [1] C. Chintaluri et al. (2019) "kCSD-python, a tool for
-       reliable current source density estimation" (preprint available at
-       `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
-       doi: 10.1101/708511
-    """
-    class MeasurementManagerBase(FunctionalFieldReconstructor.MeasurementManagerBase):
+class _VerboseFunctionalFieldReconstructorBase(object):
+    class MeasurementManagerBase(object):
         def probe_at_single_point(self, field, *args, **kwargs):
             """
             Probe the field at single point.
@@ -86,95 +58,7 @@ class VerboseFFR(FunctionalFieldReconstructor):
     class MeasurementManagerHasNoProbeAtSinglePointMethodError(_MissingAttributeError):
         _missing = 'probe_at_single_point'
 
-    _mm_validators = (FunctionalFieldReconstructor._mm_validators
-                      + [MeasurementManagerHasNoProbeAtSinglePointMethodError])
-
-    @property
-    def probed_basis(self):
-        r"""
-        A matrix of basis functions (rows) probed at measurement points
-        (columns).
-
-        The matrix is not normalized.
-
-        Returns
-        -------
-        probed_basis : numpy.ndarray
-            The matrix as number_of_basis x number_of_electrodes numpy array.
-
-        See also
-        --------
-        number_of_basis, number_of_electrodes
-
-        Notes
-        -----
-        The measurement manager may affect the returned value.
-
-        The matrix is denormalized as parental class uses normalized one.
-        Thus it may be affected by numerical errors.
-
-        `probed_basis[:, i]` is :math:`\Phi(x_i)` (see eq. 16 and above
-        in [1]_), where :math:`x_i` is the i-th measurement point(electrode).
-
-        .. [1] C. Chintaluri et al. (2019) "kCSD-python, a tool for
-           reliable current source density estimation" (preprint available at
-           `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
-           doi: 10.1101/708511
-        """
-        return self._pre_kernel * self.number_of_basis
-
-    @property
-    def kernel(self):
-        r"""
-        The kernel matrix.
-
-        Returns
-        -------
-        kernel : numpy.ndarray
-            The kernel matrix as an number_of_electrodes x number_of_electrodes numpy array.
-
-        See also
-        --------
-        number_of_electrodes, number_of_basis, probed_basis
-
-        Notes
-        -----
-        The measurement manager may affect the returned value.
-
-        The kernel matrix is a normalized matrix :math:`K` defined in [1]_
-        (see eq. 16 and 25).
-
-        `kernel == K / number_of_basis`
-        `K == probed_basis.T @ probed_basis`
-
-        .. [1] C. Chintaluri et al. (2019) "kCSD-python, a tool for
-           reliable current source density estimation" (preprint available at
-           `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
-           doi: 10.1101/708511
-        """
-        return self._kernel
-
-    @property
-    def number_of_basis(self):
-        r"""
-        The number of basis functions.
-
-        Returns
-        -------
-        int
-        """
-        return self._pre_kernel.shape[0]
-
-    @property
-    def number_of_electrodes(self):
-        r"""
-        The number of measurement points (electrodes).
-
-        Returns
-        -------
-        int
-        """
-        return self._pre_kernel.shape[1]
+    _mm_validators = [MeasurementManagerHasNoProbeAtSinglePointMethodError]
 
     def get_probed_basis(self, measurement_manager):
         r"""
@@ -272,6 +156,17 @@ class VerboseFFR(FunctionalFieldReconstructor):
                                      ROW)
         return cross_kernel
 
+    @property
+    def number_of_basis(self):
+        r"""
+        The number of basis functions.
+
+        Returns
+        -------
+        int
+        """
+        return self._pre_kernel.shape[0]
+
     def get_kernel_functions(self, *args, **kwargs):
         """
         The (cross-)kernel unary functions.
@@ -302,6 +197,121 @@ class VerboseFFR(FunctionalFieldReconstructor):
         return (LinearMixture([(component, probe(component, *args, **kwargs))
                                for component in self._field_components])
                 / self.number_of_basis)
+
+    @property
+    def probed_basis(self):
+        r"""
+        A matrix of basis functions (rows) probed at measurement points
+        (columns).
+
+        The matrix is not normalized.
+
+        Returns
+        -------
+        probed_basis : numpy.ndarray
+            The matrix as number_of_basis x number_of_electrodes numpy array.
+
+        See also
+        --------
+        number_of_basis, number_of_electrodes
+
+        Notes
+        -----
+        The measurement manager may affect the returned value.
+
+        The matrix is denormalized as parental class uses normalized one.
+        Thus it may be affected by numerical errors.
+
+        `probed_basis[:, i]` is :math:`\Phi(x_i)` (see eq. 16 and above
+        in [1]_), where :math:`x_i` is the i-th measurement point(electrode).
+
+        .. [1] C. Chintaluri et al. (2019) "kCSD-python, a tool for
+           reliable current source density estimation" (preprint available at
+           `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
+           doi: 10.1101/708511
+        """
+        return self._pre_kernel * self.number_of_basis
+
+    @property
+    def kernel(self):
+        r"""
+        The kernel matrix.
+
+        Returns
+        -------
+        kernel : numpy.ndarray
+            The kernel matrix as an number_of_electrodes x number_of_electrodes numpy array.
+
+        See also
+        --------
+        number_of_electrodes, number_of_basis, probed_basis
+
+        Notes
+        -----
+        The measurement manager may affect the returned value.
+
+        The kernel matrix is a normalized matrix :math:`K` defined in [1]_
+        (see eq. 16 and 25).
+
+        `kernel == K / number_of_basis`
+        `K == probed_basis.T @ probed_basis`
+
+        .. [1] C. Chintaluri et al. (2019) "kCSD-python, a tool for
+           reliable current source density estimation" (preprint available at
+           `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
+           doi: 10.1101/708511
+        """
+        return self._kernel
+
+    @property
+    def number_of_electrodes(self):
+        r"""
+        The number of measurement points (electrodes).
+
+        Returns
+        -------
+        int
+        """
+        return self._pre_kernel.shape[1]
+
+
+class VerboseFFR(FunctionalFieldReconstructor, _VerboseFunctionalFieldReconstructorBase):
+    """
+    Attributes
+    ----------
+    number_of_basis
+    number_of_electrodes
+    probed_basis
+    kernel
+
+    Methods
+    -------
+    get_probed_basis(measurement_manager)
+    get_kernel_matrix(measurement_manager)
+
+    Class attributes
+    ----------------
+    MeasurementManagerBase
+    MeasurementManagerHasNoProbeAtSinglePointMethodError
+
+    Notes
+    -----
+    This class extends its parent, providing access to theoretical concepts
+    presented in our publication [1]_, thus some names follow convention used
+    therein.
+
+    .. [1] C. Chintaluri et al. (2019) "kCSD-python, a tool for
+       reliable current source density estimation" (preprint available at
+       `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
+       doi: 10.1101/708511
+    """
+
+    class MeasurementManagerBase(FunctionalFieldReconstructor.MeasurementManagerBase,
+                                 _VerboseFunctionalFieldReconstructorBase.MeasurementManagerBase):
+        pass
+
+    _mm_validators = FunctionalFieldReconstructor._mm_validators + \
+                     _VerboseFunctionalFieldReconstructorBase._mm_validators
 
 
 class _Eigenreconstructor(object):
