@@ -24,11 +24,44 @@
 
 import numpy as np
 
-from ._engine import (FunctionalFieldReconstructor, LinearMixture,
-                      _MissingAttributeError, _EigenvectorKernelSolver)
+from ._engine import (FunctionalFieldReconstructor,
+                      LoadableFunctionalFieldReconstructor,
+                      LinearMixture,
+                      _MissingAttributeError,
+                      _EigenvectorKernelSolver)
 
 
 class _VerboseFunctionalFieldReconstructorBase(object):
+    """
+    Attributes
+    ----------
+    number_of_basis
+    number_of_electrodes
+    probed_basis
+    kernel
+
+    Methods
+    -------
+    get_probed_basis(measurement_manager)
+    get_kernel_matrix(measurement_manager)
+
+    Class attributes
+    ----------------
+    MeasurementManagerBase
+    MeasurementManagerHasNoProbeAtSinglePointMethodError
+
+    Notes
+    -----
+    This class extends its parent, providing access to theoretical concepts
+    presented in our publication [1]_, thus some names follow convention used
+    therein.
+
+    .. [1] C. Chintaluri et al. (2019) "kCSD-python, a tool for
+       reliable current source density estimation" (preprint available at
+       `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
+       doi: 10.1101/708511
+    """
+
     class MeasurementManagerBase(object):
         def probe_at_single_point(self, field, *args, **kwargs):
             """
@@ -275,43 +308,25 @@ class _VerboseFunctionalFieldReconstructorBase(object):
         return self._pre_kernel.shape[1]
 
 
-class VerboseFFR(FunctionalFieldReconstructor, _VerboseFunctionalFieldReconstructorBase):
-    """
-    Attributes
-    ----------
-    number_of_basis
-    number_of_electrodes
-    probed_basis
-    kernel
-
-    Methods
-    -------
-    get_probed_basis(measurement_manager)
-    get_kernel_matrix(measurement_manager)
-
-    Class attributes
-    ----------------
-    MeasurementManagerBase
-    MeasurementManagerHasNoProbeAtSinglePointMethodError
-
-    Notes
-    -----
-    This class extends its parent, providing access to theoretical concepts
-    presented in our publication [1]_, thus some names follow convention used
-    therein.
-
-    .. [1] C. Chintaluri et al. (2019) "kCSD-python, a tool for
-       reliable current source density estimation" (preprint available at
-       `bioRxiv <https://www.biorxiv.org/content/10.1101/708511v1>`)
-       doi: 10.1101/708511
-    """
-
-    class MeasurementManagerBase(FunctionalFieldReconstructor.MeasurementManagerBase,
-                                 _VerboseFunctionalFieldReconstructorBase.MeasurementManagerBase):
+class VerboseFFR(_VerboseFunctionalFieldReconstructorBase,
+                 FunctionalFieldReconstructor):
+    class MeasurementManagerBase(_VerboseFunctionalFieldReconstructorBase.MeasurementManagerBase,
+                                 FunctionalFieldReconstructor.MeasurementManagerBase):
         pass
 
     _mm_validators = FunctionalFieldReconstructor._mm_validators + \
                      _VerboseFunctionalFieldReconstructorBase._mm_validators
+
+
+class LoadableVerboseFFR(_VerboseFunctionalFieldReconstructorBase,
+                         LoadableFunctionalFieldReconstructor):
+    class MeasurementManagerBase(_VerboseFunctionalFieldReconstructorBase.MeasurementManagerBase,
+                                 LoadableFunctionalFieldReconstructor.MeasurementManagerBase):
+        pass
+
+    _mm_validators = LoadableFunctionalFieldReconstructor._mm_validators + \
+                     _VerboseFunctionalFieldReconstructorBase._mm_validators
+
 
 
 class _Eigenreconstructor(object):

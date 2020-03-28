@@ -23,26 +23,32 @@
 ###############################################################################
 
 import unittest
+from unittest.case import TestCase
 
 from kesi._engine import FunctionalFieldReconstructor
 
 
-class TestMeasurementManagerBase(unittest.TestCase):
-    CLASS = FunctionalFieldReconstructor.MeasurementManagerBase
-
+class TestMeasurementManagerBaseBase(TestCase):
     def setUp(self):
-        self.manager = self.CLASS()
+        if hasattr(self, 'CLASS'):
+            self.manager = self.CLASS()
+        else:
+            self.skipTest('Test in virtual class called')
 
     def testLoadMethodIsIdentity(self):
         self.assertIs(self,
                       self.manager.load(self))
 
+    def testNumberOfMeasurementsIsNone(self):
+        self.assertIsNone(self.manager.number_of_measurements)
+
+
+class TestMeasurementManagerBase(TestMeasurementManagerBaseBase):
+    CLASS = FunctionalFieldReconstructor.MeasurementManagerBase
+
     def testProbeMethodIsAbstract(self):
         with self.assertRaises(NotImplementedError):
             self.manager.probe(None)
-
-    def testNumberOfMeasurementsIsNone(self):
-        self.assertIsNone(self.manager.number_of_measurements)
 
 
 if __name__ == '__main__':

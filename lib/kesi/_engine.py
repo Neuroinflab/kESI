@@ -193,6 +193,10 @@ class _FunctionalFieldReconstructorBase(object):
                             KERNEL=self._kernel,
                             PRE_KERNEL=self._pre_kernel)
 
+    def _fill_probed_components(self, values, probe):
+        for i, component in enumerate(self._field_components):
+            values[i, :] = probe(component)
+
 
 class FunctionalFieldReconstructor(_FunctionalFieldReconstructorBase):
     class MeasurementManagerHasNoProbeMethodError(_MissingAttributeError):
@@ -250,10 +254,6 @@ class FunctionalFieldReconstructor(_FunctionalFieldReconstructorBase):
         self._fill_probed_components(self._pre_kernel,
                                      self._measurement_manager.probe)
         self._pre_kernel /= m
-
-    def _fill_probed_components(self, values, probe):
-        for i, component in enumerate(self._field_components):
-            values[i, :] = probe(component)
 
 
 class LoadableFunctionalFieldReconstructor(_FunctionalFieldReconstructorBase):
