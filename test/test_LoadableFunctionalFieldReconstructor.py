@@ -28,11 +28,10 @@ from unittest.case import TestCase
 
 import numpy as np
 
-from kesi import FunctionalFieldReconstructor
-
 try:
     from ._common import Stub, TestCase, SpyKernelSolverClass
     from .test_Engine import _TestsOfInitializationErrorsBase
+    from .test_MeasurementManagerBase import TestMeasurementManagerBaseBase
     # When run as script raises:
     #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
     #  - `SystemError` (Python 3.3-5), or
@@ -41,6 +40,7 @@ try:
 except (ImportError, SystemError, ValueError):
     from _common import Stub, TestCase, SpyKernelSolverClass
     from test_Engine import _TestsOfInitializationErrorsBase
+    from test_MeasurementManagerBase import TestMeasurementManagerBaseBase
 
 from kesi._engine import (FunctionalFieldReconstructor,
                           LoadableFunctionalFieldReconstructor,
@@ -397,6 +397,10 @@ class TestFunctionalFieldReconstructorMayUseArbitraryKernelSolverClass(_TestCase
         self.checkArrayLikeAlmostEqual(np.reshape(measurements, (-1, 1)),
                                        self.kernel_solver.rhs)
         self.assertEqual(regularization_parameter, self.kernel_solver.regularization_parameter)
+
+
+class TestMeasurementManagerBase(TestMeasurementManagerBaseBase):
+    CLASS = LoadableFunctionalFieldReconstructor.MeasurementManagerBase
 
 
 if __name__ == '__main__':
