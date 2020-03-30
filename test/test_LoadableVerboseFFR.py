@@ -24,11 +24,15 @@
 
 import unittest
 import collections
+from io import BytesIO
 
 import numpy as np
 
 try:
-    from . import test_MeasurementManagerBase, test_Engine
+    from . import (test_MeasurementManagerBase,
+                   test_Engine,
+                   test_Verbose,
+                   test_LoadableFunctionalFieldReconstructor)
     from ._common import TestCase
     # When run as script raises:
     #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
@@ -36,14 +40,18 @@ try:
     #  - `ValueError` (Python 2.7).
 
 except (ImportError, SystemError, ValueError):
-    import test_MeasurementManagerBase, test_Engine
+    import test_MeasurementManagerBase
+    import test_Engine
+    import test_Verbose
+    import test_LoadableFunctionalFieldReconstructor
     from _common import TestCase
 
-from kesi._engine import FunctionalFieldReconstructor
-from kesi._verbose import VerboseFFR
+from kesi._engine import (FunctionalFieldReconstructor,
+                          LoadableFunctionalFieldReconstructor)
+from kesi._verbose import LoadableVerboseFFR
 
 
-class _PlainMatrixMM(VerboseFFR.MeasurementManagerBase):
+class _PlainMatrixMM(LoadableVerboseFFR.MeasurementManagerBase):
     def __init__(self, measurements_of_basis_functions):
         '''
         Parameters
@@ -165,12 +173,19 @@ class TestKernelMatricesOfVerboseFFR(TestCase):
 
     def getReconstructor(self, measurements_of_basis_functions):
         self.measurement_mgr = self.MM(measurements_of_basis_functions)
-        return VerboseFFR(self.measurement_mgr.bases(),
-                          self.measurement_mgr)
+        measurement_manager = self.measurement_mgr
+        reconstructor = FunctionalFieldReconstructor(measurement_manager.bases(),
+                                                     measurement_manager)
+        buffer = BytesIO()
+        reconstructor.save(buffer)
+        buffer.seek(0)
+        return LoadableVerboseFFR(buffer,
+                                  measurement_manager.bases(),
+                                  measurement_manager)
 
     def testIsSubclassOfFunctionalFieldReconstructor(self):
-        self.assertTrue(issubclass(VerboseFFR,
-                                   FunctionalFieldReconstructor))
+        self.assertTrue(issubclass(LoadableVerboseFFR,
+                                   LoadableFunctionalFieldReconstructor))
 
     def testAttribute_probed_basis(self):
         self.checkArrayAlmostEqual(self.PROBED_POTENTIAL_BASIS,
@@ -256,38 +271,16 @@ class MockTestKernelFunctionsOfVerboseFFR(TestKernelFunctionsOfVerboseFFR):
                                  {c[0][0].id() for c in calls})
 
 
-class TestsOfInitializationErrors(test_Engine.TestsOfInitializationErrors):
-    CLASS = VerboseFFR
+class TestsOfInitializationErrors(test_LoadableFunctionalFieldReconstructor.TestsOfInitializationErrors):
+    CLASS = LoadableVerboseFFR
 
     MM_MISSING_ATTRIBUTE_ERRORS = (
-            test_Engine.TestsOfInitializationErrors.MM_MISSING_ATTRIBUTE_ERRORS
+            test_LoadableFunctionalFieldReconstructor.TestsOfInitializationErrors.MM_MISSING_ATTRIBUTE_ERRORS
             + [('probe_at_single_point', 'ProbeAtSinglePointMethod')])
 
 
-class TestVerboseMeasurementManagerBase(test_MeasurementManagerBase.TestMeasurementManagerBaseBase):
-    def testMethod_probe_at_single_point_isAbstract(self):
-        for args, kwargs in [((), {}),
-                             ((0,), {}),
-                             ((), {'a': 1}),
-                             ]:
-            with self.assertRaises(NotImplementedError):
-                self.manager.probe_at_single_point(None, *args, **kwargs)
-
-    def testHas_MeasurementManagerHasNoProbeAtSinglePointMethodError_TypeErrorAttribute(self):
-        self.checkTypeErrorAttribute('MeasurementManagerHasNoProbeAtSinglePointMethodError')
-
-    @property
-    def MM_MISSING_ATTRIBUTE_ERRORS(self):
-        for row in super(TestVerboseMeasurementManagerBase,
-                         self).MM_MISSING_ATTRIBUTE_ERRORS:
-            yield row
-
-        yield 'probe_at_single_point', 'ProbeAtSinglePointMethod'
-
-
-class TestMeasurementManagerBase(test_MeasurementManagerBase.TestMeasurementManagerBase,
-                                 TestVerboseMeasurementManagerBase):
-    CLASS = VerboseFFR.MeasurementManagerBase
+class TestMeasurementManagerBase(test_Verbose.TestVerboseMeasurementManagerBase):
+    CLASS = LoadableVerboseFFR.MeasurementManagerBase
 
 
 if __name__ == '__main__':

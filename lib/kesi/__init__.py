@@ -22,7 +22,9 @@
 #                                                                             #
 ###############################################################################
 
-from ._engine import FunctionalFieldReconstructor, MeasurementManagerBase
+from ._engine import (FunctionalFieldReconstructor,
+                      LoadableFunctionalFieldReconstructor,
+                      MeasurementManagerBase)
 
 
 class FunctionalKernelFieldReconstructor(FunctionalFieldReconstructor):

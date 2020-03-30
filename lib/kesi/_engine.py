@@ -84,8 +84,14 @@ class _EigenvectorKernelSolver(object):
                                    rhs))
 
 
-class FunctionalFieldReconstructor(object):
-    class MeasurementManagerBase(object):
+class _ValidableMeasurementManagerBase(object):
+    @classmethod
+    def validate(cls, measurement_manager):
+        pass
+
+
+class _FunctionalFieldReconstructorBase(object):
+    class MeasurementManagerBase(_ValidableMeasurementManagerBase):
         """
         Base class for measurement managers.
 
@@ -119,87 +125,39 @@ class FunctionalFieldReconstructor(object):
             """
             return measurements
 
-        def probe(self, field):
-            """
-            Probe the field.
+        class MeasurementManagerHasNoLoadMethodError(_MissingAttributeError):
+            _missing = 'load'
 
-            An abstract method implementing probing the field in the measurement
-            points.
+        class MeasurementManagerHasNoNumberOfMeasurementsAttributeError(_MissingAttributeError):
+            _missing = 'number_of_measurements'
 
-            Parameters
-            ----------
-            field : object
-                An object implementing the field. It is up to the measurement
-                manager to interpret the object and use its API.
+        @classmethod
+        def validate(cls, measurement_manager):
+            super(_FunctionalFieldReconstructorBase.MeasurementManagerBase,
+                  cls).validate(measurement_manager)
+            cls.MeasurementManagerHasNoLoadMethodError._validate(measurement_manager)
+            cls.MeasurementManagerHasNoNumberOfMeasurementsAttributeError._validate(measurement_manager)
 
-            Returns
-            -------
-            Sequence
-                A sequence of the field quantities measured at the measurement
-                points.
-
-            Raises
-            ------
-            NotImplementedError
-                Always (unless overriden in a subclass).
-            """
-            raise NotImplementedError
-
-    class MeasurementManagerHasNoProbeMethodError(_MissingAttributeError):
-        _missing = 'probe'
-
-    class MeasurementManagerHasNoLoadMethodError(_MissingAttributeError):
-        _missing = 'load'
-
-    class MeasurementManagerHasNoNumberOfMeasurementsAttributeError(_MissingAttributeError):
-        _missing = 'number_of_measurements'
-
-    _mm_validators = [MeasurementManagerHasNoProbeMethodError,
-                      MeasurementManagerHasNoLoadMethodError,
-                      MeasurementManagerHasNoNumberOfMeasurementsAttributeError,
-                      ]
-
-    def __init__(self, field_components, measurement_manager,
-                 KernelSolverClass=_LinearKernelSolver):
+    def _basic_setup(self, field_components, measurement_manager):
         self._field_components = field_components
         self._measurement_manager = measurement_manager
         self._validate_measurement_manager()
-        self._generate_kernels()
-        self._solve_kernel = KernelSolverClass(self._kernel)
 
     def _validate_measurement_manager(self):
-        for validator in self._mm_validators:
-            validator._validate(self._measurement_manager)
+        self.MeasurementManagerBase.validate(self._measurement_manager)
 
-    def _generate_kernels(self):
-        self._generate_pre_kernel()
-        self._generate_kernel()
+    def _process_kernels(self, KernelSolverClass):
+        self._solve_kernel = KernelSolverClass(self._kernel)
 
-    def _generate_kernel(self):
-        self._kernel = np.matmul(self._pre_kernel.T,
-                                 self._pre_kernel) * self._pre_kernel.shape[0]
-
-    def _generate_pre_kernel(self):
-        m = len(self._field_components)
-        n = self._measurement_manager.number_of_measurements
-        self._pre_kernel = np.empty((m, n))
-        self._fill_probed_components(self._pre_kernel,
-                                     self._measurement_manager.probe)
-        self._pre_kernel /= m
-
-    def _fill_probed_components(self, values, probe):
-        for i, component in enumerate(self._field_components):
-            values[i, :] = probe(component)
+    def _wrap_kernel_solution(self, solution):
+        return LinearMixture(zip(self._field_components,
+                                 np.matmul(self._pre_kernel, solution).flatten()))
 
     def __call__(self, measurements, regularization_parameter=0):
         return self._wrap_kernel_solution(
                         self._solve_kernel(
                                  self._measurement_vector(measurements),
                                  regularization_parameter))
-
-    def _wrap_kernel_solution(self, solution):
-        return LinearMixture(zip(self._field_components,
-                                 np.matmul(self._pre_kernel, solution).flatten()))
 
     def _measurement_vector(self, values):
         measurements = self._ensure_is_array(
@@ -237,6 +195,88 @@ class FunctionalFieldReconstructor(object):
         return np.matmul(KERNEL[np.ix_([i], IDX)],
                          np.linalg.solve(KERNEL[np.ix_(IDX, IDX)],
                                          X[IDX, :]))[0, :]
+
+    def save(self, file):
+        np.savez_compressed(file,
+                            KERNEL=self._kernel,
+                            PRE_KERNEL=self._pre_kernel)
+
+    def _fill_probed_components(self, values, probe):
+        for i, component in enumerate(self._field_components):
+            values[i, :] = probe(component)
+
+
+class FunctionalFieldReconstructor(_FunctionalFieldReconstructorBase):
+    class MeasurementManagerBase(_FunctionalFieldReconstructorBase.MeasurementManagerBase):
+        def probe(self, field):
+            """
+            Probe the field.
+
+            An abstract method implementing probing the field in the measurement
+            points.
+
+            Parameters
+            ----------
+            field : object
+                An object implementing the field. It is up to the measurement
+                manager to interpret the object and use its API.
+
+            Returns
+            -------
+            Sequence
+                A sequence of the field quantities measured at the measurement
+                points.
+
+            Raises
+            ------
+            NotImplementedError
+                Always (unless overriden in a subclass).
+            """
+            raise NotImplementedError
+
+        class MeasurementManagerHasNoProbeMethodError(_MissingAttributeError):
+            _missing = 'probe'
+
+        @classmethod
+        def validate(cls, measurement_manager):
+            super(FunctionalFieldReconstructor.MeasurementManagerBase,
+                  cls).validate(measurement_manager)
+            cls.MeasurementManagerHasNoProbeMethodError._validate(measurement_manager)
+
+    def __init__(self, field_components, measurement_manager,
+                 KernelSolverClass=_LinearKernelSolver):
+        self._basic_setup(field_components, measurement_manager)
+        self._generate_kernels()
+        self._process_kernels(KernelSolverClass)
+
+    def _generate_kernels(self):
+        self._generate_pre_kernel()
+        self._generate_kernel()
+
+    def _generate_kernel(self):
+        self._kernel = np.matmul(self._pre_kernel.T,
+                                 self._pre_kernel) * self._pre_kernel.shape[0]
+
+    def _generate_pre_kernel(self):
+        m = len(self._field_components)
+        n = self._measurement_manager.number_of_measurements
+        self._pre_kernel = np.empty((m, n))
+        self._fill_probed_components(self._pre_kernel,
+                                     self._measurement_manager.probe)
+        self._pre_kernel /= m
+
+
+class LoadableFunctionalFieldReconstructor(_FunctionalFieldReconstructorBase):
+    def __init__(self, file, field_components, measurement_manager,
+                 KernelSolverClass=_LinearKernelSolver):
+        self._basic_setup(field_components, measurement_manager)
+        self._load_kernels(file)
+        self._process_kernels(KernelSolverClass)
+
+    def _load_kernels(self, file):
+        with np.load(file) as fh:
+            self._kernel = fh['KERNEL']
+            self._pre_kernel = fh['PRE_KERNEL']
 
 
 class LinearMixture(object):
