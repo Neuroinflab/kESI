@@ -10,7 +10,8 @@ import scipy
 import time
 
 from validate_properties import (ValidateKESI,
-                                 MeasurementManager, MeasurementManagerFast)
+                                 MeasurementManager, MeasurementManagerFastP,
+                                 MeasurementManagerFastC)
 
 from FEM.fem_sphere_gaussian import SomeSphereGaussianSourceFactory3D
 
@@ -170,6 +171,35 @@ EST_POINTS =pd.DataFrame({'X': EST_X.flatten(),
                           'Y': EST_Y.flatten(),
                           'Z': EST_Z.flatten()})
 
+
+
+#save_time = time.time()
+#np.savez_compressed('reconstructor_sphere_new.npz',
+#                    KERNEL=reconstructor.kernel,
+#                    CROSS_KERNEL=reconstructor.get_kernel_matrix(measurement_manager_basis))
+#print("Saved Reconstructor --- %s seconds ---" % (time.time() - save_time))
+
+t3 = time.time()
+measurement_manager = MeasurementManagerFastP(ELECTRODES, space='potential')
+print('MMF: ', time.time() - t3)
+t4 = time.time()
+measurement_manager_basis = MeasurementManagerFastC(EST_POINTS, space='csd')
+print('MMF_basis: ', time.time() - t4)
+
+
+rec_timef = time.time()
+reconstructor = ValidateKESI(sources, measurement_manager)
+print("Reconstructor MMF --- %s seconds ---" % (time.time() - rec_timef))
+
+
+stf = time.time()
+potential = measurement_manager.probe(sources[0])
+true_csd = measurement_manager_basis.probe(sources[0])
+approximator = reconstructor(potential)
+est_csd = approximator.csd(EST_X, EST_Y, EST_Z)
+print("Approximator MMF --- %s seconds ---" % (time.time() - stf))
+
+
 t1 = time.time()
 measurement_manager = MeasurementManager(ELECTRODES, space='potential')
 print('MM: ', time.time() - t1)
@@ -191,31 +221,5 @@ true_csd = measurement_manager_basis.probe(sources[0])
 approximator = reconstructor(potential)
 est_csd = approximator.csd(EST_X, EST_Y, EST_Z)
 print("Approximator MM --- %s seconds ---" % (time.time() - st))
-
-#save_time = time.time()
-#np.savez_compressed('reconstructor_sphere_new.npz',
-#                    KERNEL=reconstructor.kernel,
-#                    CROSS_KERNEL=reconstructor.get_kernel_matrix(measurement_manager_basis))
-#print("Saved Reconstructor --- %s seconds ---" % (time.time() - save_time))
-
-t3 = time.time()
-measurement_manager = MeasurementManagerFast(ELECTRODES, space='potential')
-print('MMF: ', time.time() - t3)
-t4 = time.time()
-measurement_manager_basis = MeasurementManagerFast(EST_POINTS, space='csd')
-print('MMF_basis: ', time.time() - t4)
-
-
-rec_timef = time.time()
-reconstructor = ValidateKESI(sources, measurement_manager)
-print("Reconstructor MMF --- %s seconds ---" % (time.time() - rec_timef))
-
-
-stf = time.time()
-potential = measurement_manager.probe(sources[0])
-true_csd = measurement_manager_basis.probe(sources[0])
-approximator = reconstructor(potential)
-est_csd = approximator.csd(EST_X, EST_Y, EST_Z)
-print("Approximator MMF --- %s seconds ---" % (time.time() - stf))
 
 
