@@ -57,14 +57,15 @@ class _SomeSphereGaussianLoaderBase(object):
                   'cortex_radius_external',
                   'brain_conductivity',
                   'brain_radius',
+                  'scalp_radius',
                   'degree',
-                  'POTENTIAL',
                   'A',
+                  # 'POTENTIAL',
                   # 'STATS',
                   ]
 
     def _load(self):
-        self._populate_solutions()
+        self._provide_attributes()
 
         span = self.cortex_radius_external - self.cortex_radius_internal
         n = 2 ** self.k
@@ -76,16 +77,26 @@ class _SomeSphereGaussianLoaderBase(object):
                              self.cortex_radius_external - sd / 2 / self.source_resolution,
                              n * self.source_resolution)
 
-    def _load_solutions(self):
+    def _load_attributes(self):
         with np.load(self.path) as fh:
-            for attr in self.ATTRIBUTES:
-                setattr(self, attr, fh[attr])
+            self._load_attributes_from_numpy_file(fh)
 
-            self.STATS = list(fh['STATS'])
+    def _load_attributes_from_numpy_file(self, fh):
+        for attr in self.ATTRIBUTES:
+            setattr(self, attr, fh[attr])
 
 
-class _FixedElectrodesGaussianLoaderBase(_SomeSphereGaussianLoaderBase):
-    ATTRIBUTES = _SomeSphereGaussianLoaderBase.ATTRIBUTES + ['ELECTRODES']
+class _SomeSphereGaussianPotentialLoaderBase(_SomeSphereGaussianLoaderBase):
+    def _load_attributes_from_numpy_file(self, fh):
+        super(_SomeSphereGaussianPotentialLoaderBase,
+              self)._load_attributes_from_numpy_file(fh)
+
+        self.POTENTIAL = fh['POTENTIAL']
+        self.STATS = list(fh['STATS'])
+
+
+class _FixedElectrodesGaussianLoaderBase(_SomeSphereGaussianPotentialLoaderBase):
+    ATTRIBUTES = _SomeSphereGaussianPotentialLoaderBase.ATTRIBUTES + ['ELECTRODES']
     _REGISTRATION_RADIUS = 0.079
     _RADIUS = 73.21604532
     _CENTER = np.array([[82.40997559, 118.14496578, 104.73314426]])
@@ -191,10 +202,9 @@ class _FixedElectrodesGaussianLoaderBase(_SomeSphereGaussianLoaderBase):
                 self.AZIMUTH.append(azimuth)
 
 
-class _GaussianLoaderBase(_SomeSphereGaussianLoaderBase):
-    ATTRIBUTES = _SomeSphereGaussianLoaderBase.ATTRIBUTES +\
-                 ['scalp_radius',
-                  'sampling_frequency',
+class _GaussianLoaderBase(_SomeSphereGaussianPotentialLoaderBase):
+    ATTRIBUTES = _SomeSphereGaussianPotentialLoaderBase.ATTRIBUTES + \
+                 ['sampling_frequency',
                   ]
 
 
@@ -235,7 +245,42 @@ class _GaussianLoaderBase2D(_GaussianLoaderBase):
                                     2 * self.sampling_frequency + 1)
 
 
+class SomeSphereGaussianSourceFactoryOnlyCSD(_SomeSphereGaussianLoaderBase):
+    def __init__(self, filename):
+        self.path = filename
+        self._load()
+        self._r_index = {r: i for i, r in enumerate(self.R)}
+
+    def __call__(self, r, altitude, azimuth):
+        return _SourceBase(r, altitude, azimuth,
+                           self.A[self._r_index[r]],
+                           self)
+
+    def _provide_attributes(self):
+        self._load_attributes()
+
+
 class _SourceBase(object):
+    def __init__(self, r, altitude, azimuth, a, parent):
+        self._r = r
+        self._altitude = altitude
+        self._azimuth = azimuth
+        self._a = a
+        self.parent = parent
+
+        sin_alt = np.sin(self._altitude)  # np.cos(np.pi / 2 - altitude)
+        cos_alt = np.cos(self._altitude)  # np.sin(np.pi / 2 - altitude)
+        sin_az = np.sin(self._azimuth)  # -np.sin(-azimuth)
+        cos_az = np.cos(self._azimuth)  # np.cos(-azimuth)
+
+        self._apply_trigonometric_functions(cos_alt, sin_alt, cos_az, sin_az)
+
+    def _apply_trigonometric_functions(self, cos_alt, sin_alt, cos_az, sin_az):
+        r2 = self._r * cos_alt
+        self._x = r2 * cos_az
+        self._y = self._r * sin_alt
+        self._z = -r2 * sin_az
+
     def csd(self, X, Y, Z):
         return np.where((X**2 + Y**2 + Z**2 > self.parent.brain_radius ** 2),
                         0,
@@ -272,16 +317,15 @@ class _SourceBase(object):
 
 
 class _RotatingSourceBase(_SourceBase):
-    def __init__(self, r, altitude, azimuth, a, interpolator, parent):
-        self._r = r
-        self._altitude = altitude
-        self._azimuth = azimuth
+    def __init__(self, r, altitude, azimuth, a, parent, interpolator):
+        super(_RotatingSourceBase,
+              self).__init__(r, altitude, azimuth, a, parent)
 
-        sin_alt = np.sin(altitude)  # np.cos(np.pi / 2 - altitude)
-        cos_alt = np.cos(altitude)  # np.sin(np.pi / 2 - altitude)
-        sin_az = np.sin(azimuth)  # -np.sin(-azimuth)
-        cos_az = np.cos(azimuth)  # np.cos(-azimuth)
+        self._interpolator = interpolator
 
+    def _apply_trigonometric_functions(self, cos_alt, sin_alt, cos_az, sin_az):
+        super(_RotatingSourceBase,
+              self)._apply_trigonometric_functions(cos_alt, sin_alt, cos_az, sin_az)
         self._ROT = np.matmul([[sin_alt, cos_alt, 0],
                                [-cos_alt, sin_alt, 0],
                                [0, 0, 1]],
@@ -289,15 +333,6 @@ class _RotatingSourceBase(_SourceBase):
                                [0, 1, 0],
                                [-sin_az, 0, cos_az]]
                               )
-
-        r2 = r * cos_alt
-        self._x = r2 * cos_az
-        self._y = r * sin_alt
-        self._z = -r2 * sin_az
-        self._a = a
-        self.parent = parent
-
-        self._interpolator = interpolator
 
     def _rotated(self, X, Y, Z):
         _X = self._ROT[0, 0] * X + self._ROT[1, 0] * Y + self._ROT[2, 0] * Z
@@ -316,8 +351,8 @@ class SomeSphereFixedElectrodesGaussianSourceFactory(_FixedElectrodesGaussianLoa
                                         in enumerate(zip(self.ALTITUDE,
                                                          self.AZIMUTH))}
 
-    def _populate_solutions(self):
-        self._load_solutions()
+    def _provide_attributes(self):
+        self._load_attributes()
 
     def __call__(self, r, altitude, azimuth):
         i_r = self._r_index[r]
@@ -350,14 +385,14 @@ class _SomeSphereGaussianSourceFactoryBase(object):
         self._r_index = {r: i for i, r in enumerate(self.R)}
         self._interpolator = [None] * len(self.R)
 
-    def _populate_solutions(self):
-        self._load_solutions()
+    def _provide_attributes(self):
+        self._load_attributes()
 
     def __call__(self, r, altitude, azimuth):
         a, interpolator = self._source_prefabricates(r)
         return self._Source(r, altitude, azimuth, a,
-                            interpolator,
-                            self)
+                            self,
+                            interpolator)
 
     def _source_prefabricates(self, r):
         r_idx = self._r_index[r]
@@ -428,6 +463,7 @@ class SomeSphereGaussianSourceFactory2D(SomeSphereGaussianSourceFactoryLinear2D)
 class _SomeSphereControllerBase(object):
     FEM_ATTRIBUTES = ['brain_conductivity',
                       'brain_radius',
+                      'scalp_radius',
                       ]
     TOLERANCE = np.finfo(float).eps
 
@@ -484,9 +520,9 @@ class _SomeSphereControllerBase(object):
 
         return _fem_common._SourceFactory_Base.solution_path(fn, False)
 
-    def _populate_solutions(self):
+    def _provide_attributes(self):
         try:
-            self._load_solutions()
+            self._load_attributes()
 
         except Exception as e:
             logger.warning(str(e))
@@ -524,8 +560,6 @@ class _SomeSphereFixedElectrodesGaussianController(
 
 class _SomeSphereGaussianController3D(_GaussianLoaderBase3D,
                                       _SomeSphereControllerBase):
-    FEM_ATTRIBUTES = _SomeSphereControllerBase.FEM_ATTRIBUTES + ['scalp_radius']
-
     sampling_frequency = 256
     sampling_frequency_2D = 1024
 
