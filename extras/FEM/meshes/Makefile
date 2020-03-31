@@ -10,11 +10,11 @@ EIGHTH_OF_SPHERE_MESHES=$(EIGHTH_OF_SPHERE_XDMF) $(EIGHTH_OF_SPHERE_XML)
 FINITE_SLICE_MESHES=finite_slice.xml finite_slice_small.xml finite_slice_smaller.xml finite_slice_small_coarse.xml finite_slice_smaller_coarse.xml
 SPHERICAL_MESHES=one_sphere.xml two_spheres.xml four_spheres.xml four_spheres_composite.xml
 WEDGE_MESHES=eighth_wedge_of_one_sphere.xml eighth_wedge_of_two_spheres.xml eighth_wedge_of_four_spheres.xml eighth_wedge_of_four_spheres_composite.xml
-MESHES=$(EIGHTH_OF_SPHERE_MESHES) $(FINITE_SLICE_MESHES) $(SPHERICAL_MESHES) $(WEDGE_MESHES)
+MESHES=$(EIGHTH_OF_SPHERE_MESHES) $(FINITE_SLICE_MESHES) $(SPHERICAL_MESHES) $(WEDGE_MESHES) $(WEDGE_MESHES:.xml=_fine.xml) $(WEDGE_MESHES:.xml=_finer.xml) $(WEDGE_MESHES:.xml=_finest.xml)
 
 MESHES_MSH=$(MESHES:.xml=.msh)
 
-.SECONDARY: $(MESHES_MSH)
+.SECONDARY: $(MESHES_MSH) $(WEDGE_MESHES:.xml=.geo)
 
 .PHONY: all
 
