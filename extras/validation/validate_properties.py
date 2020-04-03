@@ -5,6 +5,7 @@
 import numpy as np
 import sys
 import scipy
+from numpy.linalg import LinAlgError
 sys.path.append('../')
 
 try:
@@ -48,6 +49,55 @@ class ValidateKESI(VerboseFFR):
         eigenvalues = eigenvalues[idx]
         eigenvectors = eigenvectors[:, idx]
         return eigenvalues, eigenvectors
+
+    def picard_plot(self, rhs, regularization_parameter):
+        """
+        Creates Picard plot according to Hansen's book.
+        Parameters
+        ----------
+        rhs: numpy array
+            Right-hand side of the linear equation.
+        Raises
+        ------
+        LinAlgError
+            If SVD computation does not converge.
+        """
+        try:
+            u, s, v = np.linalg.svd(self.kernel + regularization_parameter *
+                                    np.identity(self.kernel.shape[0]))
+        except LinAlgError:
+            raise LinAlgError('SVD is failing - try moving the electrodes'
+                              'slightly')
+        picard = np.zeros(len(s))
+        picard_norm = np.zeros(len(s))
+        for i, value in enumerate(s):
+            picard[i] = abs(np.dot(u[:, i].T, rhs))
+            picard_norm[i] = abs(np.dot(u[:, i].T, rhs))/value
+        plt.figure(figsize=(10, 6))
+        plt.plot(s, marker='.', label=r'$\sigma_{i}$')
+        plt.plot(picard, marker='.', label='$|u(:, i)^{T}*rhs|$')
+        plt.plot(picard_norm, marker='.',
+                 label=r'$\frac{|u(:, i)^{T}*rhs|}{\sigma_{i}}$')
+        plt.yscale('log')
+        plt.legend()
+        plt.title('Picard plot')
+        plt.xlabel('i')
+        plt.show()
+        a = int(len(s) - int(np.sqrt(len(s)))**2)
+        if a == 0:
+            size = int(np.sqrt(len(s)))
+        else:
+            size = int(np.sqrt(len(s))) + 1
+        fig, axs = plt.subplots(int(np.sqrt(len(s))),
+                                size, figsize=(15, 13))
+        axs = axs.ravel()
+        beta = np.zeros(v.shape)
+        fig.suptitle('vectors products of k_pot matrix')
+        for i, value in enumerate(s):
+            beta[i] = ((np.dot(u[:, i].T, rhs)/value) * v[i, :])
+            axs[i].plot(beta[i, :], marker='.')
+            axs[i].set_title(r'$vec_{'+str(i+1)+'}$')
+        plt.show()
 
     # def _orthonormalize_matrix(self, matrix):
     #     orthn = scipy.linalg.orth(matrix)
