@@ -491,6 +491,7 @@ class _SomeSphereControllerBase(object):
     def save(self, path):
         results = self._results()
         results['STATS'] = self.STATS
+        results['POTENTIAL'] = self.POTENTIAL
         np.savez_compressed(path, **results)
 
     def save2D(self, path):
