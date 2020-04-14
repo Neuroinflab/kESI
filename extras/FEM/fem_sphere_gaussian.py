@@ -494,12 +494,6 @@ class _SomeSphereControllerBase(object):
         results['POTENTIAL'] = self.POTENTIAL
         np.savez_compressed(path, **results)
 
-    def save2D(self, path):
-        results = self._results()
-        results['STATS'] = self.STATS
-        results['POTENTIAL'] = self.POTENTIAL_2D
-        results['sampling_frequency'] = self.sampling_frequency_2D
-        np.savez_compressed(path, **results)
 
     def fem(self, y):
         self._anything_new = True
@@ -512,14 +506,6 @@ class _SomeSphereControllerBase(object):
             msg = "self.{0} / self._fem.{0} - 1 = {1:.2e}".format(attr, err)
 
             assert abs(err) < self.TOLERANCE, msg
-
-    @property
-    def path(self):
-        fn = '{0._fem.mesh_name}_gaussian_{1:04d}_deg_{0.degree}.npz'.format(
-                   self,
-                   int(round(1000 / 2 ** self.k)))
-
-        return _fem_common._SourceFactory_Base.solution_path(fn, False)
 
     def _provide_attributes(self):
         try:
@@ -538,6 +524,8 @@ class _SomeSphereControllerBase(object):
     def _empty_solutions(self):
         n = 2 ** self.k
         self.A = empty_array(n * self.source_resolution)
+        self.STATS = []
+        self.POTENTIAL = empty_array(self._potential_size(n))
 
     @property
     def _fem_attributes(self):
@@ -549,6 +537,14 @@ class _SomeSphereControllerBase(object):
 class _SomeSphereFixedElectrodesGaussianController(
           _FixedElectrodesGaussianLoaderBase,
           _SomeSphereControllerBase):
+    @property
+    def path(self):
+        fn = '{0._fem.mesh_name}_gaussian_{1:04d}_deg_{0.degree}.npz'.format(
+                   self,
+                   int(round(1000 / 2 ** self.k)))
+
+        return _fem_common._SourceFactory_Base.solution_path(fn, False)
+
     def _empty_solutions(self):
         super(_SomeSphereFixedElectrodesGaussianController,
               self)._empty_solutions()
@@ -562,20 +558,42 @@ class _SomeSphereFixedElectrodesGaussianController(
 class _SomeSphereGaussianController3D(_GaussianLoaderBase3D,
                                       _SomeSphereControllerBase):
     sampling_frequency = 256
-    sampling_frequency_2D = 1024
 
     def _empty_solutions(self):
         super(_SomeSphereGaussianController3D, self)._empty_solutions()
         n = 2 ** self.k
-        self.STATS = []
-        xz_size = (self.sampling_frequency + 1) * (self.sampling_frequency + 2) // 2
-        self.POTENTIAL = empty_array((n * self.source_resolution,
-                                      xz_size,
-                                      2 * self.sampling_frequency + 1))
 
-        self.POTENTIAL_2D = empty_array((n * self.source_resolution,
-                                         self.sampling_frequency_2D + 1,
-                                         2 * self.sampling_frequency_2D + 1))
+    def _potential_size(self, n):
+        xz_size = (self.sampling_frequency + 1) * (self.sampling_frequency + 2) // 2
+        return (n * self.source_resolution,
+                xz_size,
+                2 * self.sampling_frequency + 1)
+
+    @property
+    def path(self):
+        fn = '{0._fem.mesh_name}_gaussian_{1:04d}_deg_{0.degree}.npz'.format(
+                   self,
+                   int(round(1000 / 2 ** self.k)))
+
+        return _fem_common._SourceFactory_Base.solution_path(fn, False)
+
+
+class _SomeSphereGaussianController2D(_GaussianLoaderBase2D,
+                                      _SomeSphereControllerBase):
+    sampling_frequency = 1024
+
+    def _potential_size(self, n):
+        return (n * self.source_resolution,
+                self.sampling_frequency + 1,
+                2 * self.sampling_frequency + 1)
+
+    @property
+    def path(self):
+        fn = '{0._fem.mesh_name}_gaussian_{1:04d}_deg_{0.degree}_2D.npz'.format(
+                   self,
+                   int(round(1000 / 2 ** self.k)))
+
+        return _fem_common._SourceFactory_Base.solution_path(fn, False)
 
 
 if __name__ == '__main__':
@@ -751,129 +769,133 @@ if __name__ == '__main__':
                 continue
 
             controller = _SomeSphereGaussianController3D(fem)
+            controller_2D = _SomeSphereGaussianController2D(fem)
 
             for controller.degree in [1, 2, 3]:
+                controller_2D.degree = controller.degree
                 K_MAX = 4  # as element size is 0.25 mm,
                            # the smallest sd considered safe is
                            # 12mm / (2 ** 4)
                 for controller.k in range(K_MAX + 1):
+                    controller_2D.k = controller.k
                     with controller:
                         logger.info('Gaussian SD={} ({}; deg={})'.format(
                             controller.standard_deviation,
                             mesh_name,
                             controller.degree))
+                        with controller_2D:
+                            tmp_mark = 0
 
-                        tmp_mark = 0
-                        stats = controller.STATS
+                            POTENTIAL = controller.POTENTIAL
+                            AS = controller.A
 
-                        POTENTIAL = controller.POTENTIAL
-                        AS = controller.A
+                            save_stopwatch = _fem_common.Stopwatch()
+                            sample_stopwatch = _fem_common.Stopwatch()
 
-                        save_stopwatch = _fem_common.Stopwatch()
-                        sample_stopwatch = _fem_common.Stopwatch()
+                            with _fem_common.Stopwatch() as unsaved_time:
+                                for idx_r, src_r in enumerate(controller.R):
+                                    logger.info(
+                                        'Gaussian SD={}, r={} ({}, deg={})'.format(
+                                            controller.standard_deviation,
+                                            src_r,
+                                            mesh_name,
+                                            controller.degree))
+                                    if not np.isnan(AS[idx_r]) and not np.isnan(controller_2D.A[idx_r]):
+                                        logger.info('Already found, skipping')
+                                        continue
 
-                        with _fem_common.Stopwatch() as unsaved_time:
-                            for idx_r, src_r in enumerate(controller.R):
-                                logger.info(
-                                    'Gaussian SD={}, r={} ({}, deg={})'.format(
-                                        controller.standard_deviation,
-                                        src_r,
-                                        mesh_name,
-                                        controller.degree))
-                                if not np.isnan(AS[idx_r]):
-                                    logger.info('Already found, skipping')
-                                    continue
+                                    potential = controller.fem(src_r)
 
-                                potential = controller.fem(src_r)
+                                    stats = (src_r,
+                                             np.nan if potential is None else float(sample_stopwatch),
+                                             fem.iterations,
+                                             float(fem.solving_time),
+                                             float(fem.local_preprocessing_time),
+                                             float(fem.global_preprocessing_time))
 
-                                if potential is not None:
-                                    with sample_stopwatch:
-                                        # for idx_polar, (altitude, azimuth) in enumerate(zip(controller.ALTITUDE,
-                                        #                                                     controller.AZIMUTH)):
-                                        #     negative_d_altitude = np.pi / 2 - altitude
-                                        #     sin_alt = np.sin(negative_d_altitude)
-                                        #     cos_alt = np.cos(negative_d_altitude)
-                                        #     sin_az = np.sin(-azimuth)
-                                        #     cos_az = np.cos(-azimuth)
-                                        #     ELECTRODES = np.matmul(
-                                        #         controller.ELECTRODES,
-                                        #         np.matmul(
-                                        #             [[cos_alt, sin_alt, 0],
-                                        #              [-sin_alt, cos_alt, 0],
-                                        #              [0, 0, 1]],
-                                        #             [[cos_az, 0, -sin_az],
-                                        #              [0, 1, 0],
-                                        #              [sin_az, 0, cos_az]]
-                                        #             ))
-                                        r2 = controller.scalp_radius ** 2
-                                        for idx_xz, (x, z) in enumerate(controller._xz):
-                                            r_xz_2 = x ** 2 + z ** 2
-                                            if r_xz_2 > r2:
-                                                continue
-                                            for idx_y, y in enumerate(controller.Y_SAMPLE):
-                                                if r_xz_2 + y ** 2 > r2:
+                                    if potential is not None:
+                                        with sample_stopwatch:
+                                            # for idx_polar, (altitude, azimuth) in enumerate(zip(controller.ALTITUDE,
+                                            #                                                     controller.AZIMUTH)):
+                                            #     negative_d_altitude = np.pi / 2 - altitude
+                                            #     sin_alt = np.sin(negative_d_altitude)
+                                            #     cos_alt = np.cos(negative_d_altitude)
+                                            #     sin_az = np.sin(-azimuth)
+                                            #     cos_az = np.cos(-azimuth)
+                                            #     ELECTRODES = np.matmul(
+                                            #         controller.ELECTRODES,
+                                            #         np.matmul(
+                                            #             [[cos_alt, sin_alt, 0],
+                                            #              [-sin_alt, cos_alt, 0],
+                                            #              [0, 0, 1]],
+                                            #             [[cos_az, 0, -sin_az],
+                                            #              [0, 1, 0],
+                                            #              [sin_az, 0, cos_az]]
+                                            #             ))
+                                            r2 = controller.scalp_radius ** 2
+                                            for idx_xz, (x, z) in enumerate(controller._xz):
+                                                r_xz_2 = x ** 2 + z ** 2
+                                                if r_xz_2 > r2:
                                                     continue
-                                                try:
-                                                    v = potential(x, y, z)
-                                                except Exception as e:
-                                                    pass
-                                                else:
-                                                    POTENTIAL[idx_r,
-                                                              idx_xz,
-                                                              idx_y] = v
-
-                                        if fem.FRACTION_OF_SPACE < 1:
-                                            logging.info('Sampling 2D')
-                                            POTENTIAL_2D = controller.POTENTIAL_2D
-                                            angle = fem.FRACTION_OF_SPACE * np.pi
-                                            SIN_COS = np.array([np.sin(angle),
-                                                                np.cos(angle)])
-
-                                            for idx_xz, xz in enumerate(
-                                                    np.linspace(0,
-                                                                controller.scalp_radius,
-                                                                controller.sampling_frequency_2D + 1)):
-                                                x, z = SIN_COS * xz
-                                                xz2 = xz ** 2
-                                                for idx_y, y in enumerate(np.linspace(-controller.scalp_radius,
-                                                                                      controller.scalp_radius,
-                                                                                      2 * controller.sampling_frequency_2D + 1)):
-                                                    if xz2 + y ** 2 > r2:
+                                                for idx_y, y in enumerate(controller.Y_SAMPLE):
+                                                    if r_xz_2 + y ** 2 > r2:
                                                         continue
                                                     try:
                                                         v = potential(x, y, z)
                                                     except Exception as e:
                                                         pass
                                                     else:
-                                                        POTENTIAL_2D[idx_r,
-                                                                     idx_xz,
-                                                                     idx_y] = v
-                                AS[idx_r] = fem.a
-                                stats.append((src_r,
-                                              np.nan if potential is None else float(sample_stopwatch),
-                                              fem.iterations,
-                                              float(fem.solving_time),
-                                              float(fem.local_preprocessing_time),
-                                              float(fem.global_preprocessing_time)))
+                                                        POTENTIAL[idx_r,
+                                                                  idx_xz,
+                                                                  idx_y] = v
 
-                                logger.info(
-                                    'Gaussian SD={}, r={}, (deg={}): {}\t({fem.iterations}, {time}, {sampling})'.format(
-                                        controller.standard_deviation,
-                                        src_r,
-                                        controller.degree,
-                                        'SUCCEED' if potential is not None else 'FAILED',
-                                        fem=fem,
-                                        time=fem.local_preprocessing_time.duration + fem.solving_time.duration,
-                                        sampling=sample_stopwatch.duration))
+                                            if fem.FRACTION_OF_SPACE < 1:
+                                                logging.info('Sampling 2D')
+                                                POTENTIAL_2D = controller_2D.POTENTIAL
+                                                angle = fem.FRACTION_OF_SPACE * np.pi
+                                                SIN_COS = np.array([np.sin(angle),
+                                                                    np.cos(angle)])
 
-                                if float(unsaved_time) > 10 * float(save_stopwatch):
-                                    with save_stopwatch:
-                                        controller.save(controller.path + str(tmp_mark))
-                                        if fem.FRACTION_OF_SPACE < 1:
-                                            logging.info('Saving 2D')
-                                            controller.save2D(controller.path.replace('.npz', '_2D.npz') + str(tmp_mark))
-                                    unsaved_time.reset()
-                                    tmp_mark = 1 - tmp_mark
+                                                for idx_xz, xz in enumerate(
+                                                        controller_2D.X_SAMPLE):
+                                                    x, z = SIN_COS * xz
+                                                    xz2 = xz ** 2
+                                                    for idx_y, y in enumerate(
+                                                            controller_2D.Y_SAMPLE):
+                                                        if xz2 + y ** 2 > r2:
+                                                            continue
+                                                        try:
+                                                            v = potential(x, y, z)
+                                                        except Exception as e:
+                                                            pass
+                                                        else:
+                                                            POTENTIAL_2D[idx_r,
+                                                                         idx_xz,
+                                                                         idx_y] = v
+                                        controller_2D.A[idx_r] = fem.a
+                                        controller_2D.STATS.append(stats)
 
-                        if fem.FRACTION_OF_SPACE < 1:
-                            controller.save2D(controller.path.replace('.npz', '_2D.npz'))
+                                    AS[idx_r] = fem.a
+                                    controller.STATS.append(stats)
+
+                                    logger.info(
+                                        'Gaussian SD={}, r={}, (deg={}): {}\t({fem.iterations}, {time}, {sampling})'.format(
+                                            controller.standard_deviation,
+                                            src_r,
+                                            controller.degree,
+                                            'SUCCEED' if potential is not None else 'FAILED',
+                                            fem=fem,
+                                            time=fem.local_preprocessing_time.duration + fem.solving_time.duration,
+                                            sampling=sample_stopwatch.duration))
+
+                                    if float(unsaved_time) > 10 * float(save_stopwatch):
+                                        with save_stopwatch:
+                                            controller.save(controller.path + str(tmp_mark))
+                                            if fem.FRACTION_OF_SPACE < 1:
+                                                logging.info('Saving 2D')
+                                                controller_2D.save(controller_2D.path + str(tmp_mark))
+                                        unsaved_time.reset()
+                                        tmp_mark = 1 - tmp_mark
+
+                            if fem.FRACTION_OF_SPACE < 1:
+                                controller_2D.save(controller_2D.path)
