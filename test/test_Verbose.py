@@ -131,6 +131,12 @@ class _TrueBasesMatrixMM(_CommonTrueBasesMatrixMM,
     pass
 
 
+class _SpyCrossKernelReconstructor(object):
+    def __init__(self, kernel_solver, cross_kernel):
+        self.kernel_solver = kernel_solver
+        self.cross_kernel = cross_kernel
+
+
 class _CommonTestKernelMatricesOfVerboseFFR(TestCase):
     MM = _PlainMatrixMM
 
@@ -203,6 +209,20 @@ class _CommonTestKernelMatricesOfVerboseFFR(TestCase):
     def testMethod_get_kernel_matrix(self):
         self.checkArrayAlmostEqual(self.CROSS_KERNEL,
                                    self.reconstructor.get_kernel_matrix(self.estimation_mgr))
+
+    def testMethod_get_crossreconstructor_ReturnsCrossKernelReconstructor(self):
+        self.assertIsInstance(self.reconstructor.get_crossreconstructor(self.estimation_mgr),
+                              self.reconstructor._CrossKernelReconstructor)
+
+    def testMethod_get_crossreconstructor_CallsArbitraryClassWithKernelSolverAndCrossKernel(self):
+        reconstructor = self.reconstructor.get_crossreconstructor(self.estimation_mgr,
+                                                                  _CrossKernelReconstructor=_SpyCrossKernelReconstructor)
+        self.assertIsInstance(reconstructor,
+                              _SpyCrossKernelReconstructor)
+        self.assertIs(reconstructor.kernel_solver,
+                      self.reconstructor._solve_kernel)
+        self.checkArrayAlmostEqual(self.CROSS_KERNEL,
+                                   reconstructor.cross_kernel)
 
 
 class TestKernelMatricesOfVerboseFFR(_CommonTestKernelMatricesOfVerboseFFR):
