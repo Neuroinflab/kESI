@@ -22,6 +22,7 @@
 #                                                                             #
 ###############################################################################
 
+import warnings
 import numpy as np
 
 from ._engine import (FunctionalFieldReconstructor,
@@ -312,6 +313,16 @@ class _VerboseFunctionalFieldReconstructorBase(object):
         """
         return self._pre_kernel.shape[1]
 
+    class _CrossKernelReconstructor(object):
+        def __init__(self, kernel_solver, cross_kernel):
+            self._cross_kernel = cross_kernel
+            self._solve_kernel = kernel_solver
+
+        def __call__(self, measured, *args, **kwargs):
+            return np.matmul(self._cross_kernel,
+                             self._solve_kernel(measured, *args, **kwargs))
+
+
 
 class VerboseFFR(_VerboseFunctionalFieldReconstructorBase,
                  FunctionalFieldReconstructor):
@@ -349,11 +360,11 @@ class _Eigenreconstructor(object):
         return self._reconstructor._wrap_kernel_solution(solution)
 
 
-class _CrossKernelReconstructor(object):
+class _CrossKernelReconstructor(_VerboseFunctionalFieldReconstructorBase._CrossKernelReconstructor):
     def __init__(self, kernel_solver, cross_kernel):
-        self._cross_kernel = cross_kernel
-        self._solve_kernel = kernel_solver
+        warnings.warn(
+            DeprecationWarning(
+                'The class has been moved to `[Loadable]VerboseFFR`.  Use `[Loadable]VerboseFFR._CrossKernelReconstructor` instead.'))
 
-    def __call__(self, measured, *args, **kwargs):
-        return np.matmul(self._cross_kernel,
-                         self._solve_kernel(measured, *args, **kwargs))
+        super(_CrossKernelReconstructor, self).__init__(kernel_solver,
+                                                        cross_kernel)
