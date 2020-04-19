@@ -641,13 +641,6 @@ if __name__ == '__main__':
 
                                     potential = controller.fem(src_r)
 
-                                    stats = (src_r,
-                                             np.nan if potential is None else float(sample_stopwatch),
-                                             fem.iterations,
-                                             float(fem.solving_time),
-                                             float(fem.local_preprocessing_time),
-                                             float(fem.global_preprocessing_time))
-
                                     if potential is not None:
                                         with sample_stopwatch:
                                             # for idx_polar, (altitude, azimuth) in enumerate(zip(controller.ALTITUDE,
@@ -684,7 +677,10 @@ if __name__ == '__main__':
                                                                   idx_xz,
                                                                   idx_y] = v
 
-                                            if fem.FRACTION_OF_SPACE < 1:
+                                        sampling_time_3D = float(sample_stopwatch)
+
+                                        if fem.FRACTION_OF_SPACE < 1:
+                                            with sample_stopwatch:
                                                 logging.info('Sampling 2D')
                                                 POTENTIAL_2D = controller_2D.POTENTIAL
                                                 angle = fem.FRACTION_OF_SPACE * np.pi
@@ -707,11 +703,25 @@ if __name__ == '__main__':
                                                             POTENTIAL_2D[idx_r,
                                                                          idx_xz,
                                                                          idx_y] = v
+
+                                            sampling_time_2D = float(sample_stopwatch)
+
+                                    if fem.FRACTION_OF_SPACE < 1:
                                         controller_2D.A[idx_r] = fem.a
-                                        controller_2D.STATS.append(stats)
+                                        controller_2D.STATS.append((src_r,
+                                                                    np.nan if potential is None else sampling_time_2D,
+                                                                    fem.iterations,
+                                                                    float(fem.solving_time),
+                                                                    float(fem.local_preprocessing_time),
+                                                                    float(fem.global_preprocessing_time))
 
                                     AS[idx_r] = fem.a
-                                    controller.STATS.append(stats)
+                                    controller.STATS.append((src_r,
+                                                             np.nan if potential is None else sampling_time_3D,
+                                                             fem.iterations,
+                                                             float(fem.solving_time),
+                                                             float(fem.local_preprocessing_time),
+                                                             float(fem.global_preprocessing_time))
 
                                     logger.info(
                                         'Gaussian SD={}, r={}, (deg={}): {}\t({fem.iterations}, {time}, {sampling})'.format(
@@ -721,7 +731,7 @@ if __name__ == '__main__':
                                             'SUCCEED' if potential is not None else 'FAILED',
                                             fem=fem,
                                             time=fem.local_preprocessing_time.duration + fem.solving_time.duration,
-                                            sampling=sample_stopwatch.duration))
+                                            sampling=sampling_time_2D + sampling_time_3D)
 
                                     if float(unsaved_time) > 10 * float(save_stopwatch):
                                         with save_stopwatch:
