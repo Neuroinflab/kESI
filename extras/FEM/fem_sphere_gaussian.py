@@ -668,13 +668,17 @@ if __name__ == '__main__':
                                                 r_xz_2 = x ** 2 + z ** 2
                                                 if r_xz_2 > r2:
                                                     misses += len(controller.Y_SAMPLE)
+                                                    continue
 
                                                 for idx_y, y in enumerate(controller.Y_SAMPLE):
                                                     if r_xz_2 + y ** 2 > r2:
                                                         misses += 1
+                                                        continue
                                                     try:
                                                         v = potential(x, y, z)
                                                     except Exception as e:
+                                                        if x < 0 or z < 0 or abs(y) > controller.scalp_radius or x > controller.scalp_radius or z > controller.scalp_radius:
+                                                            logger.warn('coords out of bounding box')
                                                         exceptions += 1
                                                     else:
                                                         hits += 1
@@ -683,12 +687,12 @@ if __name__ == '__main__':
                                                                   idx_y] = v
 
                                         sampling_time_3D = float(sample_stopwatch)
-                                        logger.info('H={} ({:.2f}),\tM={} (:.2f),\tE={} (:.2f)'.format(hits,
-                                                                                         hits / float(hits + misses + exceptions),
-                                                                                         misses,
-                                                                                         misses / float(hits + misses + exceptions),
-                                                                                         exceptions,
-                                                                                         exceptions / float(hits + exceptions)))
+                                        logger.info('H={} ({:.2f}),\tM={} ({:.2f}),\tE={} ({:.2f})'.format(hits,
+                                                                                                           hits / float(hits + misses + exceptions),
+                                                                                                           misses,
+                                                                                                           misses / float(hits + misses + exceptions),
+                                                                                                           exceptions,
+                                                                                                           exceptions / float(hits + exceptions)))
 
                                         if fem.FRACTION_OF_SPACE < 1:
                                             with sample_stopwatch:
@@ -724,7 +728,7 @@ if __name__ == '__main__':
                                                                     fem.iterations,
                                                                     float(fem.solving_time),
                                                                     float(fem.local_preprocessing_time),
-                                                                    float(fem.global_preprocessing_time))
+                                                                    float(fem.global_preprocessing_time)))
 
                                     AS[idx_r] = fem.a
                                     controller.STATS.append((src_r,
@@ -732,7 +736,7 @@ if __name__ == '__main__':
                                                              fem.iterations,
                                                              float(fem.solving_time),
                                                              float(fem.local_preprocessing_time),
-                                                             float(fem.global_preprocessing_time))
+                                                             float(fem.global_preprocessing_time)))
 
                                     logger.info(
                                         'Gaussian SD={}, r={}, (deg={}): {}\t({fem.iterations}, {time}, {sampling})'.format(
@@ -742,7 +746,7 @@ if __name__ == '__main__':
                                             'SUCCEED' if potential is not None else 'FAILED',
                                             fem=fem,
                                             time=fem.local_preprocessing_time.duration + fem.solving_time.duration,
-                                            sampling=sampling_time_2D + sampling_time_3D)
+                                            sampling=sampling_time_2D + sampling_time_3D))
 
                                     if float(unsaved_time) > 10 * float(save_stopwatch):
                                         with save_stopwatch:
