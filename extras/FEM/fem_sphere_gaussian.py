@@ -642,6 +642,9 @@ if __name__ == '__main__':
                                     potential = controller.fem(src_r)
 
                                     if potential is not None:
+                                        hits = 0
+                                        exceptions = 0
+                                        misses = 0
                                         with sample_stopwatch:
                                             # for idx_polar, (altitude, azimuth) in enumerate(zip(controller.ALTITUDE,
                                             #                                                     controller.AZIMUTH)):
@@ -664,20 +667,28 @@ if __name__ == '__main__':
                                             for idx_xz, (x, z) in enumerate(controller._xz):
                                                 r_xz_2 = x ** 2 + z ** 2
                                                 if r_xz_2 > r2:
-                                                    continue
+                                                    misses += len(controller.Y_SAMPLE)
+
                                                 for idx_y, y in enumerate(controller.Y_SAMPLE):
                                                     if r_xz_2 + y ** 2 > r2:
-                                                        continue
+                                                        misses += 1
                                                     try:
                                                         v = potential(x, y, z)
                                                     except Exception as e:
-                                                        pass
+                                                        exceptions += 1
                                                     else:
+                                                        hits += 1
                                                         POTENTIAL[idx_r,
                                                                   idx_xz,
                                                                   idx_y] = v
 
                                         sampling_time_3D = float(sample_stopwatch)
+                                        logger.info('H={} ({:.2f}),\tM={} (:.2f),\tE={} (:.2f)'.format(hits,
+                                                                                         hits / float(hits + misses + exceptions),
+                                                                                         misses,
+                                                                                         misses / float(hits + misses + exceptions),
+                                                                                         exceptions,
+                                                                                         exceptions / float(hits + exceptions)))
 
                                         if fem.FRACTION_OF_SPACE < 1:
                                             with sample_stopwatch:
