@@ -43,7 +43,7 @@ from kesi._engine import FunctionalFieldReconstructor
 from kesi._verbose import VerboseFFR
 
 
-class _PlainMatrixMM(VerboseFFR.MeasurementManagerBase):
+class _CommonPlainMatrixMM(object):
     def __init__(self, measurements_of_basis_functions):
         '''
         Parameters
@@ -86,7 +86,12 @@ class _PlainMatrixMM(VerboseFFR.MeasurementManagerBase):
                         range(len(self._measurements_of_basis_functions))))
 
 
-class _TrueBasesMatrixMM(_PlainMatrixMM):
+class _PlainMatrixMM(_CommonPlainMatrixMM,
+                     VerboseFFR.MeasurementManagerBase):
+    pass
+
+
+class _CommonTrueBasesMatrixMM(object):
     def probe_at_single_point(self, i, j):
         """
         Parameters
@@ -121,7 +126,18 @@ class _TrueBasesMatrixMM(_PlainMatrixMM):
                                  np.eye(len(self._measurements_of_basis_functions))))]
 
 
-class TestKernelMatricesOfVerboseFFR(TestCase):
+class _TrueBasesMatrixMM(_CommonTrueBasesMatrixMM,
+                         _PlainMatrixMM):
+    pass
+
+
+class _SpyCrossKernelReconstructor(object):
+    def __init__(self, kernel_solver, cross_kernel):
+        self.kernel_solver = kernel_solver
+        self.cross_kernel = cross_kernel
+
+
+class _CommonTestKernelMatricesOfVerboseFFR(TestCase):
     MM = _PlainMatrixMM
 
     _PROBED_POTENTIAL_BASIS = [[1, 2],
@@ -160,17 +176,11 @@ class TestKernelMatricesOfVerboseFFR(TestCase):
         return self.PROBED_POTENTIAL_BASIS.shape[1]
 
     def setUp(self):
-        self.estimation_mgr = self.MM(self.PROBED_CSD_BASIS)
-        self.reconstructor = self.getReconstructor(self.PROBED_POTENTIAL_BASIS)
-
-    def getReconstructor(self, measurements_of_basis_functions):
-        self.measurement_mgr = self.MM(measurements_of_basis_functions)
-        return VerboseFFR(self.measurement_mgr.bases(),
-                          self.measurement_mgr)
-
-    def testIsSubclassOfFunctionalFieldReconstructor(self):
-        self.assertTrue(issubclass(VerboseFFR,
-                                   FunctionalFieldReconstructor))
+        if not hasattr(self, 'getReconstructor'):
+            self.skipTest('Test in abstract class called.')
+        else:
+            self.estimation_mgr = self.MM(self.PROBED_CSD_BASIS)
+            self.reconstructor = self.getReconstructor(self.PROBED_POTENTIAL_BASIS)
 
     def testAttribute_probed_basis(self):
         self.checkArrayAlmostEqual(self.PROBED_POTENTIAL_BASIS,
@@ -200,8 +210,35 @@ class TestKernelMatricesOfVerboseFFR(TestCase):
         self.checkArrayAlmostEqual(self.CROSS_KERNEL,
                                    self.reconstructor.get_kernel_matrix(self.estimation_mgr))
 
+    def testMethod_get_crossreconstructor_ReturnsCrossKernelReconstructor(self):
+        self.assertIsInstance(self.reconstructor.get_crossreconstructor(self.estimation_mgr),
+                              self.reconstructor._CrossKernelReconstructor)
 
-class TestKernelFunctionsOfVerboseFFR(TestKernelMatricesOfVerboseFFR):
+    def testMethod_get_crossreconstructor_CallsArbitraryClassWithKernelSolverAndCrossKernel(self):
+        reconstructor = self.reconstructor.get_crossreconstructor(self.estimation_mgr,
+                                                                  _CrossKernelReconstructor=_SpyCrossKernelReconstructor)
+        self.assertIsInstance(reconstructor,
+                              _SpyCrossKernelReconstructor)
+        self.assertIs(reconstructor.kernel_solver,
+                      self.reconstructor._solve_kernel)
+        self.checkArrayAlmostEqual(self.CROSS_KERNEL,
+                                   reconstructor.cross_kernel)
+
+
+class TestKernelMatricesOfVerboseFFR(_CommonTestKernelMatricesOfVerboseFFR):
+    CLASS = VerboseFFR
+
+    def getReconstructor(self, measurements_of_basis_functions):
+        self.measurement_mgr = self.MM(measurements_of_basis_functions)
+        return self.CLASS(self.measurement_mgr.bases(),
+                          self.measurement_mgr)
+
+    def testIsSubclassOfFunctionalFieldReconstructor(self):
+        self.assertTrue(issubclass(self.CLASS,
+                                   FunctionalFieldReconstructor))
+
+
+class _CommonTestKernelFunctionsOfVerboseFFR(object):
     MM = _TrueBasesMatrixMM
 
     def testMethod_get_kernel_functions(self):
@@ -213,7 +250,12 @@ class TestKernelFunctionsOfVerboseFFR(TestKernelMatricesOfVerboseFFR):
                 self.assertAlmostEqual(k, kernels.f(j))
 
 
-class MockTestKernelFunctionsOfVerboseFFR(TestKernelFunctionsOfVerboseFFR):
+class TestKernelFunctionsOfVerboseFFR(_CommonTestKernelFunctionsOfVerboseFFR,
+                                      TestKernelMatricesOfVerboseFFR):
+    pass
+
+
+class _CommonMockTestKernelFunctionsOfVerboseFFR(object):
     class MM(TestKernelFunctionsOfVerboseFFR.MM):
         def __init__(self, *args, **kwargs):
             super(MockTestKernelFunctionsOfVerboseFFR.MM,
@@ -254,6 +296,11 @@ class MockTestKernelFunctionsOfVerboseFFR(TestKernelFunctionsOfVerboseFFR):
 
                 self.assertEqual({b.id() for b in self.measurement_mgr.bases()},
                                  {c[0][0].id() for c in calls})
+
+
+class MockTestKernelFunctionsOfVerboseFFR(_CommonMockTestKernelFunctionsOfVerboseFFR,
+                                          TestKernelFunctionsOfVerboseFFR):
+    pass
 
 
 class TestsOfInitializationErrors(test_Engine.TestsOfInitializationErrors):

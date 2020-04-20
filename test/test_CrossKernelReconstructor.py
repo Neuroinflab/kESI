@@ -22,6 +22,7 @@
 #                                                                             #
 ###############################################################################
 
+import warnings
 import unittest
 
 import numpy as np
@@ -36,7 +37,7 @@ try:
 except (ImportError, SystemError, ValueError):
     from _common import TestCase, SpyKernelSolverClass
 
-from kesi._verbose import _CrossKernelReconstructor
+import kesi._verbose as verbose
 
 
 class TestCrossKernelReconstructor(TestCase):
@@ -75,8 +76,9 @@ class TestCrossKernelReconstructor(TestCase):
         self.kernel_solver.set_solution(solution)
         kernel = None
         measured = [13, 37]
-        reconstructor = _CrossKernelReconstructor(self.kernel_solver(kernel),
-                                                  cross_kernel)
+        reconstructor = verbose._VerboseFunctionalFieldReconstructorBase._CrossKernelReconstructor(
+                                    self.kernel_solver(kernel),
+                                    cross_kernel)
         self.checkArrayLikeAlmostEqual(expected,
                                        (reconstructor(measured)
                                         if regularization_parameter is None
@@ -91,6 +93,22 @@ class TestCrossKernelReconstructor(TestCase):
         else:
             self.assertEqual(regularization_parameter,
                              self.kernel_solver.regularization_parameter)
+
+
+class TestLegacyCrossKernelReconstructor(unittest.TestCase):
+    def testDeprecationWarning(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+
+            verbose._CrossKernelReconstructor(
+                SpyKernelSolverClass([[]]),
+                [[]])
+
+            self.assertEqual(1, len(w))
+            self.assertTrue(issubclass(w[-1].category,
+                                       DeprecationWarning))
+
+
 
 if __name__ == '__main__':
     unittest.main()
