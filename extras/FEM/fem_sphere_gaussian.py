@@ -675,7 +675,8 @@ if __name__ == '__main__':
                                                         misses += 1
                                                         continue
                                                     try:
-                                                        v = potential(x, y, z)
+                                                        v = potential(z, y, x)
+                                                        # Order inverted as it is required that x <= z
                                                     except Exception as e:
                                                         if x < 0 or z < 0 or abs(y) > controller.scalp_radius or x > controller.scalp_radius or z > controller.scalp_radius:
                                                             logger.warn('coords out of bounding box')
