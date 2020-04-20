@@ -5,23 +5,41 @@
 import numpy as np
 import pandas as pd
 import itertools
-import kesi
-import scipy
 import time
 
-from validate_properties import (ValidateKESI,
-                                 MeasurementManager)
+from kesi._verbose import (VerboseFFR,
+                           LinearMixture,
+                           LoadableVerboseFFR, _CrossKernelReconstructor)
+from kesi._engine import _LinearKernelSolver
 
-from FEM.fem_sphere_gaussian import SomeSphereGaussianSourceFactory3D
+from FEM.fem_sphere_gaussian import (SomeSphereGaussianSourceFactory3D,
+                                     SomeSphereGaussianSourceFactoryOnlyCSD)
+from _common_new import altitude_azimuth_mesh
 
 try:
     from joblib import Parallel, delayed
     import multiprocessing
-    NUM_CORES = multiprocessing.cpu_count() - 1
+    NUM_CORES = 8  # multiprocessing.cpu_count() - 1
     PARALLEL_AVAILABLE = True
 except ImportError:
     PARALLEL_AVAILABLE = False
+
+MeasurementManagerBase = VerboseFFR.MeasurementManagerBase
+
+
+class MeasurementManager(MeasurementManagerBase):
+    def __init__(self, ELECTRODES, space='potential'):
+        self._space = space
+        self._ELECTRODES = ELECTRODES
+        self.number_of_measurements = len(ELECTRODES)
+    def probe(self, field):
+        return getattr(field, 
+                       self._space)(self._ELECTRODES.X,
+                                    self._ELECTRODES.Y,
+                                    self._ELECTRODES.Z)
 print('PARALLEL_AVAILABLE: ', PARALLEL_AVAILABLE)
+
+
 
 
 def all_sources(r, altitude, azimuth):
@@ -111,41 +129,45 @@ def make_reconstruction(source, reconstructor, measurement_manager, measurement_
     return pots, true_csd, est_csd, error
 
 
-def source_scanning_parallel(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z):
-    results = Parallel(n_jobs=NUM_CORES)(delayed(make_reconstruction)
-                                         (source, reconstructor,
+def make_reconstruction_ck(pots, source, cross_reconstructor, measurement_manager, measurement_manager_basis, regularization_parameter):
+#    pots = measurement_manager.probe(source)
+    true_csd = measurement_manager_basis.probe(source)
+    est_csd = cross_reconstructor(pots, regularization_parameter)
+    error = calculate_point_error(true_csd, est_csd)
+    return true_csd, est_csd, error
+
+
+def source_scanning_parallel(potential, sources, reconstructor, measurement_manager, measurement_manager_basis, regularization_parameter=0):
+    results = Parallel(n_jobs=NUM_CORES)(delayed(make_reconstruction_ck)
+                                         (pots, source, reconstructor,
                                           measurement_manager, measurement_manager_basis,
-                                          EST_X, EST_Y, EST_Z)
-                                         for source in sources)
-    pots = np.array([item[0] for item in results])
-    true_csd = np.array([item[1] for item in results])
-    est_csd = np.array([item[2] for item in results])
-    error = np.array([item[3] for item in results])
+                                          regularization_parameter)
+                                         for pots, source in zip(potential, sources))
+    true_csd = np.array([item[0] for item in results])
+    est_csd = np.array([item[1] for item in results])
+    error = np.array([item[2] for item in results])
     error_mean = sigmoid_mean(error)
-    np.savez_compressed('whole_sphere_parallel.npz',
-    			POTS= pots,
+    np.savez_compressed('whole_sphere_parallel_1000_deg_1_rp_0054.npz',
     			TRUE_CSD = true_csd,
     			EST_CSD = est_csd,
     			ERROR = error,
     			ERROR_MEAN = error_mean)
-    return error_mean
+    return error_mean, true_csd, est_csd, error
 
 
 start_time = time.time()    
-factory = SomeSphereGaussianSourceFactory3D('/home/mbejtka/Data_Kuba/'
-                                          'one_sphere_gaussian_0062_deg_1.npz')
+MESHFILE = '/home/mbejtka/Data_Kuba/one_sphere_gaussian_1000_deg_1.npz'
+factory = SomeSphereGaussianSourceFactory3D(MESHFILE)
 print("Loading data --- %s seconds ---" % (time.time() - start_time))
-Altitude = list(np.linspace(-0.5*np.pi, 0.5*np.pi, 40))
-Azimuth = list(np.linspace(0, 2*np.pi, 40))
-sources = all_sources(factory.R[::2], Altitude, Azimuth)
+
+dst = factory.R[1] - factory.R[0]
+sources = [factory(r, altitude, azimuth)
+           for altitude, azimuth in altitude_azimuth_mesh(-np.pi/2,
+                                                          dst/factory.scalp_radius)
+           for r in factory.R]
+print('Number of sources: ', len(sources))
 print("Sources --- %s seconds ---" % (time.time() - start_time))
 
-R, altitude, azimuth = np.meshgrid(factory.R[::2],
-                                   Altitude,
-                                   Azimuth)
-X = R*np.cos(altitude)*np.cos(azimuth)
-Y = R*np.cos(altitude)*np.sin(azimuth)
-Z = R*np.sin(altitude)
 
 # Determine positions of electrodes
 theta, phi, r = np.meshgrid(np.linspace(-0.5*np.pi, 0.5*np.pi, 15),
@@ -158,15 +180,11 @@ ELECTRODES = pd.DataFrame({'X': ELE_X.flatten(),
                            'Y': ELE_Y.flatten(),
                            'Z': ELE_Z.flatten()})
 
-measurement_manager = MeasurementManager(ELECTRODES, space='potential')
-
-reconstructor = ValidateKESI(sources, measurement_manager)
-print("Reconstructor --- %s seconds ---" % (time.time() - start_time))
-
+# Estimating points    
 r = factory.scalp_radius
-EST_X, EST_Y, EST_Z = np.meshgrid(np.linspace(-r, r, 20),
-                                  np.linspace(-r, r, 20),
-                                  np.linspace(-r, r, 20))
+EST_X, EST_Y, EST_Z = np.meshgrid(np.linspace(-r, r, 30),
+                                  np.linspace(-r, r, 30),
+                                  np.linspace(-r, r, 30))
 inside_sphere = np.array(np.where(EST_X.flatten()**2 + EST_Y.flatten()**2 + EST_Z.flatten()**2 <=r**2))
 EST_X = EST_X.flatten()[inside_sphere[0]]
 EST_Y = EST_Y.flatten()[inside_sphere[0]]
@@ -174,19 +192,35 @@ EST_Z = EST_Z.flatten()[inside_sphere[0]]
 EST_POINTS =pd.DataFrame({'X': EST_X.flatten(),
                           'Y': EST_Y.flatten(),
                           'Z': EST_Z.flatten()})
-
+    
+measurement_manager = MeasurementManager(ELECTRODES, space='potential')
 measurement_manager_basis = MeasurementManager(EST_POINTS, space='csd')
 
-# save_time = time.time()
-# np.savez_compressed('reconstructor_sphere.npz',
-#                     KERNEL=reconstructor.kernel,
-#                     CROSS_KERNEL=reconstructor.get_kernel_matrix(measurement_manager_basis))
-# print("Saved Reconstructor --- %s seconds ---" % (time.time() - save_time))
+# Create reconstructor
+reconstructor_filename = 'SavedReconstructor_one_sphere_1000_deg_1.npz'
+#reconstructor = VerboseFFR(sources, measurement_manager)
+#reconstructor.save(reconstructor_filename)
+#print("Reconstructor --- %s seconds ---" % (time.time() - start_time))
+
+factoryCSD = SomeSphereGaussianSourceFactoryOnlyCSD(MESHFILE)
+dst = factoryCSD.R[1] - factoryCSD.R[0]
+sourcesCSD = [factoryCSD(r, altitude, azimuth)
+              for altitude, azimuth in altitude_azimuth_mesh(-np.pi/2,
+                                                          dst/factory.scalp_radius)
+              for r in factoryCSD.R]
+# Load saved reconstructor
+loadable_reconstructor = LoadableVerboseFFR(reconstructor_filename, sourcesCSD, measurement_manager)
+kernel = loadable_reconstructor.kernel
+cross_kernel = loadable_reconstructor.get_kernel_matrix(measurement_manager_basis)
+cross_reconstructor = _CrossKernelReconstructor(_LinearKernelSolver(kernel), cross_kernel)
+
+potential = [measurement_manager.probe(source) for source in sources]
 
 error_time = time.time()
 if PARALLEL_AVAILABLE:
-    source_scanning_error = source_scanning_parallel(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z)
-else:
-    source_scanning_error = source_scanning(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z)
+    source_scanning_error, true_csd, est_csd, error = source_scanning_parallel(potential, sourcesCSD, cross_reconstructor, measurement_manager, measurement_manager_basis, regularization_parameter=0.0054)
+#else:
+#    source_scanning_error = source_scanning(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z)
 print("Error --- %s seconds ---" % (time.time() - error_time))
+print("Total time --- %s seconds ---" % (time.time() - start_time))
 
