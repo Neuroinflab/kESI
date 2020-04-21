@@ -366,7 +366,7 @@ brain_roi_r = 0.006;
 scalp_element_length = 0.015 * SED_RELATIVE_ELEMENT_SIZE;  // from Chaitanya's sphere_4_lowres.geo
 
 min_sd = 0.001;
-brain_roi_element_length = min_sd / 4;
+brain_roi_element_length = min_sd / 4 * SED_RELATIVE_ROI_ELEMENT_SIZE;
 scalp_roi_element_length = 0.0025 * SED_RELATIVE_ELEMENT_SIZE;  // from Chaitanya's sphere_4_lowres.geo
 
 x = 0.; y = 0.; z = 0.;
