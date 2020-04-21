@@ -58,5 +58,5 @@ eighth_wedge_of_%_finer.geo: eighth_wedge_of_%.geo.template
 eighth_wedge_of_%_finest.geo: eighth_wedge_of_%.geo.template
 	${call SED,SED_RELATIVE_ELEMENT_SIZE,0.125}
 
-eighth_wedge_of_one_%.geo: eighth_wedge_of_one_%.geo.template
+eighth_wedge_of_%.geo: eighth_wedge_of_%.geo.template
 	${call SED,SED_RELATIVE_ELEMENT_SIZE,1.0}
