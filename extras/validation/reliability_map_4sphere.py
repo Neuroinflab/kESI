@@ -65,12 +65,13 @@ def calculate_point_error(true_csd, est_csd):
         Normalized error of reconstruction calculated separetly at every
         point of estimation space.
     """
-    epsilon = np.finfo(np.float64).eps
-    point_error = np.linalg.norm(true_csd.reshape(true_csd.size, 1) -
-                                 est_csd.reshape(est_csd.size, 1), axis=1)
-    point_error /= np.linalg.norm(true_csd.reshape(true_csd.size, 1),
-                                  axis=1) + \
-                                  epsilon*np.max(np.linalg.norm(true_csd.reshape(true_csd.size, 1), axis=1))
+    true_csd_r = true_csd.reshape(true_csd.size, 1)
+    est_csd_r = est_csd.reshape(est_csd.size, 1)
+    epsilon = np.linalg.norm(true_csd_r)/np.max(abs(true_csd_r))
+    err_r = abs(est_csd_r/(np.linalg.norm(est_csd_r)) -
+                true_csd_r/(np.linalg.norm(true_csd_r)))
+    err_r *= epsilon
+    point_error = err_r.reshape(true_csd.shape)
     return point_error
 
 def sigmoid_mean(error):
@@ -110,7 +111,7 @@ def source_scanning(sources, reconstructor, measurement_manager, measurement_man
         all_true_csd.append(true_csd)
         all_est_csd.append(est_csd)
     point_error = np.array(point_error)
-    error_mean = sigmoid_mean(point_error)
+    error_mean = np.mean(point_error, axis=0) # sigmoid_mean(point_error)
     np.savez_compressed(filename,
     			POTS = potential,
     			TRUE_CSD = true_csd,
@@ -145,7 +146,7 @@ def source_scanning_parallel(potential, sources, reconstructor, measurement_mana
     true_csd = np.array([item[0] for item in results])
     est_csd = np.array([item[1] for item in results])
     error = np.array([item[2] for item in results])
-    error_mean = sigmoid_mean(error)
+    error_mean = np.mean(error, axis=0) # sigmoid_mean(error)
     np.savez_compressed(filename,
     			TRUE_CSD = true_csd,
     			EST_CSD = est_csd,
