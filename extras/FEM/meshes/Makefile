@@ -3,6 +3,7 @@ KC=python kesi_convert.py $< $@
 GMSH=gmsh -3 -optimize_netgen $<
 GMSH_NOOPT=gmsh -3 $<
 SED=sed 's/$(1)/$(2)/g' $< > $@
+SED_INPLACE=sed -i 's/$(1)/$(2)/g' $@
 
 EIGHTH_OF_SPHERE_XDMF=eighth_of_sphere.xdmf
 EIGHTH_OF_SPHERE_XML=eighth_of_sphere.xml eighth_of_sphere_coarse.xml eighth_of_sphere_coarser.xml eighth_of_sphere_coarsest.xml
@@ -10,11 +11,12 @@ EIGHTH_OF_SPHERE_MESHES=$(EIGHTH_OF_SPHERE_XDMF) $(EIGHTH_OF_SPHERE_XML)
 FINITE_SLICE_MESHES=finite_slice.xml finite_slice_small.xml finite_slice_smaller.xml finite_slice_small_coarse.xml finite_slice_smaller_coarse.xml
 SPHERICAL_MESHES=one_sphere.xml two_spheres.xml four_spheres.xml four_spheres_composite.xml
 WEDGE_MESHES=eighth_wedge_of_one_sphere.xml eighth_wedge_of_two_spheres.xml eighth_wedge_of_four_spheres.xml eighth_wedge_of_four_spheres_composite.xml
-MESHES=$(EIGHTH_OF_SPHERE_MESHES) $(FINITE_SLICE_MESHES) $(SPHERICAL_MESHES) $(WEDGE_MESHES) $(WEDGE_MESHES:.xml=_fine.xml) $(WEDGE_MESHES:.xml=_finer.xml) $(WEDGE_MESHES:.xml=_finest.xml)
+WEDGE_MESHES_ALL=$(WEDGE_MESHES) $(WEDGE_MESHES:.xml=_fine.xml) $(WEDGE_MESHES:.xml=_finer.xml) $(WEDGE_MESHES:.xml=_finest.xml) $(WEDGE_MESHES:.xml=_coarse.xml) $(WEDGE_MESHES:.xml=_coarser.xml) $(WEDGE_MESHES:.xml=_coarsest.xml)
+MESHES=$(EIGHTH_OF_SPHERE_MESHES) $(FINITE_SLICE_MESHES) $(SPHERICAL_MESHES) $(WEDGE_MESHES_ALL)
 
 MESHES_MSH=$(MESHES:.xml=.msh)
 
-.SECONDARY: $(MESHES_MSH) $(WEDGE_MESHES:.xml=.geo)
+.SECONDARY: $(MESHES_MSH) $(WEDGE_MESHES_ALL:.xml=.geo)
 
 .PHONY: all
 
@@ -51,12 +53,28 @@ eighth_of_sphere_coarsest.geo: eighth_of_sphere.geo.template
 
 eighth_wedge_of_%_fine.geo: eighth_wedge_of_%.geo.template
 	${call SED,SED_RELATIVE_ELEMENT_SIZE,0.5}
+	${call SED_INPLACE,SED_ROI_RELATIVE_ELEMENT_SIZE,1.0}
 
 eighth_wedge_of_%_finer.geo: eighth_wedge_of_%.geo.template
 	${call SED,SED_RELATIVE_ELEMENT_SIZE,0.25}
+	${call SED_INPLACE,SED_ROI_RELATIVE_ELEMENT_SIZE,1.0}
 
 eighth_wedge_of_%_finest.geo: eighth_wedge_of_%.geo.template
 	${call SED,SED_RELATIVE_ELEMENT_SIZE,0.125}
+	${call SED_INPLACE,SED_ROI_RELATIVE_ELEMENT_SIZE,1.0}
 
-eighth_wedge_of_one_%.geo: eighth_wedge_of_one_%.geo.template
+eighth_wedge_of_%_coarse.geo: eighth_wedge_of_%.geo.template
 	${call SED,SED_RELATIVE_ELEMENT_SIZE,1.0}
+	${call SED_INPLACE,SED_ROI_RELATIVE_ELEMENT_SIZE,2.0}
+
+eighth_wedge_of_%_coarser.geo: eighth_wedge_of_%.geo.template
+	${call SED,SED_RELATIVE_ELEMENT_SIZE,1.0}
+	${call SED_INPLACE,SED_ROI_RELATIVE_ELEMENT_SIZE,4.0}
+
+eighth_wedge_of_%_coarsest.geo: eighth_wedge_of_%.geo.template
+	${call SED,SED_RELATIVE_ELEMENT_SIZE,1.0}
+	${call SED_INPLACE,SED_ROI_RELATIVE_ELEMENT_SIZE,4.0}
+
+eighth_wedge_of_%.geo: eighth_wedge_of_%.geo.template
+	${call SED,SED_RELATIVE_ELEMENT_SIZE,1.0}
+	${call SED_INPLACE,SED_ROI_RELATIVE_ELEMENT_SIZE,1.0}

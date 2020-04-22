@@ -477,7 +477,7 @@ skull_element_length = (skull_r - csf_r) * SED_RELATIVE_ELEMENT_SIZE;
 scalp_element_length = (scalp_r - skull_r) * SED_RELATIVE_ELEMENT_SIZE;
 
 min_sd = 0.001;
-brain_roi_element_length = min_sd / 4;
+brain_roi_element_length = min_sd / 4 * SED_RELATIVE_ROI_ELEMENT_SIZE;
 csf_roi_element_length   = 0.0050 * SED_RELATIVE_ELEMENT_SIZE;  // from Chaitanya's sphere_4_lowres.geo
 skull_roi_element_length = 0.0025 * SED_RELATIVE_ELEMENT_SIZE;  // from Chaitanya's sphere_4_lowres.geo
 scalp_roi_element_length = 0.0025 * SED_RELATIVE_ELEMENT_SIZE;  // from Chaitanya's sphere_4_lowres.geo
