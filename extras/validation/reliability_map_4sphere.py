@@ -19,7 +19,7 @@ from _common_new import altitude_azimuth_mesh
 try:
     from joblib import Parallel, delayed
     import multiprocessing
-    NUM_CORES = 8  # multiprocessing.cpu_count() - 1
+    NUM_CORES = multiprocessing.cpu_count() - 1
     PARALLEL_AVAILABLE = True
 except ImportError:
     PARALLEL_AVAILABLE = False
@@ -130,29 +130,43 @@ def make_reconstruction(source, reconstructor, measurement_manager, measurement_
     return pots, true_csd, est_csd, error
 
 
-def make_reconstruction_ck(pots, source, cross_reconstructor, measurement_manager, measurement_manager_basis, regularization_parameter):
+def make_reconstruction_ck(pots, source, load_rec, cross_reconstructor, measurement_manager, measurement_manager_basis, regularization_parameter):
     true_csd = measurement_manager_basis.probe(source)
-    est_csd = cross_reconstructor(pots, regularization_parameter)
+    rp = cross_validate(load_rec, pots, regularization_parameter)
+    est_csd = cross_reconstructor(pots, rp)
     error = calculate_point_error(true_csd, est_csd)
-    return true_csd, est_csd, error
+    return true_csd, est_csd, error, rp
 
 
-def source_scanning_parallel(potential, sources, reconstructor, measurement_manager, measurement_manager_basis, regularization_parameter=0, filename='reconstruction_error.npz'):
+def source_scanning_parallel(potential, sources, load_rec, reconstructor, measurement_manager, measurement_manager_basis, regularization_parameter=0, filename='reconstruction_error.npz'):
     results = Parallel(n_jobs=NUM_CORES)(delayed(make_reconstruction_ck)
-                                         (pots, source, reconstructor,
+                                         (pots, source, load_rec, reconstructor,
                                           measurement_manager, measurement_manager_basis,
                                           regularization_parameter)
                                          for pots, source in zip(potential, sources))
     true_csd = np.array([item[0] for item in results])
     est_csd = np.array([item[1] for item in results])
     error = np.array([item[2] for item in results])
+    rp = np.array([item[3] for item in results])
     error_mean = np.mean(error, axis=0) # sigmoid_mean(error)
     np.savez_compressed(filename,
     			TRUE_CSD = true_csd,
     			EST_CSD = est_csd,
     			ERROR = error,
-    			ERROR_MEAN = error_mean)
-    return error_mean, true_csd, est_csd, error
+    			ERROR_MEAN = error_mean,
+                CV_RP = rp)
+    return error_mean, true_csd, est_csd, error, rp
+
+
+def cross_validate(reconstructor, measurements, regularization_parameters):
+    errors = np.zeros(regularization_parameters.size)
+    for rp_idx, rp in enumerate(regularization_parameters):
+#        print('Cross validating regularization parameter :', rp)
+        errors[rp_idx] = np.linalg.norm(reconstructor.leave_one_out_errors(measurements, rp))
+    err_idx = np.where(errors == np.min(errors))
+    cv_rp = regularization_parameters[err_idx][0]
+#    print('CV_rp :', cv_rp)
+    return cv_rp
 
 
 start_time = time.time()    
@@ -215,12 +229,21 @@ cross_kernel = loadable_reconstructor.get_kernel_matrix(measurement_manager_basi
 cross_reconstructor = _CrossKernelReconstructor(_LinearKernelSolver(kernel), cross_kernel)
 
 potential = [measurement_manager.probe(source) for source in sources]
-filename = 'four_spheres_1000_deg_1_rp_001.npz'
+filename = 'four_spheres_1000_deg_1_rp_cv.npz'
+
+
+
+rps = np.logspace(-1, -15, 7, base=10.)
+#est_csd = cross_reconstructor(potential[0], cross_validate(loadable_reconstructor, potential[0], rps))
+#estimation_error = loadable_reconstructor.leave_one_out_errors(potential[0], 0.001)
+
 error_time = time.time()
 if PARALLEL_AVAILABLE:
-    source_scanning_error, true_csd, est_csd, error = source_scanning_parallel(potential, sourcesCSD, cross_reconstructor, measurement_manager, measurement_manager_basis, regularization_parameter=0.001, filename=filename)
+    source_scanning_error, true_csd, est_csd, error, rp = source_scanning_parallel(potential, sourcesCSD, loadable_reconstructor, cross_reconstructor, measurement_manager, measurement_manager_basis, regularization_parameter=rps, filename=filename)
 else:
-    source_scanning_error = source_scanning(sources, reconstructor, measurement_manager, measurement_manager_basis, EST_X, EST_Y, EST_Z, filename=filename)
+    source_scanning_error = source_scanning(sources, reconstructor, measurement_manager,
+                                            measurement_manager_basis, EST_X, EST_Y, EST_Z,
+                                            filename=filename)
 print("Error --- %s seconds ---" % (time.time() - error_time))
 print("Total time --- %s seconds ---" % (time.time() - start_time))
 
