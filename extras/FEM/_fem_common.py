@@ -217,6 +217,12 @@ else:
                                self.EXTERNAL_SURFACE)
 
 
+def empty_array(shape):
+    A = np.empty(shape)
+    A.fill(np.nan)
+    return A
+
+
 class _SourceFactory_Base(object):
     @classmethod
     def solution_path(cls, solution_filename, try_local_first=True):

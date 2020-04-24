@@ -44,12 +44,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def empty_array(shape):
-    A = np.empty(shape)
-    A.fill(np.nan)
-    return A
-
-
 class _SomeSphereGaussianLoaderBase(object):
     ATTRIBUTES = ['k',
                   'source_resolution',
@@ -266,9 +260,9 @@ class SomeSphereGaussianSourceFactory3D(_SomeSphereGaussianSourceFactoryBase,
                                         _GaussianLoaderBase3D):
     def _make_interpolator(self, COMPRESSED):
         sf = self.sampling_frequency
-        POTENTIAL = empty_array((sf + 1,
-                                 len(self.Y_SAMPLE),
-                                 sf + 1))
+        POTENTIAL = fc.empty_array((sf + 1,
+                                    len(self.Y_SAMPLE),
+                                    sf + 1))
         for xz_idx, (x_idx, z_idx) in enumerate(self._xz_idx):
             P = COMPRESSED[xz_idx, :]
             POTENTIAL[x_idx, :, z_idx] = P
@@ -379,9 +373,9 @@ class _SomeSphereControllerBase(object):
 
     def _empty_solutions(self):
         n = 2 ** self.k
-        self.A = empty_array(n * self.source_resolution)
+        self.A = fc.empty_array(n * self.source_resolution)
         self.STATS = []
-        self.POTENTIAL = empty_array(self._potential_size(n))
+        self.POTENTIAL = fc.empty_array(self._potential_size(n))
 
     @property
     def _fem_attributes(self):

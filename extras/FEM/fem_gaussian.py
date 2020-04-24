@@ -194,8 +194,7 @@ if __name__ == '__main__':
                                      fem=fem))
                     if potential is not None:
                         N_LIMIT = (N - 1) * SAMPLING_FREQUENCY + 1 # TODO: prove correctness
-                        POTENTIAL = np.empty(N_LIMIT * (N_LIMIT + 1) * (N_LIMIT + 2) // 6)
-                        POTENTIAL.fill(np.nan)
+                        POTENTIAL = fc.empty_array(N_LIMIT * (N_LIMIT + 1) * (N_LIMIT + 2) // 6)
                         GT = POTENTIAL.copy()
                         for x in range(N_LIMIT):
                             for y in range(x + 1):

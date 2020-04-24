@@ -30,6 +30,16 @@ logger.setLevel(logging.INFO)
 
 import numpy as np
 
+try:
+    from . import _fem_common as fc
+    # When run as script raises:
+    #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
+    #  - `SystemError` (Python 3.3-5), or
+    #  - `ValueError` (Python 2.7).
+
+except (ImportError, SystemError, ValueError):
+    import _fem_common as fc
+
 SOLUTION_FILENAME = 'Slice.npz'
 MAX_ITER = 10000
 
@@ -44,11 +54,11 @@ class GaussianSourceSliceFactory(object):
 #             COMPRESSED = fh['Lanczos{}_{}'.format(n, degree)]
 #
 #             stride = 2 * N - 1
-#             # POTENTIAL = self.empty([stride, stride, stride])
-#             self.POTENTIAL = self.empty(stride ** 3)
-#             self.X = self.empty(stride ** 3)
-#             self.Y = self.empty(stride ** 3)
-#             self.Z = self.empty(stride ** 3)
+#             # POTENTIAL = fc.empty_array([stride, stride, stride])
+#             self.POTENTIAL = fc.empty_array(stride ** 3)
+#             self.X = fc.empty_array(stride ** 3)
+#             self.Y = fc.empty_array(stride ** 3)
+#             self.Z = fc.empty_array(stride ** 3)
 #
 #             for x in range(N):
 #                 for y in range(x + 1):
@@ -80,11 +90,6 @@ class GaussianSourceSliceFactory(object):
 #         # self.X = X.flatten()
 #         # self.Y = Y.flatten()
 #         # self.Z = Z.flatten()
-#
-#     def empty(self, shape):
-#         X = np.empty(shape)
-#         X.fill(np.nan)
-#         return X
 #
 #     def _lanczos(self, X):
 #         return np.where(abs(X) >= self.n,
@@ -257,11 +262,10 @@ if __name__ == '__main__':
         for degree in [1, 2, 3]:
             results['A_{}'.format(degree)] = []
 
-            RES = np.empty((len(SD),
-                            len(H),
-                            len(X),
-                            len(Y)))
-            RES.fill(np.nan)
+            RES = fc.empty_array((len(SD),
+                                  len(H),
+                                  len(X),
+                                  len(Y)))
             results['Gaussian_{}'.format(degree)] = RES
 
             for i_sd, sd in enumerate(SD):

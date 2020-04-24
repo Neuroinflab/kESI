@@ -172,15 +172,12 @@ class _FailsafeFiniteSliceGaussianController(
             logger.warning(str(e))
             obj.STATS = []
 
-            obj.POTENTIAL = np.empty((2 ** obj.k,
-                                      2 ** obj.k * (2 ** obj.k + 1) // 2,
-                                      2 * obj.sampling_frequency + 1,
-                                      obj.sampling_frequency + 1,
-                                      2 * obj.sampling_frequency + 1))
-            obj.POTENTIAL.fill(np.nan)
-
-            obj.A = np.empty((2 ** obj.k, 2 ** obj.k * (2 ** obj.k + 1) // 2))
-            obj.A.fill(np.nan)
+            obj.POTENTIAL = fc.empty_array((2 ** obj.k,
+                                            2 ** obj.k * (2 ** obj.k + 1) // 2,
+                                            2 * obj.sampling_frequency + 1,
+                                            obj.sampling_frequency + 1,
+                                            2 * obj.sampling_frequency + 1))
+            obj.A = fc.empty_array((2 ** obj.k, 2 ** obj.k * (2 ** obj.k + 1) // 2))
 
     @property
     def K(self):
