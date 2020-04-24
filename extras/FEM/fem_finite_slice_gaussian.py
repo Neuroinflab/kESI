@@ -255,7 +255,7 @@ class FiniteSliceGaussianSourceFactory(fc._SourceFactory_Base):
             self._POTENTIAL = POTENTIAL
             self._interpolator = RegularGridInterpolator((parent.X_SAMPLE,
                                                           parent.Y_SAMPLE,
-                                                          parent.X_SAMPLE),
+                                                          parent.Z_SAMPLE),
                                                          POTENTIAL,
                                                          bounds_error=True)
 
