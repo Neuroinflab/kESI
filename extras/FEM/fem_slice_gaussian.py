@@ -23,7 +23,7 @@
 ###############################################################################
 
 import logging
-import itertools
+# import itertools
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -44,10 +44,10 @@ SOLUTION_FILENAME = 'Slice.npz'
 MAX_ITER = 10000
 
 
-class GaussianSourceSliceFactory(object):
-    def __init__(self, degree=3, _limit=np.inf):
-        with np.load(SOLUTION_FILENAME) as fh:
-            POTENTIAL = fh['Gaussian_{}'.format(degree)]
+# class GaussianSourceSliceFactory(object):
+#     def __init__(self, degree=3, _limit=np.inf):
+#         with np.load(SOLUTION_FILENAME) as fh:
+#             POTENTIAL = fh['Gaussian_{}'.format(degree)]
 #             N = min(_limit, fh['N'])
 #
 #             self.a = fh['A_{}_{}'.format(n, degree)]

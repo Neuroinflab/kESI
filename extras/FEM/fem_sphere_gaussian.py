@@ -388,9 +388,9 @@ class _SomeSphereGaussianController3D(_GaussianLoaderBase3D,
                                       _SomeSphereControllerBase):
     sampling_frequency = 256
 
-    def _empty_solutions(self):
-        super(_SomeSphereGaussianController3D, self)._empty_solutions()
-        n = 2 ** self.k
+    # def _empty_solutions(self):
+    #     super(_SomeSphereGaussianController3D, self)._empty_solutions()
+    #     n = 2 ** self.k
 
     def _potential_size(self, n):
         xz_size = (self.sampling_frequency + 1) * (self.sampling_frequency + 2) // 2
