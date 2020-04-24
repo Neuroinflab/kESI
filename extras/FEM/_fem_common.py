@@ -127,7 +127,7 @@ else:
                 logger.debug('Creating function space...')
                 self._V = FunctionSpace(self._mesh, "CG", degree)
                 logger.debug('Done.  Creating integration subdomains...')
-                self._dx = Measure("dx")(subdomain_data=self._subdomains)
+                self.create_integration_subdomains()
                 logger.debug('Done.  Creating test function...')
                 self._v = TestFunction(self._V)
                 logger.debug('Done.  Creating potential function...')
@@ -151,18 +151,16 @@ else:
 
             self._degree = degree
 
+        def create_integration_subdomains(self):
+            self._dx = Measure("dx")(subdomain_data=self._subdomains)
+
         def __call__(self, degree, *args, **kwargs):
             if degree != self._degree:
                 self._change_degree(degree, *args, **kwargs)
 
             gc.collect()
             with self.local_preprocessing_time:
-                logger.debug('Creating CSD expression...')
-                csd = self._make_csd(degree, *args, **kwargs)
-                logger.debug('Done.  Normalizing...')
-                self.a = csd.a = self._csd_normalization_factor(csd)
-                logger.debug('Done.  Creating RHS part of equation...')
-                L = csd * self._v * self._dx
+                L = self._rhs(degree, *args, **kwargs)
                 logger.debug('Done.  Assembling linear equation vector...')
                 known_terms = assemble(L)
                 logger.debug('Done.  Applying boundary condition to the vector...')
@@ -182,6 +180,14 @@ else:
                 self.iterations = self.MAX_ITER
                 logger.warning("Solver failed: {}".format(repr(e)))
                 return None
+
+        def _rhs(self, degree, *args, **kwargs):
+            logger.debug('Creating CSD expression...')
+            csd = self._make_csd(degree, *args, **kwargs)
+            logger.debug('Done.  Normalizing...')
+            self.a = csd.a = self._csd_normalization_factor(csd)
+            logger.debug('Done.  Creating RHS part of equation...')
+            return csd * self._v * self._dx
 
         def _solve(self, known_terms):
             self.iterations = self._solver.solve(
