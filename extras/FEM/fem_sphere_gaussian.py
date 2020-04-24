@@ -30,14 +30,14 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
 try:
-    from . import _fem_common
+    from . import _fem_common as fc
     # When run as script raises:
     #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
     #  - `SystemError` (Python 3.3-5), or
     #  - `ValueError` (Python 2.7).
 
 except (ImportError, SystemError, ValueError):
-    import _fem_common
+    import _fem_common as fc
 
 
 logger = logging.getLogger(__name__)
@@ -410,7 +410,7 @@ class _SomeSphereGaussianController3D(_GaussianLoaderBase3D,
                    self,
                    int(round(1000 / 2 ** self.k)))
 
-        return _fem_common._SourceFactory_Base.solution_path(fn, False)
+        return fc._SourceFactory_Base.solution_path(fn, False)
 
 
 class _SomeSphereGaussianController2D(_GaussianLoaderBase2D,
@@ -428,7 +428,7 @@ class _SomeSphereGaussianController2D(_GaussianLoaderBase2D,
                    self,
                    int(round(1000 / 2 ** self.k)))
 
-        return _fem_common._SourceFactory_Base.solution_path(fn, False)
+        return fc._SourceFactory_Base.solution_path(fn, False)
 
 
 if __name__ == '__main__':
@@ -447,13 +447,13 @@ if __name__ == '__main__':
                      quay.io/fenicsproject/stable
         """)
     else:
-        class _SphericalGaussianPotential(_fem_common._FEM_Base):
+        class _SphericalGaussianPotential(fc._FEM_Base):
             FRACTION_OF_SPACE = 1.0
             scalp_radius = 0.090
 
             def __init__(self, mesh_name='finite_slice'):
                 super(_SphericalGaussianPotential, self).__init__(
-                      mesh_path=os.path.join(_fem_common.DIRNAME,
+                      mesh_path=os.path.join(fc.DIRNAME,
                                              'meshes',
                                              mesh_name))
                 self.mesh_name = mesh_name
@@ -585,8 +585,8 @@ if __name__ == '__main__':
 
         logging.basicConfig(level=logging.INFO)
 
-        if not os.path.exists(_fem_common.SOLUTION_DIRECTORY):
-            os.makedirs(_fem_common.SOLUTION_DIRECTORY)
+        if not os.path.exists(fc.SOLUTION_DIRECTORY):
+            os.makedirs(fc.SOLUTION_DIRECTORY)
 
         for mesh_name in sys.argv[1:]:
             for SphereGaussianFEM in [OneSphereGaussianPotentialFEM,
@@ -624,10 +624,10 @@ if __name__ == '__main__':
                             POTENTIAL = controller.POTENTIAL
                             AS = controller.A
 
-                            save_stopwatch = _fem_common.Stopwatch()
-                            sample_stopwatch = _fem_common.Stopwatch()
+                            save_stopwatch = fc.Stopwatch()
+                            sample_stopwatch = fc.Stopwatch()
 
-                            with _fem_common.Stopwatch() as unsaved_time:
+                            with fc.Stopwatch() as unsaved_time:
                                 for idx_r, src_r in enumerate(controller.R):
                                     logger.info(
                                         'Gaussian SD={}, r={} ({}, deg={})'.format(

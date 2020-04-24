@@ -29,14 +29,14 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
 try:
-    from . import _fem_common
+    from . import _fem_common as fc
     # When run as script raises:
     #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
     #  - `SystemError` (Python 3.3-5), or
     #  - `ValueError` (Python 2.7).
 
 except (ImportError, SystemError, ValueError):
-    import _fem_common
+    import _fem_common as fc
 
 
 logger = logging.getLogger(__name__)
@@ -198,7 +198,7 @@ class _FailsafeFiniteSliceGaussianController(
 
 
 
-class FiniteSliceGaussianSourceFactory(_fem_common._SourceFactory_Base):
+class FiniteSliceGaussianSourceFactory(fc._SourceFactory_Base):
     def __init__(self, filename=None,
                  try_local_first=True):
          decorate = _FiniteSliceGaussianDataFileDecorator(
@@ -296,7 +296,7 @@ if __name__ == '__main__':
                      quay.io/fenicsproject/stable
         """)
     else:
-        class GaussianPotentialFEM(_fem_common._FEM_Base):
+        class GaussianPotentialFEM(fc._FEM_Base):
             _RADIUS = {'finite_slice': 0.3,
                        'finite_slice_small': 0.03,
                        'finite_slice_small_coarse': 0.03,
@@ -318,7 +318,7 @@ if __name__ == '__main__':
 
             def __init__(self, mesh_name='finite_slice'):
                 super(GaussianPotentialFEM, self).__init__(
-                      mesh_path=os.path.join(_fem_common.DIRNAME,
+                      mesh_path=os.path.join(fc.DIRNAME,
                                              'meshes',
                                              mesh_name))
                 self.RADIUS = self._RADIUS[mesh_name]
@@ -394,8 +394,8 @@ if __name__ == '__main__':
 
         logging.basicConfig(level=logging.INFO)
 
-        if not os.path.exists(_fem_common.SOLUTION_DIRECTORY):
-            os.makedirs(_fem_common.SOLUTION_DIRECTORY)
+        if not os.path.exists(fc.SOLUTION_DIRECTORY):
+            os.makedirs(fc.SOLUTION_DIRECTORY)
 
         for mesh_name in sys.argv[1:]:
             fem = GaussianPotentialFEM(mesh_name=mesh_name)
@@ -440,10 +440,10 @@ if __name__ == '__main__':
                     AS = controller.A
                     results['A'] = AS
 
-                    save_stopwatch = _fem_common.Stopwatch()
+                    save_stopwatch = fc.Stopwatch()
 
                     anything_new = False
-                    with _fem_common.Stopwatch() as unsaved_time:
+                    with fc.Stopwatch() as unsaved_time:
                         for idx_y, src_y in enumerate(X):
                             for idx_x, src_x in enumerate(X):
                                 for idx_z, src_z in enumerate(X[:idx_x+1]):

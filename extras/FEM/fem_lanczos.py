@@ -28,14 +28,14 @@ import logging
 import numpy as np
 
 try:
-    from . import _fem_common
+    from . import _fem_common as fc
     # When run as script raises:
     #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
     #  - `SystemError` (Python 3.3-5), or
     #  - `ValueError` (Python 2.7).
 
 except (ImportError, SystemError, ValueError):
-    import _fem_common
+    import _fem_common as fc
 
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ logger.setLevel(logging.DEBUG)
 SAMPLING_FREQUENCY = 5
 
 
-class LanczosSourceFactory(_fem_common._SymmetricSourceFactory_Base):
+class LanczosSourceFactory(fc._SymmetricSourceFactory_Base):
     def load_specific_attributes(self, fh):
         self.n = fh['folds']
 
@@ -81,10 +81,10 @@ if __name__ == '__main__':
                      quay.io/fenicsproject/stable
         """)
     else:
-        class LanczosPotentialFEM(_fem_common._SymmetricFEM_Base):
+        class LanczosPotentialFEM(fc._SymmetricFEM_Base):
             def __init__(self, mesh_name='eighth_of_sphere'):
                          super(LanczosPotentialFEM, self).__init__(
-                               mesh_path=os.path.join(_fem_common.DIRNAME,
+                               mesh_path=os.path.join(fc.DIRNAME,
                                                       'meshes',
                                                       mesh_name))
 
@@ -105,8 +105,8 @@ if __name__ == '__main__':
 
         logging.basicConfig(level=logging.INFO)
 
-        if not os.path.exists(_fem_common.SOLUTION_DIRECTORY):
-            os.makedirs(_fem_common.SOLUTION_DIRECTORY)
+        if not os.path.exists(fc.SOLUTION_DIRECTORY):
+            os.makedirs(fc.SOLUTION_DIRECTORY)
 
         for mesh_name in sys.argv[1:]:
             fem = LanczosPotentialFEM(mesh_name=mesh_name)
