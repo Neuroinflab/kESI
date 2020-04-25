@@ -483,12 +483,6 @@ if __name__ == '__main__':
                                 for s, c in self.SURFACE_CONDUCTIVITY.items())
                             )
 
-            def __call__(self, degree, *args, **kwargs):
-                correction_potential = super(_SphericalPointPotential,
-                                             self).__call__(degree, *args, **kwargs)
-                # WARNING: `self._base_potential` relies on side-effect of the above call
-                return self._base_potential + correction_potential
-
             @property
             def degree(self):
                 return self._degree
@@ -698,7 +692,7 @@ if __name__ == '__main__':
                                                         hits += 1
                                                         POTENTIAL[idx_r,
                                                                   idx_xz,
-                                                                  idx_y] = v
+                                                                  idx_y] = v + fem._base_potential(x, y, z)
 
                                         controller.COMPLETED[idx_r] = True
                                         sampling_time_3D = float(sample_stopwatch)
@@ -733,7 +727,8 @@ if __name__ == '__main__':
                                                     else:
                                                         POTENTIAL_2D[idx_r,
                                                                      idx_xz,
-                                                                     idx_y] = v
+                                                                     idx_y] = v + fem._base_potential(x, y, z)
+
 
                                         sampling_time_2D = float(sample_stopwatch)
 
