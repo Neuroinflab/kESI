@@ -395,9 +395,10 @@ class _SomeSpherePointController3D(_PointLoaderBase3D,
             exceptions = 0
             misses = 0
             r2 = self.scalp_radius ** 2
+            XZ = np.array(list(self._xz))
             sample_stopwatch = fc.Stopwatch()
             with sample_stopwatch:
-                for idx_xz, (x, z) in enumerate(self._xz):
+                for idx_xz, (x, z) in enumerate(XZ):
                     r_xz_2 = x ** 2 + z ** 2
                     if r_xz_2 > r2:
                         misses += len(self.Y_SAMPLE)
@@ -418,7 +419,12 @@ class _SomeSpherePointController3D(_PointLoaderBase3D,
                             hits += 1
                             self.POTENTIAL[idx_r,
                                            idx_xz,
-                                           idx_y] = v + fem._base_potential(x, y, z)
+                                           idx_y] = v
+
+                self.POTENTIAL[idx_r, :, :] += fem._base_potential(r,
+                                                                   XZ[:, :1],
+                                                                   self.Y_SAMPLE.reshape(1, -1),
+                                                                   XZ[:, 1:])
 
             sampling_time = float(sample_stopwatch)
             logger.info('H={} ({:.2f}),\tM={} ({:.2f}),\tE={} ({:.2f})'.format(hits,
@@ -483,7 +489,17 @@ class _SomeSpherePointController2D(_PointLoaderBase2D,
                         else:
                             self.POTENTIAL[idx_r,
                                            idx_xz,
-                                           idx_y] = v + fem._base_potential(x, y, z)
+                                           idx_y] = v
+                # It is known that `(sin(a) * r) ** 2 + (cos(a) * r) **2 == r ** 2`
+                # and the source is at x, z == 0, 0, thus the commented calculations
+                # can be safely omitted.
+                # XZ_SAMPLE = self.X_SAMPLE.reshape(-1, 1) * SIN_COS.reshape(1, -1)
+                self.POTENTIAL[idx_r, :, :] += fem._base_potential(r,
+                                                                   self.X_SAMPLE.reshape(-1, 1),
+                                                                   # XZ_SAMPLE[:, :1],
+                                                                   self.Y_SAMPLE.reshape(1, -1),
+                                                                   0)
+                                                                   # XZ_SAMPLE[:, 1:])
 
             sampling_time = float(sample_stopwatch)
 
@@ -523,6 +539,7 @@ if __name__ == '__main__':
                       mesh_path=os.path.join(fc.DIRNAME,
                                              'meshes',
                                              mesh_name))
+                self._base_potential_constant = 0.25 / (np.pi * self.BASE_CONDUCTIVITY)
                 self.mesh_name = mesh_name
 
             def create_integration_subdomains(self):
@@ -545,17 +562,20 @@ if __name__ == '__main__':
                 # logger.debug('R2[{}] == {}'.format(central_idx, R2[central_idx]))
                 logger.debug('DBC at: {}, {}, {}'.format(x0, y0, z0))
 
-                base_potential_at_center = (0.25 / (np.pi * self.BASE_CONDUCTIVITY)
-                                            / np.sqrt(np.square(x0)
-                                                      + np.square(y0 - y)
-                                                      + np.square(z0)))
+                base_potential_at_center = self._base_potential(y, x0, y0, z0)
                 return DirichletBC(self._V,
                                    Constant(-base_potential_at_center),
                                    "near(x[0], {}) && near(x[1], {}) && near(x[2], {})".format(x0, y0, z0),
                                    "pointwise")
 
+            def _base_potential(self, src_y, x, y, z):
+                return (self._base_potential_constant
+                        / np.sqrt(np.square(x)
+                                  + np.square(y - src_y)
+                                  + np.square(z)))
+
             def _rhs(self, degree, y):
-                self._base_potential = Expression(
+                base_potential = Expression(
                     f'''
                     0.25 / ({np.pi * self.BASE_CONDUCTIVITY})
                     / sqrt((x[0])*(x[0])
@@ -566,7 +586,7 @@ if __name__ == '__main__':
                     domain=self._mesh)
                 n = FacetNormal(self._mesh)
                 return -sum((inner((Constant(c - self.BASE_CONDUCTIVITY)
-                                    * grad(self._base_potential)),
+                                    * grad(base_potential)),
                                    grad(self._v))
                              * self._dx(x)
                              for x, c in self.CONDUCTIVITY.items()
@@ -580,7 +600,7 @@ if __name__ == '__main__':
 
                             # Eq. 19 at Piastra et al 2018
                             sum((Constant(c)
-                                 * inner(n, grad(self._base_potential))
+                                 * inner(n, grad(base_potential))
                                  * self._v
                                  * self._ds(s))
                                 for s, c in self.SURFACE_CONDUCTIVITY.items())
