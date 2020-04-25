@@ -47,6 +47,7 @@ logger.setLevel(logging.DEBUG)
 # TODO: Deduplicate with `fem_sphere_gaussian`
 class _SomeSpherePointLoaderBase(object):
     ATTRIBUTES = ['R',
+                  'COMPLETED',
                   'brain_conductivity',
                   'brain_radius',
                   'scalp_radius',
@@ -355,6 +356,7 @@ class _SomeSphereControllerBase(object):
 
     def _empty_solutions(self):
         n = len(self.R)
+        self.COMPLETED = np.zeros(n, dtype=bool)
         self.STATS = []
         self.POTENTIAL = fc.empty_array(self._potential_size(n))
 
@@ -382,7 +384,7 @@ class _SomeSpherePointController3D(_PointLoaderBase3D,
 
 
 class _SomeSpherePointController2D(_PointLoaderBase2D,
-                                      _SomeSphereControllerBase):
+                                   _SomeSphereControllerBase):
     sampling_frequency = 1024
 
     def _potential_size(self, n):
@@ -431,8 +433,8 @@ if __name__ == '__main__':
 
             def _lhs(self):
                 return sum(inner(Constant(c) * grad(self._potential_trial),
-                                 grad(self._v)) * self._dx(k)
-                           for k, c in self.CONDUCTIVITY.items())
+                                 grad(self._v)) * self._dx(x)
+                           for x, c in self.CONDUCTIVITY.items())
 
 
             def _boundary_condition(self, *args, **kwargs):
@@ -460,13 +462,23 @@ if __name__ == '__main__':
                 return -sum((inner((Constant(c - self.BASE_CONDUCTIVITY)
                                     * grad(base_potential)),
                                    grad(self._v))
-                             * self._dx(k)
-                             for k, c in self.CONDUCTIVITY.items()
+                             * self._dx(x)
+                             for x, c in self.CONDUCTIVITY.items()
                              if c != self.BASE_CONDUCTIVITY),
-                            (Constant(self.BASE_CONDUCTIVITY)
-                             * grad(base_potential)
-                             * self._v
-                             * self._ds(self._SCALP_SURFACE)))
+                            # # Eq. 20 at Piastra et al 2018
+                            # sum((Constant(self.BASE_CONDUCTIVITY)
+                            #      * grad(base_potential)
+                            #      * self._v
+                            #      * self._ds(s))
+                            #      for s in self.SURFACE_CONDUCTIVITY)
+
+                            # Eq. 19 at Piastra et al 2018
+                            sum((Constant(c)
+                                 * grad(base_potential)
+                                 * self._v
+                                 * self._ds(s))
+                                for s, c in self.SURFACE_CONDUCTIVITY.items())
+                            )
 
             @property
             def degree(self):
@@ -490,6 +502,10 @@ if __name__ == '__main__':
                             }
 
             BASE_CONDUCTIVITY = brain_conductivity
+
+            SURFACE_CONDUCTIVITY = {
+                                    _SCALP_SURFACE: brain_conductivity,
+                                    }
 
 
         class EighthWedgeOfOneSpherePointPotentialFEM(
@@ -524,6 +540,10 @@ if __name__ == '__main__':
                             }
 
             BASE_CONDUCTIVITY = brain_conductivity
+
+            SURFACE_CONDUCTIVITY = {
+                                    _SCALP_SURFACE: skull_conductivity,
+                                    }
 
         class EighthWedgeOfTwoSpheresPointPotentialFEM(
                   TwoSpheresPointPotentialFEM):
@@ -565,6 +585,9 @@ if __name__ == '__main__':
 
             BASE_CONDUCTIVITY = brain_conductivity
 
+            SURFACE_CONDUCTIVITY = {
+                                    _SCALP_SURFACE: scalp_conductivity,
+                                    }
 
         class EighthWedgeOfFourSpheresPointPotentialFEM(
                   FourSpheresPointPotentialFEM):
@@ -606,40 +629,41 @@ if __name__ == '__main__':
 
             for controller.degree in [1, 2, 3]:
                 controller_2D.degree = controller.degree
-                K_MAX = 4  # as element size is 0.25 mm,
-                           # the smallest sd considered safe is
-                           # 12mm / (2 ** 4)
-                for controller.k in range(K_MAX + 1):
-                    controller_2D.k = controller.k
-                    with controller:
-                        logger.info('Point SD={} ({}; deg={})'.format(
-                            controller.standard_deviation,
-                            mesh_name,
-                            controller.degree))
-                        with controller_2D:
-                            tmp_mark = 0
+                RES = 4
+                span = controller.cortex_radius_external - controller.cortex_radius_external
+                controller.R = np.linspace(controller.cortex_radius_internal + 0.5 * span / RES,
+                                           controller.cortex_radius_external - 0.5 * span / RES,
+                                           RES)
+                controller_2D.R = controller.R
 
-                            POTENTIAL = controller.POTENTIAL
-                            AS = controller.A
+                logger.info('Point ({}; deg={})'.format(
+                    mesh_name,
+                    controller.degree))
 
-                            save_stopwatch = fc.Stopwatch()
-                            sample_stopwatch = fc.Stopwatch()
+                tmp_mark = 0
+                with controller:
+                    with controller_2D:
+                        save_stopwatch = fc.Stopwatch()
+                        sample_stopwatch = fc.Stopwatch()
 
-                            with fc.Stopwatch() as unsaved_time:
-                                for idx_r, src_r in enumerate(controller.R):
-                                    logger.info(
-                                        'Point SD={}, r={} ({}, deg={})'.format(
-                                            controller.standard_deviation,
-                                            src_r,
-                                            mesh_name,
-                                            controller.degree))
-                                    if not np.isnan(AS[idx_r]) and not np.isnan(controller_2D.A[idx_r]):
-                                        logger.info('Already found, skipping')
-                                        continue
+                        with fc.Stopwatch() as unsaved_time:
+                            for idx_r, (src_r, completed_3D, completed_2D) in enumerate(zip(controller.R,
+                                                                                            controller.COMPLETED,
+                                                                                            controller_2D.COMPLETED)):
+                                logger.info(
+                                    'Point r={} ({}, deg={})'.format(
+                                        src_r,
+                                        mesh_name,
+                                        controller.degree))
+                                if completed_2D and completed_3D:
+                                    logger.info('Already found, skipping')
+                                    continue
 
-                                    potential = controller.fem(src_r)
+                                potential = controller.fem(src_r)
 
-                                    if potential is not None:
+                                if potential is not None:
+                                    if fem.FRACTION_OF_SPACE >= 0.125 and not completed_3D:
+                                        POTENTIAL = controller.POTENTIAL
                                         hits = 0
                                         exceptions = 0
                                         misses = 0
@@ -667,6 +691,7 @@ if __name__ == '__main__':
                                                                   idx_xz,
                                                                   idx_y] = v
 
+                                        controller.COMPLETED[idx_r] = True
                                         sampling_time_3D = float(sample_stopwatch)
                                         logger.info('H={} ({:.2f}),\tM={} ({:.2f}),\tE={} ({:.2f})'.format(hits,
                                                                                                            hits / float(hits + misses + exceptions),
@@ -675,43 +700,42 @@ if __name__ == '__main__':
                                                                                                            exceptions,
                                                                                                            exceptions / float(hits + exceptions)))
 
-                                        if fem.FRACTION_OF_SPACE < 1:
-                                            with sample_stopwatch:
-                                                logging.info('Sampling 2D')
-                                                POTENTIAL_2D = controller_2D.POTENTIAL
-                                                angle = fem.FRACTION_OF_SPACE * np.pi
-                                                SIN_COS = np.array([np.sin(angle),
-                                                                    np.cos(angle)])
+                                    if not completed_2D:
+                                        with sample_stopwatch:
+                                            logging.info('Sampling 2D')
+                                            POTENTIAL_2D = controller_2D.POTENTIAL
+                                            angle = fem.FRACTION_OF_SPACE * np.pi
+                                            SIN_COS = np.array([np.sin(angle),
+                                                                np.cos(angle)])
 
-                                                for idx_xz, xz in enumerate(
-                                                        controller_2D.X_SAMPLE):
-                                                    x, z = SIN_COS * xz
-                                                    xz2 = xz ** 2
-                                                    for idx_y, y in enumerate(
-                                                            controller_2D.Y_SAMPLE):
-                                                        if xz2 + y ** 2 > r2:
-                                                            continue
-                                                        try:
-                                                            v = potential(x, y, z)
-                                                        except Exception as e:
-                                                            pass
-                                                        else:
-                                                            POTENTIAL_2D[idx_r,
-                                                                         idx_xz,
-                                                                         idx_y] = v
+                                            for idx_xz, xz in enumerate(
+                                                    controller_2D.X_SAMPLE):
+                                                x, z = SIN_COS * xz
+                                                xz2 = xz ** 2
+                                                for idx_y, y in enumerate(
+                                                        controller_2D.Y_SAMPLE):
+                                                    if xz2 + y ** 2 > r2:
+                                                        continue
+                                                    try:
+                                                        v = potential(x, y, z)
+                                                    except Exception as e:
+                                                        pass
+                                                    else:
+                                                        POTENTIAL_2D[idx_r,
+                                                                     idx_xz,
+                                                                     idx_y] = v
 
-                                            sampling_time_2D = float(sample_stopwatch)
+                                        sampling_time_2D = float(sample_stopwatch)
 
-                                    if fem.FRACTION_OF_SPACE < 1:
-                                        controller_2D.A[idx_r] = fem.a
-                                        controller_2D.STATS.append((src_r,
-                                                                    np.nan if potential is None else sampling_time_2D,
-                                                                    fem.iterations,
-                                                                    float(fem.solving_time),
-                                                                    float(fem.local_preprocessing_time),
-                                                                    float(fem.global_preprocessing_time)))
+                                if not completed_2D:
+                                    controller_2D.STATS.append((src_r,
+                                                                np.nan if potential is None else sampling_time_2D,
+                                                                fem.iterations,
+                                                                float(fem.solving_time),
+                                                                float(fem.local_preprocessing_time),
+                                                                float(fem.global_preprocessing_time)))
 
-                                    AS[idx_r] = fem.a
+                                if fem.FRACTION_OF_SPACE >= 0.125 and not completed_3D:
                                     controller.STATS.append((src_r,
                                                              np.nan if potential is None else sampling_time_3D,
                                                              fem.iterations,
@@ -719,24 +743,23 @@ if __name__ == '__main__':
                                                              float(fem.local_preprocessing_time),
                                                              float(fem.global_preprocessing_time)))
 
-                                    logger.info(
-                                        'Point SD={}, r={}, (deg={}): {}\t({fem.iterations}, {time}, {sampling})'.format(
-                                            controller.standard_deviation,
-                                            src_r,
-                                            controller.degree,
-                                            'SUCCEED' if potential is not None else 'FAILED',
-                                            fem=fem,
-                                            time=fem.local_preprocessing_time.duration + fem.solving_time.duration,
-                                            sampling=sampling_time_2D + sampling_time_3D))
+                                logger.info(
+                                    'Point r={}, (deg={}): {}\t({fem.iterations}, {time}, {sampling})'.format(
+                                        src_r,
+                                        controller.degree,
+                                        'SUCCEED' if potential is not None else 'FAILED',
+                                        fem=fem,
+                                        time=fem.local_preprocessing_time.duration + fem.solving_time.duration,
+                                        sampling=sampling_time_2D + sampling_time_3D))
 
-                                    if float(unsaved_time) > 10 * float(save_stopwatch):
-                                        with save_stopwatch:
+                                if float(unsaved_time) > 10 * float(save_stopwatch):
+                                    with save_stopwatch:
+                                        if fem.FRACTION_OF_SPACE >= 0.125:
+                                            logging.info('Saving 3D')
                                             controller.save(controller.path + str(tmp_mark))
-                                            if fem.FRACTION_OF_SPACE < 1:
-                                                logging.info('Saving 2D')
-                                                controller_2D.save(controller_2D.path + str(tmp_mark))
-                                        unsaved_time.reset()
-                                        tmp_mark = 1 - tmp_mark
 
-                            if fem.FRACTION_OF_SPACE < 1:
-                                controller_2D.save(controller_2D.path)
+                                        logging.info('Saving 2D')
+                                        controller_2D.save(controller_2D.path + str(tmp_mark))
+
+                                    unsaved_time.reset()
+                                    tmp_mark = 1 - tmp_mark
