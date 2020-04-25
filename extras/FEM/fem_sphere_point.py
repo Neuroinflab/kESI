@@ -329,7 +329,6 @@ class _SomeSphereControllerBase(object):
 
 
     def fem(self, y):
-        self._anything_new = True
         return self._fem(int(self.degree), y)
 
     def _validate_attributes(self):
@@ -382,6 +381,63 @@ class _SomeSpherePointController3D(_PointLoaderBase3D,
         fn = '{0._fem.mesh_name}_point_deg_{0.degree}.npz'.format(self)
         return fc._SourceFactory_Base.solution_path(fn, False)
 
+    def sample(self, r, potential, fem=None):
+        if fem is None:
+            fem = self._fem
+
+        self._anything_new = True
+        idx_r = np.where(np.isclose(self.R, r))[0][0]
+
+        sampling_time = np.nan
+        if potential is not None:
+            logging.info('Sampling 3D')
+            hits = 0
+            exceptions = 0
+            misses = 0
+            r2 = self.scalp_radius ** 2
+            sample_stopwatch = fc.Stopwatch()
+            with sample_stopwatch:
+                for idx_xz, (x, z) in enumerate(self._xz):
+                    r_xz_2 = x ** 2 + z ** 2
+                    if r_xz_2 > r2:
+                        misses += len(self.Y_SAMPLE)
+                        continue
+
+                    for idx_y, y in enumerate(self.Y_SAMPLE):
+                        if r_xz_2 + y ** 2 > r2:
+                            misses += 1
+                            continue
+                        try:
+                            v = potential(x, y, z)
+                        except Exception as e:
+                            if x < 0 or z < 0 or abs(
+                                    y) > self.scalp_radius or x > self.scalp_radius or z > self.scalp_radius:
+                                logger.warning('coords out of bounding box')
+                            exceptions += 1
+                        else:
+                            hits += 1
+                            self.POTENTIAL[idx_r,
+                                           idx_xz,
+                                           idx_y] = v + fem._base_potential(x, y, z)
+
+            sampling_time = float(sample_stopwatch)
+            logger.info('H={} ({:.2f}),\tM={} ({:.2f}),\tE={} ({:.2f})'.format(hits,
+                                                                               hits / float(hits + misses + exceptions),
+                                                                               misses,
+                                                                               misses / float(
+                                                                                   hits + misses + exceptions),
+                                                                               exceptions,
+                                                                               exceptions / float(hits + exceptions)))
+
+        self.STATS.append((r,
+                           sampling_time,
+                           fem.iterations,
+                           float(fem.solving_time),
+                           float(fem.local_preprocessing_time),
+                           float(fem.global_preprocessing_time)))
+        self.COMPLETED[idx_r] = True
+        return 0 if np.isnan(sampling_time) else sampling_time
+
 
 class _SomeSpherePointController2D(_PointLoaderBase2D,
                                    _SomeSphereControllerBase):
@@ -397,6 +453,48 @@ class _SomeSpherePointController2D(_PointLoaderBase2D,
         fn = '{0._fem.mesh_name}_point_deg_{0.degree}_2D.npz'.format(self)
 
         return fc._SourceFactory_Base.solution_path(fn, False)
+
+    def sample(self, r, potential, fem=None):
+        if fem is None:
+            fem = self._fem
+
+        self._anything_new = True
+        idx_r = np.where(np.isclose(self.R, r))[0][0]
+
+        sampling_time = np.nan
+        if potential is not None:
+            logging.info('Sampling 2D')
+            angle = fem.FRACTION_OF_SPACE * np.pi
+            SIN_COS = np.array([np.sin(angle),
+                                np.cos(angle)])
+            r2 = self.scalp_radius ** 2
+            sample_stopwatch = fc.Stopwatch()
+            with sample_stopwatch:
+                for idx_xz, xz in enumerate(self.X_SAMPLE):
+                    x, z = SIN_COS * xz
+                    xz2 = xz ** 2
+                    for idx_y, y in enumerate(self.Y_SAMPLE):
+                        if xz2 + y ** 2 > r2:
+                            continue
+                        try:
+                            v = potential(x, y, z)
+                        except Exception as e:
+                            pass
+                        else:
+                            self.POTENTIAL[idx_r,
+                                           idx_xz,
+                                           idx_y] = v + fem._base_potential(x, y, z)
+
+            sampling_time = float(sample_stopwatch)
+
+        self.STATS.append((r,
+                           sampling_time,
+                           fem.iterations,
+                           float(fem.solving_time),
+                           float(fem.local_preprocessing_time),
+                           float(fem.global_preprocessing_time)))
+        self.COMPLETED[idx_r] = True
+        return 0 if np.isnan(sampling_time) else sampling_time
 
 
 if __name__ == '__main__':
@@ -664,89 +762,11 @@ if __name__ == '__main__':
 
                                 potential = controller.fem(src_r)
 
-                                if potential is not None:
-                                    if fem.FRACTION_OF_SPACE >= 0.125 and not completed_3D:
-                                        POTENTIAL = controller.POTENTIAL
-                                        hits = 0
-                                        exceptions = 0
-                                        misses = 0
-                                        with sample_stopwatch:
-                                            r2 = controller.scalp_radius ** 2
-                                            for idx_xz, (x, z) in enumerate(controller._xz):
-                                                r_xz_2 = x ** 2 + z ** 2
-                                                if r_xz_2 > r2:
-                                                    misses += len(controller.Y_SAMPLE)
-                                                    continue
-
-                                                for idx_y, y in enumerate(controller.Y_SAMPLE):
-                                                    if r_xz_2 + y ** 2 > r2:
-                                                        misses += 1
-                                                        continue
-                                                    try:
-                                                        v = potential(x, y, z)
-                                                    except Exception as e:
-                                                        if x < 0 or z < 0 or abs(y) > controller.scalp_radius or x > controller.scalp_radius or z > controller.scalp_radius:
-                                                            logger.warning('coords out of bounding box')
-                                                        exceptions += 1
-                                                    else:
-                                                        hits += 1
-                                                        POTENTIAL[idx_r,
-                                                                  idx_xz,
-                                                                  idx_y] = v + fem._base_potential(x, y, z)
-
-                                        controller.COMPLETED[idx_r] = True
-                                        sampling_time_3D = float(sample_stopwatch)
-                                        logger.info('H={} ({:.2f}),\tM={} ({:.2f}),\tE={} ({:.2f})'.format(hits,
-                                                                                                           hits / float(hits + misses + exceptions),
-                                                                                                           misses,
-                                                                                                           misses / float(hits + misses + exceptions),
-                                                                                                           exceptions,
-                                                                                                           exceptions / float(hits + exceptions)))
-
-                                    if not completed_2D:
-                                        with sample_stopwatch:
-                                            logging.info('Sampling 2D')
-                                            POTENTIAL_2D = controller_2D.POTENTIAL
-                                            angle = fem.FRACTION_OF_SPACE * np.pi
-                                            SIN_COS = np.array([np.sin(angle),
-                                                                np.cos(angle)])
-
-                                            r2 = controller.scalp_radius ** 2
-                                            for idx_xz, xz in enumerate(
-                                                    controller_2D.X_SAMPLE):
-                                                x, z = SIN_COS * xz
-                                                xz2 = xz ** 2
-                                                for idx_y, y in enumerate(
-                                                        controller_2D.Y_SAMPLE):
-                                                    if xz2 + y ** 2 > r2:
-                                                        continue
-                                                    try:
-                                                        v = potential(x, y, z)
-                                                    except Exception as e:
-                                                        pass
-                                                    else:
-                                                        POTENTIAL_2D[idx_r,
-                                                                     idx_xz,
-                                                                     idx_y] = v + fem._base_potential(x, y, z)
-
-
-                                        sampling_time_2D = float(sample_stopwatch)
+                                if fem.FRACTION_OF_SPACE >= 0.125 and not completed_3D:
+                                    sampling_time_3D = controller.sample(src_r, potential)
 
                                 if not completed_2D:
-                                    controller_2D.STATS.append((src_r,
-                                                                np.nan if potential is None else sampling_time_2D,
-                                                                fem.iterations,
-                                                                float(fem.solving_time),
-                                                                float(fem.local_preprocessing_time),
-                                                                float(fem.global_preprocessing_time)))
-
-                                if fem.FRACTION_OF_SPACE >= 0.125 and not completed_3D:
-                                    controller.STATS.append((src_r,
-                                                             np.nan if potential is None else sampling_time_3D,
-                                                             fem.iterations,
-                                                             float(fem.solving_time),
-                                                             float(fem.local_preprocessing_time),
-                                                             float(fem.global_preprocessing_time)))
+                                    sampling_time_2D = controller_2D.sample(src_r, potential, fem)
 
                                 logger.info(
                                     'Point r={}, (deg={}): {}\t({fem.iterations}, {time}, {sampling})'.format(
