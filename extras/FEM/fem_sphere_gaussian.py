@@ -661,23 +661,6 @@ if __name__ == '__main__':
                                         exceptions = 0
                                         misses = 0
                                         with sample_stopwatch:
-                                            # for idx_polar, (altitude, azimuth) in enumerate(zip(controller.ALTITUDE,
-                                            #                                                     controller.AZIMUTH)):
-                                            #     negative_d_altitude = np.pi / 2 - altitude
-                                            #     sin_alt = np.sin(negative_d_altitude)
-                                            #     cos_alt = np.cos(negative_d_altitude)
-                                            #     sin_az = np.sin(-azimuth)
-                                            #     cos_az = np.cos(-azimuth)
-                                            #     ELECTRODES = np.matmul(
-                                            #         controller.ELECTRODES,
-                                            #         np.matmul(
-                                            #             [[cos_alt, sin_alt, 0],
-                                            #              [-sin_alt, cos_alt, 0],
-                                            #              [0, 0, 1]],
-                                            #             [[cos_az, 0, -sin_az],
-                                            #              [0, 1, 0],
-                                            #              [sin_az, 0, cos_az]]
-                                            #             ))
                                             r2 = controller.scalp_radius ** 2
                                             for idx_xz, (x, z) in enumerate(controller._xz):
                                                 r_xz_2 = x ** 2 + z ** 2
