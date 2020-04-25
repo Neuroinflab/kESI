@@ -25,7 +25,7 @@ all: $(MESHES)
 eighth_wedge_of_one_sphere_coarse.msh eighth_wedge_of_two_spheres_coarse.msh eighth_wedge_of_two_spheres_coarser.msh eighth_wedge_of_two_spheres_coarsest.msh eighth_wedge_of_four_spheres_coarse.msh eighth_wedge_of_four_spheres_coarser.msh eighth_wedge_of_four_spheres_coarsest.msh: %.msh: %.geo
 	${GMSH_NOOPT}
 
-
+# TODO: validate whether disabling of optimization is necessary
 eighth_wedge_of_two_spheres.msh eighth_wedge_of_four_spheres.msh eighth_wedge_of_one_sphere_fine.msh eighth_wedge_of_one_sphere_finer.msh eighth_wedge_of_one_sphere_finest.msh eighth_wedge_of_two_spheres_fine.msh  eighth_wedge_of_two_spheres_finer.msh eighth_wedge_of_four_spheres_finer.msh eighth_wedge_of_four_spheres_finest.msh eighth_wedge_of_four_spheres_composite_fine.msh eighth_wedge_of_four_spheres_composite_finer.msh eighth_wedge_of_four_spheres_composite_finest.msh: %.msh: %.geo
 	${GMSH_NOOPT}
 
