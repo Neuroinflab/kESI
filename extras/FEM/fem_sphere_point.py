@@ -465,7 +465,13 @@ class _SomeSpherePointController2D(_PointLoaderBase2D,
             fem = self._fem
 
         self._anything_new = True
-        idx_r = np.where(np.isclose(self.R, r))[0][0]
+        try:
+            idx_r = np.where(np.isclose(self.R, r))[0][0]
+        except IndexError:
+            print(self.R)
+            print(r)
+            print(self.R - r)
+            raise
 
         sampling_time = np.nan
         if potential is not None:
