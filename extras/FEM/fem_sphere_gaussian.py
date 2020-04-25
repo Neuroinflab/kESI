@@ -105,9 +105,9 @@ class _GaussianLoaderBase3D(_GaussianLoaderBase):
     @property
     def _xz_idx(self):
         _idx = 0
-        for x_idx in range(self.sampling_frequency + 1):
-            for z_idx in range(x_idx + 1):
-                assert _idx == x_idx * (x_idx + 1) // 2 + z_idx
+        for z_idx in range(self.sampling_frequency + 1):
+            for x_idx in range(z_idx + 1):
+                assert _idx == z_idx * (z_idx + 1) // 2 + x_idx
                 yield x_idx, z_idx
                 _idx += 1
 
@@ -673,8 +673,7 @@ if __name__ == '__main__':
                                                         misses += 1
                                                         continue
                                                     try:
-                                                        v = potential(z, y, x)
-                                                        # Order inverted as it is required that x <= z
+                                                        v = potential(x, y, z)
                                                     except Exception as e:
                                                         if x < 0 or z < 0 or abs(y) > controller.scalp_radius or x > controller.scalp_radius or z > controller.scalp_radius:
                                                             logger.warning('coords out of bounding box')
