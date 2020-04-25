@@ -520,6 +520,12 @@ if __name__ == '__main__':
             FRACTION_OF_SPACE = 0.125
 
 
+        class SixthWedgeOfOneSphereGaussianPotentialFEM(
+                  OneSphereGaussianPotentialFEM):
+            startswith = 'sixth_wedge_of_one_sphere'
+            FRACTION_OF_SPACE = 1.0 / 6
+
+
         class TwoSpheresGaussianPotentialFEM(_SphericalGaussianPotential):
             startswith = 'two_spheres'
 
@@ -543,6 +549,12 @@ if __name__ == '__main__':
                   TwoSpheresGaussianPotentialFEM):
             startswith = 'eighth_wedge_of_two_spheres'
             FRACTION_OF_SPACE = 0.125
+
+
+        class SixthWedgeOfTwoSpheresGaussianPotentialFEM(
+                  TwoSpheresGaussianPotentialFEM):
+            startswith = 'sixth_wedge_of_two_spheres'
+            FRACTION_OF_SPACE = 1.0 / 6
 
 
         class FourSpheresGaussianPotentialFEM(_SphericalGaussianPotential):
@@ -577,6 +589,12 @@ if __name__ == '__main__':
             FRACTION_OF_SPACE = 0.125
 
 
+        class SixthWedgeOfFourSpheresGaussianPotentialFEM(
+                  FourSpheresGaussianPotentialFEM):
+            startswith = 'sixth_wedge_of_four_spheres'
+            FRACTION_OF_SPACE = 1.0 / 6
+
+
         logging.basicConfig(level=logging.INFO)
 
         if not os.path.exists(fc.SOLUTION_DIRECTORY):
@@ -589,6 +607,9 @@ if __name__ == '__main__':
                                       EighthWedgeOfOneSphereGaussianPotentialFEM,
                                       EighthWedgeOfTwoSpheresGaussianPotentialFEM,
                                       EighthWedgeOfFourSpheresGaussianPotentialFEM,
+                                      SixthWedgeOfOneSphereGaussianPotentialFEM,
+                                      SixthWedgeOfTwoSpheresGaussianPotentialFEM,
+                                      SixthWedgeOfFourSpheresGaussianPotentialFEM,
                                       ]:
                 if mesh_name.startswith(SphereGaussianFEM.startswith):
                     fem = SphereGaussianFEM(mesh_name=mesh_name)

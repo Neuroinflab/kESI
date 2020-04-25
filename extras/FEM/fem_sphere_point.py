@@ -498,6 +498,12 @@ if __name__ == '__main__':
             FRACTION_OF_SPACE = 0.125
 
 
+        class SixthWedgeOfOneSpherePointPotentialFEM(
+                  OneSpherePointPotentialFEM):
+            startswith = 'sixth_wedge_of_one_sphere'
+            FRACTION_OF_SPACE = 1.0 / 6
+
+
         class TwoSpheresPointPotentialFEM(_SphericalPointPotential):
             startswith = 'two_spheres'
 
@@ -523,6 +529,12 @@ if __name__ == '__main__':
                   TwoSpheresPointPotentialFEM):
             startswith = 'eighth_wedge_of_two_spheres'
             FRACTION_OF_SPACE = 0.125
+
+
+        class SixthWedgeOfTwoSpheresPointPotentialFEM(
+                  TwoSpheresPointPotentialFEM):
+            startswith = 'sixth_wedge_of_two_spheres'
+            FRACTION_OF_SPACE = 1.0 / 6
 
 
         class FourSpheresPointPotentialFEM(_SphericalPointPotential):
@@ -560,6 +572,12 @@ if __name__ == '__main__':
             FRACTION_OF_SPACE = 0.125
 
 
+        class SixthWedgeOfFourSpheresPointPotentialFEM(
+                  FourSpheresPointPotentialFEM):
+            startswith = 'sixth_wedge_of_four_spheres'
+            FRACTION_OF_SPACE = 1.0 / 6
+
+
         logging.basicConfig(level=logging.INFO)
 
         if not os.path.exists(fc.SOLUTION_DIRECTORY):
@@ -572,6 +590,9 @@ if __name__ == '__main__':
                                    EighthWedgeOfOneSpherePointPotentialFEM,
                                    EighthWedgeOfTwoSpheresPointPotentialFEM,
                                    EighthWedgeOfFourSpheresPointPotentialFEM,
+                                   SixthWedgeOfOneSpherePointPotentialFEM,
+                                   SixthWedgeOfTwoSpheresPointPotentialFEM,
+                                   SixthWedgeOfFourSpheresPointPotentialFEM,
                                    ]:
                 if mesh_name.startswith(SpherePointFEM.startswith):
                     fem = SpherePointFEM(mesh_name=mesh_name)
