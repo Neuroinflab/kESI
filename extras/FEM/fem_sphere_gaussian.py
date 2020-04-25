@@ -694,7 +694,7 @@ if __name__ == '__main__':
                                                         # Order inverted as it is required that x <= z
                                                     except Exception as e:
                                                         if x < 0 or z < 0 or abs(y) > controller.scalp_radius or x > controller.scalp_radius or z > controller.scalp_radius:
-                                                            logger.warn('coords out of bounding box')
+                                                            logger.warning('coords out of bounding box')
                                                         exceptions += 1
                                                     else:
                                                         hits += 1
