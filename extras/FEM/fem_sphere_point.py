@@ -535,18 +535,23 @@ if __name__ == '__main__':
                                  grad(self._v)) * self._dx(x)
                            for x, c in self.CONDUCTIVITY.items())
 
-
-            def _boundary_condition(self, *args, **kwargs):
+            def _boundary_condition(self, y, *args, **kwargs):
                 gdim = self._mesh.geometry().dim()
                 dofs_x = self._V.tabulate_dof_coordinates().reshape((-1, gdim))
                 R2 = np.square(dofs_x).sum(axis=1)
                 # logger.debug('R2.min() == {}'.format(R2.min()))
                 central_idx = np.argmin(R2)
+                x0, y0, z0 = dofs_x[central_idx]
                 # logger.debug('R2[{}] == {}'.format(central_idx, R2[central_idx]))
-                logger.debug('DBC at: {}, {}, {}'.format(*dofs_x[central_idx]))
+                logger.debug('DBC at: {}, {}, {}'.format(x0, y0, z0))
+
+                base_potential_at_center = (0.25 / (np.pi * self.BASE_CONDUCTIVITY)
+                                            / np.sqrt(np.square(x0)
+                                                      + np.square(y0 - y)
+                                                      + np.square(z0)))
                 return DirichletBC(self._V,
-                                   Constant(0),
-                                   "near(x[0], {}) && near(x[1], {}) && near(x[2], {})".format(*dofs_x[central_idx]),
+                                   Constant(-base_potential_at_center),
+                                   "near(x[0], {}) && near(x[1], {}) && near(x[2], {})".format(x0, y0, z0),
                                    "pointwise")
 
             def _rhs(self, degree, y):
