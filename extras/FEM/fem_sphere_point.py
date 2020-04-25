@@ -404,6 +404,7 @@ if __name__ == '__main__':
 
     try:
         from dolfin import (Expression, Constant, DirichletBC, Measure,
+                            FacetNormal,
                             inner, grad, assemble,
                             HDF5File)
 
@@ -451,34 +452,42 @@ if __name__ == '__main__':
                                    "pointwise")
 
             def _rhs(self, degree, y):
-                base_potential = Expression(
+                self._base_potential = Expression(
                     f'''
                     0.25 / ({np.pi * self.BASE_CONDUCTIVITY})
                     / sqrt((x[0])*(x[0])
                            + (x[1] - {y})*(x[1] - {y})
                            + (x[2])*(x[2]))
                     ''',
-                    degree=degree)
+                    degree=degree,
+                    domain=self._mesh)
+                n = FacetNormal(self._mesh)
                 return -sum((inner((Constant(c - self.BASE_CONDUCTIVITY)
-                                    * grad(base_potential)),
+                                    * grad(self._base_potential)),
                                    grad(self._v))
                              * self._dx(x)
                              for x, c in self.CONDUCTIVITY.items()
                              if c != self.BASE_CONDUCTIVITY),
                             # # Eq. 20 at Piastra et al 2018
                             # sum((Constant(self.BASE_CONDUCTIVITY)
-                            #      * grad(base_potential)
+                            #      * inner(n, grad(self._base_potential))
                             #      * self._v
                             #      * self._ds(s))
                             #      for s in self.SURFACE_CONDUCTIVITY)
 
                             # Eq. 19 at Piastra et al 2018
                             sum((Constant(c)
-                                 * grad(base_potential)
+                                 * inner(n, grad(self._base_potential))
                                  * self._v
                                  * self._ds(s))
                                 for s, c in self.SURFACE_CONDUCTIVITY.items())
                             )
+
+            def __call__(self, degree, *args, **kwargs):
+                correction_potential = super(_SphericalPointPotential,
+                                             self).__call__(degree, *args, **kwargs)
+                # WARNING: `self._base_potential` relies on side-effect of the above call
+                return self._base_potential + correction_potential
 
             @property
             def degree(self):
@@ -708,6 +717,7 @@ if __name__ == '__main__':
                                             SIN_COS = np.array([np.sin(angle),
                                                                 np.cos(angle)])
 
+                                            r2 = controller.scalp_radius ** 2
                                             for idx_xz, xz in enumerate(
                                                     controller_2D.X_SAMPLE):
                                                 x, z = SIN_COS * xz
