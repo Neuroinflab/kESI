@@ -22,7 +22,7 @@ MESHES_MSH=$(MESHES:.xml=.msh)
 
 all: $(MESHES)
 
-%_coarsest.msh: %_coarsest.geo
+eighth_wedge_of_one_sphere_coarse.msh eighth_wedge_of_two_spheres_coarse.msh eighth_wedge_of_two_spheres_coarser.msh eighth_wedge_of_two_spheres_coarsest.msh eighth_wedge_of_four_spheres_coarse.msh eighth_wedge_of_four_spheres_coarser.msh eighth_wedge_of_four_spheres_coarsest.msh: %.msh: %.geo
 	${GMSH_NOOPT}
 
 
