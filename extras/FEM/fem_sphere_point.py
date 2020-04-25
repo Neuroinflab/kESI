@@ -639,7 +639,7 @@ if __name__ == '__main__':
             for controller.degree in [1, 2, 3]:
                 controller_2D.degree = controller.degree
                 RES = 4
-                span = controller.cortex_radius_external - controller.cortex_radius_external
+                span = controller.cortex_radius_external - controller.cortex_radius_internal
                 controller.R = np.linspace(controller.cortex_radius_internal + 0.5 * span / RES,
                                            controller.cortex_radius_external - 0.5 * span / RES,
                                            RES)
