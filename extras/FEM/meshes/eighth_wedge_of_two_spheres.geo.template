@@ -463,7 +463,7 @@ Return
 
 
 n_meridians = 2;
-dihedral_angle = 2 * Pi / 8;
+dihedral_angle = 2 * Pi / SED_NUMBER_OF_WEDGES;
 brain_r = 0.079;
 scalp_r = 0.090;
 
