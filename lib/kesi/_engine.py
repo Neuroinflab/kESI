@@ -65,6 +65,21 @@ class _LinearKernelSolver(object):
         return np.linalg.solve(self._kernel + regularization_parameter * np.identity(self._kernel.shape[0]),
                                rhs)
 
+    def leave_one_out_errors(self, RHS, regularization_parameter=0):
+        n = self._kernel.shape[0]
+        KERNEL = self._kernel + regularization_parameter * np.identity(n)
+        IDX_N = np.arange(n)
+        return [self._leave_one_out_estimate(KERNEL, RHS, i, IDX_N != i) - ROW
+                for i, ROW in enumerate(RHS)]
+
+    def _leave_one_out_estimate(self, KERNEL, X, i, IDX):
+        CROSS_KERNEL = KERNEL[np.ix_([i], IDX)]
+        # As the first dimension of the `CROSS_KERNEL` is degenerated,
+        # it is removed from the product
+        return np.matmul(CROSS_KERNEL,
+                         np.linalg.solve(KERNEL[np.ix_(IDX, IDX)],
+                                         X[IDX]))[0]
+
 
 class _EigenvectorKernelSolver(object):
     def __init__(self, kernel):
@@ -178,23 +193,18 @@ class _FunctionalFieldReconstructorBase(object):
 
     def leave_one_out_errors(self, measured, regularization_parameter):
         """
+        Warnings
+        --------
+            Requires the object to be initialized with `_LinearKernelSolver`
+
         Note
         ----
 
             In the future result for a static measurement may be a sequence
             of scalars instead of arrays.
         """
-        n = self._kernel.shape[0]
-        KERNEL = self._kernel + regularization_parameter * np.identity(n)
-        IDX_N = np.arange(n)
-        X = self._measurement_vector(measured)
-        return [self._leave_one_out_estimate(KERNEL, X, i, IDX_N != i) - ROW
-                for i, ROW in enumerate(X)]
-
-    def _leave_one_out_estimate(self, KERNEL, X, i, IDX):
-        return np.matmul(KERNEL[np.ix_([i], IDX)],
-                         np.linalg.solve(KERNEL[np.ix_(IDX, IDX)],
-                                         X[IDX, :]))[0, :]
+        return self._solve_kernel.leave_one_out_errors(self._measurement_vector(measured),
+                                                       regularization_parameter)
 
     def save(self, file):
         np.savez_compressed(file,

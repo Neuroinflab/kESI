@@ -93,5 +93,50 @@ class TestLinearKernelSolver(TestCase):
                                         else solver(rhs, regularization_parameter=regularization_parameter)))
 
 
+class TestLinearKernelSolverLeaveOneOutBase(TestCase):
+    def setUp(self):
+        if hasattr(self, 'KERNEL'):
+            self.solver = _LinearKernelSolver(np.array(self.KERNEL))
+        else:
+            self.skipTest('test in abstract class called')
+
+    def testLeaveOneOutErrorsGivenConstantVectorInputAndNoRegularisation(self):
+        self.checkLeaveOneOut([0, 0],
+                              [1, 1])
+
+    def testLeaveOneOutErrorsGivenConstantVectorInputAndRegularisation(self):
+        self.checkLeaveOneOut([-0.5, -0.5],
+                              [1, 1],
+                              1)
+
+    def testLeaveOneOutErrorsGivenVariableVectorInputAndNoRegularisation(self):
+        self.checkLeaveOneOut([-1, 1],
+                              [2, 1],
+                              0)
+
+    def testLeaveOneOutErrorsGivenVariableMatrixInputAndNoRegularisation(self):
+        self.checkLeaveOneOut([[-1, -2],
+                               [1, 2]],
+                              [[2, 4],
+                               [1, 2]],
+                              0)
+
+
+    def checkLeaveOneOut(self, expected, measurements,
+                         regularization_parameter=None):
+        if regularization_parameter is None:
+            observed = self.solver.leave_one_out_errors(np.array(measurements))
+        else:
+            observed = self.solver.leave_one_out_errors(
+                                np.array(measurements),
+                                regularization_parameter=regularization_parameter)
+        self.checkArrayLikeAlmostEqual(expected, observed)
+
+
+class TestLinearKernelSolverLeaveOneOutGivenConstantKernel(TestLinearKernelSolverLeaveOneOutBase):
+    KERNEL = [[1, 1],
+              [1, 1]]
+
+
 if __name__ == '__main__':
     unittest.main()
