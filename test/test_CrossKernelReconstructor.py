@@ -41,58 +41,64 @@ import kesi._verbose as verbose
 
 
 class TestCrossKernelReconstructor(TestCase):
+    KERNEL = None
+    MEASURED = [13, 37]
+    CROSS_KERNEL = [[1, 3],
+                    [2, 2],
+                    [3, 1]]
+
     def setUp(self):
         self.kernel_solver = SpyKernelSolverClass()
+        self.reconstructor = verbose._VerboseFunctionalFieldReconstructorBase._CrossKernelReconstructor(
+                  self.kernel_solver(self.KERNEL),
+                  self.CROSS_KERNEL)
 
     def testReconstructsSingleMeasurements(self):
-        solution = [1, 1]
-        cross_kernel = [[1, 3],
-                        [2, 2],
-                        [3, 1]]
-        expected = np.matmul(cross_kernel, solution)
-        self.checkReconstructor(cross_kernel, expected, solution)
+        self.checkCall([1, 1])
 
     def testReconstructsSingleMeasurementsWithRegularization(self):
-        solution = [1, 1]
-        cross_kernel = [[1, 3],
-                        [2, 2],
-                        [3, 1]]
-        expected = np.matmul(cross_kernel, solution)
-        self.checkReconstructor(cross_kernel, expected, solution,
-                                regularization_parameter=1)
+        self.checkCall([1, 1], regularization_parameter=1)
 
     def testReconstructsSerialMeasurements(self):
-        self.kernel_solver = SpyKernelSolverClass()
-        solution = [[1, 1],
-                    [-1, 2]]
-        cross_kernel = [[1, 3],
-                        [2, 2],
-                        [3, 1]]
+        self.checkCall([[1, 1],
+                        [-1, 2]])
 
-        expected = np.matmul(cross_kernel, solution)
-        self.checkReconstructor(cross_kernel, expected, solution)
+    def test_leave_one_out_methodWithoutRegularization(self):
+        self.check_leave_one_out_method()
 
-    def checkReconstructor(self, cross_kernel, expected, solution, regularization_parameter=None):
+    def test_leave_one_out_methodWithRegularization(self):
+        self.check_leave_one_out_method(regularization_parameter=1)
+
+    def checkCall(self, solution, regularization_parameter=None):
         self.kernel_solver.set_solution(solution)
-        kernel = None
-        measured = [13, 37]
-        reconstructor = verbose._VerboseFunctionalFieldReconstructorBase._CrossKernelReconstructor(
-                                    self.kernel_solver(kernel),
-                                    cross_kernel)
+        expected = np.matmul(self.CROSS_KERNEL, solution)
         self.checkArrayLikeAlmostEqual(expected,
-                                       (reconstructor(measured)
+                                       (self.reconstructor(self.MEASURED)
                                         if regularization_parameter is None
-                                        else reconstructor(measured,
-                                                           regularization_parameter=regularization_parameter)))
-        self.assertEqual(1, self.kernel_solver.call_counter['__init__'])
+                                        else self.reconstructor(self.MEASURED,
+                                                                regularization_parameter=regularization_parameter)))
         self.assertEqual(1, self.kernel_solver.call_counter['__call__'])
-        self.checkArrayLikeAlmostEqual(measured,
+        self.check_rhs_and_regularization_parameter_arguments(regularization_parameter)
+
+    def check_rhs_and_regularization_parameter_arguments(self, regularization_parameter):
+        self.checkArrayLikeAlmostEqual(self.MEASURED,
                                        self.kernel_solver.rhs)
         if regularization_parameter is None:
             self.assertIsNone(self.kernel_solver.regularization_parameter)
         else:
             self.assertEqual(regularization_parameter,
                              self.kernel_solver.regularization_parameter)
+
+    def check_leave_one_out_method(self, regularization_parameter=None):
+        result = np.random.random(2)
+        self.kernel_solver.set_leave_one_out_errors(result)
+        self.checkArrayAlmostEqual(result,
+                                   (self.reconstructor.leave_one_out(self.MEASURED)
+                                    if regularization_parameter is None
+                                    else self.reconstructor.leave_one_out(self.MEASURED,
+                                                                          regularization_parameter=regularization_parameter)))
+        self.assertEqual(1, self.kernel_solver.call_counter['leave_one_out'])
+        self.check_rhs_and_regularization_parameter_arguments(regularization_parameter)
 
 
 class TestLegacyCrossKernelReconstructor(unittest.TestCase):

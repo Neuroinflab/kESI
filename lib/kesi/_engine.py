@@ -65,12 +65,12 @@ class _LinearKernelSolver(object):
         return np.linalg.solve(self._kernel + regularization_parameter * np.identity(self._kernel.shape[0]),
                                rhs)
 
-    def leave_one_out_errors(self, RHS, regularization_parameter=0):
+    def leave_one_out_errors(self, rhs, regularization_parameter=0):
         n = self._kernel.shape[0]
         KERNEL = self._kernel + regularization_parameter * np.identity(n)
         IDX_N = np.arange(n)
-        return [self._leave_one_out_estimate(KERNEL, RHS, i, IDX_N != i) - ROW
-                for i, ROW in enumerate(RHS)]
+        return [self._leave_one_out_estimate(KERNEL, rhs, i, IDX_N != i) - ROW
+                for i, ROW in enumerate(rhs)]
 
     def _leave_one_out_estimate(self, KERNEL, X, i, IDX):
         CROSS_KERNEL = KERNEL[np.ix_([i], IDX)]
