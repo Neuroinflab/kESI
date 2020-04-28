@@ -4,7 +4,7 @@
 #                                                                             #
 #    kESI                                                                     #
 #                                                                             #
-#    Copyright (C) 2019 Jakub M. Dzik (Laboratory of Neuroinformatics;        #
+#    Copyright (C) 2019-2020 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
 #    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
 #                                                                             #
 #    This software is free software: you can redistribute it and/or modify    #
@@ -95,8 +95,8 @@ class SpyKernelSolverClass(object):
         self._function_of_rhs_and_regularization_parameter(regularization_parameter, rhs)
         return self._solution
 
-    def _leave_one_out(self, rhs, regularization_parameter=None):
-        self.call_counter['leave_one_out'] += 1
+    def _leave_one_out_errors(self, rhs, regularization_parameter=None):
+        self.call_counter['leave_one_out_errors'] += 1
         self._function_of_rhs_and_regularization_parameter(regularization_parameter, rhs)
         return self._errors
 
@@ -111,5 +111,5 @@ class SpyKernelSolverClass(object):
         def __call__(self, *args, **kwargs):
             return self._parent._call(*args, **kwargs)
 
-        def leave_one_out(self, *args, **kwargs):
-            return self._parent._leave_one_out(*args, **kwargs)
+        def leave_one_out_errors(self, *args, **kwargs):
+            return self._parent._leave_one_out_errors(*args, **kwargs)

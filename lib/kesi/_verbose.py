@@ -322,8 +322,8 @@ class _VerboseFunctionalFieldReconstructorBase(object):
             return np.matmul(self._cross_kernel,
                              self._solve_kernel(measured, *args, **kwargs))
 
-        def leave_one_out(self, measured, *args, **kwargs):
-            return self._solve_kernel.leave_one_out(measured, *args, **kwargs)
+        def leave_one_out_errors(self, measured, *args, **kwargs):
+            return self._solve_kernel.leave_one_out_errors(measured, *args, **kwargs)
 
     def get_crossreconstructor(self,
                                measurement_manager,
