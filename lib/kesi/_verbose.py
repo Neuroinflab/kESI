@@ -30,7 +30,8 @@ from ._engine import (FunctionalFieldReconstructor,
                       LinearMixture,
                       _MissingAttributeError,
                       _EigenvectorKernelSolver,
-                      _ValidableMeasurementManagerBase)
+                      _ValidableMeasurementManagerBase,
+                      _LinearKernelSolver)
 
 
 class _VerboseFunctionalFieldReconstructorBase(object):
@@ -324,6 +325,17 @@ class _VerboseFunctionalFieldReconstructorBase(object):
 
         def leave_one_out_errors(self, measured, *args, **kwargs):
             return self._solve_kernel.leave_one_out_errors(measured, *args, **kwargs)
+
+        def save(self, file):
+            np.savez_compressed(file,
+                                CROSS_KERNEL=self._cross_kernel,
+                                KERNEL=self._solve_kernel._kernel)
+
+        @classmethod
+        def load(cls, file):
+            with np.load(file) as fh:
+                return cls(_LinearKernelSolver.load_from_npzfile(fh),
+                           fh['CROSS_KERNEL'])
 
     def get_crossreconstructor(self,
                                measurement_manager,
