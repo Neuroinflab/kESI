@@ -29,24 +29,24 @@ import numpy as np
 from scipy.special import erf
 
 try:
-    from . import _fem_common
+    from . import _fem_common as fc
     # When run as script raises:
     #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
     #  - `SystemError` (Python 3.3-5), or
     #  - `ValueError` (Python 2.7).
 
 except (ImportError, SystemError, ValueError):
-    import _fem_common
+    import _fem_common as fc
 
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-# SOLUTION_DIRECTORY = _fem_common.SOLUTION_DIRECTORY
+# SOLUTION_DIRECTORY = fc.SOLUTION_DIRECTORY
 
 SAMPLING_FREQUENCY = 5
 
-class GaussianSourceFactory(_fem_common._SymmetricSourceFactory_Base):
+class GaussianSourceFactory(fc._SymmetricSourceFactory_Base):
     def load_specific_attributes(self, fh):
         self.standard_deviation = fh['standard_deviation']
 
@@ -88,10 +88,10 @@ if __name__ == '__main__':
         $ docker run -ti --env HOST_UID=$(id -u) --env HOST_GID=$(id -g) -v $(pwd):/home/fenics/shared:Z -w /home/fenics/shared quay.io/fenicsproject/stable
         """)
     else:
-        class GaussianPotentialFEM(_fem_common._SymmetricFEM_Base):
+        class GaussianPotentialFEM(fc._SymmetricFEM_Base):
             def __init__(self, mesh_name='eighth_of_sphere'):
                          super(GaussianPotentialFEM, self).__init__(
-                               mesh_path=os.path.join(_fem_common.DIRNAME,
+                               mesh_path=os.path.join(fc.DIRNAME,
                                                       'meshes',
                                                       mesh_name))
 
@@ -161,8 +161,8 @@ if __name__ == '__main__':
 
         logging.basicConfig(level=logging.INFO)
 
-        if not os.path.exists(_fem_common.SOLUTION_DIRECTORY):
-            os.makedirs(_fem_common.SOLUTION_DIRECTORY)
+        if not os.path.exists(fc.SOLUTION_DIRECTORY):
+            os.makedirs(fc.SOLUTION_DIRECTORY)
 
         for mesh_name in sys.argv[1:]:
             fem = GaussianPotentialFEM(mesh_name=mesh_name)
@@ -194,8 +194,7 @@ if __name__ == '__main__':
                                      fem=fem))
                     if potential is not None:
                         N_LIMIT = (N - 1) * SAMPLING_FREQUENCY + 1 # TODO: prove correctness
-                        POTENTIAL = np.empty(N_LIMIT * (N_LIMIT + 1) * (N_LIMIT + 2) // 6)
-                        POTENTIAL.fill(np.nan)
+                        POTENTIAL = fc.empty_array(N_LIMIT * (N_LIMIT + 1) * (N_LIMIT + 2) // 6)
                         GT = POTENTIAL.copy()
                         for x in range(N_LIMIT):
                             for y in range(x + 1):

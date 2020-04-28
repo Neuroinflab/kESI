@@ -82,13 +82,34 @@ class SpyKernelSolverClass(object):
     def set_solution(self, solution):
         self._solution = solution
 
+    def set_leave_one_out_errors(self, errors):
+        self._errors = errors
+
     def __call__(self, kernel):
         self.call_counter['__init__'] += 1
         self.kernel = kernel
-        return self._callable
+        return self.Spy(self)
 
-    def _callable(self, rhs, regularization_parameter=None):
+    def _call(self, rhs, regularization_parameter=None):
         self.call_counter['__call__'] += 1
+        self._function_of_rhs_and_regularization_parameter(regularization_parameter, rhs)
+        return self._solution
+
+    def _leave_one_out(self, rhs, regularization_parameter=None):
+        self.call_counter['leave_one_out'] += 1
+        self._function_of_rhs_and_regularization_parameter(regularization_parameter, rhs)
+        return self._errors
+
+    def _function_of_rhs_and_regularization_parameter(self, regularization_parameter, rhs):
         self.rhs = rhs
         self.regularization_parameter = regularization_parameter
-        return self._solution
+
+    class Spy(object):
+        def __init__(self, parent):
+            self._parent = parent
+
+        def __call__(self, *args, **kwargs):
+            return self._parent._call(*args, **kwargs)
+
+        def leave_one_out(self, *args, **kwargs):
+            return self._parent._leave_one_out(*args, **kwargs)

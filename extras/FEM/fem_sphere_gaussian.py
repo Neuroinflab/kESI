@@ -30,24 +30,18 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
 try:
-    from . import _fem_common
+    from . import _fem_common as fc
     # When run as script raises:
     #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
     #  - `SystemError` (Python 3.3-5), or
     #  - `ValueError` (Python 2.7).
 
 except (ImportError, SystemError, ValueError):
-    import _fem_common
+    import _fem_common as fc
 
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-
-def empty_array(shape):
-    A = np.empty(shape)
-    A.fill(np.nan)
-    return A
 
 
 class _SomeSphereGaussianLoaderBase(object):
@@ -111,9 +105,9 @@ class _GaussianLoaderBase3D(_GaussianLoaderBase):
     @property
     def _xz_idx(self):
         _idx = 0
-        for x_idx in range(self.sampling_frequency + 1):
-            for z_idx in range(x_idx + 1):
-                assert _idx == x_idx * (x_idx + 1) // 2 + z_idx
+        for z_idx in range(self.sampling_frequency + 1):
+            for x_idx in range(z_idx + 1):
+                assert _idx == z_idx * (z_idx + 1) // 2 + x_idx
                 yield x_idx, z_idx
                 _idx += 1
 
@@ -266,9 +260,9 @@ class SomeSphereGaussianSourceFactory3D(_SomeSphereGaussianSourceFactoryBase,
                                         _GaussianLoaderBase3D):
     def _make_interpolator(self, COMPRESSED):
         sf = self.sampling_frequency
-        POTENTIAL = empty_array((sf + 1,
-                                 len(self.Y_SAMPLE),
-                                 sf + 1))
+        POTENTIAL = fc.empty_array((sf + 1,
+                                    len(self.Y_SAMPLE),
+                                    sf + 1))
         for xz_idx, (x_idx, z_idx) in enumerate(self._xz_idx):
             P = COMPRESSED[xz_idx, :]
             POTENTIAL[x_idx, :, z_idx] = P
@@ -379,9 +373,9 @@ class _SomeSphereControllerBase(object):
 
     def _empty_solutions(self):
         n = 2 ** self.k
-        self.A = empty_array(n * self.source_resolution)
+        self.A = fc.empty_array(n * self.source_resolution)
         self.STATS = []
-        self.POTENTIAL = empty_array(self._potential_size(n))
+        self.POTENTIAL = fc.empty_array(self._potential_size(n))
 
     @property
     def _fem_attributes(self):
@@ -394,9 +388,9 @@ class _SomeSphereGaussianController3D(_GaussianLoaderBase3D,
                                       _SomeSphereControllerBase):
     sampling_frequency = 256
 
-    def _empty_solutions(self):
-        super(_SomeSphereGaussianController3D, self)._empty_solutions()
-        n = 2 ** self.k
+    # def _empty_solutions(self):
+    #     super(_SomeSphereGaussianController3D, self)._empty_solutions()
+    #     n = 2 ** self.k
 
     def _potential_size(self, n):
         xz_size = (self.sampling_frequency + 1) * (self.sampling_frequency + 2) // 2
@@ -410,7 +404,7 @@ class _SomeSphereGaussianController3D(_GaussianLoaderBase3D,
                    self,
                    int(round(1000 / 2 ** self.k)))
 
-        return _fem_common._SourceFactory_Base.solution_path(fn, False)
+        return fc._SourceFactory_Base.solution_path(fn, False)
 
 
 class _SomeSphereGaussianController2D(_GaussianLoaderBase2D,
@@ -428,7 +422,7 @@ class _SomeSphereGaussianController2D(_GaussianLoaderBase2D,
                    self,
                    int(round(1000 / 2 ** self.k)))
 
-        return _fem_common._SourceFactory_Base.solution_path(fn, False)
+        return fc._SourceFactory_Base.solution_path(fn, False)
 
 
 if __name__ == '__main__':
@@ -447,13 +441,13 @@ if __name__ == '__main__':
                      quay.io/fenicsproject/stable
         """)
     else:
-        class _SphericalGaussianPotential(_fem_common._FEM_Base):
+        class _SphericalGaussianPotential(fc._FEM_Base):
             FRACTION_OF_SPACE = 1.0
             scalp_radius = 0.090
 
             def __init__(self, mesh_name='finite_slice'):
                 super(_SphericalGaussianPotential, self).__init__(
-                      mesh_path=os.path.join(_fem_common.DIRNAME,
+                      mesh_path=os.path.join(fc.DIRNAME,
                                              'meshes',
                                              mesh_name))
                 self.mesh_name = mesh_name
@@ -526,6 +520,12 @@ if __name__ == '__main__':
             FRACTION_OF_SPACE = 0.125
 
 
+        class SixthWedgeOfOneSphereGaussianPotentialFEM(
+                  OneSphereGaussianPotentialFEM):
+            startswith = 'sixth_wedge_of_one_sphere'
+            FRACTION_OF_SPACE = 1.0 / 6
+
+
         class TwoSpheresGaussianPotentialFEM(_SphericalGaussianPotential):
             startswith = 'two_spheres'
 
@@ -549,6 +549,12 @@ if __name__ == '__main__':
                   TwoSpheresGaussianPotentialFEM):
             startswith = 'eighth_wedge_of_two_spheres'
             FRACTION_OF_SPACE = 0.125
+
+
+        class SixthWedgeOfTwoSpheresGaussianPotentialFEM(
+                  TwoSpheresGaussianPotentialFEM):
+            startswith = 'sixth_wedge_of_two_spheres'
+            FRACTION_OF_SPACE = 1.0 / 6
 
 
         class FourSpheresGaussianPotentialFEM(_SphericalGaussianPotential):
@@ -583,10 +589,16 @@ if __name__ == '__main__':
             FRACTION_OF_SPACE = 0.125
 
 
+        class SixthWedgeOfFourSpheresGaussianPotentialFEM(
+                  FourSpheresGaussianPotentialFEM):
+            startswith = 'sixth_wedge_of_four_spheres'
+            FRACTION_OF_SPACE = 1.0 / 6
+
+
         logging.basicConfig(level=logging.INFO)
 
-        if not os.path.exists(_fem_common.SOLUTION_DIRECTORY):
-            os.makedirs(_fem_common.SOLUTION_DIRECTORY)
+        if not os.path.exists(fc.SOLUTION_DIRECTORY):
+            os.makedirs(fc.SOLUTION_DIRECTORY)
 
         for mesh_name in sys.argv[1:]:
             for SphereGaussianFEM in [OneSphereGaussianPotentialFEM,
@@ -595,6 +607,9 @@ if __name__ == '__main__':
                                       EighthWedgeOfOneSphereGaussianPotentialFEM,
                                       EighthWedgeOfTwoSpheresGaussianPotentialFEM,
                                       EighthWedgeOfFourSpheresGaussianPotentialFEM,
+                                      SixthWedgeOfOneSphereGaussianPotentialFEM,
+                                      SixthWedgeOfTwoSpheresGaussianPotentialFEM,
+                                      SixthWedgeOfFourSpheresGaussianPotentialFEM,
                                       ]:
                 if mesh_name.startswith(SphereGaussianFEM.startswith):
                     fem = SphereGaussianFEM(mesh_name=mesh_name)
@@ -624,10 +639,10 @@ if __name__ == '__main__':
                             POTENTIAL = controller.POTENTIAL
                             AS = controller.A
 
-                            save_stopwatch = _fem_common.Stopwatch()
-                            sample_stopwatch = _fem_common.Stopwatch()
+                            save_stopwatch = fc.Stopwatch()
+                            sample_stopwatch = fc.Stopwatch()
 
-                            with _fem_common.Stopwatch() as unsaved_time:
+                            with fc.Stopwatch() as unsaved_time:
                                 for idx_r, src_r in enumerate(controller.R):
                                     logger.info(
                                         'Gaussian SD={}, r={} ({}, deg={})'.format(
@@ -646,23 +661,6 @@ if __name__ == '__main__':
                                         exceptions = 0
                                         misses = 0
                                         with sample_stopwatch:
-                                            # for idx_polar, (altitude, azimuth) in enumerate(zip(controller.ALTITUDE,
-                                            #                                                     controller.AZIMUTH)):
-                                            #     negative_d_altitude = np.pi / 2 - altitude
-                                            #     sin_alt = np.sin(negative_d_altitude)
-                                            #     cos_alt = np.cos(negative_d_altitude)
-                                            #     sin_az = np.sin(-azimuth)
-                                            #     cos_az = np.cos(-azimuth)
-                                            #     ELECTRODES = np.matmul(
-                                            #         controller.ELECTRODES,
-                                            #         np.matmul(
-                                            #             [[cos_alt, sin_alt, 0],
-                                            #              [-sin_alt, cos_alt, 0],
-                                            #              [0, 0, 1]],
-                                            #             [[cos_az, 0, -sin_az],
-                                            #              [0, 1, 0],
-                                            #              [sin_az, 0, cos_az]]
-                                            #             ))
                                             r2 = controller.scalp_radius ** 2
                                             for idx_xz, (x, z) in enumerate(controller._xz):
                                                 r_xz_2 = x ** 2 + z ** 2
@@ -675,11 +673,10 @@ if __name__ == '__main__':
                                                         misses += 1
                                                         continue
                                                     try:
-                                                        v = potential(z, y, x)
-                                                        # Order inverted as it is required that x <= z
+                                                        v = potential(x, y, z)
                                                     except Exception as e:
                                                         if x < 0 or z < 0 or abs(y) > controller.scalp_radius or x > controller.scalp_radius or z > controller.scalp_radius:
-                                                            logger.warn('coords out of bounding box')
+                                                            logger.warning('coords out of bounding box')
                                                         exceptions += 1
                                                     else:
                                                         hits += 1

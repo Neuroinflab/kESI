@@ -463,27 +463,89 @@ Return
 
 
 n_meridians = 2;
-dihedral_angle = 2 * Pi / 8;
+dihedral_angle = 2 * Pi / SED_NUMBER_OF_WEDGES;
 brain_r = 0.079;
+csf_r   = 0.080;
+skull_r = 0.085;
 scalp_r = 0.090;
 
 brain_roi_r = 0.006;
 
 brain_element_length = 0.015 * SED_RELATIVE_ELEMENT_SIZE;  // from Chaitanya's sphere_4_lowres.geo
-scalp_element_length = (scalp_r - brain_r) * SED_RELATIVE_ELEMENT_SIZE;
+csf_element_length   = (csf_r - brain_r) * SED_RELATIVE_ELEMENT_SIZE;
+skull_element_length = (skull_r - csf_r) * SED_RELATIVE_ELEMENT_SIZE;
+scalp_element_length = (scalp_r - skull_r) * SED_RELATIVE_ELEMENT_SIZE;
 
 min_sd = 0.001;
 brain_roi_element_length = min_sd / 4 * SED_RELATIVE_ROI_ELEMENT_SIZE;
+csf_roi_element_length   = 0.0050 * SED_RELATIVE_ELEMENT_SIZE;  // from Chaitanya's sphere_4_lowres.geo
+skull_roi_element_length = 0.0025 * SED_RELATIVE_ELEMENT_SIZE;  // from Chaitanya's sphere_4_lowres.geo
 scalp_roi_element_length = 0.0025 * SED_RELATIVE_ELEMENT_SIZE;  // from Chaitanya's sphere_4_lowres.geo
 
 x = 0.; y = 0.; z = 0.;
 
-r = brain_r;
-roi_r = brain_roi_r;
+r = brain_r - 2 * brain_roi_r;
+roi_r = brain_roi_r * r / brain_r;
 element_length = brain_element_length;
 roi_element_length = brain_roi_element_length;
 
 center = newp; Point(center) = {x, y, z, element_length};
+
+Call MakeSphereWithROI;
+
+external_surfaces[] = sphere_surfaces[];
+external_top = sphere_upper_pole;
+external_bottom = sphere_lower_pole;
+external_roi_radii[] = roi_radii[];
+external_roi_nodes[] = roi_nodes[];
+external_equatorial_nodes[] = equatorial_nodes[];
+external_upper_meridians[] = sphere_segment_meridians[];
+external_lower_meridians[] = lower_hemisphere_meridians[];
+external_surrounding_sector_surfaces[] = surrounding_sector_surfaces[];
+
+_top_axis = newl; Line(_top_axis) = {center, external_top};
+_bottom_axis = newl; Line(_bottom_axis) = {external_bottom, center};
+
+For _i In {0: 1}
+  _idx = _i * (n_meridians - 1);
+
+  _equatorial_line = newl; Line(_equatorial_line) = {center, equatorial_nodes[_idx]};
+
+  _loop = newll;
+  _surface = news;
+  Line Loop(_loop) = {_top_axis,
+                      -external_roi_radii[_idx],
+                      -external_upper_meridians[_idx],
+                      -_equatorial_line};
+  Plane Surface(_surface) = {_loop};
+  _dihedral_surfaces[_i * 2] = _surface;
+
+  _loop = newll;
+  _surface = news;
+  Line Loop(_loop) = {_bottom_axis,
+                      _equatorial_line,
+                      external_lower_meridians[_idx]};
+  Plane Surface(_surface) = {_loop};
+  _dihedral_surfaces[_i * 2 + 1] = _surface;
+EndFor
+
+volume_surfaces[] = {external_surfaces[],
+                     _dihedral_surfaces[]};
+Call MakeVolume;
+subcortex_volume = volume;
+
+
+roi_lower_pole = external_top;
+roi_lower_radii[] = external_roi_radii[];
+roi_lower_nodes[] = external_roi_nodes[];
+roi_lower_arcs[] = roi_arcs[];
+roi_lower_surfaces[] = roi_sector_surfaces[];
+
+
+r = brain_r;
+roi_r = brain_roi_r;
+element_length = csf_element_length;
+
 Call MakeSphereWithROI;
 
 roi_upper_nodes[] = roi_nodes[];
@@ -491,16 +553,6 @@ roi_upper_arcs[] = roi_arcs[];
 roi_upper_surfaces[] = roi_sector_surfaces[];
 roi_upper_radii[] =  roi_radii[];
 roi_upper_pole = roi_top;
-
-r = brain_r - 2 * roi_r;
-roi_r = roi_r * r / brain_r;
-
-Call MakeCapROI;
-roi_lower_nodes[] = roi_nodes[];
-roi_lower_arcs[] = roi_arcs[];
-roi_lower_surfaces[] = roi_sector_surfaces[];
-roi_lower_radii[] =  roi_radii[];
-roi_lower_pole = roi_top;
 
 roi_axis = newl; Line(roi_axis) = {roi_lower_pole, roi_upper_pole};
 
@@ -513,50 +565,42 @@ volume_surfaces[] = {roi_upper_surfaces[],
 Call MakeVolume;
 roi_volume = volume;
 
-_top_axis = newl; Line(_top_axis) = {center, roi_lower_pole};
-_bottom_axis = newl; Line(_bottom_axis) = {sphere_lower_pole, center};
+_bottom_axis = newl; Line(_bottom_axis) = {sphere_lower_pole, external_bottom};
 
 For _i In {0: 1}
   _idx = _i * (n_meridians - 1);
 
-  _line = newl; Line(_line) = {roi_lower_nodes[_idx], equatorial_nodes[_idx]};
-  _equatorial_line = newl; Line(_equatorial_line) = {center, equatorial_nodes[_idx]};
+  _equatorial_line = newl; Line(_equatorial_line) = {external_equatorial_nodes[_idx],
+                                                     equatorial_nodes[_idx]};
 
   _loop = newll;
   _surface = news;
   Line Loop(_loop) = {roi_meridians[_idx],
                       -sphere_segment_meridians[_idx],
-                      -_line};
+                      -_equatorial_line,
+                      external_upper_meridians[_idx]};
   Plane Surface(_surface) = {_loop};
-  _dihedral_surfaces[_i * 3] = _surface;
+  _dihedral_surfaces[_i * 2] = _surface;
 
   _loop = newll;
   _surface = news;
-  Line Loop(_loop) = {-_equatorial_line,
-                      _top_axis,
-                      -roi_lower_radii[_idx],
-                      _line};
-  Plane Surface(_surface) = {_loop};
-  _dihedral_surfaces[_i * 3 + 1] = _surface;
-
-  _loop = newll;
-  _surface = news;
-  Line Loop(_loop) = {lower_hemisphere_meridians[_idx],
+  Line Loop(_loop) = {_equatorial_line,
+                      lower_hemisphere_meridians[_idx],
                       _bottom_axis,
-                      _equatorial_line};
+                      -external_lower_meridians[_idx]};
   Plane Surface(_surface) = {_loop};
-  _dihedral_surfaces[_i * 3 + 2] = _surface;
+  _dihedral_surfaces[_i * 2 + 1] = _surface;
 EndFor
 
 volume_surfaces[] = {surrounding_sector_surfaces[],
-                     roi_lower_surfaces[],
                      roi_side_surfaces[],
+                     external_surrounding_sector_surfaces[],
                      _dihedral_surfaces[]};
 Call MakeVolume;
-surrounding_brain_volume = volume;
+surrounding_cortex_volume = volume;
 
 
-brain_surfaces[] = {surrounding_sector_surfaces[], roi_upper_surfaces[]};
+brain_surfaces[] = sphere_surfaces[];
 
 external_surfaces[] = brain_surfaces[];
 external_top = roi_upper_pole;
@@ -566,6 +610,22 @@ external_roi_nodes[] = roi_upper_nodes[];
 external_equatorial_nodes[] = equatorial_nodes[];
 external_upper_meridians[] = sphere_segment_meridians[];
 external_lower_meridians[] = lower_hemisphere_meridians[];
+
+r = csf_r;
+roi_r = brain_roi_r * r / brain_r;
+element_length = csf_element_length;
+roi_element_length = csf_roi_element_length;
+Call MakeCrustVolumeWithROI;
+csf_volume = volume;
+csf_surfaces[] = external_surfaces[];
+
+r = skull_r;
+roi_r = brain_roi_r * r / brain_r;
+element_length = skull_element_length;
+roi_element_length = skull_roi_element_length;
+Call MakeCrustVolumeWithROI;
+skull_volume = volume;
+skull_surfaces[] = external_surfaces[]; 
 
 r = scalp_r;
 roi_r = brain_roi_r * r / brain_r;
@@ -577,7 +637,11 @@ Call MakeCrustVolumeWithROI;
 scalp_volume = volume;
 scalp_surfaces[] = external_surfaces[];
 
-Physical Volume ("brain") = {roi_volume, surrounding_brain_volume};
+Physical Volume ("brain") = {roi_volume,
+                             surrounding_cortex_volume,
+                             subcortex_volume};
+Physical Volume ("csf") = csf_volume;
+Physical Volume ("skull") = skull_volume;
 Physical Volume ("scalp") = scalp_volume;
 Physical Surface ("brain_surface") = brain_surfaces[];
 Physical Surface ("scalp_surface") = scalp_surfaces[];

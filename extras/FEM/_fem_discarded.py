@@ -1,8 +1,7 @@
 import numpy as np
 
-from FEM import _fem_common
-from FEM.fem_sphere_gaussian import _SomeSphereGaussianPotentialLoaderBase, _SourceBase, _SomeSphereControllerBase, \
-    empty_array
+from FEM import _fem_common as fc
+from FEM.fem_sphere_gaussian import _SomeSphereGaussianPotentialLoaderBase, _SourceBase, _SomeSphereControllerBase
 
 
 class _FixedElectrodesGaussianLoaderBase(_SomeSphereGaussianPotentialLoaderBase):
@@ -158,13 +157,13 @@ class _SomeSphereFixedElectrodesGaussianController(
                    self,
                    int(round(1000 / 2 ** self.k)))
 
-        return _fem_common._SourceFactory_Base.solution_path(fn, False)
+        return fc._SourceFactory_Base.solution_path(fn, False)
 
     def _empty_solutions(self):
         super(_SomeSphereFixedElectrodesGaussianController,
               self)._empty_solutions()
         n = 2 ** self.k
         self.STATS = []
-        self.POTENTIAL = empty_array((n * self.source_resolution,
-                                      len(self.AZIMUTH),
-                                      len(self.ELECTRODES)))
+        self.POTENTIAL = fc.empty_array((n * self.source_resolution,
+                                        len(self.AZIMUTH),
+                                        len(self.ELECTRODES)))
