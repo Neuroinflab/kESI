@@ -59,7 +59,7 @@ class _TestsOfInitializationErrorsBase(unittest.TestCase):
                                            exception_name),
                                    TypeError]:
                 with self.assertRaises(ExceptionClass):
-                    self.makeReconstructor(measurement_manager)
+                    self.attemptToMakeReconstructor(measurement_manager)
 
     def getIncompleteMeasurementManager(self, missing):
         return Stub(**{attr: None
@@ -76,7 +76,14 @@ class TestsOfInitializationErrors(_TestsOfInitializationErrorsBase):
                                     'NumberOfMeasurementsAttribute'),
                                    ]
 
-    def makeReconstructor(self, measurement_manager):
+    def attemptToMakeReconstructor(self, measurement_manager):
+        """
+        Try to load a reconstructor to trigger exceptions.
+
+        Parameters
+        ----------
+            measurement_manager : measurement-manager like object
+        """
         self.CLASS([], measurement_manager)
 
 
