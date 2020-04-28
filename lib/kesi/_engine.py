@@ -86,7 +86,11 @@ class _LinearKernelSolver(object):
     @classmethod
     def load(cls, file):
         with np.load(file) as fh:
-            return cls(fh['KERNEL'])
+            return cls.load_from_npzfile(fh)
+
+    @classmethod
+    def load_from_npzfile(cls, npzfile):
+        return cls(npzfile['KERNEL'])
 
 
 class _EigenvectorKernelSolver(object):

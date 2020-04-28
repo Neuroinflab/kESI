@@ -107,6 +107,16 @@ class TestLinearKernelSolverLoadability(_TestLinearKernelSolverBase):
         return _LinearKernelSolver.load(buffer)
 
 
+class TestLinearKernelSolverNpzFileLoadability(_TestLinearKernelSolverBase):
+    def createSolver(self, kernel):
+        buffer = BytesIO()
+        _LinearKernelSolver(np.array(kernel)).save(buffer)
+        buffer.seek(0)
+        with np.load(buffer) as fh:
+            return _LinearKernelSolver.load_from_npzfile(fh)
+
+
+
 class TestLinearKernelSolverLeaveOneOutBase(TestCase):
     def setUp(self):
         if hasattr(self, 'KERNEL'):
