@@ -93,11 +93,11 @@ class TestCrossKernelReconstructor(TestCase):
         result = np.random.random(2)
         self.kernel_solver.set_leave_one_out_errors(result)
         self.checkArrayAlmostEqual(result,
-                                   (self.reconstructor.leave_one_out(self.MEASURED)
+                                   (self.reconstructor.leave_one_out_errors(self.MEASURED)
                                     if regularization_parameter is None
-                                    else self.reconstructor.leave_one_out(self.MEASURED,
-                                                                          regularization_parameter=regularization_parameter)))
-        self.assertEqual(1, self.kernel_solver.call_counter['leave_one_out'])
+                                    else self.reconstructor.leave_one_out_errors(self.MEASURED,
+                                                                                 regularization_parameter=regularization_parameter)))
+        self.assertEqual(1, self.kernel_solver.call_counter['leave_one_out_errors'])
         self.check_rhs_and_regularization_parameter_arguments(regularization_parameter)
 
 
