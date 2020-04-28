@@ -250,7 +250,7 @@ class SomeSpherePointSourceFactory3D(_SomeSpherePointSourceFactoryBase,
         for xz_idx, (x_idx, z_idx) in enumerate(self._xz_idx):
             P = COMPRESSED[xz_idx, :]
             POTENTIAL[x_idx, :, z_idx] = P
-            if x_idx > z_idx:
+            if x_idx < z_idx:
                 POTENTIAL[z_idx, :, x_idx] = P
         interpolator = RegularGridInterpolator((self.X_SAMPLE[sf:],
                                                 self.Y_SAMPLE,
