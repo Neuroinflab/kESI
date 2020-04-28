@@ -24,7 +24,6 @@
 
 import unittest
 from io import BytesIO
-from unittest.case import TestCase
 
 import numpy as np
 
