@@ -80,6 +80,14 @@ class _LinearKernelSolver(object):
                          np.linalg.solve(KERNEL[np.ix_(IDX, IDX)],
                                          X[IDX]))[0]
 
+    def save(self, file):
+        np.savez_compressed(file, KERNEL=self._kernel)
+
+    @classmethod
+    def load(cls, file):
+        with np.load(file) as fh:
+            return cls(fh['KERNEL'])
+
 
 class _EigenvectorKernelSolver(object):
     def __init__(self, kernel):
