@@ -6,12 +6,13 @@ import numpy as np
 import pandas as pd
 import itertools
 import time
+import sys
 
 from kesi._verbose import (VerboseFFR,
                            LinearMixture,
                            LoadableVerboseFFR, _CrossKernelReconstructor)
 from kesi._engine import _LinearKernelSolver
-
+sys.path.append('..')
 from FEM.fem_sphere_gaussian import (SomeSphereGaussianSourceFactory3D,
                                      SomeSphereGaussianSourceFactoryOnlyCSD)
 from _common_new import altitude_azimuth_mesh
@@ -130,17 +131,17 @@ def make_reconstruction(source, reconstructor, measurement_manager, measurement_
     return pots, true_csd, est_csd, error
 
 
-def make_reconstruction_ck(pots, source, load_rec, cross_reconstructor, measurement_manager, measurement_manager_basis, regularization_parameter):
+def make_reconstruction_ck(pots, source, cross_reconstructor, measurement_manager, measurement_manager_basis, regularization_parameter):
     true_csd = measurement_manager_basis.probe(source)
-    rp = cross_validate(load_rec, pots, regularization_parameter)
+    rp = cross_validate(cross_reconstructor, pots, regularization_parameter)
     est_csd = cross_reconstructor(pots, rp)
     error = calculate_point_error(true_csd, est_csd)
     return true_csd, est_csd, error, rp
 
 
-def source_scanning_parallel(potential, sources, load_rec, reconstructor, measurement_manager, measurement_manager_basis, regularization_parameter=0, filename='reconstruction_error.npz'):
+def source_scanning_parallel(potential, sources, reconstructor, measurement_manager, measurement_manager_basis, regularization_parameter=0, filename='reconstruction_error.npz'):
     results = Parallel(n_jobs=NUM_CORES)(delayed(make_reconstruction_ck)
-                                         (pots, source, load_rec, reconstructor,
+                                         (pots, source, reconstructor,
                                           measurement_manager, measurement_manager_basis,
                                           regularization_parameter)
                                          for pots, source in zip(potential, sources))
@@ -211,7 +212,7 @@ measurement_manager = MeasurementManager(ELECTRODES, space='potential')
 measurement_manager_basis = MeasurementManager(EST_POINTS, space='csd')
 
 # Create reconstructor
-reconstructor_filename = 'SavedReconstructor_four_spheres_1000_deg_1.npz'
+reconstructor_filename = '../SavedReconstructor_four_spheres_1000_deg_1.npz'
 #reconstructor = VerboseFFR(sources, measurement_manager)
 #reconstructor.save(reconstructor_filename)
 #print("Reconstructor --- %s seconds ---" % (time.time() - start_time))
@@ -234,12 +235,10 @@ filename = 'four_spheres_1000_deg_1_rp_cv.npz'
 
 
 rps = np.logspace(-1, -15, 7, base=10.)
-#est_csd = cross_reconstructor(potential[0], cross_validate(loadable_reconstructor, potential[0], rps))
-#estimation_error = loadable_reconstructor.leave_one_out_errors(potential[0], 0.001)
 
 error_time = time.time()
 if PARALLEL_AVAILABLE:
-    source_scanning_error, true_csd, est_csd, error, rp = source_scanning_parallel(potential, sourcesCSD, loadable_reconstructor, cross_reconstructor, measurement_manager, measurement_manager_basis, regularization_parameter=rps, filename=filename)
+    source_scanning_error, true_csd, est_csd, error, rp = source_scanning_parallel(potential, sourcesCSD, cross_reconstructor, measurement_manager, measurement_manager_basis, regularization_parameter=rps, filename=filename)
 else:
     source_scanning_error = source_scanning(sources, reconstructor, measurement_manager,
                                             measurement_manager_basis, EST_X, EST_Y, EST_Z,
