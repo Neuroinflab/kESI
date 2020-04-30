@@ -28,6 +28,11 @@ import numpy as np
 import warnings
 
 
+def warn_deprecated(message, stacklevel=1):
+    warnings.warn(DeprecationWarning(message),
+                  stacklevel=stacklevel + 2)
+
+
 class _MissingAttributeError(TypeError):
     """
     An abstract base class for TypeError object validators.
@@ -79,6 +84,18 @@ class _LinearKernelSolver(object):
         return np.matmul(CROSS_KERNEL,
                          np.linalg.solve(KERNEL[np.ix_(IDX, IDX)],
                                          X[IDX]))[0]
+
+    def save(self, file):
+        np.savez_compressed(file, KERNEL=self._kernel)
+
+    @classmethod
+    def load(cls, file):
+        with np.load(file) as fh:
+            return cls.load_from_npzfile(fh)
+
+    @classmethod
+    def load_from_npzfile(cls, npzfile):
+        return cls(npzfile['KERNEL'])
 
 
 class _EigenvectorKernelSolver(object):
@@ -441,8 +458,6 @@ class MeasurementManagerBase(FunctionalFieldReconstructor.MeasurementManagerBase
     """
 
     def __init__(self, *args, **kwargs):
-        warnings.warn(
-            DeprecationWarning(
-                'The class has been moved to `FunctionalFieldReconstructor`.  Use `FunctionalFieldReconstructor.MeasurementManagerBase` instead.'))
-
+        warn_deprecated(
+            'The class has been moved to `FunctionalFieldReconstructor`.  Use `FunctionalFieldReconstructor.MeasurementManagerBase` instead.')
         super(MeasurementManagerBase, self).__init__(*args, **kwargs)

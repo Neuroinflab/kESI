@@ -24,6 +24,7 @@
 
 import warnings
 import unittest
+from io import BytesIO
 
 import numpy as np
 
@@ -38,6 +39,7 @@ except (ImportError, SystemError, ValueError):
     from _common import TestCase, SpyKernelSolverClass
 
 import kesi._verbose as verbose
+import kesi._engine as engine
 
 
 class TestCrossKernelReconstructor(TestCase):
@@ -99,6 +101,20 @@ class TestCrossKernelReconstructor(TestCase):
                                                                                  regularization_parameter=regularization_parameter)))
         self.assertEqual(1, self.kernel_solver.call_counter['leave_one_out_errors'])
         self.check_rhs_and_regularization_parameter_arguments(regularization_parameter)
+
+
+class TestCrossKernelLoadability(TestCase):
+    def testIsLoadable(self):
+        buffer = BytesIO()
+        verbose.VerboseFFR._CrossKernelReconstructor(engine._LinearKernelSolver([[0.1, 0],
+                                                                                 [0, 10]]),
+                                                     [[1, 30],
+                                                      [2, 20],
+                                                      [3, 10]]).save(buffer)
+        buffer.seek(0)
+        reconstructor = verbose.VerboseFFR._CrossKernelReconstructor.load(buffer)
+        self.checkArrayLikeAlmostEqual([23, 42, 61],
+                                       reconstructor([2, 1]))
 
 
 class TestLegacyCrossKernelReconstructor(unittest.TestCase):

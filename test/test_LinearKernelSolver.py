@@ -23,6 +23,7 @@
 ###############################################################################
 
 import unittest
+from io import BytesIO
 
 import numpy as np
 
@@ -38,15 +39,15 @@ except (ImportError, SystemError, ValueError):
 
 from kesi._engine import _LinearKernelSolver
 
-class TestLinearKernelSolver(TestCase):
+
+class _TestLinearKernelSolverBase(TestCase):
+    def setUp(self):
+        if not hasattr(self, 'createSolver'):
+            self.skipTest('test in abstract class called')
+
     def testGivenIdentityKernelIsIdentityFunction(self):
         rhs = np.array([1, 2])
         self.checkSolution(rhs, np.identity(2), rhs)
-
-    def testGivenDiagonalKernelDividesVectorElementsByDiagonal(self):
-        diagonal = np.array([0.5, 1, 2])
-        rhs = np.array([1, 2, 3])
-        self.checkSolution(rhs / diagonal, np.diag(diagonal), rhs)
 
     def testGivenDiagonalKernelDividesVectorElementsByDiagonal(self):
         diagonal = np.array([0.5, 1, 2])
@@ -86,11 +87,34 @@ class TestLinearKernelSolver(TestCase):
                            regularization_parameter=1)
 
     def checkSolution(self, expected, kernel, rhs, regularization_parameter=None):
-        solver = _LinearKernelSolver(np.array(kernel))
+        solver = self.createSolver(kernel)
         self.checkArrayLikeAlmostEqual(expected,
                                        (solver(rhs)
                                         if regularization_parameter is None
                                         else solver(rhs, regularization_parameter=regularization_parameter)))
+
+
+class TestLinearKernelSolver(_TestLinearKernelSolverBase):
+    def createSolver(self, kernel):
+        return _LinearKernelSolver(np.array(kernel))
+
+
+class TestLinearKernelSolverLoadability(_TestLinearKernelSolverBase):
+    def createSolver(self, kernel):
+        buffer = BytesIO()
+        _LinearKernelSolver(np.array(kernel)).save(buffer)
+        buffer.seek(0)
+        return _LinearKernelSolver.load(buffer)
+
+
+class TestLinearKernelSolverNpzFileLoadability(_TestLinearKernelSolverBase):
+    def createSolver(self, kernel):
+        buffer = BytesIO()
+        _LinearKernelSolver(np.array(kernel)).save(buffer)
+        buffer.seek(0)
+        with np.load(buffer) as fh:
+            return _LinearKernelSolver.load_from_npzfile(fh)
+
 
 
 class TestLinearKernelSolverLeaveOneOutBase(TestCase):

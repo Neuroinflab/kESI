@@ -30,7 +30,9 @@ from ._engine import (FunctionalFieldReconstructor,
                       LinearMixture,
                       _MissingAttributeError,
                       _EigenvectorKernelSolver,
-                      _ValidableMeasurementManagerBase)
+                      _ValidableMeasurementManagerBase,
+                      _LinearKernelSolver,
+                      warn_deprecated)
 
 
 class _VerboseFunctionalFieldReconstructorBase(object):
@@ -325,6 +327,17 @@ class _VerboseFunctionalFieldReconstructorBase(object):
         def leave_one_out_errors(self, measured, *args, **kwargs):
             return self._solve_kernel.leave_one_out_errors(measured, *args, **kwargs)
 
+        def save(self, file):
+            np.savez_compressed(file,
+                                CROSS_KERNEL=self._cross_kernel,
+                                KERNEL=self._solve_kernel._kernel)
+
+        @classmethod
+        def load(cls, file):
+            with np.load(file) as fh:
+                return cls(_LinearKernelSolver.load_from_npzfile(fh),
+                           fh['CROSS_KERNEL'])
+
     def get_crossreconstructor(self,
                                measurement_manager,
                                _CrossKernelReconstructor=_CrossKernelReconstructor):
@@ -370,9 +383,7 @@ class _Eigenreconstructor(object):
 
 class _CrossKernelReconstructor(_VerboseFunctionalFieldReconstructorBase._CrossKernelReconstructor):
     def __init__(self, kernel_solver, cross_kernel):
-        warnings.warn(
-            DeprecationWarning(
-                'The class has been moved to `[Loadable]VerboseFFR`.  Use `[Loadable]VerboseFFR._CrossKernelReconstructor` instead.'))
-
+        warn_deprecated(
+            'The class has been moved to `[Loadable]VerboseFFR`.  Use `[Loadable]VerboseFFR._CrossKernelReconstructor` instead.')
         super(_CrossKernelReconstructor, self).__init__(kernel_solver,
                                                         cross_kernel)

@@ -29,6 +29,8 @@ import warnings
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
+from kesi._engine import warn_deprecated
+
 try:
     from . import _fem_common as fc
     # When run as script raises:
@@ -287,9 +289,8 @@ class SomeSpherePointSourceFactoryLinear2D(_SomeSpherePointSourceFactoryBase,
 
 class SomeSpherePointSourceFactory2D(SomeSpherePointSourceFactoryLinear2D):
     def __init__(self, *args, **kwargs):
-        warnings.warn('SomeSpherePointSourceFactory2D is deprecated; use SomeSpherePointSourceFactoryLinear2D instead',
-                      DeprecationWarning,
-                      stacklevel=2)
+        warn_deprecated(
+            'SomeSphereGaussianSourceFactory2D is deprecated; use SomeSphereGaussianSourceFactoryLinear2D instead')
         super(SomeSpherePointSourceFactory2D,
               self).__init__(*args, **kwargs)
 

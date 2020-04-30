@@ -32,6 +32,9 @@ import gc
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
+from kesi._engine import warn_deprecated
+
+
 DIRNAME = os.path.dirname(__file__)
 SOLUTION_DIRECTORY = os.path.join(DIRNAME,
                                   'solutions')
@@ -378,8 +381,7 @@ class _SymmetricSourceFactory_Base(_SourceFactory_Base):
                                  APPROXIMATED))
 
     def Source(self, *args, **kwargs):
-        warnings.warn('The factory is a callable.  Call it instead.',
-                      DeprecationWarning)
+        warn_deprecated('The factory is a callable.  Call it instead.')
         return self(*args, **kwargs)
 
     class _Source(object):

@@ -24,7 +24,6 @@
 
 import unittest
 from io import BytesIO
-from unittest.case import TestCase
 
 import numpy as np
 
@@ -62,7 +61,14 @@ class TestsOfInitializationErrors(_TestsOfInitializationErrorsBase):
                                     'NumberOfMeasurementsAttribute'),
                                    ]
 
-    def makeReconstructor(self, measurement_manager):
+    def attemptToMakeReconstructor(self, measurement_manager):
+        """
+        Try to load a reconstructor to trigger exceptions.
+
+        Parameters
+        ----------
+            measurement_manager : measurement-manager like object
+        """
         buffer = BytesIO()
         np.savez_compressed(buffer, KERNEL=[], PRE_KERNREL=[])
         self.CLASS(buffer, [], measurement_manager)
