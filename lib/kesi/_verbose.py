@@ -31,7 +31,8 @@ from ._engine import (FunctionalFieldReconstructor,
                       _MissingAttributeError,
                       _EigenvectorKernelSolver,
                       _ValidableMeasurementManagerBase,
-                      _LinearKernelSolver)
+                      _LinearKernelSolver,
+                      warn_deprecated)
 
 
 class _VerboseFunctionalFieldReconstructorBase(object):
@@ -382,9 +383,7 @@ class _Eigenreconstructor(object):
 
 class _CrossKernelReconstructor(_VerboseFunctionalFieldReconstructorBase._CrossKernelReconstructor):
     def __init__(self, kernel_solver, cross_kernel):
-        warnings.warn(
-            DeprecationWarning(
-                'The class has been moved to `[Loadable]VerboseFFR`.  Use `[Loadable]VerboseFFR._CrossKernelReconstructor` instead.'))
-
+        warn_deprecated(
+            'The class has been moved to `[Loadable]VerboseFFR`.  Use `[Loadable]VerboseFFR._CrossKernelReconstructor` instead.')
         super(_CrossKernelReconstructor, self).__init__(kernel_solver,
                                                         cross_kernel)
