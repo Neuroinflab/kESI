@@ -22,7 +22,6 @@
 #                                                                             #
 ###############################################################################
 
-import warnings
 import numpy as np
 
 from ._engine import (FunctionalFieldReconstructor,
