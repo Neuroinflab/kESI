@@ -512,7 +512,7 @@ class _SomeSpherePointController2D(_PointLoaderBase2D,
 
 class _SamplingControllerBase(_SomeSphereControllerBase):
     def __init__(self, fem, y_resolution):
-        super(KronrodControllerBase, self).__init__(fem)
+        super(_SamplingControllerBase, self).__init__(fem)
         self.Z = self.X
         top = np.sqrt(np.square(self.cortex_radius_external) - np.square(self.roi_radius))
         self.Y = np.linspace(self.cortex_radius_internal,
