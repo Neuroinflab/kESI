@@ -424,10 +424,10 @@ class _SomeSpherePointController3D(_PointLoaderBase3D,
                                            idx_xz,
                                            idx_y] = v
 
-                self.POTENTIAL[idx_r, :, :] += fem._base_potential(r,
-                                                                   XZ[:, :1],
-                                                                   self.Y_SAMPLE.reshape(1, -1),
-                                                                   XZ[:, 1:])
+                # self.POTENTIAL[idx_r, :, :] += fem._base_potential(r,
+                #                                                    XZ[:, :1],
+                #                                                    self.Y_SAMPLE.reshape(1, -1),
+                #                                                    XZ[:, 1:])
 
             sampling_time = float(sample_stopwatch)
             logger.info('H={} ({:.2f}),\tM={} ({:.2f}),\tE={} ({:.2f})'.format(hits,
@@ -499,16 +499,16 @@ class _SomeSpherePointController2D(_PointLoaderBase2D,
                             self.POTENTIAL[idx_r,
                                            idx_xz,
                                            idx_y] = v
-                # It is known that `(sin(a) * r) ** 2 + (cos(a) * r) **2 == r ** 2`
-                # and the source is at x, z == 0, 0, thus the commented calculations
-                # can be safely omitted.
-                # XZ_SAMPLE = self.X_SAMPLE.reshape(-1, 1) * SIN_COS.reshape(1, -1)
-                self.POTENTIAL[idx_r, :, :] += fem._base_potential(r,
-                                                                   self.X_SAMPLE.reshape(-1, 1),
-                                                                   # XZ_SAMPLE[:, :1],
-                                                                   self.Y_SAMPLE.reshape(1, -1),
-                                                                   0)
-                                                                   # XZ_SAMPLE[:, 1:])
+                # # It is known that `(sin(a) * r) ** 2 + (cos(a) * r) **2 == r ** 2`
+                # # and the source is at x, z == 0, 0, thus the commented calculations
+                # # can be safely omitted.
+                # # XZ_SAMPLE = self.X_SAMPLE.reshape(-1, 1) * SIN_COS.reshape(1, -1)
+                # self.POTENTIAL[idx_r, :, :] += fem._base_potential(r,
+                #                                                    self.X_SAMPLE.reshape(-1, 1),
+                #                                                    # XZ_SAMPLE[:, :1],
+                #                                                    self.Y_SAMPLE.reshape(1, -1),
+                #                                                    0)
+                #                                                    # XZ_SAMPLE[:, 1:])
 
             sampling_time = float(sample_stopwatch)
 
