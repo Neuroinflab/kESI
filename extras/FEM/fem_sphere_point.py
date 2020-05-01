@@ -53,6 +53,12 @@ class _SomeSpherePointLoaderBase(object):
                   'brain_radius',
                   'scalp_radius',
                   'degree',
+                  'sampling_frequency',
+                  'roi_radius',
+                  'POTENTIAL',
+                  'X',
+                  'Y',
+                  'Z',
                   ]
 
     def _load(self):
@@ -66,23 +72,15 @@ class _SomeSpherePointLoaderBase(object):
         for attr in self.ATTRIBUTES:
             setattr(self, attr, fh[attr])
 
-
-class _SomeSpherePointPotentialLoaderBase(_SomeSpherePointLoaderBase):
-    def _load_attributes_from_numpy_file(self, fh):
-        super(_SomeSpherePointPotentialLoaderBase,
-              self)._load_attributes_from_numpy_file(fh)
-
-        self.POTENTIAL = fh['POTENTIAL']
         self.STATS = list(fh['STATS'])
 
+    @property
+    def path(self):
+        fn = '{0._fem.mesh_name}_point_deg_{0.degree}_{0.sufix}.npz'.format(self)
+        return fc._SourceFactory_Base.solution_path(fn, False)
 
-class _PointLoaderBase(_SomeSpherePointPotentialLoaderBase):
-    ATTRIBUTES = _SomeSpherePointPotentialLoaderBase.ATTRIBUTES + \
-                 ['sampling_frequency',
-                  ]
 
-
-class _PointLoaderBase3D(_PointLoaderBase):
+class _PointLoaderBase3D(_SomeSpherePointLoaderBase):
     @property
     def _xz(self):
         sf = self.sampling_frequency
@@ -108,7 +106,7 @@ class _PointLoaderBase3D(_PointLoaderBase):
         self.Z_SAMPLE = self.X_SAMPLE
 
 
-class _PointLoaderBase2D(_PointLoaderBase):
+class _PointLoaderBase2D(_SomeSpherePointLoaderBase):
     def _load(self):
         super(_PointLoaderBase2D, self)._load()
         self.X_SAMPLE = np.linspace(0,
@@ -300,6 +298,7 @@ class _SomeSphereControllerBase(object):
 
     cortex_radius_external = 0.079
     cortex_radius_internal = 0.067
+    roi_radius = 0.006
     source_resolution = 4
 
     def __init__(self, fem):
@@ -372,11 +371,6 @@ class _SomeSpherePointController3D(_PointLoaderBase3D,
         return (n,
                 xz_size,
                 2 * self.sampling_frequency + 1)
-
-    @property
-    def path(self):
-        fn = '{0._fem.mesh_name}_point_deg_{0.degree}.npz'.format(self)
-        return fc._SourceFactory_Base.solution_path(fn, False)
 
     def sample(self, r, potential, fem=None):
         if fem is None:
@@ -457,12 +451,6 @@ class _SomeSpherePointController2D(_PointLoaderBase2D,
                 self.sampling_frequency + 1,
                 2 * self.sampling_frequency + 1)
 
-    @property
-    def path(self):
-        fn = '{0._fem.mesh_name}_point_deg_{0.degree}_2D.npz'.format(self)
-
-        return fc._SourceFactory_Base.solution_path(fn, False)
-
     def sample(self, r, potential, fem=None):
         if fem is None:
             fem = self._fem
@@ -520,6 +508,65 @@ class _SomeSpherePointController2D(_PointLoaderBase2D,
                            float(fem.global_preprocessing_time)))
         self.COMPLETED[idx_r] = True
         return 0 if np.isnan(sampling_time) else sampling_time
+
+
+class _SamplingControllerBase(_SomeSphereControllerBase):
+    def __init__(self, fem, y_resolution):
+        super(KronrodControllerBase, self).__init__(fem)
+        self.Z = self.X
+        top = np.sqrt(np.square(self.cortex_radius_external) - np.square(self.roi_radius))
+        self.Y = np.linspace(self.cortex_radius_internal,
+                             top,
+                             y_resolution)
+        self.R = [np.sqrt(np.square(x)
+                          + np.square(y)
+                          + np.square(z))
+                  for y in self.Y
+                  for i, z in enumerate(self.Z, 1)
+                  for x in self.X[:i]]
+
+
+class _KronrodControllerBase(_SamplingControllerBase):
+    _NODES = [
+              0.99145_53711_20813,
+              0.94910_79123_42759,
+              0.86486_44233_59769,
+              0.74153_11855_99394,
+              0.58608_72354_67691,
+              0.40584_51513_77397,
+              0.20778_49550_07898,
+              0.00000_00000_00000,
+              ]
+
+    def __init__(self, fem, y_resolution):
+        self.X = np.array(self._NODES) * self.roi_radius
+        super(_KronrodControllerBase, self).__init__(fem, y_resolution)
+
+
+class _RombergControllerBase(_SamplingControllerBase):
+    def __init__(self, fem, n):
+        self.X = np.linspace(0, self.roi_radius, 2 ** (n - 1) + 1)
+        super(_RombergControllerBase, self).__init__(fem, 2 ** n + 1)
+
+
+class RombergController3D(_SomeSpherePointController3D,
+                          _RombergControllerBase):
+    sufix = 'Romberg_3D'
+
+
+class RombergController2D(_SomeSpherePointController2D,
+                          _RombergControllerBase):
+    sufix = 'Romberg_2D'
+
+
+class KronrodController3D(_SomeSpherePointController3D,
+                          _KronrodControllerBase):
+    sufix = 'Kronrod_3D'
+
+
+class KronrodController2D(_SomeSpherePointController2D,
+                          _KronrodControllerBase):
+    sufix = 'Kronrod_2D'
 
 
 if __name__ == '__main__':
@@ -759,48 +806,33 @@ if __name__ == '__main__':
                 logger.warning('Missing appropriate FEM class for {}'.format(mesh_name))
                 continue
 
-            controller = _SomeSpherePointController3D(fem)
-            controller_2D = _SomeSpherePointController2D(fem)
+            for controller in [KronrodController2D(fem, 17),
+                               RombergController2D(fem, 4)]:
+                for controller.degree in [1, 2, 3]:
+                    logger.info('Point ({}; deg={})'.format(
+                        mesh_name,
+                        controller.degree))
 
-            for controller.degree in [1, 2, 3]:
-                controller_2D.degree = controller.degree
-                RES = 4
-                span = controller.cortex_radius_external - controller.cortex_radius_internal
-                controller.R = np.linspace(controller.cortex_radius_internal + 0.5 * span / RES,
-                                           controller.cortex_radius_external - 0.5 * span / RES,
-                                           RES)
-                controller_2D.R = controller.R
-
-                logger.info('Point ({}; deg={})'.format(
-                    mesh_name,
-                    controller.degree))
-
-                tmp_mark = 0
-                with controller:
-                    with controller_2D:
+                    tmp_mark = 0
+                    with controller:
                         save_stopwatch = fc.Stopwatch()
                         sample_stopwatch = fc.Stopwatch()
 
                         with fc.Stopwatch() as unsaved_time:
-                            for idx_r, (src_r, completed_3D, completed_2D) in enumerate(zip(controller.R,
-                                                                                            controller.COMPLETED,
-                                                                                            controller_2D.COMPLETED)):
+                            for idx_r, (src_r, completed) in enumerate(zip(controller.R,
+                                                                           controller.COMPLETED)):
                                 logger.info(
                                     'Point r={} ({}, deg={})'.format(
                                         src_r,
                                         mesh_name,
                                         controller.degree))
-                                if completed_2D and completed_3D:
+                                if completed:
                                     logger.info('Already found, skipping')
                                     continue
 
                                 potential = controller.fem(src_r)
 
-                                if fem.FRACTION_OF_SPACE >= 0.125 and not completed_3D:
-                                    sampling_time_3D = controller.sample(src_r, potential)
-
-                                if not completed_2D:
-                                    sampling_time_2D = controller_2D.sample(src_r, potential, fem)
+                                sampling_time = controller.sample(src_r, potential)
 
                                 logger.info(
                                     'Point r={}, (deg={}): {}\t({fem.iterations}, {time}, {sampling})'.format(
@@ -809,16 +841,12 @@ if __name__ == '__main__':
                                         'SUCCEED' if potential is not None else 'FAILED',
                                         fem=fem,
                                         time=fem.local_preprocessing_time.duration + fem.solving_time.duration,
-                                        sampling=sampling_time_2D + sampling_time_3D))
+                                        sampling=sampling_time))
 
                                 if float(unsaved_time) > 10 * float(save_stopwatch):
                                     with save_stopwatch:
-                                        if fem.FRACTION_OF_SPACE >= 0.125:
-                                            logging.info('Saving 3D')
-                                            controller.save(controller.path + str(tmp_mark))
-
-                                        logging.info('Saving 2D')
-                                        controller_2D.save(controller_2D.path + str(tmp_mark))
+                                        logging.info('Saving')
+                                        controller.save(controller.path + str(tmp_mark))
 
                                     unsaved_time.reset()
                                     tmp_mark = 1 - tmp_mark
