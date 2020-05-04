@@ -239,8 +239,12 @@ class _RotatingSourceSingleInterpolatorBase(_RotatingSourceBase):
 
 
 class _SomeSphereSourceFactoryBase(object):
+    @property
+    def path(self):
+        return self._path
+
     def __init__(self, filename):
-        self.path = filename
+        self._path = filename
         self._load()
         self._r_index = {r: i for i, r in enumerate(self.R)}
         self._interpolator = [None] * len(self.R)
