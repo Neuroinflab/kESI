@@ -102,8 +102,8 @@ class _SomeSpherePointLoaderBase(object):
 
     @property
     def AZIMUTH(self):
-        X, Z = self.XYZ.T[::1]
-        return np.arctan(-Z, X)
+        X, Z = self.XYZ.T[::2]
+        return np.arctan2(-Z, X)
 
 
 class _PointLoaderBase3D(_SomeSpherePointLoaderBase):
