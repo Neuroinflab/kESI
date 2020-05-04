@@ -309,9 +309,9 @@ class _ArbitrarySourceFactoryBase(object):
                         r_ref = r * np.cos(altitude)
                         x_ref = r_ref * np.cos(azimuth)
                         z_ref = -r_ref * np.sin(azimuth)
-                        assert np.isclose(x, x_ref)
+                        assert np.isclose(xxx, x_ref)
                         assert np.isclose(y, y_ref)
-                        assert np.isclose(z, z_ref)
+                        assert np.isclose(zzz, z_ref)
                         c = csd(xxx, y, zzz)
 
                         if c:
