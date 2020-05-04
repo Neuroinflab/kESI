@@ -79,6 +79,13 @@ class _SomeSpherePointLoaderBase(object):
         fn = '{0._fem.mesh_name}_point_deg_{0.degree}_{0.sufix}.npz'.format(self)
         return fc._SourceFactory_Base.solution_path(fn, False)
 
+    @property
+    def XYZ(self):
+        return [[x, y, z]
+                for y in self.Y
+                for i, z in enumerate(self.Z, 1)
+                for x in self.X[:i]]
+
 
 class _PointLoaderBase3D(_SomeSpherePointLoaderBase):
     @property
@@ -518,12 +525,7 @@ class _SamplingControllerBase(_SomeSphereControllerBase):
         self.Y = np.linspace(self.cortex_radius_internal,
                              top,
                              y_resolution)
-        self.R = [np.sqrt(np.square(x)
-                          + np.square(y)
-                          + np.square(z))
-                  for y in self.Y
-                  for i, z in enumerate(self.Z, 1)
-                  for x in self.X[:i]]
+        self.R = np.sqrt(np.square(self.XYZ).sum(axis=1))
 
 
 class _KronrodControllerBase(_SamplingControllerBase):
