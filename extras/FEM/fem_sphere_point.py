@@ -212,6 +212,7 @@ class _RotatingSourceBase(_SourceBase):
               self).__init__(r, altitude, azimuth, parent)
 
         self._interpolator = interpolator
+        self._base_potential_constant = 0.25 / (np.pi * parent.brain_conductivity)
 
     def _apply_trigonometric_functions(self, cos_alt, sin_alt, cos_az, sin_az):
         super(_RotatingSourceBase,
@@ -229,6 +230,18 @@ class _RotatingSourceBase(_SourceBase):
         _Y = self._ROT[0, 1] * X + self._ROT[1, 1] * Y + self._ROT[2, 1] * Z
         _Z = self._ROT[0, 2] * X + self._ROT[1, 2] * Y + self._ROT[2, 2] * Z
         return _X, _Y, _Z
+
+    def potential(self, X, Y, Z):
+        _X, _Y, _Z = self._rotated(X, Y, Z)
+        return self._base_potential(_X, _Y, _Z) + self._correction_potential(_X, _Y, _Z)
+
+    def _base_potential(self, _X, _Y, _Z):
+        return self._base_potential_constant * self._distance_rotated(_X, _Y, _Z)
+
+    def _distance_rotated(self, _X, _Y, _Z):
+        return np.sqrt(np.square(_X)
+                       + np.square(_Y - self.r)
+                       + np.square(_Z))
 
 
 class _SomeSpherePointSourceFactoryBase(object):
@@ -280,8 +293,7 @@ class SomeSpherePointSourceFactory3D(_SomeSpherePointSourceFactoryBase,
         return interpolator
 
     class _Source(_RotatingSourceBase):
-        def potential(self, X, Y, Z):
-            _X, _Y, _Z = self._rotated(X, Y, Z)
+        def _correction_potential(self, _X, _Y, _Z):
             return self._interpolator(np.stack((abs(_X), _Y, abs(_Z)),
                                                axis=-1))
 
@@ -296,8 +308,7 @@ class SomeSpherePointSourceFactoryLinear2D(_SomeSpherePointSourceFactoryBase,
                                        fill_value=np.nan)
 
     class _Source(_RotatingSourceBase):
-        def potential(self, X, Y, Z):
-            _X, _Y, _Z = self._rotated(X, Y, Z)
+        def _correction_potential(self, _X, _Y, _Z):
             return self._interpolator(np.stack((np.sqrt(np.square(_X)
                                                         + np.square(_Z)),
                                                 _Y),
@@ -680,6 +691,10 @@ if __name__ == '__main__':
             def degree(self):
                 return self._degree
 
+            @property
+            def BASE_CONDUCTIVITY(self):
+                return self.brain_conductivity
+
 
         class OneSpherePointPotentialFEM(_SphericalPointPotential):
             startswith = 'one_sphere'
@@ -696,8 +711,6 @@ if __name__ == '__main__':
             CONDUCTIVITY = {
                             _BRAIN_VOLUME: brain_conductivity,
                             }
-
-            BASE_CONDUCTIVITY = brain_conductivity
 
             SURFACE_CONDUCTIVITY = {
                                     _SCALP_SURFACE: brain_conductivity,
@@ -734,8 +747,6 @@ if __name__ == '__main__':
                             _BRAIN_VOLUME: brain_conductivity,
                             _SKULL_VOLUME: skull_conductivity,
                             }
-
-            BASE_CONDUCTIVITY = brain_conductivity
 
             SURFACE_CONDUCTIVITY = {
                                     _SCALP_SURFACE: skull_conductivity,
@@ -778,8 +789,6 @@ if __name__ == '__main__':
                             _SKULL_VOLUME: skull_conductivity,
                             _SCALP_VOLUME: scalp_conductivity,
                             }
-
-            BASE_CONDUCTIVITY = brain_conductivity
 
             SURFACE_CONDUCTIVITY = {
                                     _SCALP_SURFACE: scalp_conductivity,
