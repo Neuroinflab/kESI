@@ -137,20 +137,6 @@ class _PointLoaderBase2D(_SomeSpherePointLoaderBase):
                                     2 * self.sampling_frequency + 1)
 
 
-# class SomeSpherePointSourceFactoryOnlyCSD(_SomeSpherePointLoaderBase):
-#     def __init__(self, filename):
-#         self.path = filename
-#         self._load()
-#         self._r_index = {r: i for i, r in enumerate(self.R)}
-#
-#     def __call__(self, r, altitude, azimuth):
-#         return _SourceBase(r, altitude, azimuth,
-#                            self)
-#
-#     def _provide_attributes(self):
-#         self._load_attributes()
-
-
 class _SourceBase(object):
     def __init__(self, r, altitude, azimuth, parent):
         self._r = r
@@ -170,16 +156,6 @@ class _SourceBase(object):
         self._x = r2 * cos_az
         self._y = self._r * sin_alt
         self._z = -r2 * sin_az
-
-    # def csd(self, X, Y, Z):
-    #     return np.where((X**2 + Y**2 + Z**2 > self.parent.brain_radius ** 2),
-    #                     0,
-    #                     self._a
-    #                     * np.exp(-0.5
-    #                              * (np.square(X - self._x)
-    #                                 + np.square(Y - self._y)
-    #                                 + np.square(Z - self._z))
-    #                              / self.parent.standard_deviation ** 2))
 
     @property
     def x(self):
@@ -449,11 +425,6 @@ class _SomeSpherePointController3D(_PointLoaderBase3D,
                                            idx_xz,
                                            idx_y] = v
 
-                # self.POTENTIAL[idx_r, :, :] += fem._base_potential(r,
-                #                                                    XZ[:, :1],
-                #                                                    self.Y_SAMPLE.reshape(1, -1),
-                #                                                    XZ[:, 1:])
-
             sampling_time = float(sample_stopwatch)
             logger.info('H={} ({:.2f}),\tM={} ({:.2f}),\tE={} ({:.2f})'.format(hits,
                                                                                hits / float(hits + misses + exceptions),
@@ -518,16 +489,6 @@ class _SomeSpherePointController2D(_PointLoaderBase2D,
                             self.POTENTIAL[idx_r,
                                            idx_xz,
                                            idx_y] = v
-                # # It is known that `(sin(a) * r) ** 2 + (cos(a) * r) **2 == r ** 2`
-                # # and the source is at x, z == 0, 0, thus the commented calculations
-                # # can be safely omitted.
-                # # XZ_SAMPLE = self.X_SAMPLE.reshape(-1, 1) * SIN_COS.reshape(1, -1)
-                # self.POTENTIAL[idx_r, :, :] += fem._base_potential(r,
-                #                                                    self.X_SAMPLE.reshape(-1, 1),
-                #                                                    # XZ_SAMPLE[:, :1],
-                #                                                    self.Y_SAMPLE.reshape(1, -1),
-                #                                                    0)
-                #                                                    # XZ_SAMPLE[:, 1:])
 
             sampling_time = float(sample_stopwatch)
 
