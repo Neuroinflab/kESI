@@ -27,6 +27,7 @@ import logging
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
+from scipy.integrate import romb
 
 from kesi._engine import deprecated
 
@@ -81,10 +82,15 @@ class _SomeSpherePointLoaderBase(object):
 
     @property
     def XYZ(self):
-        return np.array([[x, y, z]
-                         for y in self.Y
-                         for i, z in enumerate(self.Z, 1)
-                         for x in self.X[:i]])
+        return np.array(self.iterate_XYZ(self.X,
+                                         self.Y,
+                                         self.Z))
+
+    def iterate_XYZ(self, X, Y, Z):
+        return [[x, y, z]
+                for y in Y
+                for i, z in enumerate(Z, 1)
+                for x in X[:i]]
 
     @property
     def R(self):
@@ -183,12 +189,12 @@ class _SourceBase(object):
 
 
 class _RotatingSourceBase(_SourceBase):
-    def __init__(self, r, altitude, azimuth, parent, interpolator):
+    def __init__(self, r, altitude, azimuth, parent, weight=1):
         super(_RotatingSourceBase,
               self).__init__(r, altitude, azimuth, parent)
 
-        self._interpolator = interpolator
         self._base_potential_constant = 0.25 / (np.pi * parent.brain_conductivity)
+        self._weight = weight
 
     def _apply_trigonometric_functions(self, cos_alt, sin_alt, cos_az, sin_az):
         super(_RotatingSourceBase,
@@ -209,10 +215,22 @@ class _RotatingSourceBase(_SourceBase):
 
     def potential(self, X, Y, Z):
         _X, _Y, _Z = self._rotated(X, Y, Z)
-        return self._base_potential(_X, _Y, _Z) + self._correction_potential(_X, _Y, _Z)
+        return self._weight * self._potential_rotated(_X, _Y, _Z)
+
+
+class _RotatingSourceSingleInterpolatorBase(_RotatingSourceBase):
+    def __init__(self, r, altitude, azimuth, parent, interpolator, weight=1):
+        super(_RotatingSourceSingleInterpolatorBase,
+              self).__init__(r, altitude, azimuth, parent, weight)
+
+        self._interpolator = interpolator
+
+    def _potential_rotated(self, _X, _Y, _Z):
+        return (self._base_potential(_X, _Y, _Z)
+                + self._correction_potential(_X, _Y, _Z))
 
     def _base_potential(self, _X, _Y, _Z):
-        return self._base_potential_constant * self._distance_rotated(_X, _Y, _Z)
+        return self._base_potential_constant / self._distance_rotated(_X, _Y, _Z)
 
     def _distance_rotated(self, _X, _Y, _Z):
         return np.sqrt(np.square(_X)
@@ -220,7 +238,7 @@ class _RotatingSourceBase(_SourceBase):
                        + np.square(_Z))
 
 
-class _SomeSpherePointSourceFactoryBase(object):
+class _SomeSphereSourceFactoryBase(object):
     def __init__(self, filename):
         self.path = filename
         self._load()
@@ -230,22 +248,131 @@ class _SomeSpherePointSourceFactoryBase(object):
     def _provide_attributes(self):
         self._load_attributes()
 
-    def __call__(self, r, altitude, azimuth):
-        interpolator = self._source_prefabricates(r)
-        return self._Source(r, altitude, azimuth,
-                            self,
-                            interpolator)
-
-    def _source_prefabricates(self, r):
-        r_idx = self._r_index[r]
-        return self._get_interpolator(r_idx)
-
     def _get_interpolator(self, r_idx):
         interpolator = self._interpolator[r_idx]
         if interpolator is None:
             interpolator = self._make_interpolator(self.POTENTIAL[r_idx, :, :])
             self._interpolator[r_idx] = interpolator
+
         return interpolator
+
+
+class _SomeSpherePointSourceFactoryBase(_SomeSphereSourceFactoryBase):
+    def __call__(self, r, altitude, azimuth, weight=1):
+        interpolator = self._source_prefabricates(r)
+        return self._Source(r, altitude, azimuth,
+                            self,
+                            interpolator,
+                            weight=weight)
+
+    def _source_prefabricates(self, r):
+        r_idx = self._r_index[r]
+        return self._get_interpolator(r_idx)
+
+class _ArbitrarySourceFactoryBase(object):
+    @property
+    def WEIGHT_Y(self):
+        return romb(np.identity(len(self.Y)))
+
+    def arbitrary_CSD_factory(self, csd):
+        scale = self.scale
+        sources = []
+        for i, (r,
+                altitude,
+                az,
+                (x, y, z),
+                (wx, wy, wz)) in enumerate(zip(self.R,
+                                               self.ALTITUDE,
+                                               self.AZIMUTH,
+                                               self.XYZ,
+                                               self.iterate_XYZ(self.WEIGHT_X,
+                                                                self.WEIGHT_Y,
+                                                                self.WEIGHT_Z))):
+            c = 0
+            for xx, zz, aaz in ([(x, z, az)]
+                                if x == z else
+                                [(x, z, az),
+                                 (z, x, -np.pi/2 - az)]):
+                for xxx, aazz in ([(xx, aaz),
+                                  (-xx, -np.pi -aaz)]
+                                 if xx else
+                                 [(xx, aaz)]):
+                    for zzz, azimuth in ([(zz, aazz),
+                                          (-zz, -aazz)]
+                                          if zz else
+                                          [(zz, aazz)]):
+                        y_ref = r * np.sin(altitude)
+                        r_ref = r * np.cos(altitude)
+                        x_ref = r_ref * np.cos(azimuth)
+                        z_ref = -r_ref * np.sin(azimuth)
+                        assert np.isclose(x, x_ref)
+                        assert np.isclose(y, y_ref)
+                        assert np.isclose(z, z_ref)
+                        c = csd(xxx, y, zzz)
+
+                        if c:
+                            sources.append(self(r,
+                                                altitude,
+                                                azimuth,
+                                                scale * c * wx * wy * wz))
+
+        return self.SourceFactory(csd,
+                                  sources)
+
+    class SourceFactory(object):
+        def __init__(self, csd, sources):
+            self.csd = csd
+            self.sources = sources
+
+        def __call__(self, altitude, azimuth):
+            pass
+
+        class _Source(_RotatingSourceBase):
+            def __init__(self, altitude, azimuth, parent):
+                super(_SomeSpherePointSourceFactoryBase.SourceFactory._Source,
+                      self).__init__(1, altitude, azimuth, parent)
+
+            def csd(self, X, Y, Z):
+                _X, _Y, _Z = self._rotated(X, Y, Z)
+                return self.parent.csd(_X, _Y, _Z)
+
+            def _potential_rotated(self, X, Y, Z):
+                return sum(s.potential(X, Y, Z)
+                           for s in self.parent.sources)
+
+
+class _KronrodArbitrarySourceFactoryBase(_ArbitrarySourceFactoryBase):
+    WEIGHT_X = [
+                0.02293_53220_10529,
+                0.06309_20926_29979,
+                0.10479_00103_22250,
+                0.14065_32597_15525,
+                0.16900_47266_39267,
+                0.19035_05780_64785,
+                0.20443_29400_75298,
+                0.20948_21410_84728,
+                ]
+    WEIGHT_Z = WEIGHT_X
+
+    @property
+    def scale(self):
+        return np.square(self.roi_radius) * (self.Y[-1] - self.Y[0]) / (len(self.Y) - 1)
+
+
+class _RombergArbitrarySourceFactoryBase(_ArbitrarySourceFactoryBase):
+    @property
+    def WEIGHT_X(self):
+        return romb(np.identity(len(self.X) * 2 - 1))
+
+    @property
+    def WEIGHT_Z(self):
+        return romb(np.identity(len(self.Z) * 2 - 1))
+
+    @property
+    def scale(self):
+        return ((self.X[-1] - self.X[0]) / (len(self.X) - 1)
+                * (self.Y[-1] - self.Y[0]) / (len(self.Y) - 1)
+                * (self.Z[-1] - self.Z[0]) / (len(self.Z) - 1))
 
 
 class SomeSpherePointSourceFactory3D(_SomeSpherePointSourceFactoryBase,
@@ -268,7 +395,7 @@ class SomeSpherePointSourceFactory3D(_SomeSpherePointSourceFactoryBase,
                                                fill_value=np.nan)
         return interpolator
 
-    class _Source(_RotatingSourceBase):
+    class _Source(_RotatingSourceSingleInterpolatorBase):
         def _correction_potential(self, _X, _Y, _Z):
             return self._interpolator(np.stack((abs(_X), _Y, abs(_Z)),
                                                axis=-1))
@@ -283,12 +410,22 @@ class SomeSpherePointSourceFactoryLinear2D(_SomeSpherePointSourceFactoryBase,
                                        bounds_error=False,
                                        fill_value=np.nan)
 
-    class _Source(_RotatingSourceBase):
+    class _Source(_RotatingSourceSingleInterpolatorBase):
         def _correction_potential(self, _X, _Y, _Z):
             return self._interpolator(np.stack((np.sqrt(np.square(_X)
                                                         + np.square(_Z)),
                                                 _Y),
                                                axis=-1))
+
+
+class RombergSomeSpherePointSourceFactoryLinear2D(_RombergArbitrarySourceFactoryBase,
+                                                  SomeSpherePointSourceFactoryLinear2D):
+    pass
+
+
+class KronrodSomeSpherePointSourceFactoryLinear2D(_KronrodArbitrarySourceFactoryBase,
+                                                  SomeSpherePointSourceFactoryLinear2D):
+    pass
 
 
 @deprecated('SomeSphereGaussianSourceFactory2D is deprecated; use SomeSphereGaussianSourceFactoryLinear2D instead')
