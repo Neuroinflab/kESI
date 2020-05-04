@@ -193,7 +193,6 @@ class _RotatingSourceBase(_SourceBase):
         super(_RotatingSourceBase,
               self).__init__(r, altitude, azimuth, parent)
 
-        self._base_potential_constant = 0.25 / (np.pi * parent.brain_conductivity)
         self._weight = weight
 
     def _apply_trigonometric_functions(self, cos_alt, sin_alt, cos_az, sin_az):
@@ -223,6 +222,7 @@ class _RotatingSourceSingleInterpolatorBase(_RotatingSourceBase):
         super(_RotatingSourceSingleInterpolatorBase,
               self).__init__(r, altitude, azimuth, parent, weight)
 
+        self._base_potential_constant = 0.25 / (np.pi * parent.brain_conductivity)
         self._interpolator = interpolator
 
     def _potential_rotated(self, _X, _Y, _Z):
@@ -329,11 +329,11 @@ class _ArbitrarySourceFactoryBase(object):
             self.sources = sources
 
         def __call__(self, altitude, azimuth):
-            pass
+            return self._Source(altitude, azimuth, self)
 
         class _Source(_RotatingSourceBase):
             def __init__(self, altitude, azimuth, parent):
-                super(_SomeSpherePointSourceFactoryBase.SourceFactory._Source,
+                super(_ArbitrarySourceFactoryBase.SourceFactory._Source,
                       self).__init__(1, altitude, azimuth, parent)
 
             def csd(self, X, Y, Z):
