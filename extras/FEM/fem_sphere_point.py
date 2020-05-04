@@ -81,14 +81,23 @@ class _SomeSpherePointLoaderBase(object):
 
     @property
     def XYZ(self):
-        return [[x, y, z]
-                for y in self.Y
-                for i, z in enumerate(self.Z, 1)
-                for x in self.X[:i]]
+        return np.array([[x, y, z]
+                         for y in self.Y
+                         for i, z in enumerate(self.Z, 1)
+                         for x in self.X[:i]])
 
     @property
     def R(self):
         return np.sqrt(np.square(self.XYZ).sum(axis=1))
+
+    @property
+    def ALTITUDE(self):
+        return np.arcsin(self.XYZ[:, 1] / self.R)
+
+    @property
+    def AZIMUTH(self):
+        X, Z = self.XYZ.T[::1]
+        return np.arctan(-Z, X)
 
 
 class _PointLoaderBase3D(_SomeSpherePointLoaderBase):
