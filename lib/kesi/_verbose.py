@@ -22,7 +22,6 @@
 #                                                                             #
 ###############################################################################
 
-import warnings
 import numpy as np
 
 from ._engine import (FunctionalFieldReconstructor,
@@ -32,7 +31,7 @@ from ._engine import (FunctionalFieldReconstructor,
                       _EigenvectorKernelSolver,
                       _ValidableMeasurementManagerBase,
                       _LinearKernelSolver,
-                      warn_deprecated)
+                      deprecated)
 
 
 class _VerboseFunctionalFieldReconstructorBase(object):
@@ -381,9 +380,6 @@ class _Eigenreconstructor(object):
         return self._reconstructor._wrap_kernel_solution(solution)
 
 
+@deprecated('The class has been moved to `[Loadable]VerboseFFR`.  Use `[Loadable]VerboseFFR._CrossKernelReconstructor` instead.')
 class _CrossKernelReconstructor(_VerboseFunctionalFieldReconstructorBase._CrossKernelReconstructor):
-    def __init__(self, kernel_solver, cross_kernel):
-        warn_deprecated(
-            'The class has been moved to `[Loadable]VerboseFFR`.  Use `[Loadable]VerboseFFR._CrossKernelReconstructor` instead.')
-        super(_CrossKernelReconstructor, self).__init__(kernel_solver,
-                                                        cross_kernel)
+    pass

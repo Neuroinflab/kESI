@@ -26,11 +26,34 @@ import sys
 
 import numpy as np
 import warnings
+import functools
 
 
 def warn_deprecated(message, stacklevel=1):
     warnings.warn(DeprecationWarning(message),
                   stacklevel=stacklevel + 2)
+
+
+def deprecated(message):
+    def decorator(to_be_decorated):
+        if isinstance(to_be_decorated, type):
+            class Deprecated(to_be_decorated):
+                def __init__(self, *args, **kwargs):
+                    warn_deprecated(message)
+                    super(Deprecated,
+                          self).__init__(*args, **kwargs)
+
+            return Deprecated
+
+        else:
+            @functools.wraps(to_be_decorated)
+            def wrapper(*args, **kwargs):
+                warn_deprecated(message)
+                return to_be_decorated(*args, **kwargs)
+
+            return wrapper
+
+    return decorator
 
 
 class _MissingAttributeError(TypeError):
@@ -436,6 +459,7 @@ class LinearMixture(object):
             return self._div(other)
 
 
+@deprecated('The class has been moved to `FunctionalFieldReconstructor`.  Use `FunctionalFieldReconstructor.MeasurementManagerBase` instead.')
 class MeasurementManagerBase(FunctionalFieldReconstructor.MeasurementManagerBase):
     """
     Base class for measurement managers.
@@ -456,8 +480,3 @@ class MeasurementManagerBase(FunctionalFieldReconstructor.MeasurementManagerBase
         number_of_measurements: int
             A number of measurement points. May be implemented as a property.
     """
-
-    def __init__(self, *args, **kwargs):
-        warn_deprecated(
-            'The class has been moved to `FunctionalFieldReconstructor`.  Use `FunctionalFieldReconstructor.MeasurementManagerBase` instead.')
-        super(MeasurementManagerBase, self).__init__(*args, **kwargs)

@@ -25,14 +25,13 @@
 import datetime
 import itertools
 import logging
-import warnings
 import os
 import gc
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
-from kesi._engine import warn_deprecated
+from kesi._engine import deprecated
 
 
 DIRNAME = os.path.dirname(__file__)
@@ -380,8 +379,8 @@ class _SymmetricSourceFactory_Base(_SourceFactory_Base):
                                  Q * INTERPOLATED + (1.0 - Q) * APPROXIMATED,
                                  APPROXIMATED))
 
+    @deprecated('The factory is a callable.  Call it instead.')
     def Source(self, *args, **kwargs):
-        warn_deprecated('The factory is a callable.  Call it instead.')
         return self(*args, **kwargs)
 
     class _Source(object):
