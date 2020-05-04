@@ -47,7 +47,7 @@ logger.setLevel(logging.DEBUG)
 
 # TODO: Deduplicate with `fem_sphere_gaussian`
 class _SomeSpherePointLoaderBase(object):
-    ATTRIBUTES = ['R',
+    ATTRIBUTES = [
                   'COMPLETED',
                   'brain_conductivity',
                   'brain_radius',
@@ -85,6 +85,10 @@ class _SomeSpherePointLoaderBase(object):
                 for y in self.Y
                 for i, z in enumerate(self.Z, 1)
                 for x in self.X[:i]]
+
+    @property
+    def R(self):
+        return np.sqrt(np.square(self.XYZ).sum(axis=1))
 
 
 class _PointLoaderBase3D(_SomeSpherePointLoaderBase):
@@ -525,7 +529,6 @@ class _SamplingControllerBase(_SomeSphereControllerBase):
         self.Y = np.linspace(self.cortex_radius_internal,
                              top,
                              y_resolution)
-        self.R = np.sqrt(np.square(self.XYZ).sum(axis=1))
 
 
 class _KronrodControllerBase(_SamplingControllerBase):
