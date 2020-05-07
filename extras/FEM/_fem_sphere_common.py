@@ -97,20 +97,34 @@ class _RotatingSourceBase(_SourceBase):
     def _apply_trigonometric_functions(self, cos_alt, sin_alt, cos_az, sin_az):
         super(_RotatingSourceBase,
               self)._apply_trigonometric_functions(cos_alt, sin_alt, cos_az, sin_az)
-        self._ROT = np.matmul([[sin_alt, cos_alt, 0],
-                               [-cos_alt, sin_alt, 0],
-                               [0, 0, 1]],
-                              [[cos_az, 0, sin_az],
-                               [0, 1, 0],
-                               [-sin_az, 0, cos_az]]
-                              )
+
+        # As the source is to be rotated by az, the electrodes
+        # needs to be rotated by -az.
+        # sin(-az) = -sin(az)
+        # cos(-az) = cos(az)
+        ROT_XY = [[cos_az, -sin_az, 0],
+                  [sin_az, cos_az, 0],
+                  [0, 0, 1]]
+
+        # As the original source is at (0, 0, R), its altitude
+        # is already pi/2.  The source needs to be rotated by
+        # pi/2 - alt, thus the electrodes needs to be rotated
+        # alt - pi / 2.
+        # sin(alt - pi/2) == -cos(alt)
+        # cos(alt - pi/2) == sin(alt)
+        ROT_ZX = [[sin_alt, 0, cos_alt],
+                  [0, 1, 0],
+                  [-cos_alt, 0, sin_alt]]
+        # As the source is raotated by altitude, then by azimuth,
+        # the electrodes are to be rotated in inverse order
+        self._ROT = np.matmul(ROT_XY,
+                              ROT_ZX)
 
     def _rotated(self, X, Y, Z):
-        X, Y, Z = self._RPI_as_LIP(X, Y, Z)
         _X = self._ROT[0, 0] * X + self._ROT[1, 0] * Y + self._ROT[2, 0] * Z
         _Y = self._ROT[0, 1] * X + self._ROT[1, 1] * Y + self._ROT[2, 1] * Z
         _Z = self._ROT[0, 2] * X + self._ROT[1, 2] * Y + self._ROT[2, 2] * Z
-        return _X, _Y, _Z
+        return self._RPI_as_LIP(_X, _Y, _Z)
 
     def potential(self, X, Y, Z):
         _X, _Y, _Z = self._rotated(X, Y, Z)

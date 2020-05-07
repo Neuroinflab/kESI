@@ -248,8 +248,8 @@ class _ArbitrarySourceFactoryBase(object):
                                           [(zz, aazz)]):
                         y_ref = r * np.sin(altitude)
                         r_ref = r * np.cos(altitude)
-                        x_ref = r_ref * np.cos(azimuth)
-                        z_ref = -r_ref * np.sin(azimuth)
+                        x_ref = r_ref * np.cos(azimuth + np.pi)
+                        z_ref = -r_ref * np.sin(azimuth + np.pi)
                         assert np.isclose(xxx, x_ref)
                         assert np.isclose(y, y_ref)
                         assert np.isclose(zzz, z_ref)
@@ -282,7 +282,8 @@ class _ArbitrarySourceFactoryBase(object):
                 return self.parent.csd(_X, _Y, _Z)
 
             def _potential_rotated(self, X, Y, Z):
-                return sum(s.potential(X, Y, Z)
+                _X, _Y, _Z = self._RPI_as_LIP(X, Y, Z)
+                return sum(s.potential(_X, _Y, _Z)
                            for s in self.parent.sources)
 
 
