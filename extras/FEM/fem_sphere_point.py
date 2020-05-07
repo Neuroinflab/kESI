@@ -104,7 +104,7 @@ class _SomeSpherePointLoaderBase(object):
 
     @property
     def AZIMUTH(self):
-        X, Z = self.XYZ.T[::2]
+        X, Z = -self.XYZ.T[::2]  # XYZ is in LIP, while AZIMUTH in RPI
         return np.arctan2(-Z, X)
 
 

@@ -59,8 +59,14 @@ class _SourceBase(object):
     def _apply_trigonometric_functions(self, cos_alt, sin_alt, cos_az, sin_az):
         r2 = self._r * cos_alt
         self._x = r2 * cos_az
-        self._y = self._r * sin_alt
-        self._z = -r2 * sin_az
+        self._y = r2 * sin_az
+        self._z = self._r * sin_alt
+
+    def _RPI_as_LIP(self, X, Y, Z):
+        return -X, Z, Y
+
+    def _LIP_as_RPI(self, X, Y, Z):
+        return -X, Z, Y
 
     @property
     def x(self):
@@ -100,6 +106,7 @@ class _RotatingSourceBase(_SourceBase):
                               )
 
     def _rotated(self, X, Y, Z):
+        X, Y, Z = self._RPI_as_LIP(X, Y, Z)
         _X = self._ROT[0, 0] * X + self._ROT[1, 0] * Y + self._ROT[2, 0] * Z
         _Y = self._ROT[0, 1] * X + self._ROT[1, 1] * Y + self._ROT[2, 1] * Z
         _Z = self._ROT[0, 2] * X + self._ROT[1, 2] * Y + self._ROT[2, 2] * Z
@@ -108,4 +115,3 @@ class _RotatingSourceBase(_SourceBase):
     def potential(self, X, Y, Z):
         _X, _Y, _Z = self._rotated(X, Y, Z)
         return self._potential_rotated(_X, _Y, _Z)
-
