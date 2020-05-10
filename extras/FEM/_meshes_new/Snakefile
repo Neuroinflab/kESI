@@ -1,0 +1,11 @@
+rule MSH:
+    input: '{mesh_name}.geo'
+    output: '{mesh_name}.msh'
+    shell: 'gmsh -3 -optimize_netgen -format msh2 {input}'
+
+rule XML:
+    input: '{mesh_name}.msh'
+    output: '{mesh_name}.xml', '{mesh_name}_physical_region.xml',  '{mesh_name}_facet_region.xml'
+    shell: 'dolfin-convert {input} {output[0]}'
+    # run:
+    #     shell('dolfin-convert {} {}'.format(input, output[0]))
