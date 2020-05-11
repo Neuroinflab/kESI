@@ -33,6 +33,7 @@ from kesi._engine import deprecated
 
 try:
     from . import _fem_common as fc
+    from . import _fem_sphere_common as fsc
     # When run as script raises:
     #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
     #  - `SystemError` (Python 3.3-5), or
@@ -40,6 +41,7 @@ try:
 
 except (ImportError, SystemError, ValueError):
     import _fem_common as fc
+    import _fem_sphere_common as fsc
 
 
 logger = logging.getLogger(__name__)
@@ -102,7 +104,7 @@ class _SomeSpherePointLoaderBase(object):
 
     @property
     def AZIMUTH(self):
-        X, Z = self.XYZ.T[::2]
+        X, Z = -self.XYZ.T[::2]  # XYZ is in LIP, while AZIMUTH in RPI
         return np.arctan2(-Z, X)
 
 
@@ -143,83 +145,21 @@ class _PointLoaderBase2D(_SomeSpherePointLoaderBase):
                                     2 * self.sampling_frequency + 1)
 
 
-class _SourceBase(object):
-    def __init__(self, r, altitude, azimuth, parent):
-        self._r = r
-        self._altitude = altitude
-        self._azimuth = azimuth
-        self.parent = parent
-
-        sin_alt = np.sin(self._altitude)  # np.cos(np.pi / 2 - altitude)
-        cos_alt = np.cos(self._altitude)  # np.sin(np.pi / 2 - altitude)
-        sin_az = np.sin(self._azimuth)  # -np.sin(-azimuth)
-        cos_az = np.cos(self._azimuth)  # np.cos(-azimuth)
-
-        self._apply_trigonometric_functions(cos_alt, sin_alt, cos_az, sin_az)
-
-    def _apply_trigonometric_functions(self, cos_alt, sin_alt, cos_az, sin_az):
-        r2 = self._r * cos_alt
-        self._x = r2 * cos_az
-        self._y = self._r * sin_alt
-        self._z = -r2 * sin_az
-
-    @property
-    def x(self):
-        return self._x
-
-    @property
-    def y(self):
-        return self._y
-
-    @property
-    def z(self):
-        return self._z
-
-    @property
-    def r(self):
-        return self._r
-
-    @property
-    def altitude(self):
-        return self._altitude
-
-    @property
-    def azimuth(self):
-        return self._azimuth
-
-
-class _RotatingSourceBase(_SourceBase):
+class _WeightedRotatingSourceBase(fsc._RotatingSourceBase):
     def __init__(self, r, altitude, azimuth, parent, weight=1):
-        super(_RotatingSourceBase,
+        super(_WeightedRotatingSourceBase,
               self).__init__(r, altitude, azimuth, parent)
 
         self._weight = weight
 
-    def _apply_trigonometric_functions(self, cos_alt, sin_alt, cos_az, sin_az):
-        super(_RotatingSourceBase,
-              self)._apply_trigonometric_functions(cos_alt, sin_alt, cos_az, sin_az)
-        self._ROT = np.matmul([[sin_alt, cos_alt, 0],
-                               [-cos_alt, sin_alt, 0],
-                               [0, 0, 1]],
-                              [[cos_az, 0, sin_az],
-                               [0, 1, 0],
-                               [-sin_az, 0, cos_az]]
-                              )
-
-    def _rotated(self, X, Y, Z):
-        _X = self._ROT[0, 0] * X + self._ROT[1, 0] * Y + self._ROT[2, 0] * Z
-        _Y = self._ROT[0, 1] * X + self._ROT[1, 1] * Y + self._ROT[2, 1] * Z
-        _Z = self._ROT[0, 2] * X + self._ROT[1, 2] * Y + self._ROT[2, 2] * Z
-        return _X, _Y, _Z
-
     def potential(self, X, Y, Z):
-        _X, _Y, _Z = self._rotated(X, Y, Z)
-        return self._weight * self._potential_rotated(_X, _Y, _Z)
+        return super(_WeightedRotatingSourceBase,
+                     self).potential(X, Y, Z) * self._weight
 
 
-class _RotatingSourceSingleInterpolatorBase(_RotatingSourceBase):
+class _WeightedRotatingSourceSingleInterpolatorBase(_WeightedRotatingSourceBase):
     def __init__(self, r, altitude, azimuth, parent, interpolator, weight=1):
-        super(_RotatingSourceSingleInterpolatorBase,
+        super(_WeightedRotatingSourceSingleInterpolatorBase,
               self).__init__(r, altitude, azimuth, parent, weight)
 
         self._base_potential_constant = 0.25 / (np.pi * parent.brain_conductivity)
@@ -273,6 +213,7 @@ class _SomeSpherePointSourceFactoryBase(_SomeSphereSourceFactoryBase):
         r_idx = self._r_index[r]
         return self._get_interpolator(r_idx)
 
+
 class _ArbitrarySourceFactoryBase(object):
     @property
     def WEIGHT_Y(self):
@@ -307,8 +248,8 @@ class _ArbitrarySourceFactoryBase(object):
                                           [(zz, aazz)]):
                         y_ref = r * np.sin(altitude)
                         r_ref = r * np.cos(altitude)
-                        x_ref = r_ref * np.cos(azimuth)
-                        z_ref = -r_ref * np.sin(azimuth)
+                        x_ref = r_ref * np.cos(azimuth + np.pi)
+                        z_ref = -r_ref * np.sin(azimuth + np.pi)
                         assert np.isclose(xxx, x_ref)
                         assert np.isclose(y, y_ref)
                         assert np.isclose(zzz, z_ref)
@@ -331,7 +272,7 @@ class _ArbitrarySourceFactoryBase(object):
         def __call__(self, altitude, azimuth):
             return self._Source(altitude, azimuth, self)
 
-        class _Source(_RotatingSourceBase):
+        class _Source(_WeightedRotatingSourceBase):
             def __init__(self, altitude, azimuth, parent):
                 super(_ArbitrarySourceFactoryBase.SourceFactory._Source,
                       self).__init__(1, altitude, azimuth, parent)
@@ -341,7 +282,8 @@ class _ArbitrarySourceFactoryBase(object):
                 return self.parent.csd(_X, _Y, _Z)
 
             def _potential_rotated(self, X, Y, Z):
-                return sum(s.potential(X, Y, Z)
+                _X, _Y, _Z = self._RPI_as_LIP(X, Y, Z)
+                return sum(s.potential(_X, _Y, _Z)
                            for s in self.parent.sources)
 
 
@@ -399,7 +341,7 @@ class SomeSpherePointSourceFactory3D(_SomeSpherePointSourceFactoryBase,
                                                fill_value=np.nan)
         return interpolator
 
-    class _Source(_RotatingSourceSingleInterpolatorBase):
+    class _Source(_WeightedRotatingSourceSingleInterpolatorBase):
         def _correction_potential(self, _X, _Y, _Z):
             return self._interpolator(np.stack((abs(_X), _Y, abs(_Z)),
                                                axis=-1))
@@ -414,7 +356,7 @@ class SomeSpherePointSourceFactoryLinear2D(_SomeSpherePointSourceFactoryBase,
                                        bounds_error=False,
                                        fill_value=np.nan)
 
-    class _Source(_RotatingSourceSingleInterpolatorBase):
+    class _Source(_WeightedRotatingSourceSingleInterpolatorBase):
         def _correction_potential(self, _X, _Y, _Z):
             return self._interpolator(np.stack((np.sqrt(np.square(_X)
                                                         + np.square(_Z)),

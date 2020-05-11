@@ -32,6 +32,7 @@ from kesi._engine import deprecated
 
 try:
     from . import _fem_common as fc
+    from . import _fem_sphere_common as fsc
     # When run as script raises:
     #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
     #  - `SystemError` (Python 3.3-5), or
@@ -39,6 +40,7 @@ try:
 
 except (ImportError, SystemError, ValueError):
     import _fem_common as fc
+    import _fem_sphere_common as fsc
 
 
 logger = logging.getLogger(__name__)
@@ -148,26 +150,10 @@ class SomeSphereGaussianSourceFactoryOnlyCSD(_SomeSphereGaussianLoaderBase):
         self._load_attributes()
 
 
-class _SourceBase(object):
+class _SourceBase(fsc._SourceBase):
     def __init__(self, r, altitude, azimuth, a, parent):
-        self._r = r
-        self._altitude = altitude
-        self._azimuth = azimuth
+        super(_SourceBase, self).__init__(r, altitude, azimuth, parent)
         self._a = a
-        self.parent = parent
-
-        sin_alt = np.sin(self._altitude)  # np.cos(np.pi / 2 - altitude)
-        cos_alt = np.cos(self._altitude)  # np.sin(np.pi / 2 - altitude)
-        sin_az = np.sin(self._azimuth)  # -np.sin(-azimuth)
-        cos_az = np.cos(self._azimuth)  # np.cos(-azimuth)
-
-        self._apply_trigonometric_functions(cos_alt, sin_alt, cos_az, sin_az)
-
-    def _apply_trigonometric_functions(self, cos_alt, sin_alt, cos_az, sin_az):
-        r2 = self._r * cos_alt
-        self._x = r2 * cos_az
-        self._y = self._r * sin_alt
-        self._z = -r2 * sin_az
 
     def csd(self, X, Y, Z):
         return np.where((X**2 + Y**2 + Z**2 > self.parent.brain_radius ** 2),
@@ -179,54 +165,16 @@ class _SourceBase(object):
                                     + np.square(Z - self._z))
                                  / self.parent.standard_deviation ** 2))
 
-    @property
-    def x(self):
-        return self._x
-
-    @property
-    def y(self):
-        return self._y
-
-    @property
-    def z(self):
-        return self._z
-
-    @property
-    def r(self):
-        return self._r
-
-    @property
-    def altitude(self):
-        return self._altitude
-
-    @property
-    def azimuth(self):
-        return self._azimuth
 
 
-class _RotatingSourceBase(_SourceBase):
+# class _RotatingSourceBase(_SourceBase, fcs._RotatingSourceBase):
+class _RotatingSourceBase(fsc._RotatingSourceBase, _SourceBase):
     def __init__(self, r, altitude, azimuth, a, parent, interpolator):
         super(_RotatingSourceBase,
               self).__init__(r, altitude, azimuth, a, parent)
 
         self._interpolator = interpolator
 
-    def _apply_trigonometric_functions(self, cos_alt, sin_alt, cos_az, sin_az):
-        super(_RotatingSourceBase,
-              self)._apply_trigonometric_functions(cos_alt, sin_alt, cos_az, sin_az)
-        self._ROT = np.matmul([[sin_alt, cos_alt, 0],
-                               [-cos_alt, sin_alt, 0],
-                               [0, 0, 1]],
-                              [[cos_az, 0, sin_az],
-                               [0, 1, 0],
-                               [-sin_az, 0, cos_az]]
-                              )
-
-    def _rotated(self, X, Y, Z):
-        _X = self._ROT[0, 0] * X + self._ROT[1, 0] * Y + self._ROT[2, 0] * Z
-        _Y = self._ROT[0, 1] * X + self._ROT[1, 1] * Y + self._ROT[2, 1] * Z
-        _Z = self._ROT[0, 2] * X + self._ROT[1, 2] * Y + self._ROT[2, 2] * Z
-        return _X, _Y, _Z
 
 
 class _SomeSphereGaussianSourceFactoryBase(object):
