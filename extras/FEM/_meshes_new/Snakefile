@@ -3,10 +3,10 @@ rule MSH:
     output: '{mesh_name}.msh'
     shell: 'gmsh -3 -optimize_netgen -format msh2 {input}'
 
-rule XML:
-    input: '{mesh_name}.msh'
-    output: '{mesh_name}.xml', '{mesh_name}_physical_region.xml',  '{mesh_name}_facet_region.xml'
-    shell: 'dolfin-convert {input} {output[0]}'
+# rule XML:
+#     input: '{mesh_name}.msh'
+#     output: '{mesh_name}.xml', '{mesh_name}_physical_region.xml',  '{mesh_name}_facet_region.xml'
+#     shell: 'dolfin-convert {input} {output[0]}'
 
 rule XDMF:
     input: '{mesh_name}.msh'
