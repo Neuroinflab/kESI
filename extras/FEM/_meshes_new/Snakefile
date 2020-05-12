@@ -7,3 +7,26 @@ rule XML:
     input: '{mesh_name}.msh'
     output: '{mesh_name}.xml', '{mesh_name}_physical_region.xml',  '{mesh_name}_facet_region.xml'
     shell: 'dolfin-convert {input} {output[0]}'
+
+rule XDMF:
+    input: '{mesh_name}.msh'
+    output: mesh='{mesh_name}.xdmf', subdomains='{mesh_name}_subdomains.xdmf',  boundaries='{mesh_name}_boundaries.xdmf'
+    run:
+        import meshio
+        msh = meshio.read(str(input))
+
+        meshio.write(output.mesh,
+                     meshio.Mesh(points=msh.points,
+                                 cells=[("tetra", msh.cells_dict["tetra"]
+                                         )]))
+        meshio.write(str(output.boundaries),
+                     meshio.Mesh(points=msh.points,
+                                 cells=[("triangle", msh.cells_dict["triangle"])],
+                                 cell_data={"boundaries":
+                                            [msh.cell_data_dict["gmsh:physical"]["triangle"]]}))
+
+        meshio.write(str(output.subdomains),
+                     meshio.Mesh(points=msh.points,
+                                 cells=[("tetra", msh.cells_dict["tetra"])],
+                                 cell_data={"subdomains":
+                                            [msh.cell_data_dict["gmsh:physical"]["tetra"]]}))
