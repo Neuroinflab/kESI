@@ -1,7 +1,7 @@
 rule MSH:
     input: '{mesh_name}.geo'
     output: '{mesh_name}.msh'
-    shell: 'gmsh -3 -optimize_netgen -format msh2 {input}'
+    shell: 'gmsh -3 -optimize_netgen {input}'
 
 # rule XML:
 #     input: '{mesh_name}.msh'
