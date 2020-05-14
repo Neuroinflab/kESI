@@ -47,7 +47,7 @@ try:
                         TestFunction, TrialFunction, Function,
                         Measure, inner, grad, assemble, KrylovSolver,
                         Expression, DirichletBC, XDMFFile, MeshValueCollection,
-                        cpp)
+                        cpp, HDF5File, MPI)
 
 except (ModuleNotFoundError, ImportError):
     logger.warning("Unable to import from dolfin")
@@ -207,3 +207,32 @@ else:
                                               self._terms_with_unknown,
                                               self._potential_function.vector(),
                                               known_terms)
+
+
+class FunctionManager(object):
+    """
+    TODO: Rewrite to:
+    - use INI configuration with mesh name and degree,
+    - use lazy mesh loading.
+    """
+    def __init__(self, mesh, degree):
+        with XDMFFile(mesh + '.xdmf') as fh:
+            self._mesh = Mesh()
+            fh.read(self._mesh)
+
+        self._V = FunctionSpace(self._mesh, "CG", degree)
+
+    def write(self, filename, function, name):
+        with HDF5File(MPI.comm_self, filename, 'a') as fh:
+            fh.write(function, name)
+
+    def read(self, filename, name):
+        function = Function(self._V)
+        with HDF5File(MPI.comm_self, filename, 'a') as fh:
+            fh.read(function, name)
+
+        return function
+
+
+# TODO:
+# Create Romberg Function manager/controler and Romberg function factory.
