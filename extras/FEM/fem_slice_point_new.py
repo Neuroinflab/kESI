@@ -24,6 +24,7 @@
 
 import configparser
 import logging
+import os
 
 import numpy as np
 
@@ -223,7 +224,9 @@ class FunctionManager(object):
         self._V = FunctionSpace(self._mesh, "CG", degree)
 
     def write(self, filename, function, name):
-        with HDF5File(MPI.comm_self, filename, 'a') as fh:
+        with HDF5File(MPI.comm_self,
+                      filename,
+                      'a' if os.path.exists(filename) else 'w') as fh:
             fh.write(function, name)
 
     def read(self, filename, name):
