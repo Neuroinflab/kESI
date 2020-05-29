@@ -6,7 +6,7 @@
 for python_version in "3.6"
 do
   name=kesi${python_version/./}
-  conda create --name $name --no-default-packages --yes numpy scipy matplotlib pandas ipython python=$python_version
+  conda create --name $name --no-default-packages --yes numpy scipy matplotlib pandas ipython importlib_metadata python=$python_version
   conda activate $name
   conda install -c bioconda --yes snakemake
   conda install -c conda-forge --yes fenics meshio
