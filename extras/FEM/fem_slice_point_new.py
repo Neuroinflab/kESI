@@ -87,29 +87,37 @@ else:
             self.config = configparser.ConfigParser()
             self.config.read(config)
 
-        def _set_degree(self, degree):
+        @property
+        def degree(self):
+            return self._degree
+
+        @degree.setter
+        def degree(self, degree):
             if degree != self._degree:
-                self._degree = degree
-                with self.global_preprocessing_time:
-                    logger.debug('Creating function space...')
-                    self._V = FunctionSpace(self._mesh, "CG", degree)
-                    logger.debug('Done.  Creating integration subdomains...')
-                    self.create_integration_subdomains()
-                    logger.debug('Done.  Creating test function...')
-                    self._v = TestFunction(self._V)
-                    logger.debug('Done.  Creating potential function...')
-                    self._potential_function = Function(self._V)
-                    logger.debug('Done.  Creating trial function...')
-                    self._potential_trial = TrialFunction(self._V)
-                    logger.debug('Done.  Creating LHS part of equation...')
-                    self._a = self._lhs()
-                    logger.debug('Done.  Creating base potential formula...')
-                    self._base_potential_expression = self._potential_expression()
-                    logger.debug('Done.  Creating solver...')
-                    self._solver = KrylovSolver("cg", "ilu")
-                    self._solver.parameters["maximum_iterations"] = self.MAX_ITER
-                    self._solver.parameters["absolute_tolerance"] = 1E-8
-                    logger.debug('Done.  Solver created.')
+                self._set_degree(degree)
+
+        def _set_degree(self, degree):
+            self._degree = degree
+            with self.global_preprocessing_time:
+                logger.debug('Creating function space...')
+                self._V = FunctionSpace(self._mesh, "CG", degree)
+                logger.debug('Done.  Creating integration subdomains...')
+                self.create_integration_subdomains()
+                logger.debug('Done.  Creating test function...')
+                self._v = TestFunction(self._V)
+                logger.debug('Done.  Creating potential function...')
+                self._potential_function = Function(self._V)
+                logger.debug('Done.  Creating trial function...')
+                self._potential_trial = TrialFunction(self._V)
+                logger.debug('Done.  Creating LHS part of equation...')
+                self._a = self._lhs()
+                logger.debug('Done.  Creating base potential formula...')
+                self._base_potential_expression = self._potential_expression()
+                logger.debug('Done.  Creating solver...')
+                self._solver = KrylovSolver("cg", "ilu")
+                self._solver.parameters["maximum_iterations"] = self.MAX_ITER
+                self._solver.parameters["absolute_tolerance"] = 1E-8
+                logger.debug('Done.  Solver created.')
 
 
         def _potential_expression(self, conductivity=0.0):
