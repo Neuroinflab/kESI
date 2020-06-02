@@ -293,7 +293,7 @@ def add_noise(potential, seed=0, level=10):
         Potentials with added random Gaussian noise.
     """
     rstate = np.random.RandomState(seed)
-    noise = 0.01*level*rstate.normal(np.mean(potential), np.std(potential),
+    noise = 0.01*level*rstate.normal(0, np.std(potential),
                                      len(potential))
     potential_noise = potential + noise
     return potential_noise
