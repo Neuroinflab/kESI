@@ -85,7 +85,7 @@ class PointSource(SourceBase):
 
     def potential(self, X, Y, Z):
         return self.a / np.sqrt(np.square(X - self.x)
-                                + np.square(Y - y)
+                                + np.square(Y - self.y)
                                 + np.square(Z - self.z))
 
 
