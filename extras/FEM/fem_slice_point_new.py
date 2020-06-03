@@ -425,5 +425,34 @@ if __name__ == '__main__':
                 fem._fm.write(solution_metadata_filename)
 
 
+class PointSourceFactoryINI(object):
+    def __init__(self, config):
+        self._fm = FunctionManagerINI(config)
+
+    def sources(self):
+        yield from self._fm.functions()
+
+    def __call__(self, name):
+        return self.Source(self._fm.getfloat(name, 'x'),
+                           self._fm.getfloat(name, 'y'),
+                           self._fm.getfloat(name, 'z'),
+                           conductivity=self._fm.getfloat(name, 'base_conductivity'),
+                           potential_correction=self._fm.load(name))
+
+    class Source(object):  # duplicates code from _common_new.PointSource
+        def __init__(self, x, y, z, conductivity=1, amplitude=1, potential_correction=None):
+            self.x = x
+            self.y = y
+            self.z = z
+            self.conductivity = conductivity
+            self.potential_correction = potential_correction
+            self.a = amplitude * 0.25 / (np.pi * conductivity)
+
+        def potential(self, X, Y, Z):
+            return (self.a / np.sqrt(np.square(X - self.x)
+                                     + np.square(Y - y)
+                                     + np.square(Z - self.z))
+                    + self.potential_correction(X, Y, Z))
+
 # TODO:
 # Create Romberg Function manager/controler and Romberg function factory.
