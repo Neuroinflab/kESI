@@ -367,6 +367,9 @@ class FunctionManagerINI(FunctionManager):
     def _set_degree(self, value):
         self.set('fem', 'degree', value)
 
+    def has_solution(self, name):
+        return self.config.has_section(name)
+
 
 if __name__ == '__main__':
     import sys
@@ -391,22 +394,24 @@ if __name__ == '__main__':
                 logger.info('{:3.1f}%\t(x = {:g}\ty = {:g})'.format(100 * float(x_idx * (x_idx - 1) // 2 + y_idx) / ((2 ** (k - 1) + 1) * 2 ** (k - 2)),
                                                                     x, y))
                 for z_idx, z in enumerate(Z):
-                    filename = solution_filename_pattern.format(x=x_idx,
-                                                                y=y_idx,
-                                                                z=z_idx)
-                    if os.path.exists(filename):
-                        logger.info('{:3.1f}%\t(x = {:g}\ty = {:g},\tz={:g}) found'.format(
-                            100 * float(x_idx * (x_idx - 1) // 2 + y_idx) / ((2 ** (k - 1) + 1) * 2 ** (k - 2)),
-                            x, y, z))
-                        continue
+                    name = solution_name_pattern.format(x=x_idx,
+                                                        y=y_idx,
+                                                        z=z_idx)
+                    if fem._fm.has_solution(name):
+                        filename = fem._fm.get(name, 'filename')
+                        if os.path.exists(filename):
+                            logger.info('{:3.1f}%\t(x = {:g}\ty = {:g},\tz={:g}) found'.format(
+                                100 * float(x_idx * (x_idx - 1) // 2 + y_idx) / ((2 ** (k - 1) + 1) * 2 ** (k - 2)),
+                                x, y, z))
+                            continue
 
                     logger.info('{:3.1f}%\t(x = {:g}\ty = {:g},\tz={:g})'.format(
                         100 * float(x_idx * (x_idx - 1) // 2 + y_idx) / ((2 ** (k - 1) + 1) * 2 ** (k - 2)),
                         x, y, z))
                     function = fem.solve(x, y, z)
-                    name = solution_name_pattern.format(x=x_idx,
-                                                        y=y_idx,
-                                                        z=z_idx)
+                    filename = solution_filename_pattern.format(x=x_idx,
+                                                                y=y_idx,
+                                                                z=z_idx)
                     fem._fm.store(name, function,
                                   {'filename': filename,
                                    'x': x,
