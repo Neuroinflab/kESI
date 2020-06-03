@@ -388,7 +388,7 @@ if __name__ == '__main__':
 
         for x_idx, x in enumerate(X):
             for y_idx, y in enumerate(X[:x_idx + 1]):
-                logger.info('{:3.1f}%\t(x = {:g}\ty = {:g})'.format(float(x_idx * (x_idx - 1) // 2 + y_idx) / ((2 ** (k - 1) + 1) * 2 ** (k - 2)),
+                logger.info('{:3.1f}%\t(x = {:g}\ty = {:g})'.format(100 * float(x_idx * (x_idx - 1) // 2 + y_idx) / ((2 ** (k - 1) + 1) * 2 ** (k - 2)),
                                                                     x, y))
                 for z_idx, z in enumerate(Z):
                     filename = solution_filename_pattern.format(x=x_idx,
@@ -396,12 +396,12 @@ if __name__ == '__main__':
                                                                 z=z_idx)
                     if os.path.exists(filename):
                         logger.info('{:3.1f}%\t(x = {:g}\ty = {:g},\tz={:g}) found'.format(
-                            float(x_idx * (x_idx - 1) // 2 + y_idx) / ((2 ** (k - 1) + 1) * 2 ** (k - 2)),
+                            100 * float(x_idx * (x_idx - 1) // 2 + y_idx) / ((2 ** (k - 1) + 1) * 2 ** (k - 2)),
                             x, y, z))
                         continue
 
                     logger.info('{:3.1f}%\t(x = {:g}\ty = {:g},\tz={:g})'.format(
-                        float(x_idx * (x_idx - 1) // 2 + y_idx) / ((2 ** (k - 1) + 1) * 2 ** (k - 2)),
+                        100 * float(x_idx * (x_idx - 1) // 2 + y_idx) / ((2 ** (k - 1) + 1) * 2 ** (k - 2)),
                         x, y, z))
                     function = fem.solve(x, y, z)
                     name = solution_name_pattern.format(x=x_idx,
