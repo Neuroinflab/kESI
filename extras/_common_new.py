@@ -33,11 +33,16 @@ from scipy.special import erf, lpmv
 logger = logging.getLogger(__name__)
 
 
-class GaussianSourceBase(object):
-    def __init__(self, x, y, z, standard_deviation):
+class SourceBase(object):
+    def __init__(self, x, y, z):
         self.x = x
         self.y = y
         self.z = z
+
+
+class GaussianSourceBase(SourceBase):
+    def __init__(self, x, y, z, standard_deviation):
+        super(GaussianSourceBase, self).__init__(x, y, z)
         self._variance = standard_deviation ** 2
         self._a = (2 * np.pi * self._variance) ** -1.5
 
@@ -70,6 +75,18 @@ class GaussianSourceKCSD3D(GaussianSourceBase):
         return self._b * np.where(Rc >= self._radius_of_erf_to_x_limit_applicability,
                                   erf(Rc) / R,
                                   self._c * self._fraction_of_erf_to_x_limit_in_0)
+
+
+class PointSource(SourceBase):
+    def __init__(self, x, y, z, conductivity, amplitude=1):
+        super(PointSource, self).__init__(x, y, z)
+        self.conductivity = conductivity
+        self.a = amplitude * 0.25 / (np.pi * conductivity)
+
+    def potential(self, X, Y, Z):
+        return self.a / np.sqrt(np.square(X - self.x)
+                                + np.square(Y - y)
+                                + np.square(Z - self.z))
 
 
 class InfiniteSliceSourceMOI(object):
