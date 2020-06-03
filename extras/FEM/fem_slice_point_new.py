@@ -419,7 +419,9 @@ if __name__ == '__main__':
                                    'z': z,
                                    'global_preprocessing_time': float(fem.global_preprocessing_time),
                                    'local_preprocessing_time': float(fem.local_preprocessing_time),
-                                   'solving_time': float(fem.solving_time)})
+                                   'solving_time': float(fem.solving_time),
+                                   'base_conductivity': fem.base_conductivity(x, y, z),
+                                   })
                 fem._fm.write(solution_metadata_filename)
 
 
