@@ -370,6 +370,7 @@ class FunctionManagerINI(FunctionManager):
 
 if __name__ == '__main__':
     import sys
+    import os
 
     logging.basicConfig(level=logging.INFO)
 
@@ -390,6 +391,15 @@ if __name__ == '__main__':
                 logger.info('{:3.1f}%\t(x = {:g}\ty = {:g})'.format(float(x_idx * (x_idx - 1) // 2 + y_idx) / ((2 ** (k - 1) + 1) * 2 ** (k - 2)),
                                                                     x, y))
                 for z_idx, z in enumerate(Z):
+                    filename = solution_filename_pattern.format(x=x_idx,
+                                                                y=y_idx,
+                                                                z=z_idx)
+                    if os.path.exists(filename):
+                        logger.info('{:3.1f}%\t(x = {:g}\ty = {:g},\tz={:g}) found'.format(
+                            float(x_idx * (x_idx - 1) // 2 + y_idx) / ((2 ** (k - 1) + 1) * 2 ** (k - 2)),
+                            x, y, z))
+                        continue
+
                     logger.info('{:3.1f}%\t(x = {:g}\ty = {:g},\tz={:g})'.format(
                         float(x_idx * (x_idx - 1) // 2 + y_idx) / ((2 ** (k - 1) + 1) * 2 ** (k - 2)),
                         x, y, z))
@@ -397,9 +407,6 @@ if __name__ == '__main__':
                     name = solution_name_pattern.format(x=x_idx,
                                                         y=y_idx,
                                                         z=z_idx)
-                    filename = solution_filename_pattern.format(x=x_idx,
-                                                                y=y_idx,
-                                                                z=z_idx)
                     fem._fm.store(name, function,
                                   {'filename': filename,
                                    'x': x,
