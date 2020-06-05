@@ -62,8 +62,8 @@ else:
 
         def __init__(self, config):
             self._fm = FunctionManagerINI(config)
-            self._setup_mesh(self._fm.get('fem', 'mesh')[:-5])
-            self._load_config(self._fm.get('fem', 'config'))
+            self._setup_mesh(self._fm.getpath('fem', 'mesh')[:-5])
+            self._load_config(self._fm.getpath('fem', 'config'))
             self.global_preprocessing_time = fc.Stopwatch()
             self.local_preprocessing_time = fc.Stopwatch()
             self.solving_time = fc.Stopwatch()
@@ -324,9 +324,12 @@ class FunctionManagerINI(FunctionManager):
     def __init__(self, config):
         self._load_config(config)
         super(FunctionManagerINI,
-              self).__init__(self._absolute_path(self.get('fem', 'mesh')),
+              self).__init__(self.getpath('fem', 'mesh'),
                              self.getint('fem', 'degree'),
                              self.get('fem', 'element_type'))
+
+    def getpath(self, section, field):
+        return self._absolute_path(self.get(section, field))
 
     def _absolute_path(self, relative_path):
         return os.path.join(DIRNAME,
@@ -341,7 +344,7 @@ class FunctionManagerINI(FunctionManager):
                      self).load(self._function_filename(name))
 
     def _function_filename(self, name):
-        return self._absolute_path(self.get(name, 'filename'))
+        return self.getpath(name, 'filename')
 
     def get(self, section, field):
         return self.config.get(section, field)
