@@ -117,28 +117,28 @@ class InfiniteSliceSourceMOI(object):
         for i in range(n):
             weights.append(wtg**i * wts**(i+1))
             sources.append(SourceClass(x,
-                                       2 * (i + 1) * slice_thickness - y,
-                                       z,
+                                       y,
+                                       2 * (i + 1) * slice_thickness - z,
                                        conductivity=slice_conductivity,
                                        **kwargs))
             weights.append(wtg**(i+1) * wts**i)
             sources.append(SourceClass(x,
-                                       -2 * i * slice_thickness - y,
-                                       z,
+                                       y,
+                                       -2 * i * slice_thickness - z,
                                        conductivity=slice_conductivity,
                                        **kwargs))
 
         for i in range(1, n + 1):
             weights.append((wtg * wts)**i)
             sources.append(SourceClass(x,
-                                       y + 2 * i * slice_thickness,
-                                       z,
+                                       y,
+                                       z + 2 * i * slice_thickness,
                                        conductivity=slice_conductivity,
                                        **kwargs))
             weights.append((wtg * wts)**i)
             sources.append(SourceClass(x,
-                                       y - 2 * i * slice_thickness,
-                                       z,
+                                       y,
+                                       z - 2 * i * slice_thickness,
                                        conductivity=slice_conductivity,
                                        **kwargs))
         self._positive = [(w, s) for w, s in zip(weights, sources)
@@ -155,7 +155,7 @@ class InfiniteSliceSourceMOI(object):
                                        for w, s in self._negative))
 
     def is_applicable(self, X, Y, Z):
-        return (Y >= 0) & (Y <= self.slice_thickness)
+        return (Z >= 0) & (Z <= self.slice_thickness)
 
     def _mask_invalid_space_if_requested(self, VALUE, MASK, fill_value=0):
         if self.mask_invalid_space:
