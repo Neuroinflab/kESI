@@ -234,11 +234,11 @@ roi_r = 0.0003;
 slice_r = 0.003;
 saline_r = 0.1;
 
-roi_element_length = h * 0.125;
-roi_cap_element_length = h * 0.5;
-slice_element_length = h;
-slice_cap_element_length = 2 * h;
-saline_element_length = 0.05;
+roi_element_length = h * 0.125 * SED_RELATIVE_ELEMENT_SIZE;
+roi_cap_element_length = h * 0.5 * SED_RELATIVE_ELEMENT_SIZE;
+slice_element_length = h * SED_RELATIVE_ELEMENT_SIZE;
+slice_cap_element_length = 2 * h * SED_RELATIVE_ELEMENT_SIZE;
+saline_element_length = 0.05 * SED_RELATIVE_ELEMENT_SIZE;
 
 x = 0.; y = 0.; z = 0.;
 r = roi_r;
