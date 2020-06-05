@@ -24,6 +24,7 @@
 
 import configparser
 import logging
+import os
 
 import numpy as np
 
@@ -40,6 +41,9 @@ except (ImportError, SystemError, ValueError):
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+DIRNAME = os.path.dirname(__file__)
 
 
 try:
@@ -319,16 +323,25 @@ class FunctionManager(object):
 class FunctionManagerINI(FunctionManager):
     def __init__(self, config):
         self._load_config(config)
-        super(FunctionManagerINI, self).__init__(self.get('fem', 'mesh'),
-                                                 self.getint('fem', 'degree'),
-                                                 self.get('fem', 'element_type'))
+        super(FunctionManagerINI,
+              self).__init__(self._absolute_path(self.get('fem', 'mesh')),
+                             self.getint('fem', 'degree'),
+                             self.get('fem', 'element_type'))
+
+    def _absolute_path(self, relative_path):
+        return os.path.join(DIRNAME,
+                            relative_path)
 
     def _load_config(self, config):
         self.config = configparser.ConfigParser()
         self.config.read(config)
 
     def load(self, name):
-        return super(FunctionManagerINI, self).load(self.get(name, 'filename'))
+        return super(FunctionManagerINI,
+                     self).load(self._function_filename(name))
+
+    def _function_filename(self, name):
+        return self._absolute_path(self.get(name, 'filename'))
 
     def get(self, section, field):
         return self.config.get(section, field)
@@ -353,8 +366,9 @@ class FunctionManagerINI(FunctionManager):
         for key, value in metadata.items():
             self.set(name, key, value)
 
-        return super(FunctionManagerINI, self).store(self.get(name, 'filename'),
-                                                     function)
+        return super(FunctionManagerINI,
+                     self).store(self._function_filename(name),
+                                 function)
 
     def write(self, filename):
         self.config.write(open(filename, 'w'))
@@ -373,7 +387,6 @@ class FunctionManagerINI(FunctionManager):
 
 if __name__ == '__main__':
     import sys
-    import os
 
     logging.basicConfig(level=logging.INFO)
 
