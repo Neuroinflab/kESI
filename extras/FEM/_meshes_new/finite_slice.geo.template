@@ -384,6 +384,6 @@ Physical Volume ("saline") = {roi_cap_volume,
                               slice_cap_volume,
                               saline_cap_volume};
 Physical Surface ("dome") = saline_cap_surfaces[];
-Physical Surface ("base") = {roi_lower_surfaces[],
-                             slice_lower_surfaces[],
-                             saline_base_surfaces[]};
+Physical Surface ("slice_base") = {roi_lower_surfaces[],
+                                   slice_lower_surfaces[]};
+Physical Surface ("saline_base") = saline_base_surfaces[];
