@@ -47,7 +47,7 @@ DIRNAME = os.path.dirname(__file__)
 
 
 try:
-    from dolfin import (Constant, Mesh, MeshFunction, FunctionSpace,
+    from dolfin import (Constant, Mesh, MeshFunction, FunctionSpace, FacetNormal,
                         TestFunction, TrialFunction, Function,
                         Measure, inner, grad, assemble, KrylovSolver,
                         Expression, DirichletBC, XDMFFile, MeshValueCollection,
@@ -77,6 +77,7 @@ else:
             self._subdomains = self._load_mesh_data(mesh + '_subdomains.xdmf',
                                                     "subdomains",
                                                     3)
+            self._facet_normal = FacetNormal(self._fm.mesh)
 
         def _load_mesh_data(self, path, name, dim):
             with XDMFFile(path) as fh:
@@ -154,6 +155,16 @@ else:
         def _is_conductive_volume(self, section):
             return self.config.has_option(section, 'volume') and self.config.has_option(section, 'conductivity')
 
+        @property
+        def BOUNDARY_CONDUCTIVITY(self):
+            for section in self.config.sections():
+                if self._is_conductive_boundary(section):
+                    yield (self.config.getint(section, 'surface'),
+                           self.config.getfloat(section, 'conductivity'))
+
+        def _is_conductive_boundary(self, section):
+            return self.config.has_option(section, 'surface') and self.config.has_option(section, 'conductivity')
+
         def solve(self, x, y, z):
             with self.local_preprocessing_time:
                 logger.debug('Creating RHS...')
@@ -189,13 +200,19 @@ else:
             self._base_potential_expression.src_x = x
             self._base_potential_expression.src_y = y
             self._base_potential_expression.src_z = z
-            return -sum((inner((Constant(c - base_conductivity)
-                                * grad(self._base_potential_expression)),
-                               grad(self._v))
-                         * self._dx(x)
-                         for x, c in self.CONDUCTIVITY
-                         if c != base_conductivity))
-                        # # Eq. 18 at Piastra et al 2018
+            return (-sum((inner((Constant(c - base_conductivity)
+                                 * grad(self._base_potential_expression)),
+                                grad(self._v))
+                          * self._dx(x)
+                          for x, c in self.CONDUCTIVITY
+                          if c != base_conductivity))
+                          # # Eq. 18 at Piastra et al 2018
+                    - sum(Constant(c)
+                          * inner(self._facet_normal,
+                                  grad(self._base_potential_expression))
+                          * self._v
+                          * self._ds(s)
+                          for s, c in self.BOUNDARY_CONDUCTIVITY))
 
         def base_conductivity(self, x, y, z):
             return self.config.getfloat('slice', 'conductivity')
