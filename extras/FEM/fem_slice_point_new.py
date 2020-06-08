@@ -429,7 +429,7 @@ if __name__ == '__main__':
 
     for config in sys.argv[1:]:
         fem = SlicePointSourcePotentialFEM(config)
-        solution_filename_pattern = fem._fm.getpath('fem', 'solution_filename_pattern')
+        solution_filename_pattern = fem._fm.get('fem', 'solution_filename_pattern')
         solution_name_pattern = fem._fm.get('fem', 'solution_name_pattern')
         solution_metadata_filename = fem._fm.getpath('fem', 'solution_metadata_filename')
         h = fem.config.getfloat('slice', 'thickness')
@@ -448,7 +448,7 @@ if __name__ == '__main__':
                                                         y=y_idx,
                                                         z=z_idx)
                     if fem._fm.has_solution(name):
-                        filename = fem._fm.get(name, 'filename')
+                        filename = fem._fm.getpath(name, 'filename')
                         if os.path.exists(filename):
                             logger.info('{:3.1f}%\t(x = {:g}\ty = {:g},\tz={:g}) found'.format(
                                 100 * float(x_idx * (x_idx - 1) // 2 + y_idx) / ((2 ** (k - 1) + 1) * 2 ** (k - 2)),
