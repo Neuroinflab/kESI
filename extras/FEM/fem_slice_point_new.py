@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-DIRNAME = os.path.dirname(__file__)
+_DIRECTORY = os.path.dirname(__file__)
 
 
 try:
@@ -371,7 +371,7 @@ class FunctionManagerINI(FunctionManager):
         return self._absolute_path(self.get(section, field))
 
     def _absolute_path(self, relative_path):
-        return os.path.join(DIRNAME,
+        return os.path.join(_DIRECTORY,
                             relative_path)
 
     def _load_config(self, config):
@@ -436,7 +436,7 @@ class PointSourceFactoryINI(object):
         self._fm = FunctionManagerINI(config)
         self._fm.set('fem', 'solution_metadata_filename',
                      os.path.relpath(config,
-                                     DIRNAME))
+                                     _DIRECTORY))
 
     def sources(self):
         yield from self._fm.functions()
