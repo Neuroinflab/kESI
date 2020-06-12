@@ -77,7 +77,7 @@ else:
             self._subdomains = self._load_mesh_data(mesh + '_subdomains.xdmf',
                                                     "subdomains",
                                                     3)
-            self._facet_normal = FacetNormal(self._fm.mesh)
+            # self._facet_normal = FacetNormal(self._fm.mesh)
 
         def _load_mesh_data(self, path, name, dim):
             with XDMFFile(path) as fh:
@@ -113,6 +113,7 @@ else:
                 self._a = self._lhs()
                 logger.debug('Done.  Creating base potential formula...')
                 self._base_potential_expression = self._potential_expression()
+                self._base_potential_gradient_z_expression = self._potential_gradient_z()
                 logger.debug('Done.  Creating solver...')
                 self._solver = KrylovSolver("cg", "ilu")
                 self._solver.parameters["maximum_iterations"] = self.MAX_ITER
@@ -126,6 +127,22 @@ else:
                               / sqrt((src_x - x[0])*(src_x - x[0])
                                      + (src_y - x[1])*(src_y - x[1])
                                      + (src_z - x[2])*(src_z - x[2]))
+                              '''.format(pi=np.pi),
+                              degree=self.degree,
+                              domain=self._fm.mesh,
+                              src_x=0.0,
+                              src_y=0.0,
+                              src_z=0.0,
+                              conductivity=conductivity)
+
+        def _potential_gradient_z(self, conductivity=0.0):
+            return Expression('''
+                              0.25 / {pi} / conductivity
+                              * (src_z - x[2])
+                              * pow((src_x - x[0])*(src_x - x[0])
+                                    + (src_y - x[1])*(src_y - x[1])
+                                    + (src_z - x[2])*(src_z - x[2]),
+                                    -1.5)
                               '''.format(pi=np.pi),
                               degree=self.degree,
                               domain=self._fm.mesh,
@@ -196,16 +213,19 @@ else:
             base_conductivity = self.base_conductivity(x, y, z)
             self._setup_expression(self._base_potential_expression,
                                    base_conductivity, x, y, z)
+            self._setup_expression(self._base_potential_gradient_z_expression,
+                                   base_conductivity, x, y, z)
             return (-sum((inner((Constant(c - base_conductivity)
                                  * grad(self._base_potential_expression)),
                                 grad(self._v))
                           * self._dx(x)
                           for x, c in self.CONDUCTIVITY
                           if c != base_conductivity))
-                          # # Eq. 18 at Piastra et al 2018
-                    + sum(Constant(c)
-                          * inner(self._facet_normal,
-                                  grad(self._base_potential_expression))
+                    # # Eq. 18 at Piastra et al 2018
+                    - sum(Constant(c)
+                          # * inner(self._facet_normal,
+                          #         grad(self._base_potential_expression))
+                          * self._base_potential_gradient_z_expression
                           * self._v
                           * self._ds(s)
                           for s, c in self.BOUNDARY_CONDUCTIVITY))
