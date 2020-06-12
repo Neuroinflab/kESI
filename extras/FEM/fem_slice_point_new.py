@@ -383,7 +383,11 @@ class FunctionManagerINI(FunctionManager):
                      self).load(self._function_filename(name))
 
     def _function_filename(self, name):
-        return self.getpath(name, 'filename')
+        directory = os.path.dirname(self.getpath('fem',
+                                                 'solution_metadata_filename'))
+        return os.path.join(directory,
+                            self.get(name,
+                                     'filename'))
 
     def get(self, section, field):
         return self.config.get(section, field)
@@ -430,6 +434,9 @@ class FunctionManagerINI(FunctionManager):
 class PointSourceFactoryINI(object):
     def __init__(self, config):
         self._fm = FunctionManagerINI(config)
+        self._fm.set('fem', 'solution_metadata_filename',
+                     os.path.relpath(config,
+                                     DIRNAME))
 
     def sources(self):
         yield from self._fm.functions()
