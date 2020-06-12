@@ -122,12 +122,10 @@ else:
 
         def _potential_expression(self, conductivity=0.0):
             return Expression('''
-                              0.25
-                              / ({pi}
-                                 * conductivity
-                                 * sqrt((x[0] - src_x)*(x[0] - src_x)
-                                        + (x[1] - src_y)*(x[1] - src_y)
-                                        + (x[2] - src_z)*(x[2] - src_z)))
+                              0.25 / {pi} / conductivity
+                              / sqrt((src_x - x[0])*(src_x - x[0])
+                                     + (src_y - x[1])*(src_y - x[1])
+                                     + (src_z - x[2])*(src_z - x[2]))
                               '''.format(pi=np.pi),
                               degree=self.degree,
                               domain=self._fm.mesh,
@@ -196,10 +194,8 @@ else:
 
         def _rhs(self, x, y, z):
             base_conductivity = self.base_conductivity(x, y, z)
-            self._base_potential_expression.conductivity = base_conductivity
-            self._base_potential_expression.src_x = x
-            self._base_potential_expression.src_y = y
-            self._base_potential_expression.src_z = z
+            self._setup_expression(self._base_potential_expression,
+                                   base_conductivity, x, y, z)
             return (-sum((inner((Constant(c - base_conductivity)
                                  * grad(self._base_potential_expression)),
                                 grad(self._v))
@@ -213,6 +209,12 @@ else:
                           * self._v
                           * self._ds(s)
                           for s, c in self.BOUNDARY_CONDUCTIVITY))
+
+        def _setup_expression(self, expression, base_conductivity, x, y, z):
+            expression.conductivity = base_conductivity
+            expression.src_x = x
+            expression.src_y = y
+            expression.src_z = z
 
         def base_conductivity(self, x, y, z):
             return self.config.getfloat('slice', 'conductivity')
