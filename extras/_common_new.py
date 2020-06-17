@@ -33,11 +33,16 @@ from scipy.special import erf, lpmv
 logger = logging.getLogger(__name__)
 
 
-class GaussianSourceBase(object):
-    def __init__(self, x, y, z, standard_deviation):
+class SourceBase(object):
+    def __init__(self, x, y, z):
         self.x = x
         self.y = y
         self.z = z
+
+
+class GaussianSourceBase(SourceBase):
+    def __init__(self, x, y, z, standard_deviation):
+        super(GaussianSourceBase, self).__init__(x, y, z)
         self._variance = standard_deviation ** 2
         self._a = (2 * np.pi * self._variance) ** -1.5
 
@@ -72,6 +77,18 @@ class GaussianSourceKCSD3D(GaussianSourceBase):
                                   self._c * self._fraction_of_erf_to_x_limit_in_0)
 
 
+class PointSource(SourceBase):
+    def __init__(self, x, y, z, conductivity, amplitude=1):
+        super(PointSource, self).__init__(x, y, z)
+        self.conductivity = conductivity
+        self.a = amplitude * 0.25 / (np.pi * conductivity)
+
+    def potential(self, X, Y, Z):
+        return self.a / np.sqrt(np.square(X - self.x)
+                                + np.square(Y - self.y)
+                                + np.square(Z - self.z))
+
+
 class InfiniteSliceSourceMOI(object):
     def __init__(self, x, y, z,
                  slice_thickness,
@@ -100,28 +117,28 @@ class InfiniteSliceSourceMOI(object):
         for i in range(n):
             weights.append(wtg**i * wts**(i+1))
             sources.append(SourceClass(x,
-                                       2 * (i + 1) * slice_thickness - y,
-                                       z,
+                                       y,
+                                       2 * (i + 1) * slice_thickness - z,
                                        conductivity=slice_conductivity,
                                        **kwargs))
             weights.append(wtg**(i+1) * wts**i)
             sources.append(SourceClass(x,
-                                       -2 * i * slice_thickness - y,
-                                       z,
+                                       y,
+                                       -2 * i * slice_thickness - z,
                                        conductivity=slice_conductivity,
                                        **kwargs))
 
         for i in range(1, n + 1):
             weights.append((wtg * wts)**i)
             sources.append(SourceClass(x,
-                                       y + 2 * i * slice_thickness,
-                                       z,
+                                       y,
+                                       z + 2 * i * slice_thickness,
                                        conductivity=slice_conductivity,
                                        **kwargs))
             weights.append((wtg * wts)**i)
             sources.append(SourceClass(x,
-                                       y - 2 * i * slice_thickness,
-                                       z,
+                                       y,
+                                       z - 2 * i * slice_thickness,
                                        conductivity=slice_conductivity,
                                        **kwargs))
         self._positive = [(w, s) for w, s in zip(weights, sources)
@@ -138,7 +155,7 @@ class InfiniteSliceSourceMOI(object):
                                        for w, s in self._negative))
 
     def is_applicable(self, X, Y, Z):
-        return (Y >= 0) & (Y <= self.slice_thickness)
+        return (Z >= 0) & (Z <= self.slice_thickness)
 
     def _mask_invalid_space_if_requested(self, VALUE, MASK, fill_value=0):
         if self.mask_invalid_space:

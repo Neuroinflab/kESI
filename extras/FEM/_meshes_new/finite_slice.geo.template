@@ -234,11 +234,11 @@ roi_r = 0.0003;
 slice_r = 0.003;
 saline_r = 0.1;
 
-roi_element_length = h * 0.125;
-roi_cap_element_length = h * 0.5;
-slice_element_length = h;
-slice_cap_element_length = 2 * h;
-saline_element_length = 0.05;
+roi_element_length = h * 0.125 * SED_RELATIVE_ELEMENT_SIZE;
+roi_cap_element_length = h * 0.5 * SED_RELATIVE_ELEMENT_SIZE;
+slice_element_length = h * SED_RELATIVE_ELEMENT_SIZE;
+slice_cap_element_length = 2 * h * SED_RELATIVE_ELEMENT_SIZE;
+saline_element_length = 0.05 * SED_RELATIVE_ELEMENT_SIZE;
 
 x = 0.; y = 0.; z = 0.;
 r = roi_r;
@@ -384,3 +384,6 @@ Physical Volume ("saline") = {roi_cap_volume,
                               slice_cap_volume,
                               saline_cap_volume};
 Physical Surface ("dome") = saline_cap_surfaces[];
+Physical Surface ("slice_base") = {roi_lower_surfaces[],
+                                   slice_lower_surfaces[]};
+Physical Surface ("saline_base") = saline_base_surfaces[];
