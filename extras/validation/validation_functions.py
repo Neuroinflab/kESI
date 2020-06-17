@@ -228,7 +228,7 @@ def suggest_lambda(kernel):
     -------
     Lambdas : list
     """
-    u, s, v = np.linalg.svd(kernel)
+    u, s, v = np.linalg.eigh(kernel)
     print('min lambda', 10**np.round(np.log10(s[-1]), decimals=0))
     print('max lambda', str.format('{0:.4f}', np.std(np.diag(kernel))))
     return np.logspace(np.log10(s[-1]), np.log10(np.std(np.diag(kernel))), 20)
@@ -296,6 +296,6 @@ def add_noise(potential, seed=0, level=10):
     noise = 0.01*level*rstate.normal(0, np.std(potential),
                                      len(potential))
     potential_noise = potential + noise
-    return potential_noise
+    return potential_noise, noise
 
 

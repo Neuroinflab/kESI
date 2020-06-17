@@ -21,20 +21,24 @@ def make_plot(values, val_type, X, Y, Z, path, idx=15, fig_title=None):
         cmap = cm.bwr
         t_max = np.max(np.abs(values))
         t_min = -t_max
+    elif val_type == 'pot':
+        cmap = cm.PRGn
+        t_max = np.max(np.abs(values))
+        t_min = -t_max
     else:
         cmap = cm.Greys
         t_max = np.max(np.abs(values))#1
         t_min = 0
     levels = np.linspace(t_min, t_max, 65)
     ax.set_aspect('equal')
-    im = ax.contourf(X[:, :, idx], Z[:, :, idx], values[:, :, idx], levels=levels, cmap=cmap, alpha=1)
+    im = ax.contourf(X[idx, :, :], Z[idx, :, :], values[:, idx, :], levels=levels, cmap=cmap, alpha=1)
     ax.set_xlabel('X (m)')
     ax.set_ylabel('Z (m)')
     ax.set_xticks([X.min(), 0, X.max()])
     ax.set_yticks([Z.min(), 0, Z.max()])
     ticks = np.linspace(t_min, t_max, 3, endpoint=True)
     plt.colorbar(im, orientation='horizontal', format='%.2f', ticks=ticks)
-    plt.savefig(path + '/figs/' + str(fig_title) +'.png', dpi=300)
+    #plt.savefig(path + '/' + str(fig_title) +'.png', dpi=300)
     return
 
 
@@ -424,7 +428,7 @@ def plot_electrodes(ax, ELE_X, ELE_Y, ELE_Z, src_x, src_y, src_z, label='EEG'):
 
 def generate_Picard_subplot(eigenvalues, eigenvectors, true_csd, potential,
                             cv_errors, rms, rdm, mag, rp, sphere, src_nr, path,
-                            ELE_X, ELE_Y, ELE_Z, src_x, src_y, src_z):
+                            ELE_X, ELE_Y, ELE_Z, src_x, src_y, src_z, X, Y, Z, IDX, layer):
     plt.figure(figsize=(12, 8))
     
     ax = plt.subplot(231)
@@ -454,3 +458,17 @@ def generate_Picard_subplot(eigenvalues, eigenvectors, true_csd, potential,
     plt.savefig(path +'/Picard_diagnostics_ '+str(sphere)+' 1000_pots_' + str(src_nr) + '.png', dpi=300)
 
 
+def plot_potential_ele(X, Y, Z, values, fig_title, save_path):
+    plt.figure()
+    ax = plt.subplot(111, projection='3d')
+    tmax = np.max(abs(values))
+    im = ax.scatter(X, Y, Z, c=values, cmap=cm.PRGn, vmin=-tmax, vmax=tmax)
+    ax.set_title(fig_title)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Z')
+    ax.set_zlabel('Y')
+    ax.set_xticks([X.min(), 0, X.max()])
+    ax.set_yticks([Y.min(), 0, Y.max()])
+    ax.set_zticks([Z.min(), 0, Z.max()])
+    plt.colorbar(im)
+    plt.savefig(save_path + '/' + str(fig_title) + '.png', dpi=300)
