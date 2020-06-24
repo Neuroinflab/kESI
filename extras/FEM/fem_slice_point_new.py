@@ -283,185 +283,185 @@ else:
 #         return function
 
 
-class FunctionManager(object):
-    function_name = 'potential'
+    class FunctionManager(object):
+        function_name = 'potential'
 
-    def __init__(self, mesh, degree=None, element_type='CG'):
-        self._mesh_filename = mesh
-        self._degree = degree
-        self.element_type = element_type
+        def __init__(self, mesh, degree=None, element_type='CG'):
+            self._mesh_filename = mesh
+            self._degree = degree
+            self.element_type = element_type
 
-    @property
-    def degree(self):
-        return self._degree
+        @property
+        def degree(self):
+            return self._degree
 
-    @degree.setter
-    def degree(self, value):
-        self._set_degree(value)
+        @degree.setter
+        def degree(self, value):
+            self._set_degree(value)
 
-    def _set_degree(self, value):
-        if self._degree != value:
-            self._degree = value
-            self._delete_function_space()
+        def _set_degree(self, value):
+            if self._degree != value:
+                self._degree = value
+                self._delete_function_space()
 
-    def _delete_function_space(self):
-        try:
-            del self._function_space
-        except AttributeError:
-            pass
+        def _delete_function_space(self):
+            try:
+                del self._function_space
+            except AttributeError:
+                pass
 
-    @property
-    def mesh(self):
-        try:
-            return self._mesh
+        @property
+        def mesh(self):
+            try:
+                return self._mesh
 
-        except AttributeError:
-            self._load_mesh()
-            return self._mesh
+            except AttributeError:
+                self._load_mesh()
+                return self._mesh
 
-    def _load_mesh(self):
-        with XDMFFile(self._mesh_filename) as fh:
-            self._mesh = Mesh()
-            fh.read(self._mesh)
+        def _load_mesh(self):
+            with XDMFFile(self._mesh_filename) as fh:
+                self._mesh = Mesh()
+                fh.read(self._mesh)
 
-    @property
-    def function_space(self):
-        try:
-            return self._function_space
+        @property
+        def function_space(self):
+            try:
+                return self._function_space
 
-        except AttributeError:
-            self._create_function_space()
-            return self._function_space
+            except AttributeError:
+                self._create_function_space()
+                return self._function_space
 
-    def _create_function_space(self):
-        logger.debug('Creating function space...')
-        self._function_space = FunctionSpace(self.mesh, self.element_type, self._degree)
-        logger.debug('Done.')
+        def _create_function_space(self):
+            logger.debug('Creating function space...')
+            self._function_space = FunctionSpace(self.mesh, self.element_type, self._degree)
+            logger.debug('Done.')
 
-    def store(self, filename, function):
-        with HDF5File(MPI.comm_self, filename, 'w') as fh:
-            fh.write(function, self.function_name)
+        def store(self, filename, function):
+            with HDF5File(MPI.comm_self, filename, 'w') as fh:
+                fh.write(function, self.function_name)
 
-    def load(self, filename):
-        function = self.function()
-        with HDF5File(MPI.comm_self, filename, 'r') as fh:
-            fh.read(function, self.function_name)
+        def load(self, filename):
+            function = self.function()
+            with HDF5File(MPI.comm_self, filename, 'r') as fh:
+                fh.read(function, self.function_name)
 
-        return function
+            return function
 
-    def function(self):
-        return Function(self.function_space)
+        def function(self):
+            return Function(self.function_space)
 
-    def test_function(self):
-        return TestFunction(self.function_space)
+        def test_function(self):
+            return TestFunction(self.function_space)
 
-    def trial_function(self):
-        return TrialFunction(self.function_space)
-
-
-class FunctionManagerINI(FunctionManager):
-    def __init__(self, config):
-        self._load_config(config)
-        super(FunctionManagerINI,
-              self).__init__(self.getpath('fem', 'mesh'),
-                             self.getint('fem', 'degree'),
-                             self.get('fem', 'element_type'))
-
-    def getpath(self, section, field):
-        return self._absolute_path(self.get(section, field))
-
-    def _absolute_path(self, relative_path):
-        return os.path.join(_DIRECTORY,
-                            relative_path)
-
-    def _load_config(self, config):
-        self.config = configparser.ConfigParser()
-        self.config.read(config)
-
-    def load(self, name):
-        return super(FunctionManagerINI,
-                     self).load(self._function_filename(name))
-
-    def _function_filename(self, name):
-        directory = os.path.dirname(self.getpath('fem',
-                                                 'solution_metadata_filename'))
-        return os.path.join(directory,
-                            self.get(name,
-                                     'filename'))
-
-    def get(self, section, field):
-        return self.config.get(section, field)
-
-    def getint(self, section, field):
-        return self.config.getint(section, field)
-
-    def getfloat(self, section, field):
-        return self.config.getfloat(section, field)
-
-    def set(self, section, field, value):
-        value = value if isinstance(value, str) else repr(value)
-
-        try:
-            return self.config.set(section, field, value)
-
-        except configparser.NoSectionError:
-            self.config.add_section(section)
-            return self.config.set(section, field, value)
-
-    def store(self, name, function, metadata):
-        for key, value in metadata.items():
-            self.set(name, key, value)
-
-        return super(FunctionManagerINI,
-                     self).store(self._function_filename(name),
-                                 function)
-
-    def write(self, filename):
-        self.config.write(open(filename, 'w'))
-
-    def functions(self):
-        for section in self.config.sections():
-            if section != 'fem':
-                yield section
-
-    def _set_degree(self, value):
-        self.set('fem', 'degree', value)
-
-    def has_solution(self, name):
-        return self.config.has_section(name)
+        def trial_function(self):
+            return TrialFunction(self.function_space)
 
 
-class PointSourceFactoryINI(object):
-    def __init__(self, config):
-        self._fm = FunctionManagerINI(config)
-        self._fm.set('fem', 'solution_metadata_filename',
-                     os.path.relpath(config,
-                                     _DIRECTORY))
+    class FunctionManagerINI(FunctionManager):
+        def __init__(self, config):
+            self._load_config(config)
+            super(FunctionManagerINI,
+                  self).__init__(self.getpath('fem', 'mesh'),
+                                 self.getint('fem', 'degree'),
+                                 self.get('fem', 'element_type'))
 
-    def sources(self):
-        yield from self._fm.functions()
+        def getpath(self, section, field):
+            return self._absolute_path(self.get(section, field))
 
-    def __call__(self, name):
-        return self.Source(self._fm.getfloat(name, 'x'),
-                           self._fm.getfloat(name, 'y'),
-                           self._fm.getfloat(name, 'z'),
-                           conductivity=self._fm.getfloat(name, 'base_conductivity'),
-                           potential_correction=self._fm.load(name))
+        def _absolute_path(self, relative_path):
+            return os.path.join(_DIRECTORY,
+                                relative_path)
 
-    class Source(object):  # duplicates code from _common_new.PointSource
-        def __init__(self, x, y, z, conductivity=1, amplitude=1, potential_correction=None):
-            self.x = x
-            self.y = y
-            self.z = z
-            self.conductivity = conductivity
-            self.potential_correction = potential_correction
-            self.a = amplitude * 0.25 / (np.pi * conductivity)
+        def _load_config(self, config):
+            self.config = configparser.ConfigParser()
+            self.config.read(config)
 
-        def potential(self, X, Y, Z):
-            return (self.a / np.sqrt(np.square(X - self.x)
-                                     + np.square(Y - self.y)
-                                     + np.square(Z - self.z))
-                    + self.potential_correction(X, Y, Z))
+        def load(self, name):
+            return super(FunctionManagerINI,
+                         self).load(self._function_filename(name))
+
+        def _function_filename(self, name):
+            directory = os.path.dirname(self.getpath('fem',
+                                                     'solution_metadata_filename'))
+            return os.path.join(directory,
+                                self.get(name,
+                                         'filename'))
+
+        def get(self, section, field):
+            return self.config.get(section, field)
+
+        def getint(self, section, field):
+            return self.config.getint(section, field)
+
+        def getfloat(self, section, field):
+            return self.config.getfloat(section, field)
+
+        def set(self, section, field, value):
+            value = value if isinstance(value, str) else repr(value)
+
+            try:
+                return self.config.set(section, field, value)
+
+            except configparser.NoSectionError:
+                self.config.add_section(section)
+                return self.config.set(section, field, value)
+
+        def store(self, name, function, metadata):
+            for key, value in metadata.items():
+                self.set(name, key, value)
+
+            return super(FunctionManagerINI,
+                         self).store(self._function_filename(name),
+                                     function)
+
+        def write(self, filename):
+            self.config.write(open(filename, 'w'))
+
+        def functions(self):
+            for section in self.config.sections():
+                if section != 'fem':
+                    yield section
+
+        def _set_degree(self, value):
+            self.set('fem', 'degree', value)
+
+        def has_solution(self, name):
+            return self.config.has_section(name)
+
+
+    class PointSourceFactoryINI(object):
+        def __init__(self, config):
+            self._fm = FunctionManagerINI(config)
+            self._fm.set('fem', 'solution_metadata_filename',
+                         os.path.relpath(config,
+                                         _DIRECTORY))
+
+        def sources(self):
+            yield from self._fm.functions()
+
+        def __call__(self, name):
+            return self.Source(self._fm.getfloat(name, 'x'),
+                               self._fm.getfloat(name, 'y'),
+                               self._fm.getfloat(name, 'z'),
+                               conductivity=self._fm.getfloat(name, 'base_conductivity'),
+                               potential_correction=self._fm.load(name))
+
+        class Source(object):  # duplicates code from _common_new.PointSource
+            def __init__(self, x, y, z, conductivity=1, amplitude=1, potential_correction=None):
+                self.x = x
+                self.y = y
+                self.z = z
+                self.conductivity = conductivity
+                self.potential_correction = potential_correction
+                self.a = amplitude * 0.25 / (np.pi * conductivity)
+
+            def potential(self, X, Y, Z):
+                return (self.a / np.sqrt(np.square(X - self.x)
+                                         + np.square(Y - self.y)
+                                         + np.square(Z - self.z))
+                        + self.potential_correction(X, Y, Z))
 
 
 # TODO:
