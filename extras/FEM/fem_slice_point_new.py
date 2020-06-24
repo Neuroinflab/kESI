@@ -438,7 +438,7 @@ else:
                          os.path.relpath(config,
                                          _DIRECTORY))
 
-        def sources(self):
+        def __iter__(self):
             yield from self._fm.functions()
 
         def __call__(self, name):
