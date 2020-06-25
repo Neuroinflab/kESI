@@ -534,6 +534,8 @@ class DegeneratedSliceSourcesFactory(object):
 
     @classmethod
     def from_factory(cls, factory, ELECTRODES):
+        ele_z_idx = 2
+        ELE_Z = ELECTRODES[:, ele_z_idx]
         z_idx = factory.k
         n = 2 ** z_idx + 1
         midpoint = n // 2
@@ -548,28 +550,23 @@ class DegeneratedSliceSourcesFactory(object):
                     source = factory(factory.solution_name_pattern.format(x=x_idx,
                                                                           y=y_idx,
                                                                           z=z_idx))
-                    for x_idx_2, y_idx_2, ELE_X, ELE_Y in ([(x_idx,
-                                                             y_idx,
-                                                             ELECTRODES.X,
-                                                             ELECTRODES.Y)]
-                                                           if x_idx == y_idx
-                                                           else
-                                                           [(x_idx,
-                                                             y_idx,
-                                                             ELECTRODES.X,
-                                                             ELECTRODES.Y),
-                                                            (y_idx,
-                                                             x_idx,
-                                                             ELECTRODES.Y,
-                                                             ELECTRODES.X)]
-                                                           ):
+                    for ele_x_idx, (x_idx_2, y_idx_2) in enumerate([(x_idx, y_idx)]
+                                                                   if x_idx == y_idx
+                                                                   else
+                                                                   [(x_idx, y_idx),
+                                                                    (y_idx, x_idx)]):
+                        ele_y_idx = 1 - ele_x_idx
+                        ELE_X = ELECTRODES[:, ele_x_idx]
+                        ELE_Y = ELECTRODES[:, ele_y_idx]
                         for wx in [1, -1] if x_idx_2 else [0]:
-                            for wy  in [1, -1] if y_idx_2 else [0]:
-                                for i, (x, y, z) in enumerate(zip(ELE_X, ELE_Y, ELECTRODES.Z)):
+                            for wy in [1, -1] if y_idx_2 else [0]:
+                                for i, (x, y, z) in enumerate(zip(ELE_X, ELE_Y, ELE_Z)):
                                     POTENTIALS[midpoint + wx * x_idx_2,
                                                midpoint + wy * x_idx_2,
-                                    z_idx,
-                                    i] = source.potential(x * wx, y * wy, z)
+                                               z_idx,
+                                               i] = source.potential(x * wx,
+                                                                     y * wy,
+                                                                     z)
 
                     Z[z_idx] = source.z
             X[midpoint + x_idx] = source.x
