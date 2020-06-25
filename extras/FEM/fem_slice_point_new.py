@@ -508,13 +508,14 @@ class DegeneratedSourceBase(object):
 
 
 class DegeneratedSliceSourcesFactory(object):
-    def __init__(self, x, y, z, potentials):
-        self._x = x
-        self._y = y
-        self._z = z
-        self.X, self.Y, self.Z = np.meshgrid(x, y, z,
+    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
+        self._X = X
+        self._Y = Y
+        self._Z = Z
+        self.X, self.Y, self.Z = np.meshgrid(X, Y, Z,
                                              indexing='ij')
-        self._potentials = potentials
+        self._POTENTIALS = POTENTIALS
+        self._ELECTRODES = ELECTRODES
 
     class Source(DegeneratedSourceBase):
         def __init__(self, parent, x, y, z, potential, amplitude=1):
@@ -574,19 +575,20 @@ class DegeneratedSliceSourcesFactory(object):
             Y[midpoint + x_idx] = source.x
             Y[midpoint - x_idx] = -source.x
 
-        return cls(X, Y, Z, POTENTIALS)
+        return cls(X, Y, Z, POTENTIALS, ELECTRODES)
 
     def save(self, file):
         np.savez_compressed(file,
-                            X=self._x,
+                            X=self._X,
                             Y=self._y,
-                            Z=self._z,
-                            POTENTIALS=self._potentials)
+                            Z=self._Z,
+                            POTENTIALS=self._POTENTIALS,
+                            ELECTRODES=self._ELECTRODES)
 
     @classmethod
     def load(cls, file):
         with np.load(file) as fh:
-            return cls(fh['X'], fh['Y'], fh['Z'], fh['POTENTIALS'])
+            return cls(fh['X'], fh['Y'], fh['Z'], fh['POTENTIALS'], fh['ELECTRODES'])
 
 
 
