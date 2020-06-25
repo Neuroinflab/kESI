@@ -522,6 +522,8 @@ class _LoadableObjectBase(object):
     def __init__(self, *args, **kwargs):
         kwargs.update(zip(self._LoadableObject__ATTRIBUTES,
                           args))
+        for attr, value in kwargs.items():
+            setattr(self, attr, value)
 
     def save(self, file):
         np.savez_compressed(file,
