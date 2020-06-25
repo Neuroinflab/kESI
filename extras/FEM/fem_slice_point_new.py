@@ -507,21 +507,50 @@ class DegeneratedSourceBase(object):
         return self - other
 
 
-class DegeneratedSliceSourcesFactory(object):
-    ATTRIBUTES = ['X',
-                  'Y',
-                  'Z',
-                  'POTENTIALS',
-                  'ELECTRODES',
-                  ]
+class _LoadableObjectBase(object):
+    """
+    Abstract base class for loadable objects.
+
+    Class attributes
+    ----------------
+    _LoadableObject__ATTRIBUTES : list
+        A class attribute to be defined by subclasses to enable
+        the load/save protocol.  The list contains list of attribute
+        names necessary to store complete information about the object
+        in a _*.npz_ file.
+    """
+    def __init__(self, *args, **kwargs):
+        kwargs.update(zip(self._LoadableObject__ATTRIBUTES,
+                          args))
+
+    def save(self, file):
+        np.savez_compressed(file,
+                            **{attr: getattr(self, attr)
+                               for attr in self._LoadableObject__ATTRIBUTES})
+
+    @classmethod
+    def load(cls, file):
+        with np.load(file) as fh:
+            return cls(*[fh[attr] for attr in cls._LoadableObject__ATTRIBUTES])
+
+
+
+class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
+    _LoadableObject__ATTRIBUTES = [
+        'X',
+        'Y',
+        'Z',
+        'POTENTIALS',
+        'ELECTRODES',
+        ]
 
     def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
-        self.X = X
-        self.Y = Y
-        self.Z = Z
-        self.POTENTIALS = POTENTIALS
-        self.ELECTRODES = ELECTRODES
-        self._X, self._Y, self._Z = np.meshgrid(self._X, self._Y, self._Z,
+        super(DegeneratedSliceSourcesFactory,
+              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES)
+
+        self._X, self._Y, self._Z = np.meshgrid(self.X,
+                                                self.Y,
+                                                self.Z,
                                                 indexing='ij')
 
     class Source(DegeneratedSourceBase):
@@ -583,16 +612,6 @@ class DegeneratedSliceSourcesFactory(object):
             Y[midpoint - x_idx] = -source.x
 
         return cls(X, Y, Z, POTENTIALS, ELECTRODES)
-
-    def save(self, file):
-        np.savez_compressed(file,
-                            **{attr: getattr(self, attr)
-                               for attr in self.ATTRIBUTES})
-
-    @classmethod
-    def load(cls, file):
-        with np.load(file) as fh:
-            return cls(*[fh[attr] for attr in cls.ATTRIBUTES])
 
 
 # TODO:
