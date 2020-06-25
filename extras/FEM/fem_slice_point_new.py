@@ -508,14 +508,21 @@ class DegeneratedSourceBase(object):
 
 
 class DegeneratedSliceSourcesFactory(object):
+    ATTRIBUTES = ['X',
+                  'Y',
+                  'Z',
+                  'POTENTIALS',
+                  'ELECTRODES',
+                  ]
+
     def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
-        self._X = X
-        self._Y = Y
-        self._Z = Z
-        self.X, self.Y, self.Z = np.meshgrid(X, Y, Z,
-                                             indexing='ij')
-        self._POTENTIALS = POTENTIALS
-        self._ELECTRODES = ELECTRODES
+        self.X = X
+        self.Y = Y
+        self.Z = Z
+        self.POTENTIALS = POTENTIALS
+        self.ELECTRODES = ELECTRODES
+        self._X, self._Y, self._Z = np.meshgrid(self._X, self._Y, self._Z,
+                                                indexing='ij')
 
     class Source(DegeneratedSourceBase):
         def __init__(self, parent, x, y, z, potential, amplitude=1):
@@ -529,9 +536,9 @@ class DegeneratedSliceSourcesFactory(object):
         @property
         def CSD(self):
             parent = self._parent
-            return self.amplitude * ((parent.X == self._x)
-                                     & (parent.Y == self._y)
-                                     & (parent.Z == self._z))
+            return self.amplitude * ((parent._X == self._x)
+                                     & (parent._Y == self._y)
+                                     & (parent._Z == self._z))
 
     @classmethod
     def from_factory(cls, factory, ELECTRODES):
@@ -579,17 +586,13 @@ class DegeneratedSliceSourcesFactory(object):
 
     def save(self, file):
         np.savez_compressed(file,
-                            X=self._X,
-                            Y=self._y,
-                            Z=self._Z,
-                            POTENTIALS=self._POTENTIALS,
-                            ELECTRODES=self._ELECTRODES)
+                            **{attr: getattr(self, attr)
+                               for attr in self.ATTRIBUTES})
 
     @classmethod
     def load(cls, file):
         with np.load(file) as fh:
-            return cls(fh['X'], fh['Y'], fh['Z'], fh['POTENTIALS'], fh['ELECTRODES'])
-
+            return cls(*[fh[attr] for attr in cls.ATTRIBUTES])
 
 
 # TODO:
