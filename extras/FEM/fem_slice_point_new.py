@@ -438,6 +438,14 @@ else:
                          os.path.relpath(config,
                                          _DIRECTORY))
 
+        @property
+        def k(self):
+            return self._fm.getint('fem', 'k')
+
+        @property
+        def solution_name_pattern(self):
+            return self._fm.get('fem', 'solution_name_pattern')
+
         def __iter__(self):
             yield from self._fm.functions()
 
@@ -462,6 +470,127 @@ else:
                                          + np.square(Y - self.y)
                                          + np.square(Z - self.z))
                         + self.potential_correction(X, Y, Z))
+
+
+class DegeneratedSourceBase(object):
+    def __init__(self, potential, csd):
+        self.POTENTIAL = potential
+        self.CSD = csd
+
+    def __mul__(self, other):
+        return DegeneratedSourceBase(self.POTENTIAL * other,
+                                     self.CSD * other)
+
+    def __rmul__(self, other):
+        return self * other
+
+    def __add__(self, other):
+        if other == 0:
+            return self
+
+        return DegeneratedSourceBase(self.POTENTIAL + other.POTENTIAL,
+                                     self.CSD + other.CSD)
+
+    def __radd__(self, other):
+        return self * other
+
+    def __truediv__(self, other):
+        return self * (1. / other)
+
+    def __neg__(self):
+        return self * (-1)
+
+    def __sub__(self, other):
+        return self + (-other)
+
+    def __rsub__(self, other):
+        return self - other
+
+
+class DegeneratedSliceSourcesFactory(object):
+    def __init__(self, x, y, z, potentials):
+        self._x = x
+        self._y = y
+        self._z = z
+        self.X, self.Y, self.Z = np.meshgrid(x, y, z,
+                                             indexing='ij')
+        self._potentials = potentials
+
+    class Source(DegeneratedSourceBase):
+        def __init__(self, parent, x, y, z, potential, amplitude=1):
+            self._parent = parent
+            self._x = x
+            self._y = y
+            self._z = z
+            self.POTENTIAL = potential
+            self.amplitude = amplitude
+
+        @property
+        def CSD(self):
+            parent = self._parent
+            return self.amplitude * ((parent.X == self._x)
+                                     & (parent.Y == self._y)
+                                     & (parent.Z == self._z))
+
+    @classmethod
+    def from_factory(cls, factory, ELECTRODES):
+        z_idx = factory.k
+        n = 2 ** z_idx + 1
+        midpoint = n // 2
+        X = fc.empty_array(n)
+        Y = fc.empty_array(n)
+        Z = fc.empty_array(n)
+        POTENTIALS = fc.empty_array((n, n, n, len(ELECTRODES)))
+
+        for x_idx in range(0, midpoint + 1):
+            for y_idx in range(0, x_idx + 1):
+                for z_idx in range(0, n):
+                    source = factory(factory.solution_name_pattern.format(x=x_idx,
+                                                                          y=y_idx,
+                                                                          z=z_idx))
+                    for x_idx_2, y_idx_2, ELE_X, ELE_Y in ([(x_idx,
+                                                             y_idx,
+                                                             ELECTRODES.X,
+                                                             ELECTRODES.Y)]
+                                                           if x_idx == y_idx
+                                                           else
+                                                           [(x_idx,
+                                                             y_idx,
+                                                             ELECTRODES.X,
+                                                             ELECTRODES.Y),
+                                                            (y_idx,
+                                                             x_idx,
+                                                             ELECTRODES.Y,
+                                                             ELECTRODES.X)]
+                                                           ):
+                        for wx in [1, -1] if x_idx_2 else [0]:
+                            for wy  in [1, -1] if y_idx_2 else [0]:
+                                for i, (x, y, z) in enumerate(zip(ELE_X, ELE_Y, ELECTRODES.Z)):
+                                    POTENTIALS[midpoint + wx * x_idx_2,
+                                               midpoint + wy * x_idx_2,
+                                    z_idx,
+                                    i] = source.potential(x * wx, y * wy, z)
+
+                    Z[z_idx] = source.z
+            X[midpoint + x_idx] = source.x
+            X[midpoint - x_idx] = -source.x
+            Y[midpoint + x_idx] = source.x
+            Y[midpoint - x_idx] = -source.x
+
+        return cls(X, Y, Z, POTENTIALS)
+
+    def save(self, file):
+        np.savez_compressed(file,
+                            X=self._x,
+                            Y=self._y,
+                            Z=self._z,
+                            POTENTIALS=self._potentials)
+
+    @classmethod
+    def load(cls, file):
+        with np.load(file) as fh:
+            return cls(fh['X'], fh['Y'], fh['Z'], fh['POTENTIALS'])
+
 
 
 # TODO:
