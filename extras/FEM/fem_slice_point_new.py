@@ -601,7 +601,7 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
                             for wy in [1, -1] if y_idx_2 else [0]:
                                 for i, (x, y, z) in enumerate(zip(ELE_X, ELE_Y, ELE_Z)):
                                     POTENTIALS[midpoint + wx * x_idx_2,
-                                               midpoint + wy * x_idx_2,
+                                               midpoint + wy * y_idx_2,
                                                z_idx,
                                                i] = source.potential(x * wx,
                                                                      y * wy,
