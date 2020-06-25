@@ -575,8 +575,7 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
     def from_factory(cls, factory, ELECTRODES):
         ele_z_idx = 2
         ELE_Z = ELECTRODES[:, ele_z_idx]
-        z_idx = factory.k
-        n = 2 ** z_idx + 1
+        n = 2 ** factory.k + 1
         midpoint = n // 2
         X = fc.empty_array(n)
         Y = fc.empty_array(n)
