@@ -27,6 +27,7 @@ import logging
 import os
 
 import numpy as np
+from scipy.interpolate import RegularGridInterpolator
 
 from kesi._verbose import VerboseFFR
 
@@ -690,6 +691,25 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
                     POTENTIAL += point_density * self.POTENTIALS[x_idx, y_idx, z_idx]
 
         return DegeneratedSourceBase(POTENTIAL, CSD)
+
+    class InterpolatedSource(DegeneratedSourceBase):
+        def __init__(self, POTENTIAL, CSD, X, Y, Z):
+            super(DegeneratedSliceSourcesFactory.InterpolatedSource,
+                  self).__init__(POTENTIAL, CSD)
+            self._interpolator = RegularGridInterpolator((X, Y, Z),
+                                                         CSD,
+                                                         bounds_error=False)
+
+        def csd(self, X, Y, Z):
+            return self._interpolator(np.stack((X, Y, Z),
+                                               axis=-1))
+
+    def add_csd_interpolator(self, source):
+        return self.InterpolatedSource(source.POTENTIAL,
+                                       source.CSD,
+                                       self.X,
+                                       self.Y,
+                                       self.Z)
 
 
 # TODO:
