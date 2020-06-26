@@ -582,37 +582,51 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
         Z = fc.empty_array(n)
         POTENTIALS = fc.empty_array((n, n, n, len(ELECTRODES)))
 
-        for x_idx in range(0, midpoint + 1):
-            for y_idx in range(0, x_idx + 1):
-                for z_idx in range(0, n):
-                    source = factory(factory.solution_name_pattern.format(x=x_idx,
-                                                                          y=y_idx,
-                                                                          z=z_idx))
-                    for ele_x_idx, (x_idx_2, y_idx_2) in enumerate([(x_idx, y_idx)]
-                                                                   if x_idx == y_idx
-                                                                   else
-                                                                   [(x_idx, y_idx),
-                                                                    (y_idx, x_idx)]):
-                        ele_y_idx = 1 - ele_x_idx
-                        ELE_X = ELECTRODES[:, ele_x_idx]
-                        ELE_Y = ELECTRODES[:, ele_y_idx]
-                        for wx in [1, -1] if x_idx_2 else [0]:
-                            for wy in [1, -1] if y_idx_2 else [0]:
-                                for i, (x, y, z) in enumerate(zip(ELE_X, ELE_Y, ELE_Z)):
-                                    POTENTIALS[midpoint + wx * x_idx_2,
-                                               midpoint + wy * y_idx_2,
-                                               z_idx,
-                                               i] = source.potential(x * wx,
-                                                                     y * wy,
-                                                                     z)
+        for x_idx, y_idx, z_idx in cls._compressed_indices(factory.k):
+            source = factory(factory.solution_name_pattern.format(x=x_idx,
+                                                                  y=y_idx,
+                                                                  z=z_idx))
+            for x_idx_2, y_idx_2 in cls._decompressed_indices(x_idx, y_idx):
+                wx, wy = np.sign([x_idx_2, y_idx_2])
+                ele_x_idx = int(abs(x_idx_2) < abs(y_idx_2))
+                ele_y_idx = 1 - ele_x_idx
+                ELE_X = ELECTRODES[:, ele_x_idx]
+                ELE_Y = ELECTRODES[:, ele_y_idx]
+                for i, (x, y, z) in enumerate(zip(ELE_X, ELE_Y, ELE_Z)):
+                    POTENTIALS[midpoint + x_idx_2,
+                               midpoint + y_idx_2,
+                               z_idx,
+                               i] = source.potential(x * wx,
+                                                     y * wy,
+                                                     z)
 
-                    Z[z_idx] = source.z
+            Z[z_idx] = source.z
             X[midpoint + x_idx] = source.x
             X[midpoint - x_idx] = -source.x
             Y[midpoint + x_idx] = source.x
             Y[midpoint - x_idx] = -source.x
 
         return cls(X, Y, Z, POTENTIALS, ELECTRODES)
+
+    @classmethod
+    def _compressed_indices(cls, k):
+        n = 2 ** k + 1
+        midpoint = n // 2
+        for x in range(0, midpoint + 1):
+            for y in range(0, x + 1):
+                for z in range(0, n):
+                    yield x, y, z
+
+    @classmethod
+    def _decompressed_indices(cls, x_idx, y_idx):
+        for x_idx_2, y_idx_2 in ([(x_idx, y_idx)]
+                                  if x_idx == y_idx
+                                  else
+                                  [(x_idx, y_idx),
+                                   (y_idx, x_idx)]):
+            for wx in [1, -1] if x_idx_2 else [0]:
+                for wy in [1, -1] if y_idx_2 else [0]:
+                    yield wx * x_idx_2, wy * y_idx_2
 
 
 # TODO:
