@@ -573,6 +573,34 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
                                      & (parent._Y == self._y)
                                      & (parent._Z == self._z))
 
+    class MemorySavySource(object):
+        __slots__ = ('_parent', '_idx_x', '_idx_y', '_idx_z')
+
+        def __init__(self, parent, x, y, z):
+            self._parent = parent
+            self._idx_x = x
+            self._idx_y = y
+            self._idx_z = z
+
+        @property
+        def x(self):
+            return self._parent.X[self._idx_x]
+
+        @property
+        def y(self):
+            return self._parent.Y[self._idx_y]
+
+        @property
+        def z(self):
+            return self._parent.Z[self._idx_z]
+
+        @property
+        def POTENTIAL(self):
+            return self._parent.POTRNTIALS[self._idx_x,
+                                           self._idx_y,
+                                           self._idx_z,
+                                           :]
+
     @classmethod
     def from_factory(cls, factory, ELECTRODES):
         ele_z_idx = 2
