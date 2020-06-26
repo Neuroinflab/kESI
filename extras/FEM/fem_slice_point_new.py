@@ -628,6 +628,12 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
                 for wy in [1, -1] if y_idx_2 else [0]:
                     yield wx * x_idx_2, wy * y_idx_2
 
+    def __iter__(self):
+        for x_idx, x in enumerate(self.X):
+            for y_idx, y in enumerate(self.Y):
+                for z, POTENTIAL in zip(self.Z, self.POTENTIALS[x_idx, y_idx]):
+                    yield self.Source(self, x, y, z, POTENTIAL)
+
 
 # TODO:
 # Create Romberg Function manager/controler and Romberg function factory.
