@@ -677,6 +677,20 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
     def measurement_manager(self):
         return self._MeasurementManager(self)
 
+    def integrated_source(self, csd):
+        POTENTIAL = 0.0
+        CSD = fc.empty_array((len(self.X),
+                              len(self.Y),
+                              len(self.Z)))
+        for x_idx, x in enumerate(self.X):
+            for y_idx, y in enumerate(self.Y):
+                for z_idx, z in enumerate(self.Z):
+                    point_density = csd(x, y, z)
+                    CSD[x_idx, y_idx, z_idx] = point_density
+                    POTENTIAL += point_density * self.POTENTIALS[x_idx, y_idx, z_idx]
+
+        return DegeneratedSourceBase(POTENTIAL, CSD)
+
 
 # TODO:
 # Create Romberg Function manager/controler and Romberg function factory.
