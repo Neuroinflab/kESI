@@ -574,6 +574,9 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
                                      & (parent._Y == self._y)
                                      & (parent._Z == self._z))
 
+        def csd(self):
+            return self.CSD
+
     class MemorySavySource(object):
         __slots__ = ('_parent', '_idx_x', '_idx_y', '_idx_z')
 
