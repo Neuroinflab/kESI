@@ -28,6 +28,8 @@ import os
 
 import numpy as np
 
+from kesi._verbose import VerboseFFR
+
 try:
     from . import _fem_common as fc
     # When run as script raises:
@@ -633,6 +635,19 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
             for y_idx, y in enumerate(self.Y):
                 for z, POTENTIAL in zip(self.Z, self.POTENTIALS[x_idx, y_idx]):
                     yield self.Source(self, x, y, z, POTENTIAL)
+
+    class _MeasurementManager(VerboseFFR.MeasurementManagerBase):
+        def __init__(self, factory):
+            self.number_of_measurements = factory.ELECTRODES.shape[0]
+
+        def probe_at_single_point(self, field, electrode):
+            return field.POTENTIAL[electrode]
+
+        def probe(self, field):
+            return field.POTENTIAL
+
+    def measurement_manager(self):
+        return self._MeasurementManager(self)
 
 
 # TODO:
