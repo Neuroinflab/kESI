@@ -694,7 +694,14 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
                     CSD[x_idx, y_idx, z_idx] = point_density
                     POTENTIAL += point_density * self.POTENTIALS[x_idx, y_idx, z_idx]
 
-        return DegeneratedSourceBase(POTENTIAL, CSD)
+        return DegeneratedSourceBase((POTENTIAL
+                                      * self._d(self.X)
+                                      * self._d(self.Y)
+                                      * self._d(self.Z)),
+                                     CSD)
+
+    def _d(self, X):
+        return (X.max() - X.min()) / (len(X) - 1)
 
     class InterpolatedSource(DegeneratedSourceBase):
         def __init__(self, POTENTIAL, CSD, X, Y, Z):
