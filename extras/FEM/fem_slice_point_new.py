@@ -25,9 +25,11 @@
 import configparser
 import logging
 import os
+import itertools
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
+from scipy.integrate import romb
 
 from kesi._verbose import VerboseFFR
 
@@ -691,20 +693,33 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
         CSD = fc.empty_array((len(self.X),
                               len(self.Y),
                               len(self.Z)))
-        for x_idx, x in enumerate(self.X):
-            for y_idx, y in enumerate(self.Y):
-                for z_idx, z in enumerate(self.Z):
-                    point_density = csd(x, y, z)
-                    CSD[x_idx, y_idx, z_idx] = point_density
-                    POTENTIAL += point_density * self.POTENTIALS[x_idx, y_idx, z_idx]
 
-        return DegeneratedSourceBase((POTENTIAL
-                                      * self._d(self.X)
-                                      * self._d(self.Y)
-                                      * self._d(self.Z)),
-                                     CSD)
+        for point in itertools.product(*map(self._integration_index_weight_coord,
+                                            [self.X, self.Y, self.Z])):
+            indices, weights, coords = zip(*point)
+            point_density = csd(*coords)
+            CSD[indices] = point_density
+            POTENTIAL += np.product(weights) * point_density * self.POTENTIALS[indices]
 
-    def _d(self, X):
+        return DegeneratedSourceBase(POTENTIAL, CSD)
+
+    @classmethod
+    def _integration_index_weight_coord(cls, X):
+        return list(zip(itertools.count(),
+                        cls._integration_weights(X),
+                        X))
+
+    @sclassmethod
+    def _integration_weights(cls, X):
+        dx = cls._d(X)
+        n = len(X)
+        if 2 ** int(np.log2(n - 1)) == n - 1:
+            return romb(np.eye(1), dx=dx)
+
+        return np.full(n, dx)
+
+    @staticmethod
+    def _d(X):
         return (X.max() - X.min()) / (len(X) - 1)
 
     class InterpolatedSource(DegeneratedSourceBase):
