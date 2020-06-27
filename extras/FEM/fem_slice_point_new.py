@@ -606,7 +606,7 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
                                            :]
 
     @classmethod
-    def from_factory(cls, factory, ELECTRODES):
+    def from_factory(cls, factory, ELECTRODES, dtype=None):
         ele_z_idx = 2
         ELE_Z = ELECTRODES[:, ele_z_idx]
         n = 2 ** factory.k + 1
@@ -614,7 +614,8 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
         X = fc.empty_array(n)
         Y = fc.empty_array(n)
         Z = fc.empty_array(n)
-        POTENTIALS = fc.empty_array((n, n, n, len(ELECTRODES)))
+        POTENTIALS = fc.empty_array((n, n, n, len(ELECTRODES)),
+                                    dtype=dtype)
 
         for x_idx, y_idx, z_idx in cls._compressed_indices(factory.k):
             source = factory(factory.solution_name_pattern.format(x=x_idx,
