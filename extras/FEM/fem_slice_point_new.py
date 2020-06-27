@@ -625,15 +625,19 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
                 wx, wy = np.sign([x_idx_2, y_idx_2])
                 ele_x_idx = int(abs(x_idx_2) < abs(y_idx_2))
                 ele_y_idx = 1 - ele_x_idx
-                ELE_X = ELECTRODES[:, ele_x_idx]
-                ELE_Y = ELECTRODES[:, ele_y_idx]
-                for i, (x, y, z) in enumerate(zip(ELE_X, ELE_Y, ELE_Z)):
+                ELE_X = wx * ELECTRODES[:, ele_x_idx]
+                ELE_Y = wy * ELECTRODES[:, ele_y_idx]
+                try:
                     POTENTIALS[midpoint + x_idx_2,
                                midpoint + y_idx_2,
                                z_idx,
-                               i] = source.potential(x * wx,
-                                                     y * wy,
-                                                     z)
+                               :] = source.potential(ELE_X, ELE_Y, ELE_Z)
+                except:
+                    for i, (x, y, z) in enumerate(zip(ELE_X, ELE_Y, ELE_Z)):
+                        POTENTIALS[midpoint + x_idx_2,
+                                   midpoint + y_idx_2,
+                                   z_idx,
+                                   i] = source.potential(x, y, z)
 
             Z[z_idx] = source.z
             X[midpoint + x_idx] = source.x
