@@ -709,7 +709,7 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
                         cls._integration_weights(X),
                         X))
 
-    @sclassmethod
+    @classmethod
     def _integration_weights(cls, X):
         dx = cls._d(X)
         n = len(X)
