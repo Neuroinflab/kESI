@@ -14,6 +14,14 @@ from FEM.fem_sphere_gaussian import (SomeSphereGaussianSourceFactory3D,
                                      SomeSphereGaussianSourceFactoryOnlyCSD)
 from _common_new import altitude_azimuth_mesh
 
+try:
+    from joblib import Parallel, delayed
+    import multiprocessing
+    NUM_CORES = multiprocessing.cpu_count() - 1
+    PARALLEL_AVAILABLE = True
+except ImportError:
+    PARALLEL_AVAILABLE = False
+
 MeasurementManagerBase = VerboseFFR.MeasurementManagerBase
 
 
@@ -228,10 +236,11 @@ def suggest_lambda(kernel):
     -------
     Lambdas : list
     """
-    u, s, v = np.linalg.eigh(kernel)
-    print('min lambda', 10**np.round(np.log10(s[-1]), decimals=0))
+    s, v = np.linalg.eigh(kernel)
+    print(s)
+    print('min lambda', 10**np.round(np.log10(s[0]), decimals=0))
     print('max lambda', str.format('{0:.4f}', np.std(np.diag(kernel))))
-    return np.logspace(np.log10(s[-1]), np.log10(np.std(np.diag(kernel))), 20)
+    return np.logspace(np.log10(s[0]), np.log10(np.std(np.diag(kernel))), 20)
 
 
 def L_curve(kernel, potential, lambdas=None, n_jobs=1):

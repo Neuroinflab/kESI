@@ -7,6 +7,7 @@ from matplotlib import gridspec
 import itertools
 import time
 import sys
+import validation_functions as vf
 from mpl_toolkits.mplot3d import Axes3D
 
 sys.path.append('..')
@@ -97,7 +98,7 @@ def generate_subplot(X, Y, Z, true_csd, est_csd1, type1, est_csd2, type2, IDX, l
     title = 'Est csd ' + str(type1)
     make_subplot(ax, EST_CSD1, 'csd', X, Y, Z, csd_max, idx=layer, fig_title=title)
     
-    error1 = calculate_point_error(true_csd[src_nr], est_csd1[src_nr])
+    error1 = vf.calculate_point_error(true_csd[src_nr], est_csd1[src_nr])
     ERROR1 = values_in_a_grid(X, error1, IDX)
     ax = plt.subplot(gs[1, 1])
     title = 'Error ' + str(type1)
@@ -115,7 +116,7 @@ def generate_subplot(X, Y, Z, true_csd, est_csd1, type1, est_csd2, type2, IDX, l
     title = 'Est csd ' + str(type2)
     make_subplot(ax, EST_CSD2, 'csd', X, Y, Z, csd_max, idx=layer, fig_title=title, colorbar=True, cax=cax)
     
-    error2 = calculate_point_error(true_csd[src_nr], est_csd2[src_nr])
+    error2 = vf.calculate_point_error(true_csd[src_nr], est_csd2[src_nr])
     ERROR2 = values_in_a_grid(X, error2, IDX)
     ax = plt.subplot(gs[2, 1])
     cax = plt.subplot(gs[3, 1])
@@ -130,17 +131,17 @@ def generate_subplot(X, Y, Z, true_csd, est_csd1, type1, est_csd2, type2, IDX, l
     make_subplot(ax, DIFF2, 'csd', X, Y, Z, csd_max, idx=layer, fig_title=title, colorbar=True, cax=cax)
     fig_title = fig_title + ' validation ' + type1 + type2 + ' src_nr ' + str(src_nr)
     print(fig_title)
-    plt.savefig(path + '/' + str(fig_title) +'.png', dpi=300)
+    plt.savefig(save_path + '/' + str(fig_title) +'.png', dpi=300)
 
 
 def generate_reliability_maps(X, Y, Z, true_csd, est_csd, IDX, layer, fig_title, path):
     fig = plt.figure(figsize=(17, 6))
     gs = gridspec.GridSpec(2, 3, height_ratios=[1., 0.04], width_ratios=[1]*3)
-    error_kCSD_pts = np.array([calculate_point_error(t_csd, e_csd) for t_csd, e_csd in zip(true_csd, est_csd)])
+    error_kCSD_pts = np.array([vf.calculate_point_error(t_csd, e_csd) for t_csd, e_csd in zip(true_csd, est_csd)])
     error_kCSD = np.mean(error_kCSD_pts, axis=0)
-    error_rdm_pts = np.array([calculate_rdm_point(t_csd, e_csd) for t_csd, e_csd in zip(true_csd, est_csd)])
+    error_rdm_pts = np.array([vf.calculate_rdm_point(t_csd, e_csd) for t_csd, e_csd in zip(true_csd, est_csd)])
     error_rdm = np.mean(error_rdm_pts, axis=0)
-    error_mag_pts = np.array([calculate_mag_point(t_csd, e_csd) for t_csd, e_csd in zip(true_csd, est_csd)])
+    error_mag_pts = np.array([vf.calculate_mag_point(t_csd, e_csd) for t_csd, e_csd in zip(true_csd, est_csd)])
     error_mag = np.mean(error_mag_pts, axis=0)
     err_max = np.max(np.array([np.max(error_kCSD), np.max(error_rdm), np.max(error_mag)]))
     
