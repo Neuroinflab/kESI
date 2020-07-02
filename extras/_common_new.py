@@ -33,6 +33,23 @@ from scipy.special import erf, lpmv
 logger = logging.getLogger(__name__)
 
 
+class Gauss3D(object):
+    __slots__ = ('x', 'y', 'z', 'standard_deviation', '_variance', '_a')
+
+    def __init__(self, x, y, z, standard_deviation):
+        self.x = x
+        self.y = y
+        self.z = z
+        self.standard_deviation = standard_deviation
+        self._variance = standard_deviation ** 2
+        self._a = (2 * np.pi * self._variance) ** -1.5
+
+    def __call__(self, X, Y, Z):
+        return self._a * np.exp(-0.5 * (np.square(X - self.x)
+                                        + np.square(Y - self.y)
+                                        + np.square(Z - self.z)) / self._variance)
+
+
 class SourceBase(object):
     def __init__(self, x, y, z):
         self.x = x
@@ -449,3 +466,18 @@ if __name__ == '__main__':
     dipole = newFourSM([7.437628862425826, 1.9929066472894097, -1.3662702569423635e-15],
                        [0.0, 0.0, -1.0])
     assert not np.isnan(dipole(7.211087502867844, 5.368455739408048, -1.3246552843137878e-15))
+
+
+    import scipy.stats as ss
+    np.random.seed(42)
+    for standard_deviation in [0.1, 1, 10]:
+        for MEAN in np.random.normal(size=(100, 3)):
+            X = np.random.normal(size=(100, 3))
+            EXPECTED = ss.multivariate_normal.pdf(X,
+                                                  mean=MEAN,
+                                                  cov=np.diag(np.full(3,
+                                                                      standard_deviation**2)))
+            gauss_function = Gauss3D(MEAN[0], MEAN[1], MEAN[2], standard_deviation)
+            OBSERVED = gauss_function(*X.T)
+            max_error = abs(EXPECTED - OBSERVED).max()
+            assert max_error < 150 * np.finfo(float).eps
