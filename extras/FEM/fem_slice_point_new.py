@@ -478,13 +478,14 @@ else:
 
 
 class DegeneratedSourceBase(object):
-    def __init__(self, potential, csd):
+    __slots__ = ('POTENTIAL',)
+
+    def __init__(self, potential):
         self.POTENTIAL = potential
-        self.CSD = csd
 
     def __mul__(self, other):
-        return DegeneratedSourceBase(self.POTENTIAL * other,
-                                     self.CSD * other)
+        return DegeneratedSource(self.POTENTIAL * other,
+                                 self.CSD * other)
 
     def __rmul__(self, other):
         return self * other
@@ -493,8 +494,8 @@ class DegeneratedSourceBase(object):
         if other == 0:
             return self
 
-        return DegeneratedSourceBase(self.POTENTIAL + other.POTENTIAL,
-                                     self.CSD + other.CSD)
+        return DegeneratedSource(self.POTENTIAL + other.POTENTIAL,
+                                 self.CSD + other.CSD)
 
     def __radd__(self, other):
         return self * other
@@ -510,6 +511,15 @@ class DegeneratedSourceBase(object):
 
     def __rsub__(self, other):
         return self - other
+
+
+class DegeneratedSource(DegeneratedSourceBase):
+    __slots__ = ('CSD',)
+
+    def __init__(self, potential, csd):
+        super(DegeneratedSource,
+              self).__init__(potential)
+        self.CSD = csd
 
 
 class _LoadableObjectBase(object):
@@ -607,6 +617,21 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
                                            self._idx_z,
                                            :]
 
+    class IntegratedSource(DegeneratedSourceBase):
+        __slots__ = ('_parent', 'csd')
+
+        def __init__(self, parent, potential, csd):
+            super(DegeneratedSliceSourcesFactory.IntegratedSource,
+                  self).__init__(potential)
+            self._parent = parent
+            self.csd = csd
+
+        @property
+        def CSD(self):
+            return self.csd(self._parent._X,
+                            self._parent._Y,
+                            self._parent._Z)
+
     @classmethod
     def from_factory(cls, factory, ELECTRODES, dtype=None):
         ele_z_idx = 2
@@ -690,18 +715,14 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
 
     def integrated_source(self, csd):
         POTENTIAL = 0.0
-        CSD = fc.empty_array((len(self.X),
-                              len(self.Y),
-                              len(self.Z)))
 
         for point in itertools.product(*map(self._integration_index_weight_coord,
                                             [self.X, self.Y, self.Z])):
             indices, weights, coords = zip(*point)
             point_density = csd(*coords)
-            CSD[indices] = point_density
             POTENTIAL += np.product(weights) * point_density * self.POTENTIALS[indices]
 
-        return DegeneratedSourceBase(POTENTIAL, CSD)
+        return self.IntegratedSource(self, POTENTIAL, csd)
 
     @classmethod
     def _integration_index_weight_coord(cls, X):
@@ -722,7 +743,7 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
     def _d(X):
         return (X.max() - X.min()) / (len(X) - 1)
 
-    class InterpolatedSource(DegeneratedSourceBase):
+    class InterpolatedSource(DegeneratedSource):
         def __init__(self, POTENTIAL, CSD, X, Y, Z):
             super(DegeneratedSliceSourcesFactory.InterpolatedSource,
                   self).__init__(POTENTIAL, CSD)
