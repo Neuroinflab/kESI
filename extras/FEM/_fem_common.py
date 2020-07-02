@@ -225,8 +225,8 @@ else:
                                self.EXTERNAL_SURFACE)
 
 
-def empty_array(shape):
-    A = np.empty(shape)
+def empty_array(shape, dtype=None):
+    A = np.empty(shape, dtype)
     A.fill(np.nan)
     return A
 

@@ -25,8 +25,13 @@
 import configparser
 import logging
 import os
+import itertools
 
 import numpy as np
+from scipy.interpolate import RegularGridInterpolator
+from scipy.integrate import romb
+
+from kesi._verbose import VerboseFFR
 
 try:
     from . import _fem_common as fc
@@ -283,185 +288,458 @@ else:
 #         return function
 
 
-class FunctionManager(object):
-    function_name = 'potential'
+    class FunctionManager(object):
+        function_name = 'potential'
 
-    def __init__(self, mesh, degree=None, element_type='CG'):
-        self._mesh_filename = mesh
-        self._degree = degree
-        self.element_type = element_type
+        def __init__(self, mesh, degree=None, element_type='CG'):
+            self._mesh_filename = mesh
+            self._degree = degree
+            self.element_type = element_type
 
-    @property
-    def degree(self):
-        return self._degree
+        @property
+        def degree(self):
+            return self._degree
 
-    @degree.setter
-    def degree(self, value):
-        self._set_degree(value)
+        @degree.setter
+        def degree(self, value):
+            self._set_degree(value)
 
-    def _set_degree(self, value):
-        if self._degree != value:
-            self._degree = value
-            self._delete_function_space()
+        def _set_degree(self, value):
+            if self._degree != value:
+                self._degree = value
+                self._delete_function_space()
 
-    def _delete_function_space(self):
-        try:
-            del self._function_space
-        except AttributeError:
-            pass
+        def _delete_function_space(self):
+            try:
+                del self._function_space
+            except AttributeError:
+                pass
 
-    @property
-    def mesh(self):
-        try:
-            return self._mesh
+        @property
+        def mesh(self):
+            try:
+                return self._mesh
 
-        except AttributeError:
-            self._load_mesh()
-            return self._mesh
+            except AttributeError:
+                self._load_mesh()
+                return self._mesh
 
-    def _load_mesh(self):
-        with XDMFFile(self._mesh_filename) as fh:
-            self._mesh = Mesh()
-            fh.read(self._mesh)
+        def _load_mesh(self):
+            with XDMFFile(self._mesh_filename) as fh:
+                self._mesh = Mesh()
+                fh.read(self._mesh)
 
-    @property
-    def function_space(self):
-        try:
-            return self._function_space
+        @property
+        def function_space(self):
+            try:
+                return self._function_space
 
-        except AttributeError:
-            self._create_function_space()
-            return self._function_space
+            except AttributeError:
+                self._create_function_space()
+                return self._function_space
 
-    def _create_function_space(self):
-        logger.debug('Creating function space...')
-        self._function_space = FunctionSpace(self.mesh, self.element_type, self._degree)
-        logger.debug('Done.')
+        def _create_function_space(self):
+            logger.debug('Creating function space...')
+            self._function_space = FunctionSpace(self.mesh, self.element_type, self._degree)
+            logger.debug('Done.')
 
-    def store(self, filename, function):
-        with HDF5File(MPI.comm_self, filename, 'w') as fh:
-            fh.write(function, self.function_name)
+        def store(self, filename, function):
+            with HDF5File(MPI.comm_self, filename, 'w') as fh:
+                fh.write(function, self.function_name)
 
-    def load(self, filename):
-        function = self.function()
-        with HDF5File(MPI.comm_self, filename, 'r') as fh:
-            fh.read(function, self.function_name)
+        def load(self, filename):
+            function = self.function()
+            with HDF5File(MPI.comm_self, filename, 'r') as fh:
+                fh.read(function, self.function_name)
 
-        return function
+            return function
 
-    def function(self):
-        return Function(self.function_space)
+        def function(self):
+            return Function(self.function_space)
 
-    def test_function(self):
-        return TestFunction(self.function_space)
+        def test_function(self):
+            return TestFunction(self.function_space)
 
-    def trial_function(self):
-        return TrialFunction(self.function_space)
-
-
-class FunctionManagerINI(FunctionManager):
-    def __init__(self, config):
-        self._load_config(config)
-        super(FunctionManagerINI,
-              self).__init__(self.getpath('fem', 'mesh'),
-                             self.getint('fem', 'degree'),
-                             self.get('fem', 'element_type'))
-
-    def getpath(self, section, field):
-        return self._absolute_path(self.get(section, field))
-
-    def _absolute_path(self, relative_path):
-        return os.path.join(_DIRECTORY,
-                            relative_path)
-
-    def _load_config(self, config):
-        self.config = configparser.ConfigParser()
-        self.config.read(config)
-
-    def load(self, name):
-        return super(FunctionManagerINI,
-                     self).load(self._function_filename(name))
-
-    def _function_filename(self, name):
-        directory = os.path.dirname(self.getpath('fem',
-                                                 'solution_metadata_filename'))
-        return os.path.join(directory,
-                            self.get(name,
-                                     'filename'))
-
-    def get(self, section, field):
-        return self.config.get(section, field)
-
-    def getint(self, section, field):
-        return self.config.getint(section, field)
-
-    def getfloat(self, section, field):
-        return self.config.getfloat(section, field)
-
-    def set(self, section, field, value):
-        value = value if isinstance(value, str) else repr(value)
-
-        try:
-            return self.config.set(section, field, value)
-
-        except configparser.NoSectionError:
-            self.config.add_section(section)
-            return self.config.set(section, field, value)
-
-    def store(self, name, function, metadata):
-        for key, value in metadata.items():
-            self.set(name, key, value)
-
-        return super(FunctionManagerINI,
-                     self).store(self._function_filename(name),
-                                 function)
-
-    def write(self, filename):
-        self.config.write(open(filename, 'w'))
-
-    def functions(self):
-        for section in self.config.sections():
-            if section != 'fem':
-                yield section
-
-    def _set_degree(self, value):
-        self.set('fem', 'degree', value)
-
-    def has_solution(self, name):
-        return self.config.has_section(name)
+        def trial_function(self):
+            return TrialFunction(self.function_space)
 
 
-class PointSourceFactoryINI(object):
-    def __init__(self, config):
-        self._fm = FunctionManagerINI(config)
-        self._fm.set('fem', 'solution_metadata_filename',
-                     os.path.relpath(config,
-                                     _DIRECTORY))
+    class FunctionManagerINI(FunctionManager):
+        def __init__(self, config):
+            self._load_config(config)
+            super(FunctionManagerINI,
+                  self).__init__(self.getpath('fem', 'mesh'),
+                                 self.getint('fem', 'degree'),
+                                 self.get('fem', 'element_type'))
 
-    def sources(self):
-        yield from self._fm.functions()
+        def getpath(self, section, field):
+            return self._absolute_path(self.get(section, field))
 
-    def __call__(self, name):
-        return self.Source(self._fm.getfloat(name, 'x'),
-                           self._fm.getfloat(name, 'y'),
-                           self._fm.getfloat(name, 'z'),
-                           conductivity=self._fm.getfloat(name, 'base_conductivity'),
-                           potential_correction=self._fm.load(name))
+        def _absolute_path(self, relative_path):
+            return os.path.join(_DIRECTORY,
+                                relative_path)
 
-    class Source(object):  # duplicates code from _common_new.PointSource
-        def __init__(self, x, y, z, conductivity=1, amplitude=1, potential_correction=None):
-            self.x = x
-            self.y = y
-            self.z = z
-            self.conductivity = conductivity
-            self.potential_correction = potential_correction
-            self.a = amplitude * 0.25 / (np.pi * conductivity)
+        def _load_config(self, config):
+            self.config = configparser.ConfigParser()
+            self.config.read(config)
 
-        def potential(self, X, Y, Z):
-            return (self.a / np.sqrt(np.square(X - self.x)
-                                     + np.square(Y - self.y)
-                                     + np.square(Z - self.z))
-                    + self.potential_correction(X, Y, Z))
+        def load(self, name):
+            return super(FunctionManagerINI,
+                         self).load(self._function_filename(name))
+
+        def _function_filename(self, name):
+            directory = os.path.dirname(self.getpath('fem',
+                                                     'solution_metadata_filename'))
+            return os.path.join(directory,
+                                self.get(name,
+                                         'filename'))
+
+        def get(self, section, field):
+            return self.config.get(section, field)
+
+        def getint(self, section, field):
+            return self.config.getint(section, field)
+
+        def getfloat(self, section, field):
+            return self.config.getfloat(section, field)
+
+        def set(self, section, field, value):
+            value = value if isinstance(value, str) else repr(value)
+
+            try:
+                return self.config.set(section, field, value)
+
+            except configparser.NoSectionError:
+                self.config.add_section(section)
+                return self.config.set(section, field, value)
+
+        def store(self, name, function, metadata):
+            for key, value in metadata.items():
+                self.set(name, key, value)
+
+            return super(FunctionManagerINI,
+                         self).store(self._function_filename(name),
+                                     function)
+
+        def write(self, filename):
+            self.config.write(open(filename, 'w'))
+
+        def functions(self):
+            for section in self.config.sections():
+                if section != 'fem':
+                    yield section
+
+        def _set_degree(self, value):
+            self.set('fem', 'degree', value)
+
+        def has_solution(self, name):
+            return self.config.has_section(name)
+
+
+    class PointSourceFactoryINI(object):
+        def __init__(self, config):
+            self._fm = FunctionManagerINI(config)
+            self._fm.set('fem', 'solution_metadata_filename',
+                         os.path.relpath(config,
+                                         _DIRECTORY))
+
+        @property
+        def k(self):
+            return self._fm.getint('fem', 'k')
+
+        @property
+        def solution_name_pattern(self):
+            return self._fm.get('fem', 'solution_name_pattern')
+
+        def __iter__(self):
+            yield from self._fm.functions()
+
+        def __call__(self, name):
+            return self.Source(self._fm.getfloat(name, 'x'),
+                               self._fm.getfloat(name, 'y'),
+                               self._fm.getfloat(name, 'z'),
+                               conductivity=self._fm.getfloat(name, 'base_conductivity'),
+                               potential_correction=self._fm.load(name))
+
+        class Source(object):  # duplicates code from _common_new.PointSource
+            def __init__(self, x, y, z, conductivity=1, amplitude=1, potential_correction=None):
+                self.x = x
+                self.y = y
+                self.z = z
+                self.conductivity = conductivity
+                self.potential_correction = potential_correction
+                self.a = amplitude * 0.25 / (np.pi * conductivity)
+
+            def potential(self, X, Y, Z):
+                return (self.a / np.sqrt(np.square(X - self.x)
+                                         + np.square(Y - self.y)
+                                         + np.square(Z - self.z))
+                        + self.potential_correction(X, Y, Z))
+
+
+class DegeneratedSourceBase(object):
+    def __init__(self, potential, csd):
+        self.POTENTIAL = potential
+        self.CSD = csd
+
+    def __mul__(self, other):
+        return DegeneratedSourceBase(self.POTENTIAL * other,
+                                     self.CSD * other)
+
+    def __rmul__(self, other):
+        return self * other
+
+    def __add__(self, other):
+        if other == 0:
+            return self
+
+        return DegeneratedSourceBase(self.POTENTIAL + other.POTENTIAL,
+                                     self.CSD + other.CSD)
+
+    def __radd__(self, other):
+        return self * other
+
+    def __truediv__(self, other):
+        return self * (1. / other)
+
+    def __neg__(self):
+        return self * (-1)
+
+    def __sub__(self, other):
+        return self + (-other)
+
+    def __rsub__(self, other):
+        return self - other
+
+
+class _LoadableObjectBase(object):
+    """
+    Abstract base class for loadable objects.
+
+    Class attributes
+    ----------------
+    _LoadableObject__ATTRIBUTES : list
+        A class attribute to be defined by subclasses to enable
+        the load/save protocol.  The list contains list of attribute
+        names necessary to store complete information about the object
+        in a _*.npz_ file.
+    """
+    def __init__(self, *args, **kwargs):
+        kwargs.update(zip(self._LoadableObject__ATTRIBUTES,
+                          args))
+        for attr, value in kwargs.items():
+            setattr(self, attr, value)
+
+    def save(self, file):
+        np.savez_compressed(file,
+                            **{attr: getattr(self, attr)
+                               for attr in self._LoadableObject__ATTRIBUTES})
+
+    @classmethod
+    def load(cls, file):
+        with np.load(file) as fh:
+            return cls(*[fh[attr] for attr in cls._LoadableObject__ATTRIBUTES])
+
+
+
+class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
+    _LoadableObject__ATTRIBUTES = [
+        'X',
+        'Y',
+        'Z',
+        'POTENTIALS',
+        'ELECTRODES',
+        ]
+
+    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
+        super(DegeneratedSliceSourcesFactory,
+              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES)
+
+        self._X, self._Y, self._Z = np.meshgrid(self.X,
+                                                self.Y,
+                                                self.Z,
+                                                indexing='ij')
+
+    class Source(DegeneratedSourceBase):
+        def __init__(self, parent, x, y, z, potential, amplitude=1):
+            self._parent = parent
+            self._x = x
+            self._y = y
+            self._z = z
+            self.POTENTIAL = potential
+            self.amplitude = amplitude
+
+        @property
+        def CSD(self):
+            parent = self._parent
+            return self.amplitude * ((parent._X == self._x)
+                                     & (parent._Y == self._y)
+                                     & (parent._Z == self._z))
+
+        def csd(self):
+            return self.CSD
+
+    class MemorySavySource(object):
+        __slots__ = ('_parent', '_idx_x', '_idx_y', '_idx_z')
+
+        def __init__(self, parent, x, y, z):
+            self._parent = parent
+            self._idx_x = x
+            self._idx_y = y
+            self._idx_z = z
+
+        @property
+        def x(self):
+            return self._parent.X[self._idx_x]
+
+        @property
+        def y(self):
+            return self._parent.Y[self._idx_y]
+
+        @property
+        def z(self):
+            return self._parent.Z[self._idx_z]
+
+        @property
+        def POTENTIAL(self):
+            return self._parent.POTRNTIALS[self._idx_x,
+                                           self._idx_y,
+                                           self._idx_z,
+                                           :]
+
+    @classmethod
+    def from_factory(cls, factory, ELECTRODES, dtype=None):
+        ele_z_idx = 2
+        ELE_Z = ELECTRODES[:, ele_z_idx]
+        n = 2 ** factory.k + 1
+        midpoint = n // 2
+        X = fc.empty_array(n)
+        Y = fc.empty_array(n)
+        Z = fc.empty_array(n)
+        POTENTIALS = fc.empty_array((n, n, n, len(ELECTRODES)),
+                                    dtype=dtype)
+
+        for x_idx, y_idx, z_idx in cls._compressed_indices(factory.k):
+            source = factory(factory.solution_name_pattern.format(x=x_idx,
+                                                                  y=y_idx,
+                                                                  z=z_idx))
+            for x_idx_2, y_idx_2 in cls._decompressed_indices(x_idx, y_idx):
+                wx, wy = np.sign([x_idx_2, y_idx_2])
+                ele_x_idx = int(abs(x_idx_2) < abs(y_idx_2))
+                ele_y_idx = 1 - ele_x_idx
+                ELE_X = wx * ELECTRODES[:, ele_x_idx]
+                ELE_Y = wy * ELECTRODES[:, ele_y_idx]
+                try:
+                    POTENTIALS[midpoint + x_idx_2,
+                               midpoint + y_idx_2,
+                               z_idx,
+                               :] = source.potential(ELE_X, ELE_Y, ELE_Z)
+                except:
+                    for i, (x, y, z) in enumerate(zip(ELE_X, ELE_Y, ELE_Z)):
+                        POTENTIALS[midpoint + x_idx_2,
+                                   midpoint + y_idx_2,
+                                   z_idx,
+                                   i] = source.potential(x, y, z)
+
+            Z[z_idx] = source.z
+            X[midpoint + x_idx] = source.x
+            X[midpoint - x_idx] = -source.x
+            Y[midpoint + x_idx] = source.x
+            Y[midpoint - x_idx] = -source.x
+
+        return cls(X, Y, Z, POTENTIALS, ELECTRODES)
+
+    @classmethod
+    def _compressed_indices(cls, k):
+        n = 2 ** k + 1
+        midpoint = n // 2
+        for x in range(0, midpoint + 1):
+            for y in range(0, x + 1):
+                for z in range(0, n):
+                    yield x, y, z
+
+    @classmethod
+    def _decompressed_indices(cls, x_idx, y_idx):
+        for x_idx_2, y_idx_2 in ([(x_idx, y_idx)]
+                                  if x_idx == y_idx
+                                  else
+                                  [(x_idx, y_idx),
+                                   (y_idx, x_idx)]):
+            for wx in [1, -1] if x_idx_2 else [0]:
+                for wy in [1, -1] if y_idx_2 else [0]:
+                    yield wx * x_idx_2, wy * y_idx_2
+
+    def __iter__(self):
+        for x_idx, x in enumerate(self.X):
+            for y_idx, y in enumerate(self.Y):
+                for z, POTENTIAL in zip(self.Z, self.POTENTIALS[x_idx, y_idx]):
+                    yield self.Source(self, x, y, z, POTENTIAL)
+
+    class _MeasurementManager(VerboseFFR.MeasurementManagerBase):
+        def __init__(self, factory):
+            self.number_of_measurements = factory.ELECTRODES.shape[0]
+
+        def probe_at_single_point(self, field, electrode):
+            return field.POTENTIAL[electrode]
+
+        def probe(self, field):
+            return field.POTENTIAL
+
+    def measurement_manager(self):
+        return self._MeasurementManager(self)
+
+    def integrated_source(self, csd):
+        POTENTIAL = 0.0
+        CSD = fc.empty_array((len(self.X),
+                              len(self.Y),
+                              len(self.Z)))
+
+        for point in itertools.product(*map(self._integration_index_weight_coord,
+                                            [self.X, self.Y, self.Z])):
+            indices, weights, coords = zip(*point)
+            point_density = csd(*coords)
+            CSD[indices] = point_density
+            POTENTIAL += np.product(weights) * point_density * self.POTENTIALS[indices]
+
+        return DegeneratedSourceBase(POTENTIAL, CSD)
+
+    @classmethod
+    def _integration_index_weight_coord(cls, X):
+        return list(zip(itertools.count(),
+                        cls._integration_weights(X),
+                        X))
+
+    @classmethod
+    def _integration_weights(cls, X):
+        dx = cls._d(X)
+        n = len(X)
+        if 2 ** int(np.log2(n - 1)) == n - 1:
+            return romb(np.eye(n), dx=dx)
+
+        return np.full(n, dx)
+
+    @staticmethod
+    def _d(X):
+        return (X.max() - X.min()) / (len(X) - 1)
+
+    class InterpolatedSource(DegeneratedSourceBase):
+        def __init__(self, POTENTIAL, CSD, X, Y, Z):
+            super(DegeneratedSliceSourcesFactory.InterpolatedSource,
+                  self).__init__(POTENTIAL, CSD)
+            self._interpolator = RegularGridInterpolator((X, Y, Z),
+                                                         CSD,
+                                                         bounds_error=False)
+
+        def csd(self, X, Y, Z):
+            return self._interpolator(np.stack((X, Y, Z),
+                                               axis=-1))
+
+    def add_csd_interpolator(self, source):
+        return self.InterpolatedSource(source.POTENTIAL,
+                                       source.CSD,
+                                       self.X,
+                                       self.Y,
+                                       self.Z)
 
 
 # TODO:
