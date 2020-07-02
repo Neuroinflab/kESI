@@ -478,6 +478,8 @@ else:
 
 
 class DegeneratedSourceBase(object):
+    __slots__ = ('POTENTIAL',)
+
     def __init__(self, potential):
         self.POTENTIAL = potential
 
@@ -512,6 +514,8 @@ class DegeneratedSourceBase(object):
 
 
 class DegeneratedSource(DegeneratedSourceBase):
+    __slots__ = ('CSD',)
+
     def __init__(self, potential, csd):
         super(DegeneratedSource,
               self).__init__(potential)
@@ -614,6 +618,8 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
                                            :]
 
     class IntegratedSource(DegeneratedSourceBase):
+        __slots__ = ('_parent', 'csd')
+
         def __init__(self, parent, potential, csd):
             super(DegeneratedSliceSourcesFactory.IntegratedSource,
                   self).__init__(potential)
