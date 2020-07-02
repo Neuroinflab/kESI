@@ -783,7 +783,7 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
             POTENTIAL = (self.POTENTIALS
                          * csd(np.reshape(self.X, (-1, 1, 1, 1)),
                                np.reshape(self.Y, (1, -1, 1, 1)),
-                               np.reshape(self.Z, (1, 1, -1, 1))))
+                               np.reshape(self.Z, (1, 1, -1, 1)))).sum(axis=(0, 1, 2))
         except:
             POTENTIAL = 0.0
             for idx_x, x in enumerate(self.X):
