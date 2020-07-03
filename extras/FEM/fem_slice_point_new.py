@@ -551,8 +551,7 @@ class _LoadableObjectBase(object):
             return cls(*[fh[attr] for attr in cls._LoadableObject__ATTRIBUTES])
 
 
-
-class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
+class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
     _LoadableObject__ATTRIBUTES = [
         'X',
         'Y',
@@ -562,7 +561,7 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
         ]
 
     def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
-        super(DegeneratedSliceSourcesFactory,
+        super(_DegeneratedSourcesFactoryBase,
               self).__init__(X, Y, Z, POTENTIALS, ELECTRODES)
 
         self._X, self._Y, self._Z = np.meshgrid(self.X,
@@ -570,6 +569,36 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
                                                 self.Z,
                                                 indexing='ij')
 
+    @classmethod
+    def _integration_weights(cls, X):
+        dx = cls._d(X)
+        n = len(X)
+        if 2 ** int(np.log2(n - 1)) == n - 1:
+            return romb(np.eye(n), dx=dx)
+
+        return np.full(n, dx)
+
+    @staticmethod
+    def _d(X):
+        return (X.max() - X.min()) / (len(X) - 1)
+
+    class IntegratedSource(DegeneratedSourceBase):
+        __slots__ = ('_parent', 'csd')
+
+        def __init__(self, parent, potential, csd):
+            super(DegeneratedSliceSourcesFactory.IntegratedSource,
+                  self).__init__(potential)
+            self._parent = parent
+            self.csd = csd
+
+        @property
+        def CSD(self):
+            return self.csd(self._parent._X,
+                            self._parent._Y,
+                            self._parent._Z)
+
+
+class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
     class Source(DegeneratedSourceBase):
         def __init__(self, parent, x, y, z, potential, amplitude=1):
             self._parent = parent
@@ -616,21 +645,6 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
                                            self._idx_y,
                                            self._idx_z,
                                            :]
-
-    class IntegratedSource(DegeneratedSourceBase):
-        __slots__ = ('_parent', 'csd')
-
-        def __init__(self, parent, potential, csd):
-            super(DegeneratedSliceSourcesFactory.IntegratedSource,
-                  self).__init__(potential)
-            self._parent = parent
-            self.csd = csd
-
-        @property
-        def CSD(self):
-            return self.csd(self._parent._X,
-                            self._parent._Y,
-                            self._parent._Z)
 
     @classmethod
     def from_factory(cls, factory, ELECTRODES, dtype=None):
@@ -730,19 +744,6 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
                         cls._integration_weights(X),
                         X))
 
-    @classmethod
-    def _integration_weights(cls, X):
-        dx = cls._d(X)
-        n = len(X)
-        if 2 ** int(np.log2(n - 1)) == n - 1:
-            return romb(np.eye(n), dx=dx)
-
-        return np.full(n, dx)
-
-    @staticmethod
-    def _d(X):
-        return (X.max() - X.min()) / (len(X) - 1)
-
     class InterpolatedSource(DegeneratedSource):
         def __init__(self, POTENTIAL, CSD, X, Y, Z):
             super(DegeneratedSliceSourcesFactory.InterpolatedSource,
@@ -763,6 +764,36 @@ class DegeneratedSliceSourcesFactory(_LoadableObjectBase):
                                        self.Z)
 
 
+class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
+    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
+        super(DegeneratedIntegratedSourcesFactory,
+              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES)
+
+        for i, w in enumerate(self._integration_weights(X)):
+            self.POTENTIALS[i, :, :, :] *= w
+
+        for i, w in enumerate(self._integration_weights(Y)):
+            self.POTENTIALS[:, i, :, :] *= w
+
+        for i, w in enumerate(self._integration_weights(Z)):
+            self.POTENTIALS[:, :, i, :] *= w
+
+    def __call__(self, csd):
+        try:
+            POTENTIAL = (self.POTENTIALS
+                         * csd(np.reshape(self.X, (-1, 1, 1, 1)),
+                               np.reshape(self.Y, (1, -1, 1, 1)),
+                               np.reshape(self.Z, (1, 1, -1, 1)))).sum(axis=(0, 1, 2))
+        except:
+            POTENTIAL = 0.0
+            for idx_x, x in enumerate(self.X):
+                for idx_y, y in enumerate(self.Y):
+                    for idx_z, z in enumerate(self.Z):
+                        POTENTIAL += csd(x, y, z) * self.POTENTIALS[idx_x,
+                                                                    idx_y,
+                                                                    idx_z]
+
+        return self.IntegratedSource(self, POTENTIAL, csd)
 # TODO:
 # Create Romberg Function manager/controler and Romberg function factory.
 
