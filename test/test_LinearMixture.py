@@ -36,7 +36,6 @@ try:
 except (ImportError, SystemError, ValueError):
     from _common import Stub
 
-import kesi as kesi
 
 class _MixtureTestBase(unittest.TestCase):
     def setUp(self):
