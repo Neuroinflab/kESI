@@ -478,14 +478,22 @@ else:
 
 
 class DegeneratedSourceBase(object):
-    __slots__ = ('POTENTIAL',)
+    __slots__ = ('POTENTIAL', '_parent')
 
-    def __init__(self, potential):
+    def __init__(self, potential, parent=None):
         self.POTENTIAL = potential
+        self._parent = parent
+
+    def _get_parent(self, other):
+        if self._parent is not None:
+            return self._parent
+
+        return other._parent
 
     def __mul__(self, other):
         return DegeneratedSource(self.POTENTIAL * other,
-                                 self.CSD * other)
+                                 self.CSD * other,
+                                 parent=self._get_parent(other))
 
     def __rmul__(self, other):
         return self * other
@@ -495,7 +503,8 @@ class DegeneratedSourceBase(object):
             return self
 
         return DegeneratedSource(self.POTENTIAL + other.POTENTIAL,
-                                 self.CSD + other.CSD)
+                                 self.CSD + other.CSD,
+                                 parent=self._get_parent(other))
 
     def __radd__(self, other):
         return self * other
@@ -514,12 +523,30 @@ class DegeneratedSourceBase(object):
 
 
 class DegeneratedSource(DegeneratedSourceBase):
-    __slots__ = ('CSD',)
+    __slots__ = ('CSD', '_csd_interpolator', '_parent')
 
-    def __init__(self, potential, csd):
+    def __init__(self, potential, csd, parent=None):
         super(DegeneratedSource,
-              self).__init__(potential)
+              self).__init__(potential,
+                             parent=parent)
         self.CSD = csd
+        self._csd_interpolator = None
+
+    def csd(self, X, Y, Z):
+        if self._csd_interpolator is None:
+            self._create_csd_interpolator(self._parent.X,
+                                          self._parent.Y,
+                                          self._parent.Z)
+
+        return self._csd_interpolator(np.stack((X, Y, Z),
+                                               axis=-1))
+
+    def _create_csd_interpolator(self, X, Y, Z):
+        self._csd_interpolator = RegularGridInterpolator((X,
+                                                          Y,
+                                                          Z),
+                                                         self.CSD,
+                                                         bounds_error=False)
 
 
 class _LoadableObjectBase(object):
@@ -583,12 +610,12 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
         return (X.max() - X.min()) / (len(X) - 1)
 
     class IntegratedSource(DegeneratedSourceBase):
-        __slots__ = ('_parent', 'csd')
+        __slots__ = ('csd',)
 
         def __init__(self, parent, potential, csd):
             super(DegeneratedSliceSourcesFactory.IntegratedSource,
-                  self).__init__(potential)
-            self._parent = parent
+                  self).__init__(potential,
+                                 parent=parent)
             self.csd = csd
 
         @property
@@ -601,11 +628,12 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
 class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
     class Source(DegeneratedSourceBase):
         def __init__(self, parent, x, y, z, potential, amplitude=1):
-            self._parent = parent
+            super(DegeneratedSliceSourcesFactory.Source,
+                  self).__init__(potential,
+                                 parent=parent)
             self._x = x
             self._y = y
             self._z = z
-            self.POTENTIAL = potential
             self.amplitude = amplitude
 
         @property
@@ -745,16 +773,16 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
                         X))
 
     class InterpolatedSource(DegeneratedSource):
+        __slots__ = ()
+
         def __init__(self, POTENTIAL, CSD, X, Y, Z):
             super(DegeneratedSliceSourcesFactory.InterpolatedSource,
                   self).__init__(POTENTIAL, CSD)
-            self._interpolator = RegularGridInterpolator((X, Y, Z),
-                                                         CSD,
-                                                         bounds_error=False)
+            self._create_csd_interpolator(X, Y, Z)
 
         def csd(self, X, Y, Z):
-            return self._interpolator(np.stack((X, Y, Z),
-                                               axis=-1))
+            return self._csd_interpolator(np.stack((X, Y, Z),
+                                                   axis=-1))
 
     def add_csd_interpolator(self, source):
         return self.InterpolatedSource(source.POTENTIAL,
