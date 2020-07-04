@@ -478,10 +478,9 @@ else:
 
 
 class DegeneratedSourceBase(object):
-    __slots__ = ('POTENTIAL', '_parent')
+    __slots__ = ('_parent',)
 
-    def __init__(self, potential, parent=None):
-        self.POTENTIAL = potential
+    def __init__(self, parent=None):
         self._parent = parent
 
     def _get_parent(self, other):
@@ -522,8 +521,18 @@ class DegeneratedSourceBase(object):
         return self - other
 
 
-class DegeneratedSource(DegeneratedSourceBase):
-    __slots__ = ('CSD', '_csd_interpolator', '_parent')
+class DegeneratedSourcePotentialBase(DegeneratedSourceBase):
+    __slots__ = ('POTENTIAL',)
+
+    def __init__(self, potential, parent=None):
+        super(DegeneratedSourcePotentialBase,
+              self).__init__(parent)
+
+        self.POTENTIAL = potential
+
+
+class DegeneratedSource(DegeneratedSourcePotentialBase):
+    __slots__ = ('CSD', '_csd_interpolator')
 
     def __init__(self, potential, csd, parent=None):
         super(DegeneratedSource,
@@ -609,7 +618,7 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
     def _d(X):
         return (X.max() - X.min()) / (len(X) - 1)
 
-    class IntegratedSource(DegeneratedSourceBase):
+    class IntegratedSource(DegeneratedSourcePotentialBase):
         __slots__ = ('csd',)
 
         def __init__(self, parent, potential, csd):
@@ -626,7 +635,7 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
 
 
 class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
-    class Source(DegeneratedSourceBase):
+    class Source(DegeneratedSourcePotentialBase):
         def __init__(self, parent, x, y, z, potential, amplitude=1):
             super(DegeneratedSliceSourcesFactory.Source,
                   self).__init__(potential,
@@ -646,8 +655,8 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
         def csd(self):
             return self.CSD
 
-    class MemorySavySource(object):
-        __slots__ = ('_parent', '_idx_x', '_idx_y', '_idx_z')
+    class MemoryEfficientSource(DegeneratedSourceBase):
+        __slots__ = ('_idx_x', '_idx_y', '_idx_z')
 
         def __init__(self, parent, x, y, z):
             self._parent = parent
@@ -673,6 +682,26 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
                                            self._idx_y,
                                            self._idx_z,
                                            :]
+
+        @property
+        def CSD(self):
+            return ((self._parent._IDX_X == self._idx_x)
+                    & (self._parent._IDX_Y == self._idx_y)
+                    & (self._parent._IDX_Z == self._idx_z))
+
+    def memory_efficient_sources(self):
+        for x in self._IDX_X:
+            for y in self._IDX_Y:
+                for z in self._IDX_Z:
+                    yield self.MemoryEfficientSource(self, x, y, z)
+
+    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
+        super(DegeneratedSliceSourcesFactory,
+              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES)
+        self._IDX_X = np.arange(len(X)).reshape((-1, 1, 1))
+        self._IDX_Y = np.arange(len(Y)).reshape((1, -1, 1))
+        self._IDX_Z = np.arange(len(Z)).reshape((1, 1, -1))
+
 
     @classmethod
     def from_factory(cls, factory, ELECTRODES, dtype=None):
