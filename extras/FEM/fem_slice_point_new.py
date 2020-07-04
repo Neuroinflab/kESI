@@ -678,7 +678,7 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
 
         @property
         def POTENTIAL(self):
-            return self._parent.POTRNTIALS[self._idx_x,
+            return self._parent.POTENTIALS[self._idx_x,
                                            self._idx_y,
                                            self._idx_z,
                                            :]
