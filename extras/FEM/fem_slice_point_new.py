@@ -690,9 +690,9 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
                     & (self._parent._IDX_Z == self._idx_z))
 
     def memory_efficient_sources(self):
-        for x in self._IDX_X:
-            for y in self._IDX_Y:
-                for z in self._IDX_Z:
+        for x in self._IDX_X.flatten():
+            for y in self._IDX_Y.flatten():
+                for z in self._IDX_Z.flatten():
                     yield self.MemoryEfficientSource(self, x, y, z)
 
     def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
