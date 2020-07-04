@@ -333,20 +333,22 @@ class LinearMixture(object):
     def __init__(self, components=()):
         self._components, self._weights = [], []
 
-        try:
-            for c, w in components:
-                if isinstance(c, LinearMixture):
-                    self._append_components_from_mixture(self._components,
-                                                         self._weights,
-                                                         self._components,
-                                                         c * w)
-                else:
-                    self._components.append(c)
-                    self._weights.append(w)
+        if components is not None:
+            try:
+                cs, ws = [], []
+                for c, w in components:
+                    cs.append(c)
+                    ws.append(w)
 
-        except TypeError:
-            self._components = (components,)
-            self._weights = (1,)
+            except TypeError:
+                self._components = (components,)
+                self._weights = (1,)
+
+            else:
+                self._append_components(self._components,
+                                        self._weights,
+                                        cs,
+                                        ws)
 
         self._prepare_cache_for_dir()
 
@@ -383,26 +385,50 @@ class LinearMixture(object):
 
         components = list(self._components)
         weights = list(self._weights)
-        self._append_components_from_mixture(components, weights,
-                                             self._components,
-                                             other)
+        self._append_components_from_mixture(components, weights, other)
 
         return self.__class__(list(zip(components, weights)))
 
     @staticmethod
-    def _append_components_from_mixture(components,
-                                        weights,
-                                        reference_components,
-                                        mixture):
-        for c, w in zip(mixture._components,
-                        mixture._weights):
+    def _append_components_from_mixture(components, weights, mixture):
+        LinearMixture._append_components(components,
+                                         weights,
+                                         mixture._components,
+                                         mixture._weights)
+
+    @staticmethod
+    def _append_components(components, weights, new_components, new_weights):
+        for c, w in zip(new_components,
+                        new_weights):
             try:
-                i = reference_components.index(c)
-            except ValueError:
-                weights.append(w)
-                components.append(c)
+                c = c * w
+            except:
+                try:
+                    i = components.index(c)
+                except ValueError:
+                    weights.append(w)
+                    components.append(c)
+                else:
+                    weights[i] += w
             else:
-                weights[i] += w
+                if isinstance(c, LinearMixture):
+                    LinearMixture._append_components_from_mixture(components,
+                                                                  weights,
+                                                                  c)
+                    continue
+
+                for i, (c2, w2) in enumerate(zip(components,
+                                                 weights)):
+                    try:
+                        components[i] = c2 * w2 + c
+                    except:
+                        continue
+                    else:
+                        weights[i] = 1
+                        break
+                else:
+                    weights.append(1)
+                    components.append(c)
 
     def __neg__(self):
         return -1 * self

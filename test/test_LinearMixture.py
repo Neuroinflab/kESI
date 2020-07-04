@@ -23,6 +23,7 @@
 ###############################################################################
 
 import unittest
+from collections import Counter
 
 from kesi._engine import LinearMixture
 
@@ -257,6 +258,29 @@ class TestPerformance(_MixtureTestBase):
         self._INIT = [[(1, {'f': f})]]
         super(TestPerformance, self).setUp()
 
+    class SpySource(object):
+        def __init__(self, data):
+            self.data = Counter(data) if isinstance(data, dict) else Counter([data])
+            self.f_called = 0
+
+        def f(self):
+            self.f_called += 1
+            return self
+
+        def __mul__(self, other):
+            return TestPerformance.SpySource({k: v * other for k, v in self.data.items()})
+
+        def __rmul__(self, other):
+            return self * other
+
+        def __add__(self, other):
+            if other == 0:
+                return self
+            return TestPerformance.SpySource(self.data + other.data)
+
+        def __radd__(self, other):
+            return self + other
+
     def testSumCallsMethodOnce(self):
         mixture = self.mixture + self.mixture
         mixture.f()
@@ -267,6 +291,18 @@ class TestPerformance(_MixtureTestBase):
                                  (self.mixture, 1)])
         mixture.f()
         self.assertEqual(1, self.call_counter)
+
+    def testMixtureCombinesSourcesIfPossible(self):
+        sources = [self.SpySource(i) for i in range(4)]
+        mixture = LinearMixture([(s, i) for i, s in enumerate(sources)])
+        observed = mixture.f()
+        expected = range(4)
+        for i in set(observed.data) | set(expected):
+            self.assertEqual(observed.data[i],
+                             expected[i])
+
+        for s in sources:
+            self.assertEqual(0, s.f_called)
 
 
 if __name__ == '__main__':
