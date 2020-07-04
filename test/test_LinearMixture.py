@@ -22,7 +22,7 @@
 #                                                                             #
 ###############################################################################
 
-from unittest.case import TestCase
+import unittest
 
 from kesi._engine import LinearMixture
 
@@ -38,8 +38,7 @@ except (ImportError, SystemError, ValueError):
 
 import kesi as kesi
 
-
-class _MixtureTestBase(TestCase):
+class _MixtureTestBase(unittest.TestCase):
     def setUp(self):
         try:
             init = self.INIT
@@ -269,3 +268,7 @@ class TestPerformance(_MixtureTestBase):
                                  (self.mixture, 1)])
         mixture.f()
         self.assertEqual(1, self.call_counter)
+
+
+if __name__ == '__main__':
+    unittest.main()
