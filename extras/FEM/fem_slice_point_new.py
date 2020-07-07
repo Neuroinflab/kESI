@@ -859,7 +859,7 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
         self._vectorization_level = vectorization_level
         self._electrodes = electrodes
         self._integrate_xyz(csd)
-        return self.IntegratedSource(self, self._POTENTIAL)
+        return self.IntegratedSource(self, self._POTENTIAL, csd)
 
     def _integrate_xyz(self, csd):
         if self._use_vector_integration_for_xyz():
