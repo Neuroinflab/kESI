@@ -578,13 +578,19 @@ class _LoadableObjectBase(object):
 
     def save(self, file):
         np.savez_compressed(file,
-                            **{attr: getattr(self, attr)
-                               for attr in self._LoadableObject__ATTRIBUTES})
+                            **self.attribute_mapping())
+
+    def attribute_mapping(self):
+        return {attr: getattr(self, attr) for attr in self._LoadableObject__ATTRIBUTES}
 
     @classmethod
     def load(cls, file):
         with np.load(file) as fh:
-            return cls(*[fh[attr] for attr in cls._LoadableObject__ATTRIBUTES])
+            return cls.from_mapping(fh)
+
+    @classmethod
+    def from_mapping(cls, attributes):
+        return cls(*[attributes[attr] for attr in cls._LoadableObject__ATTRIBUTES])
 
 
 class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
@@ -604,6 +610,14 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
                                                 self.Y,
                                                 self.Z,
                                                 indexing='ij')
+
+    def copy(self, electrodes=None):
+        attributes = self.attribute_mapping()
+        if electrodes is not None:
+            attributes['ELECTRODES'] = attributes['ELECTRODES'][:, electrodes]
+            attributes['POTENTIALS'] = attributes['POTENTIALS'][:, :, :, electrodes]
+
+        return self.__class__.from_mapping(attributes)
 
     @classmethod
     def _integration_weights(cls, X):
