@@ -837,18 +837,22 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
 
 
 class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
-    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
-        super(DegeneratedIntegratedSourcesFactory,
-              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES)
+    @classmethod
+    def load_from_degenerated_sources_factory(cls, file):
+        with np.load(file) as fh:
+            attributes = {attr: fh[attr] for attr in cls._LoadableObject__ATTRIBUTES}
 
-        for i, w in enumerate(self._integration_weights(X)):
-            self.POTENTIALS[i, :, :, :] *= w
+        POTENTIALS = attributes['POTENTIALS']
+        for i, w in enumerate(cls._integration_weights(attributes['X'])):
+            POTENTIALS[i, :, :, :] *= w
 
-        for i, w in enumerate(self._integration_weights(Y)):
-            self.POTENTIALS[:, i, :, :] *= w
+        for i, w in enumerate(cls._integration_weights(attributes['Y'])):
+            POTENTIALS[:, i, :, :] *= w
 
-        for i, w in enumerate(self._integration_weights(Z)):
-            self.POTENTIALS[:, :, i, :] *= w
+        for i, w in enumerate(cls._integration_weights(attributes['Z'])):
+            POTENTIALS[:, :, i, :] *= w
+
+        return cls.from_mapping(attributes)
 
     (NO_VECTOR_INTEGRATION,
      VECTOR_INTEGRATE_Z,
