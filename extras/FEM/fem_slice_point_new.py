@@ -637,11 +637,12 @@ class LoadableGaussians3D(_LoadableObjectBase):
             return self._parent.AMPLITUDE[self._idx]
 
         def __call__(self, X, Y, Z):
-            parent = self._parent
-            idx = self._idx
-            return parent._A[idx] * np.exp(-0.5 * (np.square(X - parent.X[idx])
-                                            + np.square(Y - parent.Y[idx])
-                                            + np.square(Z - parent.Z[idx])) / parent._VARIANCE[idx])
+            return self._parent.gaussian(self._idx, X, Y, Z)
+
+    def gaussian(self, idx, X, Y, Z):
+       return self._A[idx] * np.exp(-0.5 * (np.square(X - self.X[idx])
+                                            + np.square(Y - self.Y[idx])
+                                            + np.square(Z - self.Z[idx])) / self._VARIANCE[idx])
 
     def __iter__(self):
         for i in range(len(self.X)):
