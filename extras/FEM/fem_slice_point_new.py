@@ -614,7 +614,7 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
     def copy(self, electrodes=None):
         attributes = self.attribute_mapping()
         if electrodes is not None:
-            attributes['ELECTRODES'] = attributes['ELECTRODES'][:, electrodes]
+            attributes['ELECTRODES'] = attributes['ELECTRODES'][electrodes]
             attributes['POTENTIALS'] = attributes['POTENTIALS'][:, :, :, electrodes]
 
         return self.__class__.from_mapping(attributes)
