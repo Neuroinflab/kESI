@@ -872,10 +872,8 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
         self._vectorization_level -= 1
 
     def __call__(self, csd,
-                 vectorization_level=VECTOR_INTEGRATE_XYZ,
-                 electrodes=slice(None)):
+                 vectorization_level=VECTOR_INTEGRATE_XYZ):
         self._vectorization_level = vectorization_level
-        self._electrodes = electrodes
         self._integrate_xyz(csd)
         return self.IntegratedSource(self, self._POTENTIAL, csd)
 
@@ -892,7 +890,7 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
             self._scalar_integrate_x(csd)
 
     def _vector_integrate_xyz(self, csd):
-        self._POTENTIAL = (self.POTENTIALS[:, :, :, self._electrodes]
+        self._POTENTIAL = (self.POTENTIALS
                            * csd(np.reshape(self.X, (-1, 1, 1, 1)),
                                  np.reshape(self.Y, (1, -1, 1, 1)),
                                  np.reshape(self.Z, (1, 1, -1, 1)))).sum(axis=(0, 1, 2))
@@ -915,7 +913,7 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
             self._scalar_integrate_y(csd, idx_x, x)
 
     def _vector_integrate_yz(self, csd, idx_x, x):
-        self._POTENTIAL += (self.POTENTIALS[idx_x][:, :, self._electrodes]
+        self._POTENTIAL += (self.POTENTIALS[idx_x]
                             * csd(x,
                                   np.reshape(self.Y, (-1, 1, 1)),
                                   np.reshape(self.Z, (1, -1, 1)))).sum(axis=(0, 1))
@@ -937,7 +935,7 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
             self._scalar_integrate_z(csd, idx_x, idx_y, x, y)
 
     def _vector_integrate_z(self, csd, idx_x, idx_y, x, y):
-        self._POTENTIAL += (self.POTENTIALS[idx_x, idx_y][:, self._electrodes]
+        self._POTENTIAL += (self.POTENTIALS[idx_x, idx_y]
                             * csd(x,
                                   y,
                                   np.reshape(self.Z, (-1, 1)))).sum(axis=0)
@@ -946,8 +944,7 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
         for idx_z, z in enumerate(self.Z):
             self._POTENTIAL += csd(x, y, z) * self.POTENTIALS[idx_x,
                                                               idx_y,
-                                                              idx_z,
-                                                              self._electrodes]
+                                                              idx_z]
 
 
 if __name__ == '__main__':
