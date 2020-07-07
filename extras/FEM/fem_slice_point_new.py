@@ -864,7 +864,8 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
             try:
                 self._vector_integrate_xyz(csd)
 
-            except:
+            except Exception as e:
+                logger.warning(f'XYZ vector integration yielded {e}')
                 self._decrease_vectorization_level()
 
         if not self._use_vector_integration_for_xyz():
@@ -885,7 +886,9 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
         if self._use_vector_integration_for_yz():
             try:
                 self._vector_integrate_yz(csd, idx_x, x)
-            except:
+
+            except Exception as e:
+                logger.warning(f'YZ vector integration yielded {e}')
                 self._decrease_vectorization_level()
 
         if not self._use_vector_integration_for_yz():
@@ -905,7 +908,9 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
         if self._use_vector_integration_for_z():
             try:
                 self._vector_integrate_z(csd, idx_x, idx_y, x, y)
-            except:
+
+            except Exception as e:
+                logger.warning(f'Z vector integration yielded {e}')
                 self._decrease_vectorization_level()
 
         if not self._use_vector_integration_for_z():
