@@ -786,18 +786,17 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
                     yield self.Source(self, x, y, z, POTENTIAL)
 
     class _MeasurementManager(VerboseFFR.MeasurementManagerBase):
-        def __init__(self, factory, selected_electrodes):
-            self.number_of_measurements = factory.ELECTRODES[selected_electrodes].shape[0]
-            self._selected_electrodes = selected_electrodes
+        def __init__(self, factory):
+            self.number_of_measurements = factory.ELECTRODES.shape[0]
 
         def probe_at_single_point(self, field, electrode):
-            return field.POTENTIAL[self._selected_electrodes][electrode]
+            return field.POTENTIAL[electrode]
 
         def probe(self, field):
-            return field.POTENTIAL[self._selected_electrodes]
+            return field.POTENTIAL
 
-    def measurement_manager(self, electrodes=slice(None)):
-        return self._MeasurementManager(self, electrodes)
+    def measurement_manager(self):
+        return self._MeasurementManager(self)
 
     def integrated_source(self, csd):
         POTENTIAL = 0.0
