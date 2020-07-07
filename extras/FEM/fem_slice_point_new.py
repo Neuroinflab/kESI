@@ -897,7 +897,7 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
             self._scalar_integrate_y(csd, idx_x, x)
 
     def _vector_integrate_yz(self, csd, idx_x, x):
-        self._POTENTIAL += (self.POTENTIALS[idx_x, :, :, self._electrodes]
+        self._POTENTIAL += (self.POTENTIALS[idx_x][:, :, self._electrodes]
                             * csd(x,
                                   np.reshape(self.Y, (-1, 1, 1)),
                                   np.reshape(self.Z, (1, -1, 1)))).sum(axis=(0, 1))
@@ -919,7 +919,7 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
             self._scalar_integrate_z(csd, idx_x, idx_y, x, y)
 
     def _vector_integrate_z(self, csd, idx_x, idx_y, x, y):
-        self._POTENTIAL += (self.POTENTIALS[idx_x, idx_y, :, self._electrodes]
+        self._POTENTIAL += (self.POTENTIALS[idx_x, idx_y][:, self._electrodes]
                             * csd(x,
                                   y,
                                   np.reshape(self.Z, (-1, 1)))).sum(axis=0)
