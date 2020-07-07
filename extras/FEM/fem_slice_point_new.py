@@ -593,6 +593,61 @@ class _LoadableObjectBase(object):
         return cls(*[attributes[attr] for attr in cls._LoadableObject__ATTRIBUTES])
 
 
+class LoadableGaussians3D(_LoadableObjectBase):
+    _LoadableObject__ATTRIBUTES = [
+        'X',
+        'Y',
+        'Z',
+        'STANDARD_DEVIATION',
+        'AMPLITUDE',
+        ]
+
+    def __init__(self, X, Y, Z, STANDARD_DEVIATION, AMPLITUDE):
+        super(LoadableGaussians3D,
+              self).__init__(X, Y, Z, STANDARD_DEVIATION, AMPLITUDE)
+
+        self._VARIANCE = np.square(STANDARD_DEVIATION)
+        self._A = AMPLITUDE * np.power(2 * np.pi * self._VARIANCE, -1.5)
+
+    class _Gaussian(object):
+        __slots__ = ('_parent', '_idx')
+
+        def __init__(self, parent, idx):
+            self._parent = parent
+            self._idx = idx
+
+        @property
+        def x(self):
+            return self._parent.X[self._idx]
+
+        @property
+        def y(self):
+            return self._parent.Y[self._idx]
+
+        @property
+        def z(self):
+            return self._parent.Z[self._idx]
+
+        @property
+        def standard_deviation(self):
+            return self._parent.STANDARD_DEVIATION[self._idx]
+
+        @property
+        def amplitude(self):
+            return self._parent.AMPLITUDE[self._idx]
+
+        def __call__(self, X, Y, Z):
+            parent = self._parent
+            idx = self._idx
+            return parent._A[idx] * np.exp(-0.5 * (np.square(X - parent.X[idx])
+                                            + np.square(Y - parent.Y[idx])
+                                            + np.square(Z - parent.Z[idx])) / parent._VARIANCE[idx])
+
+    def __iter__(self):
+        for i in range(len(self.X)):
+            yield self._Gaussian(self, i)
+
+
 class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
     _LoadableObject__ATTRIBUTES = [
         'X',
