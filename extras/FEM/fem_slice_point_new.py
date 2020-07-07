@@ -836,24 +836,91 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
         for i, w in enumerate(self._integration_weights(Z)):
             self.POTENTIALS[:, :, i, :] *= w
 
-    def __call__(self, csd):
-        try:
-            POTENTIAL = (self.POTENTIALS
-                         * csd(np.reshape(self.X, (-1, 1, 1, 1)),
-                               np.reshape(self.Y, (1, -1, 1, 1)),
-                               np.reshape(self.Z, (1, 1, -1, 1)))).sum(axis=(0, 1, 2))
-        except:
-            POTENTIAL = 0.0
-            for idx_x, x in enumerate(self.X):
-                for idx_y, y in enumerate(self.Y):
-                    for idx_z, z in enumerate(self.Z):
-                        POTENTIAL += csd(x, y, z) * self.POTENTIALS[idx_x,
-                                                                    idx_y,
-                                                                    idx_z]
+    (NO_VECTOR_INTEGRATION,
+     VECTOR_INTEGRATE_Z,
+     VECTOR_INTEGRATE_YZ,
+     VECTOR_INTEGRATE_XYZ) = range(4)
 
-        return self.IntegratedSource(self, POTENTIAL, csd)
-# TODO:
-# Create Romberg Function manager/controler and Romberg function factory.
+    def _use_vector_integration_for_xyz(self):
+        return self._vectorization_level == self.VECTOR_INTEGRATE_XYZ
+
+    def _use_vector_integration_for_yz(self):
+        return self._vectorization_level == self.VECTOR_INTEGRATE_YZ
+
+    def _use_vector_integration_for_z(self):
+        return self._vectorization_level == self.VECTOR_INTEGRATE_Z
+
+    def _decrease_vectorization_level(self):
+        self._vectorization_level -= 1
+
+    def __call__(self, csd, depth=VECTOR_INTEGRATE_XYZ):
+        self._vectorization_level = depth
+        self._integrate_xyz(csd)
+        return self.IntegratedSource(self, self._POTENTIAL)
+
+    def _integrate_xyz(self, csd):
+        if self._use_vector_integration_for_xyz():
+            try:
+                self._vector_integrate_xyz(csd)
+
+            except:
+                self._decrease_vectorization_level()
+
+        if not self._use_vector_integration_for_xyz():
+            self._scalar_integrate_x(csd)
+
+    def _vector_integrate_xyz(self, csd):
+        self._POTENTIAL = (self.POTENTIALS
+                           * csd(np.reshape(self.X, (-1, 1, 1, 1)),
+                                 np.reshape(self.Y, (1, -1, 1, 1)),
+                                 np.reshape(self.Z, (1, 1, -1, 1)))).sum(axis=(0, 1, 2))
+
+    def _scalar_integrate_x(self, csd):
+        self._POTENTIAL = 0.0
+        for idx_x, x in enumerate(self.X):
+            self._integrate_yz(csd, idx_x, x)
+
+    def _integrate_yz(self, csd, idx_x, x):
+        if self._use_vector_integration_for_yz():
+            try:
+                self._vector_integrate_yz(csd, idx_x, x)
+            except:
+                self._decrease_vectorization_level()
+
+        if not self._use_vector_integration_for_yz():
+            self._scalar_integrate_y(csd, idx_x, x)
+
+    def _vector_integrate_yz(self, csd, idx_x, x):
+        self._POTENTIAL += (self.POTENTIALS[idx_x]
+                            * csd(x,
+                                  np.reshape(self.Y, (-1, 1, 1)),
+                                  np.reshape(self.Z, (1, -1, 1)))).sum(axis=(0, 1))
+
+    def _scalar_integrate_y(self, csd, idx_x, x):
+        for idx_y, y in enumerate(self.Y):
+            self._integrate_z(csd, idx_x, idx_y, x, y)
+
+    def _integrate_z(self, csd, idx_x, idx_y, x, y):
+        if self._use_vector_integration_for_z():
+            try:
+                self._vector_integrate_z(csd, idx_x, idx_y, x, y)
+            except:
+                self._decrease_vectorization_level()
+
+        if not self._use_vector_integration_for_z():
+            self._scalar_integrate_z(csd, idx_x, idx_y, x, y)
+
+    def _vector_integrate_z(self, csd, idx_x, idx_y, x, y):
+        self._POTENTIAL += (self.POTENTIALS[idx_x, idx_y]
+                            * csd(x,
+                                  y,
+                                  np.reshape(self.Z, (-1, 1)))).sum(axis=0)
+
+    def _scalar_integrate_z(self, csd, idx_x, idx_y, x, y):
+        for idx_z, z in enumerate(self.Z):
+            self._POTENTIAL += csd(x, y, z) * self.POTENTIALS[idx_x,
+                                                              idx_y,
+                                                              idx_z]
 
 
 if __name__ == '__main__':
