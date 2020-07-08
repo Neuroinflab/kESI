@@ -593,7 +593,7 @@ class _LoadableObjectBase(object):
         return cls(*[attributes[attr] for attr in cls._LoadableObject__ATTRIBUTES])
 
 
-class _LoadableGaussians3D(_LoadableObjectBase):
+class LoadableGaussians3D(_LoadableObjectBase):
     _LoadableObject__ATTRIBUTES = [
         'X',
         'Y',
@@ -603,7 +603,7 @@ class _LoadableGaussians3D(_LoadableObjectBase):
         ]
 
     def __init__(self, X, Y, Z, STANDARD_DEVIATION, AMPLITUDE, *args):
-        super(_LoadableGaussians3D,
+        super(LoadableGaussians3D,
               self).__init__(X, Y, Z, STANDARD_DEVIATION, AMPLITUDE, *args)
 
         self._VARIANCE = np.square(STANDARD_DEVIATION)
@@ -620,6 +620,9 @@ class _LoadableGaussians3D(_LoadableObjectBase):
         def __init__(self, parent, idx):
             self._parent = parent
             self._idx = idx
+
+        def __call__(self, X, Y, Z):
+            return self._parent.gaussian(self._idx, X, Y, Z)
 
         @property
         def x(self):
@@ -645,13 +648,6 @@ class _LoadableGaussians3D(_LoadableObjectBase):
         for i in range(len(self.X)):
             yield self._Child(self, i)
 
-
-class LoadableGaussians3D(_LoadableGaussians3D):
-    class _Child(_LoadableGaussians3D._Child):
-        __slots__ = ()
-
-        def __call__(self, X, Y, Z):
-            return self._parent.gaussian(self._idx, X, Y, Z)
 
 
 class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
@@ -1011,33 +1007,31 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
                                                               idx_y,
                                                               idx_z]
 
+    def LoadableIntegratedSourcess(self, LoadableFunctionsClass):
+        class LoadableIntegratedSourcess(LoadableFunctionsClass):
+            _LoadableObject__ATTRIBUTES = LoadableFunctionsClass._LoadableObject__ATTRIBUTES + ['ELECTRODES', 'POTENTIALS']
 
-class LoadableIntegratedGaussians3D(_LoadableGaussians3D):
-    _LoadableObject__ATTRIBUTES = LoadableGaussians3D._LoadableObject__ATTRIBUTES + ['ELECTRODES', 'POTENTIALS']
+            @classmethod
+            def from_factories(cls, csd_factory, integrated_sources,
+                               vectorization_level=DegeneratedIntegratedSourcesFactory.VECTOR_INTEGRATE_XYZ):
+                attributes = csd_factory.attribute_mapping()
+                attributes['ELECTRODES'] = integrated_sources.ELECTRODES
+                attributes['POTENTIALS'] = np.array([integrated_sources.integrate_potential(csd,
+                                                                                            vectorization_level=vectorization_level)
+                                                     for csd in csd_factory])
+                return cls.from_mapping(attributes)
 
-    def __init__(self, X, Y, Z, STANDARD_DEVIATION, AMPLITUDE, ELECTRODES, POTENTIALS):
-        super(LoadableIntegratedGaussians3D,
-              self).__init__(X, Y, Z, STANDARD_DEVIATION, AMPLITUDE, ELECTRODES, POTENTIALS)
+            class _Child(LoadableFunctionsClass._Child):
+                __slots__ = ()
 
-    @classmethod
-    def from_factories(cls, gaussians, integrated_sources,
-                       vectorization_level=DegeneratedIntegratedSourcesFactory.VECTOR_INTEGRATE_XYZ):
-        attributes = gaussians.attribute_mapping()
-        attributes['ELECTRODES'] = integrated_sources.ELECTRODES
-        attributes['POTENTIALS'] = np.array([integrated_sources.integrate_potential(csd,
-                                                                                    vectorization_level=vectorization_level)
-                                             for csd in gaussians])
-        return cls.from_mapping(attributes)
+                def csd(self, *args, **kwargs):
+                    return self(*args, **kwargs)
 
-    class _Child(_LoadableGaussians3D._Child):
-        __slots__ = ()
+                @property
+                def POTENTIAL(self):
+                    return self._parent.POTENTIALS[self._idx]
 
-        def csd(self, X, Y, Z):
-            return self._parent.gaussian(self._idx, X, Y, Z)
-
-        @property
-        def POTENTIAL(self):
-            return self._parent.POTENTIALS[self._idx]
+        return LoadableIntegratedSourcess
 
 
 if __name__ == '__main__':
