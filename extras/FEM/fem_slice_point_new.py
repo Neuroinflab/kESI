@@ -593,7 +593,7 @@ class _LoadableObjectBase(object):
         return cls(*[attributes[attr] for attr in cls._LoadableObject__ATTRIBUTES])
 
 
-class LoadableGaussians3D(_LoadableObjectBase):
+class _LoadableGaussians3D(_LoadableObjectBase):
     _LoadableObject__ATTRIBUTES = [
         'X',
         'Y',
@@ -602,14 +602,19 @@ class LoadableGaussians3D(_LoadableObjectBase):
         'AMPLITUDE',
         ]
 
-    def __init__(self, X, Y, Z, STANDARD_DEVIATION, AMPLITUDE):
-        super(LoadableGaussians3D,
-              self).__init__(X, Y, Z, STANDARD_DEVIATION, AMPLITUDE)
+    def __init__(self, X, Y, Z, STANDARD_DEVIATION, AMPLITUDE, *args):
+        super(_LoadableGaussians3D,
+              self).__init__(X, Y, Z, STANDARD_DEVIATION, AMPLITUDE, *args)
 
         self._VARIANCE = np.square(STANDARD_DEVIATION)
         self._A = AMPLITUDE * np.power(2 * np.pi * self._VARIANCE, -1.5)
 
-    class _Gaussian(object):
+    def gaussian(self, idx, X, Y, Z):
+       return self._A[idx] * np.exp(-0.5 * (np.square(X - self.X[idx])
+                                            + np.square(Y - self.Y[idx])
+                                            + np.square(Z - self.Z[idx])) / self._VARIANCE[idx])
+
+    class _Child(object):
         __slots__ = ('_parent', '_idx')
 
         def __init__(self, parent, idx):
@@ -636,17 +641,17 @@ class LoadableGaussians3D(_LoadableObjectBase):
         def amplitude(self):
             return self._parent.AMPLITUDE[self._idx]
 
-        def __call__(self, X, Y, Z):
-            return self._parent.gaussian(self._idx, X, Y, Z)
-
-    def gaussian(self, idx, X, Y, Z):
-       return self._A[idx] * np.exp(-0.5 * (np.square(X - self.X[idx])
-                                            + np.square(Y - self.Y[idx])
-                                            + np.square(Z - self.Z[idx])) / self._VARIANCE[idx])
-
     def __iter__(self):
         for i in range(len(self.X)):
-            yield self._Gaussian(self, i)
+            yield self._Child(self, i)
+
+
+class LoadableGaussians3D(_LoadableGaussians3D):
+    class _Child(_LoadableGaussians3D._Child):
+        __slots__ = ()
+
+        def __call__(self, X, Y, Z):
+            return self._parent.gaussian(self._idx, X, Y, Z)
 
 
 class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
@@ -1005,6 +1010,34 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
             self._POTENTIAL += csd(x, y, z) * self.POTENTIALS[idx_x,
                                                               idx_y,
                                                               idx_z]
+
+
+class LoadableIntegratedGaussians3D(_LoadableGaussians3D):
+    _LoadableObject__ATTRIBUTES = LoadableGaussians3D._LoadableObject__ATTRIBUTES + ['ELECTRODES', 'POTENTIALS']
+
+    def __init__(self, X, Y, Z, STANDARD_DEVIATION, AMPLITUDE, ELECTRODES, POTENTIALS):
+        super(LoadableIntegratedGaussians3D,
+              self).__init__(X, Y, Z, STANDARD_DEVIATION, AMPLITUDE, ELECTRODES, POTENTIALS)
+
+    @classmethod
+    def from_factories(cls, gaussians, integrated_sources,
+                       vectorization_level=DegeneratedIntegratedSourcesFactory.VECTOR_INTEGRATE_XYZ):
+        attributes = gaussians.attribute_mapping()
+        attributes['ELECTRODES'] = integrated_sources.ELECTRODES
+        attributes['POTENTIALS'] = np.array([integrated_sources.integrate_potential(csd,
+                                                                                    vectorization_level=vectorization_level)
+                                             for csd in gaussians])
+        return cls.from_mapping(attributes)
+
+    class _Child(_LoadableGaussians3D._Child):
+        __slots__ = ()
+
+        def csd(self, X, Y, Z):
+            return self._parent.gaussian(self._idx, X, Y, Z)
+
+        @property
+        def POTENTIAL(self):
+            return self._parent.POTENTIALS[self._idx]
 
 
 if __name__ == '__main__':
