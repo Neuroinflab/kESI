@@ -478,14 +478,21 @@ else:
 
 
 class DegeneratedSourceBase(object):
-    __slots__ = ('POTENTIAL',)
+    __slots__ = ('_parent',)
 
-    def __init__(self, potential):
-        self.POTENTIAL = potential
+    def __init__(self, parent=None):
+        self._parent = parent
+
+    def _get_parent(self, other):
+        if self._parent is not None:
+            return self._parent
+
+        return other._parent
 
     def __mul__(self, other):
         return DegeneratedSource(self.POTENTIAL * other,
-                                 self.CSD * other)
+                                 self.CSD * other,
+                                 parent=self._get_parent(other))
 
     def __rmul__(self, other):
         return self * other
@@ -495,7 +502,8 @@ class DegeneratedSourceBase(object):
             return self
 
         return DegeneratedSource(self.POTENTIAL + other.POTENTIAL,
-                                 self.CSD + other.CSD)
+                                 self.CSD + other.CSD,
+                                 parent=self._get_parent(other))
 
     def __radd__(self, other):
         return self * other
@@ -513,13 +521,41 @@ class DegeneratedSourceBase(object):
         return self - other
 
 
-class DegeneratedSource(DegeneratedSourceBase):
-    __slots__ = ('CSD',)
+class DegeneratedSourcePotentialBase(DegeneratedSourceBase):
+    __slots__ = ('POTENTIAL',)
 
-    def __init__(self, potential, csd):
+    def __init__(self, potential, parent=None):
+        super(DegeneratedSourcePotentialBase,
+              self).__init__(parent)
+
+        self.POTENTIAL = potential
+
+
+class DegeneratedSource(DegeneratedSourcePotentialBase):
+    __slots__ = ('CSD', '_csd_interpolator')
+
+    def __init__(self, potential, csd, parent=None):
         super(DegeneratedSource,
-              self).__init__(potential)
+              self).__init__(potential,
+                             parent=parent)
         self.CSD = csd
+        self._csd_interpolator = None
+
+    def csd(self, X, Y, Z):
+        if self._csd_interpolator is None:
+            self._create_csd_interpolator(self._parent.X,
+                                          self._parent.Y,
+                                          self._parent.Z)
+
+        return self._csd_interpolator(np.stack((X, Y, Z),
+                                               axis=-1))
+
+    def _create_csd_interpolator(self, X, Y, Z):
+        self._csd_interpolator = RegularGridInterpolator((X,
+                                                          Y,
+                                                          Z),
+                                                         self.CSD,
+                                                         bounds_error=False)
 
 
 class _LoadableObjectBase(object):
@@ -542,13 +578,76 @@ class _LoadableObjectBase(object):
 
     def save(self, file):
         np.savez_compressed(file,
-                            **{attr: getattr(self, attr)
-                               for attr in self._LoadableObject__ATTRIBUTES})
+                            **self.attribute_mapping())
+
+    def attribute_mapping(self):
+        return {attr: getattr(self, attr) for attr in self._LoadableObject__ATTRIBUTES}
 
     @classmethod
     def load(cls, file):
         with np.load(file) as fh:
-            return cls(*[fh[attr] for attr in cls._LoadableObject__ATTRIBUTES])
+            return cls.from_mapping(fh)
+
+    @classmethod
+    def from_mapping(cls, attributes):
+        return cls(*[attributes[attr] for attr in cls._LoadableObject__ATTRIBUTES])
+
+
+class LoadableGaussians3D(_LoadableObjectBase):
+    _LoadableObject__ATTRIBUTES = [
+        'X',
+        'Y',
+        'Z',
+        'STANDARD_DEVIATION',
+        'AMPLITUDE',
+        ]
+
+    def __init__(self, X, Y, Z, STANDARD_DEVIATION, AMPLITUDE, *args):
+        super(LoadableGaussians3D,
+              self).__init__(X, Y, Z, STANDARD_DEVIATION, AMPLITUDE, *args)
+
+        self._VARIANCE = np.square(STANDARD_DEVIATION)
+        self._A = AMPLITUDE * np.power(2 * np.pi * self._VARIANCE, -1.5)
+
+    def gaussian(self, idx, X, Y, Z):
+       return self._A[idx] * np.exp(-0.5 * (np.square(X - self.X[idx])
+                                            + np.square(Y - self.Y[idx])
+                                            + np.square(Z - self.Z[idx])) / self._VARIANCE[idx])
+
+    class _Child(object):
+        __slots__ = ('_parent', '_idx')
+
+        def __init__(self, parent, idx):
+            self._parent = parent
+            self._idx = idx
+
+        def __call__(self, X, Y, Z):
+            return self._parent.gaussian(self._idx, X, Y, Z)
+
+        @property
+        def x(self):
+            return self._parent.X[self._idx]
+
+        @property
+        def y(self):
+            return self._parent.Y[self._idx]
+
+        @property
+        def z(self):
+            return self._parent.Z[self._idx]
+
+        @property
+        def standard_deviation(self):
+            return self._parent.STANDARD_DEVIATION[self._idx]
+
+        @property
+        def amplitude(self):
+            return self._parent.AMPLITUDE[self._idx]
+
+    def __iter__(self):
+        for i in range(len(self.X)):
+            yield self._Child(self, i)
+
 
 
 class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
@@ -569,6 +668,14 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
                                                 self.Z,
                                                 indexing='ij')
 
+    def copy(self, electrodes=None):
+        attributes = self.attribute_mapping()
+        if electrodes is not None:
+            attributes['ELECTRODES'] = attributes['ELECTRODES'][electrodes]
+            attributes['POTENTIALS'] = attributes['POTENTIALS'][:, :, :, electrodes]
+
+        return self.__class__.from_mapping(attributes)
+
     @classmethod
     def _integration_weights(cls, X):
         dx = cls._d(X)
@@ -582,13 +689,13 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
     def _d(X):
         return (X.max() - X.min()) / (len(X) - 1)
 
-    class IntegratedSource(DegeneratedSourceBase):
-        __slots__ = ('_parent', 'csd')
+    class IntegratedSource(DegeneratedSourcePotentialBase):
+        __slots__ = ('csd',)
 
         def __init__(self, parent, potential, csd):
             super(DegeneratedSliceSourcesFactory.IntegratedSource,
-                  self).__init__(potential)
-            self._parent = parent
+                  self).__init__(potential,
+                                 parent=parent)
             self.csd = csd
 
         @property
@@ -597,15 +704,29 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
                             self._parent._Y,
                             self._parent._Z)
 
+    class _MeasurementManager(VerboseFFR.MeasurementManagerBase):
+        def __init__(self, factory):
+            self.number_of_measurements = factory.ELECTRODES.shape[0]
+
+        def probe_at_single_point(self, field, electrode):
+            return field.POTENTIAL[electrode]
+
+        def probe(self, field):
+            return field.POTENTIAL
+
+    def measurement_manager(self):
+        return self._MeasurementManager(self)
+
 
 class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
-    class Source(DegeneratedSourceBase):
+    class Source(DegeneratedSourcePotentialBase):
         def __init__(self, parent, x, y, z, potential, amplitude=1):
-            self._parent = parent
+            super(DegeneratedSliceSourcesFactory.Source,
+                  self).__init__(potential,
+                                 parent=parent)
             self._x = x
             self._y = y
             self._z = z
-            self.POTENTIAL = potential
             self.amplitude = amplitude
 
         @property
@@ -618,8 +739,8 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
         def csd(self):
             return self.CSD
 
-    class MemorySavySource(object):
-        __slots__ = ('_parent', '_idx_x', '_idx_y', '_idx_z')
+    class MemoryEfficientSource(DegeneratedSourceBase):
+        __slots__ = ('_idx_x', '_idx_y', '_idx_z')
 
         def __init__(self, parent, x, y, z):
             self._parent = parent
@@ -641,10 +762,30 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
 
         @property
         def POTENTIAL(self):
-            return self._parent.POTRNTIALS[self._idx_x,
+            return self._parent.POTENTIALS[self._idx_x,
                                            self._idx_y,
                                            self._idx_z,
                                            :]
+
+        @property
+        def CSD(self):
+            return ((self._parent._IDX_X == self._idx_x)
+                    & (self._parent._IDX_Y == self._idx_y)
+                    & (self._parent._IDX_Z == self._idx_z))
+
+    def memory_efficient_sources(self):
+        for x in self._IDX_X.flatten():
+            for y in self._IDX_Y.flatten():
+                for z in self._IDX_Z.flatten():
+                    yield self.MemoryEfficientSource(self, x, y, z)
+
+    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
+        super(DegeneratedSliceSourcesFactory,
+              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES)
+        self._IDX_X = np.arange(len(X)).reshape((-1, 1, 1))
+        self._IDX_Y = np.arange(len(Y)).reshape((1, -1, 1))
+        self._IDX_Z = np.arange(len(Z)).reshape((1, 1, -1))
+
 
     @classmethod
     def from_factory(cls, factory, ELECTRODES, dtype=None):
@@ -714,19 +855,6 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
                 for z, POTENTIAL in zip(self.Z, self.POTENTIALS[x_idx, y_idx]):
                     yield self.Source(self, x, y, z, POTENTIAL)
 
-    class _MeasurementManager(VerboseFFR.MeasurementManagerBase):
-        def __init__(self, factory):
-            self.number_of_measurements = factory.ELECTRODES.shape[0]
-
-        def probe_at_single_point(self, field, electrode):
-            return field.POTENTIAL[electrode]
-
-        def probe(self, field):
-            return field.POTENTIAL
-
-    def measurement_manager(self):
-        return self._MeasurementManager(self)
-
     def integrated_source(self, csd):
         POTENTIAL = 0.0
 
@@ -745,16 +873,16 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
                         X))
 
     class InterpolatedSource(DegeneratedSource):
+        __slots__ = ()
+
         def __init__(self, POTENTIAL, CSD, X, Y, Z):
             super(DegeneratedSliceSourcesFactory.InterpolatedSource,
                   self).__init__(POTENTIAL, CSD)
-            self._interpolator = RegularGridInterpolator((X, Y, Z),
-                                                         CSD,
-                                                         bounds_error=False)
+            self._create_csd_interpolator(X, Y, Z)
 
         def csd(self, X, Y, Z):
-            return self._interpolator(np.stack((X, Y, Z),
-                                               axis=-1))
+            return self._csd_interpolator(np.stack((X, Y, Z),
+                                                   axis=-1))
 
     def add_csd_interpolator(self, source):
         return self.InterpolatedSource(source.POTENTIAL,
@@ -765,37 +893,145 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
 
 
 class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
-    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
-        super(DegeneratedIntegratedSourcesFactory,
-              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES)
+    @classmethod
+    def load_from_degenerated_sources_factory(cls, file):
+        with np.load(file) as fh:
+            attributes = {attr: fh[attr] for attr in cls._LoadableObject__ATTRIBUTES}
 
-        for i, w in enumerate(self._integration_weights(X)):
-            self.POTENTIALS[i, :, :, :] *= w
+        POTENTIALS = attributes['POTENTIALS']
+        for i, w in enumerate(cls._integration_weights(attributes['X'])):
+            POTENTIALS[i, :, :, :] *= w
 
-        for i, w in enumerate(self._integration_weights(Y)):
-            self.POTENTIALS[:, i, :, :] *= w
+        for i, w in enumerate(cls._integration_weights(attributes['Y'])):
+            POTENTIALS[:, i, :, :] *= w
 
-        for i, w in enumerate(self._integration_weights(Z)):
-            self.POTENTIALS[:, :, i, :] *= w
+        for i, w in enumerate(cls._integration_weights(attributes['Z'])):
+            POTENTIALS[:, :, i, :] *= w
 
-    def __call__(self, csd):
-        try:
-            POTENTIAL = (self.POTENTIALS
-                         * csd(np.reshape(self.X, (-1, 1, 1, 1)),
-                               np.reshape(self.Y, (1, -1, 1, 1)),
-                               np.reshape(self.Z, (1, 1, -1, 1)))).sum(axis=(0, 1, 2))
-        except:
-            POTENTIAL = 0.0
-            for idx_x, x in enumerate(self.X):
-                for idx_y, y in enumerate(self.Y):
-                    for idx_z, z in enumerate(self.Z):
-                        POTENTIAL += csd(x, y, z) * self.POTENTIALS[idx_x,
-                                                                    idx_y,
-                                                                    idx_z]
+        return cls.from_mapping(attributes)
 
-        return self.IntegratedSource(self, POTENTIAL, csd)
-# TODO:
-# Create Romberg Function manager/controler and Romberg function factory.
+    (NO_VECTOR_INTEGRATION,
+     VECTOR_INTEGRATE_Z,
+     VECTOR_INTEGRATE_YZ,
+     VECTOR_INTEGRATE_XYZ) = range(4)
+
+    def _use_vector_integration_for_xyz(self):
+        return self._vectorization_level == self.VECTOR_INTEGRATE_XYZ
+
+    def _use_vector_integration_for_yz(self):
+        return self._vectorization_level == self.VECTOR_INTEGRATE_YZ
+
+    def _use_vector_integration_for_z(self):
+        return self._vectorization_level == self.VECTOR_INTEGRATE_Z
+
+    def _decrease_vectorization_level(self):
+        self._vectorization_level -= 1
+
+    def __call__(self, csd,
+                 vectorization_level=VECTOR_INTEGRATE_XYZ):
+        return self.IntegratedSource(self,
+                                     self.integrate_potential(csd, vectorization_level),
+                                     csd)
+
+    def integrate_potential(self, csd, vectorization_level=VECTOR_INTEGRATE_XYZ):
+        self._vectorization_level = vectorization_level
+        self._integrate_xyz(csd)
+        return self._POTENTIAL
+
+    def _integrate_xyz(self, csd):
+        if self._use_vector_integration_for_xyz():
+            try:
+                self._vector_integrate_xyz(csd)
+
+            except Exception as e:
+                logger.warning(f'XYZ vector integration yielded {e}')
+                self._decrease_vectorization_level()
+
+        if not self._use_vector_integration_for_xyz():
+            self._scalar_integrate_x(csd)
+
+    def _vector_integrate_xyz(self, csd):
+        self._POTENTIAL = (self.POTENTIALS
+                           * csd(np.reshape(self.X, (-1, 1, 1, 1)),
+                                 np.reshape(self.Y, (1, -1, 1, 1)),
+                                 np.reshape(self.Z, (1, 1, -1, 1)))).sum(axis=(0, 1, 2))
+
+    def _scalar_integrate_x(self, csd):
+        self._POTENTIAL = 0.0
+        for idx_x, x in enumerate(self.X):
+            self._integrate_yz(csd, idx_x, x)
+
+    def _integrate_yz(self, csd, idx_x, x):
+        if self._use_vector_integration_for_yz():
+            try:
+                self._vector_integrate_yz(csd, idx_x, x)
+
+            except Exception as e:
+                logger.warning(f'YZ vector integration yielded {e}')
+                self._decrease_vectorization_level()
+
+        if not self._use_vector_integration_for_yz():
+            self._scalar_integrate_y(csd, idx_x, x)
+
+    def _vector_integrate_yz(self, csd, idx_x, x):
+        self._POTENTIAL += (self.POTENTIALS[idx_x]
+                            * csd(x,
+                                  np.reshape(self.Y, (-1, 1, 1)),
+                                  np.reshape(self.Z, (1, -1, 1)))).sum(axis=(0, 1))
+
+    def _scalar_integrate_y(self, csd, idx_x, x):
+        for idx_y, y in enumerate(self.Y):
+            self._integrate_z(csd, idx_x, idx_y, x, y)
+
+    def _integrate_z(self, csd, idx_x, idx_y, x, y):
+        if self._use_vector_integration_for_z():
+            try:
+                self._vector_integrate_z(csd, idx_x, idx_y, x, y)
+
+            except Exception as e:
+                logger.warning(f'Z vector integration yielded {e}')
+                self._decrease_vectorization_level()
+
+        if not self._use_vector_integration_for_z():
+            self._scalar_integrate_z(csd, idx_x, idx_y, x, y)
+
+    def _vector_integrate_z(self, csd, idx_x, idx_y, x, y):
+        self._POTENTIAL += (self.POTENTIALS[idx_x, idx_y]
+                            * csd(x,
+                                  y,
+                                  np.reshape(self.Z, (-1, 1)))).sum(axis=0)
+
+    def _scalar_integrate_z(self, csd, idx_x, idx_y, x, y):
+        for idx_z, z in enumerate(self.Z):
+            self._POTENTIAL += csd(x, y, z) * self.POTENTIALS[idx_x,
+                                                              idx_y,
+                                                              idx_z]
+
+    def LoadableIntegratedSourcess(self, LoadableFunctionsClass):
+        class LoadableIntegratedSourcess(LoadableFunctionsClass):
+            _LoadableObject__ATTRIBUTES = LoadableFunctionsClass._LoadableObject__ATTRIBUTES + ['ELECTRODES', 'POTENTIALS']
+
+            @classmethod
+            def from_factories(cls, csd_factory, integrated_sources,
+                               vectorization_level=DegeneratedIntegratedSourcesFactory.VECTOR_INTEGRATE_XYZ):
+                attributes = csd_factory.attribute_mapping()
+                attributes['ELECTRODES'] = integrated_sources.ELECTRODES
+                attributes['POTENTIALS'] = np.array([integrated_sources.integrate_potential(csd,
+                                                                                            vectorization_level=vectorization_level)
+                                                     for csd in csd_factory])
+                return cls.from_mapping(attributes)
+
+            class _Child(LoadableFunctionsClass._Child):
+                __slots__ = ()
+
+                def csd(self, *args, **kwargs):
+                    return self(*args, **kwargs)
+
+                @property
+                def POTENTIAL(self):
+                    return self._parent.POTENTIALS[self._idx]
+
+        return LoadableIntegratedSourcess
 
 
 if __name__ == '__main__':
