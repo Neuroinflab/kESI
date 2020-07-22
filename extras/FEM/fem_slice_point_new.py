@@ -455,11 +455,14 @@ else:
             yield from self._fm.functions()
 
         def __call__(self, name):
-            return self.Source(self._fm.getfloat(name, 'x'),
-                               self._fm.getfloat(name, 'y'),
-                               self._fm.getfloat(name, 'z'),
-                               conductivity=self._fm.getfloat(name, 'base_conductivity'),
+            return self.Source(self.getfloat(name, 'x'),
+                               self.getfloat(name, 'y'),
+                               self.getfloat(name, 'z'),
+                               conductivity=self.getfloat(name, 'base_conductivity'),
                                potential_correction=self._fm.load(name))
+
+        def getfloat(self, name, field):
+            return self._fm.getfloat(name, field)
 
         class Source(object):  # duplicates code from _common_new.PointSource
             def __init__(self, x, y, z, conductivity=1, amplitude=1, potential_correction=None):
@@ -826,6 +829,46 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
             X[midpoint - x_idx] = -source.x
             Y[midpoint + x_idx] = source.x
             Y[midpoint - x_idx] = -source.x
+
+        return cls(X, Y, Z, POTENTIALS, ELECTRODES)
+
+    @classmethod
+    def from_reciprocal_factory(cls, factory, ELECTRODES,
+                                X=None,
+                                Y=None,
+                                Z=None,
+                                dtype=None):
+        ELE_X, ELE_Y, ELE_Z = np.transpose(ELECTRODES)
+        POTENTIALS = fc.empty_array((len(X), len(Y), len(Z), len(ELECTRODES)),
+                                    dtype=dtype)
+
+        ABS_ELE_X = abs(ELE_X)
+        ABS_ELE_Y = abs(ELE_Y)
+        FLIP_XY = ABS_ELE_Y > ABS_ELE_X
+        FLIPPED_X = np.where(FLIP_XY,
+                             ABS_ELE_Y,
+                             ABS_ELE_X)
+        FLIPPED_Y = np.where(FLIP_XY,
+                             ABS_ELE_X,
+                             ABS_ELE_Y)
+
+        for name in factory:
+            x, y, z = [factory.getfloat(name, field)
+                       for field in ['x', 'y', 'z']]
+            IDX = (FLIPPED_X == x) & (FLIPPED_Y == y) & (ELE_Z == z)
+            if IDX.any():
+                source = factory(name)
+                for idx in np.where(IDX)[0]:
+                    wx = 1 if ELE_X[idx] > 0 else -1
+                    wy = 1 if ELE_Y[idx] > 0 else -1
+                    ITER_X, ITER_Y = (Y * wy, X * wx) if FLIP_XY[idx] else (X * wx, Y * wy)
+                    for idx_x, src_x in enumerate(ITER_X):
+                        for idx_y, src_y in enumerate(ITER_Y):
+                            for idx_z, src_z in enumerate(ELE_Z):
+                                POTENTIALS[idx_x,
+                                           idx_y,
+                                           idx_z,
+                                           idx] = source.potential(src_x, src_y, src_z)
 
         return cls(X, Y, Z, POTENTIALS, ELECTRODES)
 
