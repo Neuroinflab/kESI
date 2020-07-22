@@ -809,7 +809,7 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
         __slots__ = ('csd',)
 
         def __init__(self, parent, potential, csd):
-            super(DegeneratedSliceSourcesFactory.IntegratedSource,
+            super(_DegeneratedSourcesFactoryBase.IntegratedSource,
                   self).__init__(potential,
                                  parent=parent)
             self.csd = csd
