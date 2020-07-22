@@ -1048,6 +1048,128 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
                                        self.Z)
 
 
+class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
+    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
+        super(DegeneratedRegularSourcesFactory,
+              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES)
+        self._IDX_X = np.arange(len(X)).reshape((-1, 1, 1))
+        self._IDX_Y = np.arange(len(Y)).reshape((1, -1, 1))
+        self._IDX_Z = np.arange(len(Z)).reshape((1, 1, -1))
+
+
+    @classmethod
+    def from_factory(cls, factory, ELECTRODES, dtype=None):
+        sources = list(factory)
+
+        X = set()
+        Y = set()
+        Z = set()
+
+        for source in sources:
+            X.add(source.x)
+            Y.add(source.y)
+            Z.add(source.z)
+
+        X, Y, Z = map(sorted, [X, Y, Z])
+        POTENTIALS = fc.empty_array((len(X), len(Y), len(Z), len(ELECTRODES)),
+                                    dtype=dtype)
+
+        while sources:
+            source = sources.pop()
+            # it is crucial not to hold reference to the source
+            # to enable freeing of the loaded FEM solution
+
+            idx_x = X.index(source.x)
+            idx_y = Y.index(source.y)
+            idx_z = Z.index(source.z)
+
+            try:
+                POTENTIALS[idx_x,
+                           idx_y,
+                           idx_z,
+                           :] = source.potential(ELECTRODES[:, 0],
+                                                 ELECTRODES[:, 1],
+                                                 ELECTRODES[:, 2])
+            except Exception:
+                for idx_e, (x, y, z) in enumerate(ELECTRODES):
+                    POTENTIALS[idx_x,
+                               idx_y,
+                               idx_z,
+                               idx_e] = source.potential(x, y, z)
+
+        return cls(X, Y, Z, POTENTIALS, ELECTRODES)
+
+    @classmethod
+    def from_reciprocal_factory(cls, factory, ELECTRODES,
+                                X=None,
+                                Y=None,
+                                Z=None,
+                                dtype=None,
+                                tolerance=np.finfo(float).eps):
+
+        ELECTRODES = ELECTRODES.copy()
+        POTENTIALS = fc.empty_array((len(X), len(Y), len(Z), len(ELECTRODES)),
+                                    dtype=dtype)
+
+        for source in factory:
+            IDX = ((abs(ELECTRODES[:, 0] - source.x) < tolerance)
+                   & (abs(ELECTRODES[:, 1] - source.y) < tolerance)
+                   & (abs(ELECTRODES[:, 2] - source.z) < tolerance))
+            if IDX.any():
+                source = factory(name)
+                for idx in np.where(IDX)[0]:
+                    ELECTRODES[idx, :] = source.x, source.y, source.z
+                    for idx_x, src_x in enumerate(X):
+                        for idx_y, src_y in enumerate(Y):
+                            for idx_z, src_z in enumerate(Z):
+                                POTENTIALS[idx_x,
+                                           idx_y,
+                                           idx_z,
+                                           idx] = source.potential(src_x, src_y, src_z)
+
+        return cls(X, Y, Z, POTENTIALS, ELECTRODES)
+
+    def __iter__(self):
+        for x in self._IDX_X.flatten():
+            for y in self._IDX_Y.flatten():
+                for z in self._IDX_Z.flatten():
+                    yield self.Source(self, x, y, z)
+
+    class Source(DegeneratedSourceBase):
+        __slots__ = ('_idx_x', '_idx_y', '_idx_z')
+
+        def __init__(self, parent, x, y, z):
+            self._parent = parent
+            self._idx_x = x
+            self._idx_y = y
+            self._idx_z = z
+
+        @property
+        def x(self):
+            return self._parent.X[self._idx_x]
+
+        @property
+        def y(self):
+            return self._parent.Y[self._idx_y]
+
+        @property
+        def z(self):
+            return self._parent.Z[self._idx_z]
+
+        @property
+        def POTENTIAL(self):
+            return self._parent.POTENTIALS[self._idx_x,
+                                           self._idx_y,
+                                           self._idx_z,
+                                           :]
+
+        @property
+        def CSD(self):
+            return ((self._parent._IDX_X == self._idx_x)
+                    & (self._parent._IDX_Y == self._idx_y)
+                    & (self._parent._IDX_Z == self._idx_z))
+
+
 class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
     @classmethod
     def load_from_degenerated_sources_factory(cls, file):
