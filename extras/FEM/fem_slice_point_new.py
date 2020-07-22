@@ -26,6 +26,7 @@ import configparser
 import logging
 import os
 import itertools
+import collections
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
@@ -436,13 +437,21 @@ else:
             return self.config.has_section(name)
 
 
-    class PointSourceFactoryINI(object):
+    class PointSourceFactoryBase(object):
         def __init__(self, config):
             self._fm = FunctionManagerINI(config)
             self._fm.set('fem', 'solution_metadata_filename',
                          os.path.relpath(config,
                                          _DIRECTORY))
 
+        def getfloat(self, name, field):
+            return self._fm.getfloat(name, field)
+
+        def load(self, name):
+            return self._fm.load(name)
+
+
+    class PointSourceFactoryINI(PointSourceFactoryBase):
         @property
         def k(self):
             return self._fm.getint('fem', 'k')
@@ -459,10 +468,7 @@ else:
                                self.getfloat(name, 'y'),
                                self.getfloat(name, 'z'),
                                conductivity=self.getfloat(name, 'base_conductivity'),
-                               potential_correction=self._fm.load(name))
-
-        def getfloat(self, name, field):
-            return self._fm.getfloat(name, field)
+                               potential_correction=self.load(name))
 
         class Source(object):  # duplicates code from _common_new.PointSource
             def __init__(self, x, y, z, conductivity=1, amplitude=1, potential_correction=None):
@@ -478,6 +484,113 @@ else:
                                          + np.square(Y - self.y)
                                          + np.square(Z - self.z))
                         + self.potential_correction(X, Y, Z))
+
+
+    class DecompressedPointSourceFactory(PointSourceFactoryBase):
+        def __init__(self, config):
+            super(DecompressedPointSourceFactory,
+                  self).__init__(config)
+
+            self._lazy_sources = {}
+            self._lazy_sources_counter = collections.Counter()
+
+        def load(self, name):
+            try:
+                self._lazy_sources_counter[name] += 1
+                if name in self._lazy_sources:
+                    return self._lazy_sources[name]
+
+                loaded = super(DecompressedPointSourceFactory,
+                               self).load(name)
+                self._lazy_sources[name] = loaded
+                return loaded
+
+            except Exception as e:
+                self.unload(name)
+                raise e
+
+        def unload(self, name):
+            self._lazy_sources_counter[name] -= 1
+            if self._lazy_sources_counter[name] == 0:
+                del self._lazy_sources[name]
+
+        def __iter__(self):
+            for name in self._fm._functions():
+                x = self.getfloat(name, 'x')
+                y = self.getfloat(name, 'y')
+                z = self.getfloat(name, 'z')
+                conductivity = self.getfloat(name, 'base_conductivity')
+                for xx, yy in ([(x, y)]
+                               if x == y else
+                               [(x, y), (y, x)]):
+                    for xxx in ([xx] if xx > 0 else [xx, -xx]):
+                        for yyy in ([yy] if yy > 0 else [yy, -yy]):
+                            yield self.Source(self,
+                                              xxx,
+                                              yyy,
+                                              z,
+                                              name,
+                                              conductivity=conductivity)
+
+        def __call__(self, x, y, z, tolerance=np.finfo(float).eps):
+            abs_x = abs(x)
+            abs_y = abs(y)
+            flip_xy = abs_x < abs_y
+            if flip_xy:
+                abs_x, abs_y = abs_y, abs_x
+
+            for name in self._fm._functions():
+                if (abs(self.getfloat(name, 'x') - abs_x) < tolerance
+                    and abs(self.getfloat(name, 'y') - abs_y) < tolerance
+                    and abs(self.getfloat(name, 'z') - z) < tolerance):
+                    return self.Source(self,
+                                       x,
+                                       y,
+                                       z,
+                                       name,
+                                       conductivity=self.getfloat(name, 'base_conductivity'))
+
+            else:
+                raise self.SolutionNotFound
+
+        class SolutionNotFound(KeyError):
+            pass
+
+        class Source(object):  # duplicates code from _common_new.PointSource
+            def __init__(self, parent, x, y, z, name, conductivity=1, amplitude=1):
+                self.x = x
+                self.y = y
+                self.z = z
+                self._flip_xy = abs(x) < abs(y)
+                self._wx = 1 if x > 0 else -1
+                self._wy = 1 if y > 0 else -1
+                self._parent = parent
+                self._name = name
+                self.conductivity = conductivity
+                self.potential_correction = None
+                self.a = amplitude * 0.25 / (np.pi * conductivity)
+
+            def potential(self, X, Y, Z):
+                return (self.a / np.sqrt(np.square(X - self.x)
+                                         + np.square(Y - self.y)
+                                         + np.square(Z - self.z))
+                        + self.potential_correction(X, Y, Z))
+
+            def potential_correction(self, X, Y, Z):
+                if self._potential_correction is None:
+                    self._potential_correction = self._parent.load(self._name)
+
+                if self._flip_xy:
+                    return self._potential_correction(self._wy * Y,
+                                                      self._wx * X,
+                                                      Z)
+                else:
+                    return self._potential_correction(self._wx * X,
+                                                      self._wy * Y,
+                                                      Z)
+
+            def __del__(self):
+                self._parent.unload(self._name)
 
 
 class DegeneratedSourceBase(object):
