@@ -515,7 +515,7 @@ else:
                 del self._lazy_sources[name]
 
         def __iter__(self):
-            for name in self._fm._functions():
+            for name in self._fm.functions():
                 x = self.getfloat(name, 'x')
                 y = self.getfloat(name, 'y')
                 z = self.getfloat(name, 'z')
