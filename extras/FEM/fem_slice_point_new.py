@@ -26,6 +26,7 @@ import configparser
 import logging
 import os
 import itertools
+import collections
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
@@ -436,13 +437,21 @@ else:
             return self.config.has_section(name)
 
 
-    class PointSourceFactoryINI(object):
+    class PointSourceFactoryBase(object):
         def __init__(self, config):
             self._fm = FunctionManagerINI(config)
             self._fm.set('fem', 'solution_metadata_filename',
                          os.path.relpath(config,
                                          _DIRECTORY))
 
+        def getfloat(self, name, field):
+            return self._fm.getfloat(name, field)
+
+        def load(self, name):
+            return self._fm.load(name)
+
+
+    class PointSourceFactoryINI(PointSourceFactoryBase):
         @property
         def k(self):
             return self._fm.getint('fem', 'k')
@@ -455,11 +464,11 @@ else:
             yield from self._fm.functions()
 
         def __call__(self, name):
-            return self.Source(self._fm.getfloat(name, 'x'),
-                               self._fm.getfloat(name, 'y'),
-                               self._fm.getfloat(name, 'z'),
-                               conductivity=self._fm.getfloat(name, 'base_conductivity'),
-                               potential_correction=self._fm.load(name))
+            return self.Source(self.getfloat(name, 'x'),
+                               self.getfloat(name, 'y'),
+                               self.getfloat(name, 'z'),
+                               conductivity=self.getfloat(name, 'base_conductivity'),
+                               potential_correction=self.load(name))
 
         class Source(object):  # duplicates code from _common_new.PointSource
             def __init__(self, x, y, z, conductivity=1, amplitude=1, potential_correction=None):
@@ -475,6 +484,113 @@ else:
                                          + np.square(Y - self.y)
                                          + np.square(Z - self.z))
                         + self.potential_correction(X, Y, Z))
+
+
+    class DecompressedPointSourceFactory(PointSourceFactoryBase):
+        def __init__(self, config):
+            super(DecompressedPointSourceFactory,
+                  self).__init__(config)
+
+            self._lazy_sources = {}
+            self._lazy_sources_counter = collections.Counter()
+
+        def load(self, name):
+            try:
+                self._lazy_sources_counter[name] += 1
+                if name in self._lazy_sources:
+                    return self._lazy_sources[name]
+
+                loaded = super(DecompressedPointSourceFactory,
+                               self).load(name)
+                self._lazy_sources[name] = loaded
+                return loaded
+
+            except Exception as e:
+                self.unload(name)
+                raise e
+
+        def unload(self, name):
+            self._lazy_sources_counter[name] -= 1
+            if self._lazy_sources_counter[name] == 0:
+                del self._lazy_sources[name]
+
+        def __iter__(self):
+            for name in self._fm._functions():
+                x = self.getfloat(name, 'x')
+                y = self.getfloat(name, 'y')
+                z = self.getfloat(name, 'z')
+                conductivity = self.getfloat(name, 'base_conductivity')
+                for xx, yy in ([(x, y)]
+                               if x == y else
+                               [(x, y), (y, x)]):
+                    for xxx in ([xx] if xx > 0 else [xx, -xx]):
+                        for yyy in ([yy] if yy > 0 else [yy, -yy]):
+                            yield self.Source(self,
+                                              xxx,
+                                              yyy,
+                                              z,
+                                              name,
+                                              conductivity=conductivity)
+
+        def __call__(self, x, y, z, tolerance=np.finfo(float).eps):
+            abs_x = abs(x)
+            abs_y = abs(y)
+            flip_xy = abs_x < abs_y
+            if flip_xy:
+                abs_x, abs_y = abs_y, abs_x
+
+            for name in self._fm._functions():
+                if (abs(self.getfloat(name, 'x') - abs_x) < tolerance
+                    and abs(self.getfloat(name, 'y') - abs_y) < tolerance
+                    and abs(self.getfloat(name, 'z') - z) < tolerance):
+                    return self.Source(self,
+                                       x,
+                                       y,
+                                       z,
+                                       name,
+                                       conductivity=self.getfloat(name, 'base_conductivity'))
+
+            else:
+                raise self.SolutionNotFound
+
+        class SolutionNotFound(KeyError):
+            pass
+
+        class Source(object):  # duplicates code from _common_new.PointSource
+            def __init__(self, parent, x, y, z, name, conductivity=1, amplitude=1):
+                self.x = x
+                self.y = y
+                self.z = z
+                self._flip_xy = abs(x) < abs(y)
+                self._wx = 1 if x > 0 else -1
+                self._wy = 1 if y > 0 else -1
+                self._parent = parent
+                self._name = name
+                self.conductivity = conductivity
+                self.potential_correction = None
+                self.a = amplitude * 0.25 / (np.pi * conductivity)
+
+            def potential(self, X, Y, Z):
+                return (self.a / np.sqrt(np.square(X - self.x)
+                                         + np.square(Y - self.y)
+                                         + np.square(Z - self.z))
+                        + self.potential_correction(X, Y, Z))
+
+            def potential_correction(self, X, Y, Z):
+                if self._potential_correction is None:
+                    self._potential_correction = self._parent.load(self._name)
+
+                if self._flip_xy:
+                    return self._potential_correction(self._wy * Y,
+                                                      self._wx * X,
+                                                      Z)
+                else:
+                    return self._potential_correction(self._wx * X,
+                                                      self._wy * Y,
+                                                      Z)
+
+            def __del__(self):
+                self._parent.unload(self._name)
 
 
 class DegeneratedSourceBase(object):
@@ -693,7 +809,7 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
         __slots__ = ('csd',)
 
         def __init__(self, parent, potential, csd):
-            super(DegeneratedSliceSourcesFactory.IntegratedSource,
+            super(_DegeneratedSourcesFactoryBase.IntegratedSource,
                   self).__init__(potential,
                                  parent=parent)
             self.csd = csd
@@ -830,6 +946,46 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
         return cls(X, Y, Z, POTENTIALS, ELECTRODES)
 
     @classmethod
+    def from_reciprocal_factory(cls, factory, ELECTRODES,
+                                X=None,
+                                Y=None,
+                                Z=None,
+                                dtype=None):
+        ELE_X, ELE_Y, ELE_Z = np.transpose(ELECTRODES)
+        POTENTIALS = fc.empty_array((len(X), len(Y), len(Z), len(ELECTRODES)),
+                                    dtype=dtype)
+
+        ABS_ELE_X = abs(ELE_X)
+        ABS_ELE_Y = abs(ELE_Y)
+        FLIP_XY = ABS_ELE_Y > ABS_ELE_X
+        FLIPPED_X = np.where(FLIP_XY,
+                             ABS_ELE_Y,
+                             ABS_ELE_X)
+        FLIPPED_Y = np.where(FLIP_XY,
+                             ABS_ELE_X,
+                             ABS_ELE_Y)
+
+        for name in factory:
+            x, y, z = [factory.getfloat(name, field)
+                       for field in ['x', 'y', 'z']]
+            IDX = (FLIPPED_X == x) & (FLIPPED_Y == y) & (ELE_Z == z)
+            if IDX.any():
+                source = factory(name)
+                for idx in np.where(IDX)[0]:
+                    wx = 1 if ELE_X[idx] > 0 else -1
+                    wy = 1 if ELE_Y[idx] > 0 else -1
+                    ITER_X, ITER_Y = (Y * wy, X * wx) if FLIP_XY[idx] else (X * wx, Y * wy)
+                    for idx_x, src_x in enumerate(ITER_X):
+                        for idx_y, src_y in enumerate(ITER_Y):
+                            for idx_z, src_z in enumerate(ELE_Z):
+                                POTENTIALS[idx_x,
+                                           idx_y,
+                                           idx_z,
+                                           idx] = source.potential(src_x, src_y, src_z)
+
+        return cls(X, Y, Z, POTENTIALS, ELECTRODES)
+
+    @classmethod
     def _compressed_indices(cls, k):
         n = 2 ** k + 1
         midpoint = n // 2
@@ -890,6 +1046,128 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
                                        self.X,
                                        self.Y,
                                        self.Z)
+
+
+class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
+    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
+        super(DegeneratedRegularSourcesFactory,
+              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES)
+        self._IDX_X = np.arange(len(X)).reshape((-1, 1, 1))
+        self._IDX_Y = np.arange(len(Y)).reshape((1, -1, 1))
+        self._IDX_Z = np.arange(len(Z)).reshape((1, 1, -1))
+
+
+    @classmethod
+    def from_factory(cls, factory, ELECTRODES, dtype=None):
+        sources = list(factory)
+
+        X = set()
+        Y = set()
+        Z = set()
+
+        for source in sources:
+            X.add(source.x)
+            Y.add(source.y)
+            Z.add(source.z)
+
+        X, Y, Z = map(sorted, [X, Y, Z])
+        POTENTIALS = fc.empty_array((len(X), len(Y), len(Z), len(ELECTRODES)),
+                                    dtype=dtype)
+
+        while sources:
+            source = sources.pop()
+            # it is crucial not to hold reference to the source
+            # to enable freeing of the loaded FEM solution
+
+            idx_x = X.index(source.x)
+            idx_y = Y.index(source.y)
+            idx_z = Z.index(source.z)
+
+            try:
+                POTENTIALS[idx_x,
+                           idx_y,
+                           idx_z,
+                           :] = source.potential(ELECTRODES[:, 0],
+                                                 ELECTRODES[:, 1],
+                                                 ELECTRODES[:, 2])
+            except Exception:
+                for idx_e, (x, y, z) in enumerate(ELECTRODES):
+                    POTENTIALS[idx_x,
+                               idx_y,
+                               idx_z,
+                               idx_e] = source.potential(x, y, z)
+
+        return cls(X, Y, Z, POTENTIALS, ELECTRODES)
+
+    @classmethod
+    def from_reciprocal_factory(cls, factory, ELECTRODES,
+                                X=None,
+                                Y=None,
+                                Z=None,
+                                dtype=None,
+                                tolerance=np.finfo(float).eps):
+
+        ELECTRODES = ELECTRODES.copy()
+        POTENTIALS = fc.empty_array((len(X), len(Y), len(Z), len(ELECTRODES)),
+                                    dtype=dtype)
+
+        for source in factory:
+            IDX = ((abs(ELECTRODES[:, 0] - source.x) < tolerance)
+                   & (abs(ELECTRODES[:, 1] - source.y) < tolerance)
+                   & (abs(ELECTRODES[:, 2] - source.z) < tolerance))
+            if IDX.any():
+                source = factory(name)
+                for idx in np.where(IDX)[0]:
+                    ELECTRODES[idx, :] = source.x, source.y, source.z
+                    for idx_x, src_x in enumerate(X):
+                        for idx_y, src_y in enumerate(Y):
+                            for idx_z, src_z in enumerate(Z):
+                                POTENTIALS[idx_x,
+                                           idx_y,
+                                           idx_z,
+                                           idx] = source.potential(src_x, src_y, src_z)
+
+        return cls(X, Y, Z, POTENTIALS, ELECTRODES)
+
+    def __iter__(self):
+        for x in self._IDX_X.flatten():
+            for y in self._IDX_Y.flatten():
+                for z in self._IDX_Z.flatten():
+                    yield self.Source(self, x, y, z)
+
+    class Source(DegeneratedSourceBase):
+        __slots__ = ('_idx_x', '_idx_y', '_idx_z')
+
+        def __init__(self, parent, x, y, z):
+            self._parent = parent
+            self._idx_x = x
+            self._idx_y = y
+            self._idx_z = z
+
+        @property
+        def x(self):
+            return self._parent.X[self._idx_x]
+
+        @property
+        def y(self):
+            return self._parent.Y[self._idx_y]
+
+        @property
+        def z(self):
+            return self._parent.Z[self._idx_z]
+
+        @property
+        def POTENTIAL(self):
+            return self._parent.POTENTIALS[self._idx_x,
+                                           self._idx_y,
+                                           self._idx_z,
+                                           :]
+
+        @property
+        def CSD(self):
+            return ((self._parent._IDX_X == self._idx_x)
+                    & (self._parent._IDX_Y == self._idx_y)
+                    & (self._parent._IDX_Z == self._idx_z))
 
 
 class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
