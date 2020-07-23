@@ -567,7 +567,7 @@ else:
                 self._parent = parent
                 self._name = name
                 self.conductivity = conductivity
-                self.potential_correction = None
+                self._potential_correction = None
                 self.a = amplitude * 0.25 / (np.pi * conductivity)
 
             def potential(self, X, Y, Z):
