@@ -523,8 +523,8 @@ else:
                 for xx, yy in ([(x, y)]
                                if x == y else
                                [(x, y), (y, x)]):
-                    for xxx in ([xx] if xx > 0 else [xx, -xx]):
-                        for yyy in ([yy] if yy > 0 else [yy, -yy]):
+                    for xxx in ([xx] if xx == 0 else [xx, -xx]):
+                        for yyy in ([yy] if yy == 0 else [yy, -yy]):
                             yield self.Source(self,
                                               xxx,
                                               yyy,
