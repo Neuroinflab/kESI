@@ -1116,7 +1116,6 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
                    & (abs(ELECTRODES[:, 1] - source.y) < tolerance)
                    & (abs(ELECTRODES[:, 2] - source.z) < tolerance))
             if IDX.any():
-                source = factory(name)
                 for idx in np.where(IDX)[0]:
                     ELECTRODES[idx, :] = source.x, source.y, source.z
                     for idx_x, src_x in enumerate(X):
