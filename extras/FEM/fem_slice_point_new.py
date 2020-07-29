@@ -512,7 +512,8 @@ else:
         def unload(self, name):
             self._lazy_sources_counter[name] -= 1
             if self._lazy_sources_counter[name] == 0:
-                del self._lazy_sources[name]
+                if name in self._lazy_sources:
+                    del self._lazy_sources[name]
 
         def __iter__(self):
             for name in self._fm.functions():
