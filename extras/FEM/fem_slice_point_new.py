@@ -32,6 +32,7 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from scipy.integrate import romb
 
+from kesi._engine import deprecated
 from kesi._verbose import VerboseFFR
 
 try:
@@ -451,6 +452,7 @@ else:
             return self._fm.load(name)
 
 
+    @deprecated('Will be either removed or reimplemented.  Use DecompressedPointSourceFactory class instead.')
     class PointSourceFactoryINI(PointSourceFactoryBase):
         @property
         def k(self):
@@ -835,6 +837,7 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
         return self._MeasurementManager(self)
 
 
+@deprecated('Use DegeneratedRegularSourcesFactory instead')
 class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
     class Source(DegeneratedSourcePotentialBase):
         def __init__(self, parent, x, y, z, potential, amplitude=1):
