@@ -1109,6 +1109,7 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
         return cls(X, Y, Z, POTENTIALS, ELECTRODES)
 
     @classmethod
+    @deprecated('May be removed in the future.')
     def from_reciprocal_factory(cls, factory, ELECTRODES,
                                 X=None,
                                 Y=None,
