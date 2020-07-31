@@ -1062,8 +1062,13 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
 
 
     @classmethod
+    @deprecated('Use .from_sources() method instead.')
     def from_factory(cls, factory, ELECTRODES, dtype=None):
-        sources = list(factory)
+        return cls.from_sources(factory, ELECTRODES, dtype)
+
+    @classmethod
+    def from_sources(cls, sources, ELECTRODES, dtype=None):
+        sources = list(sources)
 
         X = set()
         Y = set()
