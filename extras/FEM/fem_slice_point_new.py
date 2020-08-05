@@ -425,42 +425,62 @@ else:
             return self._fm.load(name)
 
 
-### BEGIN DEPRECATED ###
-    @deprecated('Will be either removed or reimplemented.  Use DecompressedPointSourceFactory class instead.')
     class PointSourceFactoryINI(PointSourceFactoryBase):
-        @property
-        def k(self):
-            return self._fm.getint('fem', 'k')
-
-        @property
-        def solution_name_pattern(self):
-            return self._fm.get('fem', 'solution_name_pattern')
-
         def __iter__(self):
-            yield from self._fm.functions()
+            for name in self._fm.functions():
+                yield self(name)
 
         def __call__(self, name):
-            return self.Source(self.getfloat(name, 'x'),
-                               self.getfloat(name, 'y'),
-                               self.getfloat(name, 'z'),
-                               conductivity=self.getfloat(name, 'base_conductivity'),
-                               potential_correction=self.load(name))
+            return self.LazySource(self, name)
 
-        class Source(object):  # duplicates code from _common_new.PointSource
-            def __init__(self, x, y, z, conductivity=1, amplitude=1, potential_correction=None):
-                self.x = x
-                self.y = y
-                self.z = z
-                self.conductivity = conductivity
-                self.potential_correction = potential_correction
-                self.a = amplitude * 0.25 / (np.pi * conductivity)
+        class LazySource(object):
+            __slots__ = ('_parent',
+                         '_name',
+                         '_potential_correction',
+                         '_a')
+
+            def __init__(self, parent, name):
+                self._parent = parent
+                self._name = name
+                self._potential_correction = None
+                self._a = 0.25 / (np.pi * self.conductivity)
+
+            @property
+            def x(self):
+                return self._getfloat('x')
+
+            @property
+            def y(self):
+                return self._getfloat('y')
+
+            @property
+            def z(self):
+                return self._getfloat('z')
+
+            @property
+            def conductivity(self):
+                return self._getfloat('base_conductivity')
+
+            def _getfloat(self, field):
+                return self._parent.getfloat(self._name, field)
 
             def potential(self, X, Y, Z):
-                return (self.a / np.sqrt(np.square(X - self.x)
-                                         + np.square(Y - self.y)
-                                         + np.square(Z - self.z))
-                        + self.potential_correction(X, Y, Z))
-### END DEPRECATED ###
+                self._load_potential_correction_if_necessary()
+                return (self._a / self._distance(X, Y, Z)
+                        + self._potential_correction(X, Y, Z))
+
+            def _load_potential_correction_if_necessary(self):
+                if self._potential_correction is None:
+                    self._load_potential_correction()
+
+            def _load_potential_correction(self):
+                self._potential_correction = BroadcastableScalarFunction(
+                                                 self._parent.load(self._name))
+
+            def _distance(self, X, Y, Z):
+                return np.sqrt(np.square(X - self.x)
+                               + np.square(Y - self.y)
+                               + np.square(Z - self.z))
 
 
     class DecompressedPointSourceFactory(PointSourceFactoryBase):
@@ -569,6 +589,20 @@ else:
 
             def __del__(self):
                 self._parent.unload(self._name)
+
+
+class BroadcastableScalarFunction(object):
+    __slots__ = ('f',)
+
+    def __init__(self, f):
+        self.f = f
+
+    def __call__(self, *args):
+        broadcast = np.broadcast(*args)
+        result = np.empty(broadcast.shape)
+        f = self.f
+        result.flat = [f(*a) for a in broadcast]
+        return result
 
 
 class DegeneratedSourceBase(object):
