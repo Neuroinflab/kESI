@@ -425,6 +425,7 @@ else:
             return self._fm.load(name)
 
 
+### BEGIN DEPRECATED ###
     @deprecated('Will be either removed or reimplemented.  Use DecompressedPointSourceFactory class instead.')
     class PointSourceFactoryINI(PointSourceFactoryBase):
         @property
@@ -459,6 +460,7 @@ else:
                                          + np.square(Y - self.y)
                                          + np.square(Z - self.z))
                         + self.potential_correction(X, Y, Z))
+### END DEPRECATED ###
 
 
     class DecompressedPointSourceFactory(PointSourceFactoryBase):
@@ -810,6 +812,7 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
         return self._MeasurementManager(self)
 
 
+### BEGIN DEPRECATED ###
 @deprecated('Use DegeneratedRegularSourcesFactory instead')
 class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
     class Source(DegeneratedSourcePotentialBase):
@@ -1023,6 +1026,7 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
                                        self.X,
                                        self.Y,
                                        self.Z)
+### END DEPRECATED ###
 
 
 class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
