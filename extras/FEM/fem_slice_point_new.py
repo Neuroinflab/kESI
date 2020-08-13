@@ -486,8 +486,7 @@ else:
     @deprecated('Use `PointSourceFactoryINI` class with `DecompressedSourcesXY` wrapper instead.')
     class DecompressedPointSourceFactory(PointSourceFactoryBase):
         def __init__(self, config):
-            super(DecompressedPointSourceFactory,
-                  self).__init__(config)
+            super().__init__(config)
 
             self._lazy_sources = {}
             self._lazy_sources_counter = collections.Counter()
@@ -967,8 +966,7 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
                     yield self.MemoryEfficientSource(self, x, y, z)
 
     def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
-        super(DegeneratedSliceSourcesFactory,
-              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES)
+        super().__init__(X, Y, Z, POTENTIALS, ELECTRODES)
         self._IDX_X = np.arange(len(X)).reshape((-1, 1, 1))
         self._IDX_Y = np.arange(len(Y)).reshape((1, -1, 1))
         self._IDX_Z = np.arange(len(Z)).reshape((1, 1, -1))
