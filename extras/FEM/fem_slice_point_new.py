@@ -636,15 +636,15 @@ class DecompressedSourcesXY(object):
 
         @property
         def x(self):
-            return (self._source.y * self._wy
-                    if self._flip_xy
-                    else self._source.x * self._wx)
+            return self._wx * (self._source.y
+                               if self._flip_xy
+                               else self._source.x)
 
         @property
         def y(self):
-            return (self._source.x * self._wx
-                    if self._flip_xy
-                    else self._source.y * self._wy)
+            return self._wy * (self._source.x
+                               if self._flip_xy
+                               else self._source.y)
 
         @property
         def z(self):
