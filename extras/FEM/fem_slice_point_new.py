@@ -32,6 +32,7 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from scipy.integrate import romb
 
+from kesi._engine import deprecated
 from kesi._verbose import VerboseFFR
 
 try:
@@ -262,33 +263,6 @@ else:
                                               known_terms)
 
 
-# class FunctionManager(object):
-#     """
-#     TODO: Rewrite to:
-#     - use INI configuration with mesh name and degree,
-#     - use lazy mesh loading.
-#     """
-#     def __init__(self, mesh, degree):
-#         with XDMFFile(mesh + '.xdmf') as fh:
-#             self._mesh = Mesh()
-#             fh.read(self._mesh)
-#
-#         self._V = FunctionSpace(self._mesh, "CG", degree)
-#
-#     def write(self, filename, function, name):
-#         with HDF5File(MPI.comm_self,
-#                       filename,
-#                       'a' if os.path.exists(filename) else 'w') as fh:
-#             fh.write(function, name)
-#
-#     def read(self, filename, name):
-#         function = Function(self._V)
-#         with HDF5File(MPI.comm_self, filename, 'a') as fh:
-#             fh.read(function, name)
-#
-#         return function
-
-
     class FunctionManager(object):
         function_name = 'potential'
 
@@ -452,44 +426,67 @@ else:
 
 
     class PointSourceFactoryINI(PointSourceFactoryBase):
-        @property
-        def k(self):
-            return self._fm.getint('fem', 'k')
-
-        @property
-        def solution_name_pattern(self):
-            return self._fm.get('fem', 'solution_name_pattern')
-
         def __iter__(self):
-            yield from self._fm.functions()
+            for name in self._fm.functions():
+                yield self(name)
 
         def __call__(self, name):
-            return self.Source(self.getfloat(name, 'x'),
-                               self.getfloat(name, 'y'),
-                               self.getfloat(name, 'z'),
-                               conductivity=self.getfloat(name, 'base_conductivity'),
-                               potential_correction=self.load(name))
+            return self.LazySource(self, name)
 
-        class Source(object):  # duplicates code from _common_new.PointSource
-            def __init__(self, x, y, z, conductivity=1, amplitude=1, potential_correction=None):
-                self.x = x
-                self.y = y
-                self.z = z
-                self.conductivity = conductivity
-                self.potential_correction = potential_correction
-                self.a = amplitude * 0.25 / (np.pi * conductivity)
+        class LazySource(object):
+            __slots__ = ('_parent',
+                         '_name',
+                         '_potential_correction',
+                         '_a')
+
+            def __init__(self, parent, name):
+                self._parent = parent
+                self._name = name
+                self._potential_correction = None
+                self._a = 0.25 / (np.pi * self.conductivity)
+
+            @property
+            def x(self):
+                return self._getfloat('x')
+
+            @property
+            def y(self):
+                return self._getfloat('y')
+
+            @property
+            def z(self):
+                return self._getfloat('z')
+
+            @property
+            def conductivity(self):
+                return self._getfloat('base_conductivity')
+
+            def _getfloat(self, field):
+                return self._parent.getfloat(self._name, field)
 
             def potential(self, X, Y, Z):
-                return (self.a / np.sqrt(np.square(X - self.x)
-                                         + np.square(Y - self.y)
-                                         + np.square(Z - self.z))
-                        + self.potential_correction(X, Y, Z))
+                self._load_potential_correction_if_necessary()
+                return (self._a / self._distance(X, Y, Z)
+                        + self._potential_correction(X, Y, Z))
+
+            def _load_potential_correction_if_necessary(self):
+                if self._potential_correction is None:
+                    self._load_potential_correction()
+
+            def _load_potential_correction(self):
+                self._potential_correction = BroadcastableScalarFunction(
+                                                 self._parent.load(self._name))
+
+            def _distance(self, X, Y, Z):
+                return np.sqrt(np.square(X - self.x)
+                               + np.square(Y - self.y)
+                               + np.square(Z - self.z))
 
 
+    @deprecated('Use `PointSourceFactoryINI` class with `DecompressedSourcesXY` wrapper instead.')
     class DecompressedPointSourceFactory(PointSourceFactoryBase):
         def __init__(self, config):
-            super(DecompressedPointSourceFactory,
-                  self).__init__(config)
+            super().__init__(config)
 
             self._lazy_sources = {}
             self._lazy_sources_counter = collections.Counter()
@@ -592,6 +589,76 @@ else:
 
             def __del__(self):
                 self._parent.unload(self._name)
+
+
+class BroadcastableScalarFunction(object):
+    __slots__ = ('f',)
+
+    def __init__(self, f):
+        self.f = f
+
+    def __call__(self, *args):
+        broadcast = np.broadcast(*args)
+        result = np.empty(broadcast.shape)
+        f = self.f
+        result.flat = [f(*a) for a in broadcast]
+        return result
+
+
+class DecompressedSourcesXY(object):
+    def __init__(self, sources):
+        self._sources = sources
+
+    def __iter__(self):
+        for s in self._sources:
+            for x, y in ([(s.x, s.y)]
+                         if s.x == s.y else
+                         [(s.x, s.y), (s.y, s.x)]):
+                for xx in ([x] if x == 0 else [x, -x]):
+                    for yy in ([y] if y == 0 else [y, -y]):
+                        yield self.Source(xx, yy, s)
+
+    class Source(object):
+        __slots__ = ('_source', '_flip_xy', '_wx', '_wy')
+
+        class IncompatibleSourceCoords(TypeError):
+            pass
+
+        def __init__(self, x, y, source):
+            ax, ay = abs(x), abs(y)
+            if source.x != max(ax, ay) or source.y != min(ax, ay):
+                raise self.IncompatibleSourceCoords
+
+            self._source = source
+            self._flip_xy = ax < ay
+            self._wx = 1 if x > 0 else -1
+            self._wy = 1 if y > 0 else -1
+
+        @property
+        def x(self):
+            return self._wx * (self._source.y
+                               if self._flip_xy
+                               else self._source.x)
+
+        @property
+        def y(self):
+            return self._wy * (self._source.x
+                               if self._flip_xy
+                               else self._source.y)
+
+        @property
+        def z(self):
+            return self._source.z
+
+        def potential(self, X, Y, Z):
+            if self._flip_xy:
+                return self._source.potential(self._wy * Y,
+                                              self._wx * X,
+                                              Z)
+
+            return self._source.potential(self._wx * X,
+                                          self._wy * Y,
+                                          Z)
 
 
 class DegeneratedSourceBase(object):
@@ -835,6 +902,8 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
         return self._MeasurementManager(self)
 
 
+### BEGIN DEPRECATED ###
+@deprecated('Use DegeneratedRegularSourcesFactory instead')
 class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
     class Source(DegeneratedSourcePotentialBase):
         def __init__(self, parent, x, y, z, potential, amplitude=1):
@@ -897,8 +966,7 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
                     yield self.MemoryEfficientSource(self, x, y, z)
 
     def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
-        super(DegeneratedSliceSourcesFactory,
-              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES)
+        super().__init__(X, Y, Z, POTENTIALS, ELECTRODES)
         self._IDX_X = np.arange(len(X)).reshape((-1, 1, 1))
         self._IDX_Y = np.arange(len(Y)).reshape((1, -1, 1))
         self._IDX_Z = np.arange(len(Z)).reshape((1, 1, -1))
@@ -1047,6 +1115,7 @@ class DegeneratedSliceSourcesFactory(_DegeneratedSourcesFactoryBase):
                                        self.X,
                                        self.Y,
                                        self.Z)
+### END DEPRECATED ###
 
 
 class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
@@ -1059,8 +1128,13 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
 
 
     @classmethod
+    @deprecated('Use .from_sources() method instead.')
     def from_factory(cls, factory, ELECTRODES, dtype=None):
-        sources = list(factory)
+        return cls.from_sources(factory, ELECTRODES, dtype)
+
+    @classmethod
+    def from_sources(cls, sources, ELECTRODES, dtype=None):
+        sources = list(sources)
 
         X = set()
         Y = set()
@@ -1101,6 +1175,7 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
         return cls(X, Y, Z, POTENTIALS, ELECTRODES)
 
     @classmethod
+    @deprecated('May be removed in the future.')
     def from_reciprocal_factory(cls, factory, ELECTRODES,
                                 X=None,
                                 Y=None,
