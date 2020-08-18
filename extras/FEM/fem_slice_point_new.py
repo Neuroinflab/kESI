@@ -843,19 +843,32 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
         return cls(X, Y, Z, POTENTIALS, ELECTRODES)
 
     @classmethod
-    @deprecated('May be removed in the future.')
+    @deprecated('Use `.from_reciprocal_sources()` classmethod instead.')
     def from_reciprocal_factory(cls, factory, ELECTRODES,
                                 X=None,
                                 Y=None,
                                 Z=None,
                                 dtype=None,
                                 tolerance=np.finfo(float).eps):
+        return cls.from_reciprocal_sources(factory, ELECTRODES,
+                                           X=X,
+                                           Y=Y,
+                                           Z=Z,
+                                           dtype=dtype,
+                                           tolerance=tolerance)
 
+    @classmethod
+    def from_reciprocal_sources(cls, sources, ELECTRODES,
+                                X=None,
+                                Y=None,
+                                Z=None,
+                                dtype=None,
+                                tolerance=np.finfo(float).eps):
         ELECTRODES = ELECTRODES.copy()
         POTENTIALS = fc.empty_array((len(X), len(Y), len(Z), len(ELECTRODES)),
                                     dtype=dtype)
 
-        for source in factory:
+        for source in sources:
             IDX = ((abs(ELECTRODES[:, 0] - source.x) < tolerance)
                    & (abs(ELECTRODES[:, 1] - source.y) < tolerance)
                    & (abs(ELECTRODES[:, 2] - source.z) < tolerance))
