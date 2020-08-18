@@ -724,7 +724,6 @@ class LoadableGaussians3D(_LoadableObjectBase):
             yield self._Child(self, i)
 
 
-
 class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
     _LoadableObject__ATTRIBUTES = [
         'X',
