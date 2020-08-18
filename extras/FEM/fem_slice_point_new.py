@@ -25,7 +25,6 @@
 import configparser
 import logging
 import os
-import itertools
 import collections
 
 import numpy as np
