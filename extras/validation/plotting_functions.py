@@ -7,7 +7,6 @@ from matplotlib import gridspec
 import itertools
 import time
 import sys
-import validation_functions as vf
 from mpl_toolkits.mplot3d import Axes3D
 
 sys.path.append('..')
