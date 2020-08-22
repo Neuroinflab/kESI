@@ -28,6 +28,16 @@ import os
 
 import numpy as np
 
+try:
+    from . import _fem_common as fc
+    # When run as script raises:
+    #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
+    #  - `SystemError` (Python 3.3-5), or
+    #  - `ValueError` (Python 2.7).
+
+except (ImportError, SystemError, ValueError):
+    import _fem_common as fc
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -37,7 +47,11 @@ _DIRECTORY = os.path.dirname(__file__)
 
 
 try:
-    from dolfin import (Function, FunctionSpace, HDF5File, Mesh, MPI,
+    from dolfin import (assemble, Constant, cpp, Expression,
+                        # FacetNormal,
+                        Function, FunctionSpace, grad, HDF5File,
+                        inner, KrylovSolver,
+                        Measure, Mesh, MeshValueCollection, MPI,
                         TestFunction, TrialFunction, XDMFFile)
 
 except (ModuleNotFoundError, ImportError):
@@ -262,6 +276,175 @@ else:
                 return np.sqrt(np.square(X - self.x)
                                + np.square(Y - self.y)
                                + np.square(Z - self.z))
+
+
+    class _SubtractionPointSourcePotentialFEM(object):
+        def __init__(self, config):
+            self._fm = FunctionManagerINI(config)
+            self._setup_mesh(self._fm.getpath('fem', 'mesh')[:-5])
+            self._load_config(self._fm.getpath('fem', 'config'))
+            self.global_preprocessing_time = fc.Stopwatch()
+            self.local_preprocessing_time = fc.Stopwatch()
+            self.solving_time = fc.Stopwatch()
+
+            self._set_degree(self.degree)
+
+        def _load_mesh_data(self, path, name, dim):
+            with XDMFFile(path) as fh:
+                mvc = MeshValueCollection("size_t", self._fm.mesh, dim)
+                fh.read(mvc, name)
+                return cpp.mesh.MeshFunctionSizet(self._fm.mesh, mvc)
+
+        def _setup_mesh(self, mesh):
+            self._boundaries = self._load_mesh_data(mesh + '_boundaries.xdmf',
+                                                    "boundaries",
+                                                    2)
+            self._subdomains = self._load_mesh_data(mesh + '_subdomains.xdmf',
+                                                    "subdomains",
+                                                    3)
+            # self._facet_normal = FacetNormal(self._fm.mesh)
+
+        def _load_config(self, config):
+            self.config = configparser.ConfigParser()
+            self.config.read(config)
+
+        @property
+        def degree(self):
+            return self._fm.degree
+
+        @degree.setter
+        def degree(self, degree):
+            if degree != self.degree:
+                self._set_degree(degree)
+
+        def _set_degree(self, degree):
+            self._fm.degree = degree
+            with self.global_preprocessing_time:
+                logger.debug('Creating integration subdomains...')
+                self.create_integration_subdomains()
+                logger.debug('Done.  Creating test function...')
+                self._v = self._fm.test_function()
+                logger.debug('Done.  Creating potential function...')
+                self._potential_function = self._fm.function()
+                logger.debug('Done.  Creating trial function...')
+                self._potential_trial = self._fm.trial_function()
+                logger.debug('Done.  Creating LHS part of equation...')
+                self._a = self._lhs()
+                logger.debug('Done.  Creating base potential formula...')
+                self._base_potential_expression = self._potential_expression()
+                self._base_potential_gradient_normal_expression = self._potential_gradient_normal()
+                logger.debug('Done.  Creating solver...')
+                self._solver = KrylovSolver("cg", "ilu")
+                self._solver.parameters["maximum_iterations"] = self.MAX_ITER
+                self._solver.parameters["absolute_tolerance"] = 1E-8
+                logger.debug('Done.  Solver created.')
+
+        def create_integration_subdomains(self):
+            self._dx = Measure("dx")(subdomain_data=self._subdomains)
+            self._ds = Measure("ds")(subdomain_data=self._boundaries)
+
+        def _lhs(self):
+            return sum(inner(Constant(c) * grad(self._potential_trial),
+                             grad(self._v)) * self._dx(x)
+                       for x, c in self.CONDUCTIVITY)
+
+        @property
+        def CONDUCTIVITY(self):
+            for section in self.config.sections():
+                if self._is_conductive_volume(section):
+                    yield (self.config.getint(section, 'volume'),
+                           self.config.getfloat(section, 'conductivity'))
+
+        def _is_conductive_volume(self, section):
+            return (self.config.has_option(section, 'volume')
+                    and self.config.has_option(section, 'conductivity'))
+
+        @property
+        def BOUNDARY_CONDUCTIVITY(self):
+            for section in self.config.sections():
+                if self._is_conductive_boundary(section):
+                    yield (self.config.getint(section, 'surface'),
+                           self.config.getfloat(section, 'conductivity'))
+
+        def _is_conductive_boundary(self, section):
+            return (self.config.has_option(section, 'surface')
+                    and self.config.has_option(section, 'conductivity'))
+
+        def _solve(self, known_terms):
+            self.iterations = self._solver.solve(
+                                              self._terms_with_unknown,
+                                              self._potential_function.vector(),
+                                              known_terms)
+
+        def _potential_expression(self, conductivity=0.0):
+            return Expression('''
+                              0.25 / {pi} / conductivity
+                              / sqrt((src_x - x[0])*(src_x - x[0])
+                                     + (src_y - x[1])*(src_y - x[1])
+                                     + (src_z - x[2])*(src_z - x[2]))
+                              '''.format(pi=np.pi),
+                              degree=self.degree,
+                              domain=self._fm.mesh,
+                              src_x=0.0,
+                              src_y=0.0,
+                              src_z=0.0,
+                              conductivity=conductivity)
+
+        def solve(self, x, y, z):
+            with self.local_preprocessing_time:
+                logger.debug('Creating RHS...')
+                L = self._rhs(x, y, z)
+                logger.debug('Done.  Assembling linear equation vector...')
+                known_terms = assemble(L)
+                logger.debug('Done.  Assembling linear equation matrix...')
+                self._terms_with_unknown = assemble(self._a)
+                logger.debug('Done.  Defining boundary condition...')
+                self._dirichlet_bc = self._boundary_condition(x, y, z)
+                logger.debug('Done.  Applying boundary condition to the matrix...')
+                self._dirichlet_bc.apply(self._terms_with_unknown)
+                logger.debug('Done.  Applying boundary condition to the vector...')
+                self._dirichlet_bc.apply(known_terms)
+                logger.debug('Done.')
+
+            try:
+                logger.debug('Solving linear equation...')
+                with self.solving_time:
+                    self._solve(known_terms)
+
+                logger.debug('Done.')
+                return self._potential_function
+
+            except RuntimeError as e:
+                self.iterations = self.MAX_ITER
+                logger.warning("Solver failed: {}".format(repr(e)))
+                return None
+
+        def _rhs(self, x, y, z):
+            base_conductivity = self.base_conductivity(x, y, z)
+            self._setup_expression(self._base_potential_expression,
+                                   base_conductivity, x, y, z)
+            self._setup_expression(self._base_potential_gradient_normal_expression,
+                                   base_conductivity, x, y, z)
+            return (-sum((inner((Constant(c - base_conductivity)
+                                 * grad(self._base_potential_expression)),
+                                grad(self._v))
+                          * self._dx(x)
+                          for x, c in self.CONDUCTIVITY
+                          if c != base_conductivity))
+                    # # Eq. 18 at Piastra et al 2018
+                    + sum(Constant(c)
+                          # * inner(self._facet_normal,
+                          #         grad(self._base_potential_expression))
+                          * self._base_potential_gradient_normal_expression
+                          * self._v
+                          * self._ds(s)
+                          for s, c in self.BOUNDARY_CONDUCTIVITY))
+
+        def _setup_expression(self, expression, base_conductivity, x, y, z):
+            expression.conductivity = base_conductivity
+            expression.src_x = x
+            expression.src_y = y
+            expression.src_z = z
 
 
 class BroadcastableScalarFunction(object):
