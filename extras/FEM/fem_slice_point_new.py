@@ -34,7 +34,7 @@ try:
     #  - `SystemError` (Python 3.3-5), or
     #  - `ValueError` (Python 2.7).
 
-except (ImportError, SystemError, ValueError)
+except (ImportError, SystemError, ValueError):
     import fem_common as fc
 
 
