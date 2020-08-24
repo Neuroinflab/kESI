@@ -29,16 +29,14 @@ import os
 import numpy as np
 
 try:
-    from . import _fem_common as fc
-    from . import _fem_common_new as fcn
+    from . import fem_common as fc
     # When run as script raises:
     #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
     #  - `SystemError` (Python 3.3-5), or
     #  - `ValueError` (Python 2.7).
 
 except (ImportError, SystemError, ValueError):
-    import _fem_common as fc
-    import _fem_common_new as fcn
+    import fem_common as fc
 
 
 logger = logging.getLogger(__name__)
@@ -55,7 +53,7 @@ except (ModuleNotFoundError, ImportError):
     logger.warning("Unable to import from dolfin")
 
 else:
-    class SpherePointSourcePotentialFEM(fcn._SubtractionPointSourcePotentialFEM):
+    class SpherePointSourcePotentialFEM(fc._SubtractionPointSourcePotentialFEM):
         MAX_ITER = 1000
 
         def _potential_gradient_normal(self, conductivity=0.0):

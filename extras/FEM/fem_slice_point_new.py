@@ -34,7 +34,7 @@ from kesi._verbose import VerboseFFR
 
 try:
     from . import _fem_common as fc
-    from . import _fem_common_new as fcn
+    from . import fem_common as fcn
     # When run as script raises:
     #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
     #  - `SystemError` (Python 3.3-5), or
@@ -42,7 +42,7 @@ try:
 
 except (ImportError, SystemError, ValueError):
     import _fem_common as fc
-    import _fem_common_new as fcn
+    import fem_common as fcn
 
 
 logger = logging.getLogger(__name__)
