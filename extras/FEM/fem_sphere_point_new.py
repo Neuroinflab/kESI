@@ -92,3 +92,39 @@ else:
                                Constant(-self._base_potential_expression(0, 0, 0)),
                                "near(x[0], {}) && near(x[1], {}) && near(x[2], {})".format(0, 0, 0),
                                "pointwise")
+
+
+    if __name__ == '__main__':
+        import sys
+
+        logging.basicConfig(level=logging.INFO)
+
+        for config in sys.argv[-1:]:
+            fem = SpherePointSourcePotentialFEM(config)
+            solution_metadata_filename = fem._fm.getpath('fem', 'solution_metadata_filename')
+            points = list(fem._fm.functions())
+            for i, name in enumerate(points):
+                x = fem._fm.getfloat(name, 'x')
+                y = fem._fm.getfloat(name, 'y')
+                z = fem._fm.getfloat(name, 'z')
+                logger.info('{} {:3.1f}%:{}\t(x = {:g}\ty = {:g}\tz = {:g})'.format(
+                               config,
+                               100. * i / len(points),
+                               name,
+                               x, y, z))
+                filename = fem._fm.getpath(name, 'filename')
+                if os.path.exists(filename):
+                    logger.info(' found')
+                    continue
+
+                logger.info(' solving...')
+                function = fem.solve(x, y, z)
+                fem._fm.store(name, function,
+                              {'global_preprocessing_time': float(fem.global_preprocessing_time),
+                               'local_preprocessing_time': float(fem.local_preprocessing_time),
+                               'solving_time': float(fem.solving_time),
+                               'base_conductivity': fem.base_conductivity(x, y, z),
+                               })
+                logger.info(' done')
+
+            fem._fm.write(solution_metadata_filename)
