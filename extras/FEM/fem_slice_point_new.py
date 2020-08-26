@@ -81,6 +81,19 @@ else:
                                self._boundaries,
                                self.config.getint('dome', 'surface'))
 
+        def _potential_expression(self, conductivity=0.0):
+            return Expression('''
+                              0.25 / {pi} / conductivity
+                              / sqrt((src_x - x[0])*(src_x - x[0])
+                                     + (src_y - x[1])*(src_y - x[1])
+                                     + (src_z - x[2])*(src_z - x[2]))
+                              '''.format(pi=np.pi),
+                              degree=self.degree,
+                              domain=self._fm.mesh,
+                              src_x=0.0,
+                              src_y=0.0,
+                              src_z=0.0,
+                              conductivity=conductivity)
 
 if __name__ == '__main__':
     import sys

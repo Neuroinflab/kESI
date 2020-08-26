@@ -62,9 +62,9 @@ else:
             # drx / r * dx / dst = (drx * dx) / (r * dst)
             # = (x * src_x - x * x) / (r * dst)
 
-            dx = '(src_x - x[0])'
-            dy = '(src_y - x[1])'
-            dz = '(src_z - x[2])'
+            dx = '(x[0] - src_x)'
+            dy = '(x[1] - src_y)'
+            dz = '(x[2] - src_z)'
             drx = 'x[0]'
             dry = 'x[1]'
             drz = 'x[2]'
@@ -72,9 +72,9 @@ else:
             r2 = f'({drx} * {drx} + {dry} * {dry} + {drz} * {drz})'
             dst2 = f'({dx} * {dx} + {dy} * {dy} + {dz} * {dz})'
             return Expression(f'''
-                              -0.25 / {np.pi} / conductivity
-                              * {dot}
-                              / sqrt({dst2} * {dst2} * {dst2} * {r2})
+                              {0.25 / np.pi} / conductivity
+                              * ({dot} / sqrt({dst2} * {r2}) - 1.0)
+                              / {dst2}
                               ''',
                               degree=self.degree,
                               domain=self._fm.mesh,
@@ -92,6 +92,26 @@ else:
                                Constant(-self._base_potential_expression(0, 0, 0)),
                                "near(x[0], {}) && near(x[1], {}) && near(x[2], {})".format(0, 0, 0),
                                "pointwise")
+
+        def _potential_expression(self, conductivity=0.0):
+            dx = '(x[0] - src_x)'
+            dy = '(x[1] - src_y)'
+            dz = '(x[2] - src_z)'
+            drx = 'x[0]'
+            dry = 'x[1]'
+            drz = 'x[2]'
+            r2 = f'({drx} * {drx} + {dry} * {dry} + {drz} * {drz})'
+            dst2 = f'({dx} * {dx} + {dy} * {dy} + {dz} * {dz})'
+            return Expression(f'''
+                              {0.25 / np.pi} / conductivity
+                              * (1.0 / sqrt({r2}) - 1.0 / sqrt({dst2}))
+                              ''',
+                              degree=self.degree,
+                              domain=self._fm.mesh,
+                              src_x=0.0,
+                              src_y=0.0,
+                              src_z=0.0,
+                              conductivity=conductivity)
 
 
     if __name__ == '__main__':
