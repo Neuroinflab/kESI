@@ -99,7 +99,7 @@ else:
 
         logging.basicConfig(level=logging.INFO)
 
-        for config in sys.argv[-1:]:
+        for config in sys.argv[1:]:
             fem = SpherePointSourcePotentialFEM(config)
             solution_metadata_filename = fem._fm.getpath('fem', 'solution_metadata_filename')
             points = list(fem._fm.functions())
