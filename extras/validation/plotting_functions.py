@@ -294,11 +294,7 @@ def generate_projection_subplot(X, Y, Z, true_csd, est_csd, eigensources, projec
     plt.savefig(path + '/' + str(fig_title) +'.png', dpi=300)
 
 
-def picard_plot_log(ax, eigenvalues, eigenvectors, potential, sphere, src_nr, save_path):
-    #idx = eigenvalues.argsort()[::-1]
-    #eigenvalues = eigenvalues[idx]
-    #eigenvectors = eigenvectors[:, idx]
-    #eigenvalues = np.sqrt(eigenvalues)
+def picard_plot_log(ax, eigenvalues, eigenvectors, potential, forward_model, src_nr, save_path):
     utb = abs(np.matmul(eigenvectors.T, potential))
     utbs = abs(np.matmul(eigenvectors.T, potential))/eigenvalues
     #plt.figure(figsize=(8, 5))
@@ -312,13 +308,13 @@ def picard_plot_log(ax, eigenvalues, eigenvectors, potential, sphere, src_nr, sa
     ax.set_xscale('log')
     ax.invert_xaxis()
     ax.legend(ncol=4)
-    #plt.savefig(save_path +'/figs/Picard_plot_log '+str(sphere)+' 1000_pots_' + str(src_nr) + '.png', dpi=300)
+    #plt.savefig(save_path +'/figs/Picard_plot_log '+str(forward_model)+' 1000_pots_' + str(src_nr) + '.png', dpi=300)
     #plt.show()
 
 
-def plot_cv_errors(ax, rps, rp_errors, sphere, src_nr, save_path):
+def plot_cv_errors(ax, rps, rp_errors, forward_model, src_nr, save_path):
     #plt.figure(figsize=(6, 4))
-    #ax.set_title(sphere)
+    #ax.set_title(forward_model)
     ax.plot(rp_errors, '.', color=cbf.BLACK)
     #ax.plot(rps, rp_errors, '.')
     #ax.set_xscale('log')
@@ -326,12 +322,12 @@ def plot_cv_errors(ax, rps, rp_errors, sphere, src_nr, save_path):
     ax.set_xlabel('Component number')
     ax.set_ylabel('Error in potential space')
     #ax.invert_xaxis()
-    #plt.savefig(save_path + '/figs/cv_errors ' + sphere + '1000_deg_1 src_'+  str(src_nr) + '.png', dpi=300)
+    #plt.savefig(save_path + '/figs/cv_errors ' + forward_model + '1000_deg_1 src_'+  str(src_nr) + '.png', dpi=300)
 
 
-def plot_errors_vs_components(ax, rps, rp_errors, rms, rdm, sphere, src_nr, save_path):
+def plot_errors_vs_components(ax, rps, rp_errors, rms, rdm, forward_model, src_nr, save_path):
     #plt.figure(figsize=(6, 4))
-    #ax.set_title(sphere)
+    #ax.set_title(forward_model)
     ax2 = ax.twinx()
     ax.plot(rp_errors, '.', color=cbf.BLACK, label='POTS ERROR')
     ax2.plot(rms, '.', color=cbf.VERMILION, label='RMS')
@@ -349,12 +345,12 @@ def plot_errors_vs_components(ax, rps, rp_errors, rms, rdm, sphere, src_nr, save
     h2, l2 = ax2.get_legend_handles_labels()
     ax.legend(h1+h2, l1+l2, loc=1)
     #ax.invert_xaxis()
-    #plt.savefig(save_path + '/figs/cv_errors ' + sphere + '1000_deg_1 src_'+  str(src_nr) + '.png', dpi=300)
+    #plt.savefig(save_path + '/figs/cv_errors ' + forward_model + '1000_deg_1 src_'+  str(src_nr) + '.png', dpi=300)
 
 
-def plot_global_csd_errors(ax, rps, rms, rdm, mag, sphere, src_nr, save_path, title):
+def plot_global_csd_errors(ax, rps, rms, rdm, mag, forward_model, src_nr, save_path, title):
     #plt.figure(figsize=(6, 4))
-    #ax.set_title(sphere + title)
+    #ax.set_title(forward_model + title)
     ax.plot(rps, rms, '.', color=cbf.VERMILION, label='RMS')
     ax.plot(rps, rdm, '.', color=cbf.SKY_BLUE, label='RDM')
     #ax.plot(rps, mag, '.', label='RMAG')
@@ -365,12 +361,12 @@ def plot_global_csd_errors(ax, rps, rms, rdm, mag, sphere, src_nr, save_path, ti
     ax.set_ylabel('Error in csd space')
     ax.invert_xaxis()
     ax.legend()
-    #plt.savefig(save_path + '/figs/' + sphere + title + '1000_deg_1 src_'+  str(src_nr) + '.png', dpi=300)
+    #plt.savefig(save_path + '/figs/' + forward_model + title + '1000_deg_1 src_'+  str(src_nr) + '.png', dpi=300)
 
 
-def plot_errors_vs_parameters(ax, rps, rp_errors, rms, rdm, rp, sphere, src_nr, save_path, title):
+def plot_errors_vs_parameters(ax, rps, rp_errors, rms, rdm, rp, forward_model, src_nr, save_path, title):
     #plt.figure(figsize=(6, 4))
-    #ax.set_title(sphere + title)
+    #ax.set_title(forward_model + title)
     x = rps[np.where(rps>0)]
     ax.plot(rps[np.where(rps>0)], rms, '.', color=cbf.VERMILION, label='RMS')
     ax.plot(rps[np.where(rps>0)], rdm, '.', color=cbf.SKY_BLUE, label='RDM')
@@ -389,14 +385,10 @@ def plot_errors_vs_parameters(ax, rps, rp_errors, rms, rdm, rp, sphere, src_nr, 
     h1, l1 = ax.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
     ax.legend(h2+h1, l2+l1, loc=1)
-    #plt.savefig(save_path + '/figs/' + sphere + title + '1000_deg_1 src_'+  str(src_nr) + '.png', dpi=300)
+    #plt.savefig(save_path + '/figs/' + forward_model + title + '1000_deg_1 src_'+  str(src_nr) + '.png', dpi=300)
 
 
-def picard_plot(ax, eigenvalues, eigenvectors, potential, sphere, number, save_path):
-    #idx = eigenvalues.argsort()[::-1]
-    #eigenvalues = eigenvalues[idx]
-    #eigenvectors = eigenvectors[:, idx]
-    #eigenvalues = np.sqrt(eigenvalues)
+def picard_plot(ax, eigenvalues, eigenvectors, potential, forward_model, src_nr, save_path):
     utb = abs(np.matmul(eigenvectors.T, potential))
     utbs = abs(np.matmul(eigenvectors.T, potential))/eigenvalues
     ax.set_title('Picard plot')
@@ -409,7 +401,7 @@ def picard_plot(ax, eigenvalues, eigenvectors, potential, sphere, number, save_p
     #ax.invert_xaxis()
     #ax.set_xlim(ax.get_xlim()[::-1])
     ax.legend(ncol=4)
-    #plt.savefig(save_path +'/Picard_plot '+str(sphere)+' 1000_pots_' + str(number) + '.png', dpi=300)
+    #plt.savefig(save_path +'/Picard_plot '+str(forward_model)+' 1000_pots_' + str(src_nr) + '.png', dpi=300)
     #plt.show()
 
 
@@ -427,15 +419,15 @@ def plot_electrodes(ax, ELE_X, ELE_Y, ELE_Z, src_x, src_y, src_z, label='EEG'):
 
 
 def generate_Picard_subplot(eigenvalues, eigenvectors, true_csd, potential,
-                            cv_errors, rms, rdm, mag, rp, sphere, src_nr, path,
+                            cv_errors, rms, rdm, mag, rp, forward_model, src_nr, path,
                             ELE_X, ELE_Y, ELE_Z, src_x, src_y, src_z, X, Y, Z, IDX, layer):
     plt.figure(figsize=(12, 8))
     
     ax = plt.subplot(231)
-    picard_plot(ax, eigenvalues, eigenvectors, potential, sphere, src_nr, path)
+    picard_plot(ax, eigenvalues, eigenvectors, potential, forward_model, src_nr, path)
     
     ax = plt.subplot(232)
-    picard_plot_log(ax, eigenvalues, eigenvectors, potential, sphere, src_nr, path)
+    picard_plot_log(ax, eigenvalues, eigenvectors, potential, forward_model, src_nr, path)
     
     ax = plt.subplot(233)
     TRUE_CSD = values_in_a_grid(X, true_csd, IDX)
@@ -444,18 +436,18 @@ def generate_Picard_subplot(eigenvalues, eigenvectors, true_csd, potential,
     make_subplot(ax, TRUE_CSD, 'csd', X, Y, Z, t_max, idx=layer, fig_title=title, colorbar=False)
     
     ax = plt.subplot(234)
-    plot_errors_vs_components(ax, eigenvalues, cv_errors, rms, rdm, sphere, src_nr, path)
+    plot_errors_vs_components(ax, eigenvalues, cv_errors, rms, rdm, forward_model, src_nr, path)
     
     ax = plt.subplot(235)
-    plot_errors_vs_parameters(ax, eigenvalues, cv_errors, rms, rdm, rp, sphere, src_nr, path, ' ')
+    plot_errors_vs_parameters(ax, eigenvalues, cv_errors, rms, rdm, rp, forward_model, src_nr, path, ' ')
     
     ax = plt.subplot(236, projection='3d')
     plot_electrodes(ax, ELE_X, ELE_Y, ELE_Z, src_x, src_y, src_z)
     
     #ax = plt.subplot(224)
-    #plot_global_csd_errors(ax, eigenvalues, rms, rdm, mag, sphere, src_nr, path, ' ')
+    #plot_global_csd_errors(ax, eigenvalues, rms, rdm, mag, forward_model, src_nr, path, ' ')
     
-    plt.savefig(path +'/Picard_diagnostics_ '+str(sphere)+' 1000_pots_' + str(src_nr) + '.png', dpi=300)
+    plt.savefig(path +'/Picard_diagnostics_ '+str(forward_model)+' 1000_pots_' + str(src_nr) + '.png', dpi=300)
 
 
 def plot_potential_ele(X, Y, Z, values, fig_title, save_path):
