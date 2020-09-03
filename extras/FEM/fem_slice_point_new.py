@@ -81,6 +81,15 @@ else:
                                self._boundaries,
                                self.config.getint('dome', 'surface'))
 
+        def _add_boundary_conditions(self, x, y, z):
+            logger.debug('Defining boundary condition...')
+            self._dirichlet_bc = self._boundary_condition(x, y, z)
+            logger.debug('Done.  Applying boundary condition to the matrix...')
+            self._dirichlet_bc.apply(self._terms_with_unknown)
+            logger.debug('Done.  Applying boundary condition to the vector...')
+            self._dirichlet_bc.apply(self._known_terms)
+            logger.debug('Done.')
+
         def _potential_expression(self, conductivity=0.0):
             return Expression('''
                               0.25 / {pi} / conductivity

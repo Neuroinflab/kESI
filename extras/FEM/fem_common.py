@@ -375,32 +375,27 @@ else:
             return (self.config.has_option(section, 'surface')
                     and self.config.has_option(section, 'conductivity'))
 
-        def _solve(self, known_terms):
+        def _solve(self):
             self.iterations = self._solver.solve(
                                               self._terms_with_unknown,
                                               self._potential_function.vector(),
-                                              known_terms)
+                                              self._known_terms)
 
         def solve(self, x, y, z):
             with self.local_preprocessing_time:
                 logger.debug('Creating RHS...')
                 L = self._rhs(x, y, z)
                 logger.debug('Done.  Assembling linear equation vector...')
-                known_terms = assemble(L)
+                self._known_terms = assemble(L)
                 logger.debug('Done.  Assembling linear equation matrix...')
                 self._terms_with_unknown = assemble(self._a)
-                logger.debug('Done.  Defining boundary condition...')
-                self._dirichlet_bc = self._boundary_condition(x, y, z)
-                logger.debug('Done.  Applying boundary condition to the matrix...')
-                self._dirichlet_bc.apply(self._terms_with_unknown)
-                logger.debug('Done.  Applying boundary condition to the vector...')
-                self._dirichlet_bc.apply(known_terms)
                 logger.debug('Done.')
+                self._add_boundary_conditions(x, y, z)
 
             try:
                 logger.debug('Solving linear equation...')
                 with self.solving_time:
-                    self._solve(known_terms)
+                    self._solve()
 
                 logger.debug('Done.')
                 return self._potential_function
