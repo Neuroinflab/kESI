@@ -87,21 +87,20 @@ else:
             return self.config.getfloat('brain', 'conductivity')
 
         def _add_boundary_conditions(self, x, y, z):
-            pass
-        #     logger.debug('Defining boundary condition...')
-        #     self._dirichlet_bc = self._boundary_condition(x, y, z)
-        #     logger.debug('Done.  Applying boundary condition to the matrix...')
-        #     self._dirichlet_bc.apply(self._terms_with_unknown)
-        #     logger.debug('Done.  Applying boundary condition to the vector...')
-        #     self._dirichlet_bc.apply(self._known_terms)
-        #     logger.debug('Done.')
-        #
-        # def _boundary_condition(self, x, y, z):
-        #     assert x != 0 or y != 0 or z != 0
-        #     return DirichletBC(self._fm.function_space,
-        #                        Constant(-self._base_potential_expression(0, 0, 0)),
-        #                        "near(x[0], {}) && near(x[1], {}) && near(x[2], {})".format(0, 0, 0),
-        #                        "pointwise")
+            logger.debug('Defining boundary condition...')
+            self._dirichlet_bc = self._boundary_condition(x, y, z)
+            logger.debug('Done.  Applying boundary condition to the matrix...')
+            self._dirichlet_bc.apply(self._terms_with_unknown)
+            logger.debug('Done.  Applying boundary condition to the vector...')
+            self._dirichlet_bc.apply(self._known_terms)
+            logger.debug('Done.')
+
+        def _boundary_condition(self, x, y, z):
+            assert x != 0 or y != 0 or z != 0
+            return DirichletBC(self._fm.function_space,
+                               Constant(0),
+                               "near(x[0], {}) && near(x[1], {}) && near(x[2], {})".format(0, 0, 0),
+                               "pointwise")
 
         def _potential_expression(self, conductivity=0.0):
             dx = '(x[0] - src_x)'
