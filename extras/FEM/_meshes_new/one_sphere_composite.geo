@@ -149,8 +149,8 @@ Return
 n_meridians = 6;
 
 h = 0.025;
-sphere_r[] = {0.6,
-              0.9};
+sphere_r[] = {0.06,
+              0.09};
 sphere_element_length_factor[] = {6,
                                   1};
 
