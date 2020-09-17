@@ -266,7 +266,7 @@ else:
 
             def potential(self, X, Y, Z):
                 self._load_potential_correction_if_necessary()
-                return (self._a / self._distance(X, Y, Z)
+                return (self._potential_not_corrected(X, Y, Z)
                         + self._potential_correction(X, Y, Z))
 
             def _load_potential_correction_if_necessary(self):
