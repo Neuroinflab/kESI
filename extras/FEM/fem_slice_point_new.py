@@ -104,6 +104,15 @@ else:
                               src_z=0.0,
                               conductivity=conductivity)
 
+
+    class PointSourceFactoryINI(fc.PointSourceFactoryINI):
+        class LazySource(fc.PointSourceFactoryINI.LazySource):
+            __slots__ = ()
+
+            def _potential_not_corrected(self, X, Y, Z):
+                return self._a / self._distance(X, Y, Z)
+
+
     if __name__ == '__main__':
         import sys
 
