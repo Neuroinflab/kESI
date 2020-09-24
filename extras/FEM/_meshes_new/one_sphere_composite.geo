@@ -124,7 +124,7 @@ Return
 Function MakeIthSphere
   // Arguments
   // ---------
-  //   x, y, z, sphere_element_length_factor[], sphere_r[],
+  //   h, x, y, z, sphere_element_length_factor[], sphere_r[],
   //      float
   //   i, n_meridians
   //      int
