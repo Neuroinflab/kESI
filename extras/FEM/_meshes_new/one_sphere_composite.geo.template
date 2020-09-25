@@ -149,8 +149,10 @@ Return
 n_meridians = 6;
 
 h = 0.01;
-sphere_r[] = {0.09};
-sphere_element_length_factor[] = {SED_RELATIVE_ELEMENT_SIZE};
+sphere_r[] = {0.06,
+              0.09};
+sphere_element_length_factor[] = {Min(3, 6 * SED_RELATIVE_ELEMENT_SIZE),
+                                  Min(1, SED_RELATIVE_ELEMENT_SIZE)};
 
 x = 0.; y = 0.; z = 0.;
 

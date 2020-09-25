@@ -44,11 +44,11 @@ if __name__ == '__main__':
     import numpy as np
 
     BRAIN_CONDUCTIVITY = 1. / 300.  # S / cm
-    CONDUCTIVITY = FourSphereModel.Properies(1.00 * BRAIN_CONDUCTIVITY,
-                                             5.00 * BRAIN_CONDUCTIVITY,
-                                             0.05 * BRAIN_CONDUCTIVITY,
-                                             1.00 * BRAIN_CONDUCTIVITY)
-    RADIUS = FourSphereModel.Properies(7.9, 8.0, 8.5, 9.0)
+    CONDUCTIVITY = FourSphereModel.Properties(1.00 * BRAIN_CONDUCTIVITY,
+                                              5.00 * BRAIN_CONDUCTIVITY,
+                                              0.05 * BRAIN_CONDUCTIVITY,
+                                              1.00 * BRAIN_CONDUCTIVITY)
+    RADIUS = FourSphereModel.Properties(7.9, 8.0, 8.5, 9.0)
 
     import common
 

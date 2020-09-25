@@ -202,8 +202,8 @@ class FourSphereModel(object):
     Based on https://github.com/Neuroinflab/fourspheremodel
     by Chaitanya Chintaluri
     """
-    Properies = collections.namedtuple('FourSpheres',
-                                       ['brain',
+    Properties = collections.namedtuple('FourSpheres',
+                                        ['brain',
                                         'csf',
                                         'skull',
                                         'scalp',
@@ -429,11 +429,11 @@ if __name__ == '__main__':
     import pandas as pd
 
     BRAIN_CONDUCTIVITY = 1. / 300.  # S / cm
-    CONDUCTIVITY = common.FourSphereModel.Properies(1.00 * BRAIN_CONDUCTIVITY,
-                                                    5.00 * BRAIN_CONDUCTIVITY,
-                                                    0.05 * BRAIN_CONDUCTIVITY,
-                                                    1.00 * BRAIN_CONDUCTIVITY)
-    RADIUS = common.FourSphereModel.Properies(7.9, 8.0, 8.5, 9.0)
+    CONDUCTIVITY = common.FourSphereModel.Properties(1.00 * BRAIN_CONDUCTIVITY,
+                                                     5.00 * BRAIN_CONDUCTIVITY,
+                                                     0.05 * BRAIN_CONDUCTIVITY,
+                                                     1.00 * BRAIN_CONDUCTIVITY)
+    RADIUS = common.FourSphereModel.Properties(7.9, 8.0, 8.5, 9.0)
     X, Y, Z = np.meshgrid(np.linspace(-8.9, 8.9, 10),
                           np.linspace(-8.9, 8.9, 10),
                           np.linspace(-8.9, 8.9, 10))
