@@ -390,7 +390,7 @@ else:
                 logger.debug('Done.  Assembling linear equation matrix...')
                 self._terms_with_unknown = assemble(self._a)
                 logger.debug('Done.')
-                self._add_boundary_conditions(x, y, z)
+                self._modify_linear_equation(x, y, z)
 
             try:
                 logger.debug('Solving linear equation...')
