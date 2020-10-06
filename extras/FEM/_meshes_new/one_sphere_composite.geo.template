@@ -151,8 +151,19 @@ n_meridians = 6;
 h = 0.01;
 sphere_r[] = {0.06,
               0.09};
-sphere_element_length_factor[] = {Min(3, 6 * SED_RELATIVE_ELEMENT_SIZE),
-                                  Min(1, SED_RELATIVE_ELEMENT_SIZE)};
+
+// // Min/Max available since gmsh 4.5.1
+// sphere_element_length_factor[] = {Min(3, 6 * SED_RELATIVE_ELEMENT_SIZE),
+//                                  Min(1, SED_RELATIVE_ELEMENT_SIZE)};
+sphere_element_length_factor_min[] = {3,
+                                      1};
+sphere_element_length_factor[] = {6 * SED_RELATIVE_ELEMENT_SIZE,
+                                  SED_RELATIVE_ELEMENT_SIZE};
+For i In {0: # sphere_element_length_factor[] - 1}
+  If (sphere_element_length_factor_min[i] < sphere_element_length_factor[i])
+    sphere_element_length_factor[i] = sphere_element_length_factor_min[i];
+  EndIf
+EndFor
 
 x = 0.; y = 0.; z = 0.;
 

@@ -81,7 +81,7 @@ else:
                                self._boundaries,
                                self.config.getint('dome', 'surface'))
 
-        def _add_boundary_conditions(self, x, y, z):
+        def _modify_linear_equation(self, x, y, z):
             logger.debug('Defining boundary condition...')
             self._dirichlet_bc = self._boundary_condition(x, y, z)
             logger.debug('Done.  Applying boundary condition to the matrix...')
