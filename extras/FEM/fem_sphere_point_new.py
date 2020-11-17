@@ -64,26 +64,56 @@ else:
             # drx / r * dx / dst = (drx * dx) / (r * dst)
             # = (x * src_x - x * x) / (r * dst)
 
-            dx = '(x[0] - src_x)'
-            dy = '(x[1] - src_y)'
-            dz = '(x[2] - src_z)'
-            drx = 'x[0]'
-            dry = 'x[1]'
-            drz = 'x[2]'
-            dot = f'({dx} * {drx} + {dy} * {dry} + {dz} * {drz})'
-            r2 = f'({drx} * {drx} + {dry} * {dry} + {drz} * {drz})'
-            dst2 = f'({dx} * {dx} + {dy} * {dy} + {dz} * {dz})'
+            # dx = '(x[0] - src_x)'
+            # dy = '(x[1] - src_y)'
+            # dz = '(x[2] - src_z)'
+            # drx = 'x[0]'
+            # dry = 'x[1]'
+            # drz = 'x[2]'
+            # dot = f'({dx} * {drx} + {dy} * {dry} + {dz} * {drz})'
+            # r2 = f'({drx} * {drx} + {dry} * {dry} + {drz} * {drz})'
+            # dst2 = f'({dx} * {dx} + {dy} * {dy} + {dz} * {dz})'
+            # return Expression(f'''
+            #                   {0.25 / np.pi} / conductivity
+            #                   * ({dot} / sqrt({dst2} * {r2}) - 1.0)
+            #                   / {dst2}
+            #                   ''',
+            #                   degree=self.degree,
+            #                   domain=self._fm.mesh,
+            #                   src_x=0.0,
+            #                   src_y=0.0,
+            #                   src_z=0.0,
+            #                   conductivity=conductivity)
+
+            dx_src = f'(x[0] - src_x)'
+            dy_src = f'(x[1] - src_y)'
+            dz_src = f'(x[2] - src_z)'
+
+            dx_snk = f'(x[0] - snk_x)'
+            dy_snk = f'(x[1] - snk_y)'
+            dz_snk = f'(x[2] - snk_z)'
+
+            r_src2 = f'({dx_src} * {dx_src} + {dy_src} * {dy_src} + {dz_src} * {dz_src})'
+            r_src = f'sqrt({r_src2})'
+            r_snk2 = f'({dx_snk} * {dx_snk} + {dy_snk} * {dy_snk} + {dz_snk} * {dz_snk})'
+            r_snk = f'sqrt({r_snk2})'
+            r_sphere2 = '(x[0] * x[0] + x[1] * x[1] + x[2] * x[2])'
+            r_sphere = f'sqrt({r_sphere2})'
+            dot_src = f'({dx_src} * x[0] + {dy_src} * x[1] + {dz_src} * x[2]) / ({r_src} * {r_sphere})'
+            dot_snk = f'({dx_snk} * x[0] + {dy_snk} * x[1] + {dz_snk} * x[2]) / ({r_snk} * {r_sphere})'
             return Expression(f'''
-                              {0.25 / np.pi} / conductivity
-                              * ({dot} / sqrt({dst2} * {r2}) - 1.0)
-                              / {dst2}
+                              -1 * {-0.25 / np.pi} / conductivity
+                              * ({dot_src} / {r_src2} - {dot_snk} / {r_snk2})
                               ''',
                               degree=self.degree,
                               domain=self._fm.mesh,
+                              conductivity=conductivity,
                               src_x=0.0,
                               src_y=0.0,
                               src_z=0.0,
-                              conductivity=conductivity)
+                              snk_x=0.0,
+                              snk_y=0.0,
+                              snk_z=0.0)
 
         def base_conductivity(self, x, y, z):
             return self.config.getfloat('brain', 'conductivity')
