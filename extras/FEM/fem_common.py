@@ -25,6 +25,7 @@
 import configparser
 import logging
 import os
+import itertools
 
 import numpy as np
 from scipy.integrate import romb
@@ -506,6 +507,64 @@ class DecompressedSourcesXY(_DecompressedSourcesBase):
             return self._source.potential(self._wx * X,
                                           self._wy * Y,
                                           Z)
+
+
+class DecompressedSourcesXYZ(_DecompressedSourcesBase):
+    def __iter__(self):
+        for s in self._sources:
+            coords = [s.x, s.y, s.z]
+            for idx in itertools.permutations(range(3)):
+                permutated_coords = [coords[i] for i in idx]
+                if coords == permutated_coords and idx != (0, 1, 2):
+                    continue
+
+                for x, y, z in itertools.product(*map(self._mirroring_iterator,
+                                                      permutated_coords)):
+                    yield self.Source(x, y, z, s)
+
+    @staticmethod
+    def _mirroring_iterator(x):
+        yield x
+        if x != 0:
+            yield -x
+
+    class Source(_DecompressedSourcesBase.Source):
+        __slots__ = ('_permutation',
+                     '_weights')
+
+        def __init__(self, x, y, z, source):
+            ax, ay, az = abs(x), abs(y). abs(z)
+            if source.x != max(ax, ay, az) or source.z != min(ax, ay, az):
+                raise self.IncompatibleSourceCoords
+
+            self._source = source
+            self._permutation = np.argsort(np.argsort([-ax, -ay, -az],
+                                                      kind='stable'))
+            self._weights = [1 if x > 0 else -1,
+                             1 if y > 0 else -1,
+                             1 if z > 0 else -1]
+
+        @property
+        def x(self):
+            return self._value_of_coordinate(0)
+
+        @property
+        def y(self):
+            return self._value_of_coordinate(1)
+
+        @property
+        def z(self):
+            return self._value_of_coordinate(2)
+
+        def _value_of_coordinate(self, coordinate):
+            idx = self._permutation[coordinate]
+            return self._weights[idx] * getattr(self._source,
+                                                'xyz'[idx])
+
+        def potential(self, X, Y, Z):
+            coords = [a * b for a, b in zip([X, Y, Z], self._weights)]
+            return self._source.potential(*[coords[i]
+                                            for i in self._permutation])
 
 
 class DegeneratedSourceBase(object):
