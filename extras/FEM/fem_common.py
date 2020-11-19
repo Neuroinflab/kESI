@@ -447,10 +447,18 @@ class BroadcastableScalarFunction(object):
         return result
 
 
-class DecompressedSourcesXY(object):
+class _DecompressedSourcesBase(object):
     def __init__(self, sources):
         self._sources = sources
 
+    class Source(object):
+        __slots__ = ('_source',)
+
+        class IncompatibleSourceCoords(TypeError):
+            pass
+
+
+class DecompressedSourcesXY(_DecompressedSourcesBase):
     def __iter__(self):
         for s in self._sources:
             for x, y in ([(s.x, s.y)]
@@ -460,11 +468,8 @@ class DecompressedSourcesXY(object):
                     for yy in ([y] if y == 0 else [y, -y]):
                         yield self.Source(xx, yy, s)
 
-    class Source(object):
-        __slots__ = ('_source', '_flip_xy', '_wx', '_wy')
-
-        class IncompatibleSourceCoords(TypeError):
-            pass
+    class Source(_DecompressedSourcesBase.Source):
+        __slots__ = ('_flip_xy', '_wx', '_wy')
 
         def __init__(self, x, y, source):
             ax, ay = abs(x), abs(y)
