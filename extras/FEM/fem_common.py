@@ -530,16 +530,18 @@ class DecompressedSourcesXYZ(_DecompressedSourcesBase):
 
     class Source(_DecompressedSourcesBase.Source):
         __slots__ = ('_permutation',
+                     '_permutation_inv',
                      '_weights')
 
         def __init__(self, x, y, z, source):
-            ax, ay, az = abs(x), abs(y). abs(z)
+            ax, ay, az = abs(x), abs(y), abs(z)
             if source.x != max(ax, ay, az) or source.z != min(ax, ay, az):
                 raise self.IncompatibleSourceCoords
 
             self._source = source
-            self._permutation = np.argsort(np.argsort([-ax, -ay, -az],
-                                                      kind='stable'))
+            self._permutation_inv = np.argsort([-ax, -ay, -az],
+                                               kind='stable')
+            self._permutation = np.argsort(self._permutation_inv)
             self._weights = [1 if x > 0 else -1,
                              1 if y > 0 else -1,
                              1 if z > 0 else -1]
@@ -558,13 +560,13 @@ class DecompressedSourcesXYZ(_DecompressedSourcesBase):
 
         def _value_of_coordinate(self, coordinate):
             idx = self._permutation[coordinate]
-            return self._weights[idx] * getattr(self._source,
-                                                'xyz'[idx])
+            return self._weights[coordinate] * getattr(self._source,
+                                                       'xyz'[idx])
 
         def potential(self, X, Y, Z):
             coords = [a * b for a, b in zip([X, Y, Z], self._weights)]
-            return self._source.potential(*[coords[i]
-                                            for i in self._permutation])
+            permuted_coords = [coords[i] for i in self._permutation_inv]
+            return self._source.potential(*permuted_coords)
 
 
 class DegeneratedSourceBase(object):
@@ -1081,3 +1083,39 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
                     return self._parent.POTENTIALS[self._idx]
 
         return LoadableIntegratedSourcess
+
+
+if __name__ == '__main__':
+    class DistanceSourceMock(object):
+        def __init__(self, x, y, z):
+            self.x = x
+            self.y = y
+            self.z = z
+
+        def potential(self, X, Y, Z):
+            return np.sqrt(np.square(X - self.x) + np.square(Y - self.y) + np.square(Z - self.z))
+
+
+    base_source = DistanceSourceMock(3, 2, 1)
+
+    for x, y, z in itertools.permutations([1, 2, 3]):
+        for wx, wy, wz in itertools.product([1, -1], repeat=3):
+            s = DecompressedSourcesXYZ.Source(x * wx, y * wy, z * wz, base_source)
+            assert (s.x, s.y, s.z) == (x * wx, y * wy, z * wz)
+
+    sources = list(DecompressedSourcesXYZ([base_source]))
+
+    assert 48 == len(sources)
+    assert 48 == len({(s.x, s.y, s.z) for s in sources})
+    assert 8 == len({tuple(sorted([s.x, s.y, s.z])) for s in sources})
+    assert 1 == len({tuple(sorted(map(abs, [s.x, s.y, s.z]))) for s in sources})
+
+    ELECTRODES = [(0, 0, 0),
+                  (1, 0, 0),
+                  (0, 1, 0),
+                  (0, 1, 1)]
+
+    for s in sources:
+        assert abs(s.potential(s.x, s.y, s.z)) < 1e-5
+        for x, y, z in ELECTRODES:
+            assert abs(s.potential(x, y, z) - np.sqrt(np.square(s.x - x) + np.square(s.y - y) + np.square(s.z - z))) < 1e-5
