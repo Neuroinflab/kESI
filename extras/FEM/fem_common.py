@@ -962,6 +962,120 @@ class DegeneratedRegularSourcesFactory(_DegeneratedPointSourcesFactoryBase):
                     & (self._parent._IDX_Z == self._idx_z))
 
 
+class DegeneratedIrregularSourcesFactory(_DegeneratedPointSourcesFactoryBase):
+    _LoadableObject__ATTRIBUTES = (
+            _DegeneratedPointSourcesFactoryBase._LoadableObject__ATTRIBUTES
+            + [
+               'X_IDX',
+               'Y_IDX',
+               'Z_IDX',
+               ])
+
+    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES, X_IDX, Y_IDX, Z_IDX):
+        super(DegeneratedIrregularSourcesFactory,
+              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES, X_IDX, Y_IDX, Z_IDX)
+
+    @classmethod
+    def from_sources(cls, sources, ELECTRODES, dtype=None):
+        sources = list(sources)
+        n_sources = len(sources)
+
+        X = set()
+        Y = set()
+        Z = set()
+
+        for source in sources:
+            X.add(source.x)
+            Y.add(source.y)
+            Z.add(source.z)
+
+        X, Y, Z = map(sorted, [X, Y, Z])
+        X_IDX = np.full(n_sources,
+                        fill_value=len(X),
+                        dtype=cls._minimal_int_type(len(X)))
+        Y_IDX = np.full(n_sources,
+                        fill_value=len(Y),
+                        dtype=cls._minimal_int_type(len(Y)))
+        Z_IDX = np.full(n_sources,
+                        fill_value=len(Z),
+                        dtype=cls._minimal_int_type(len(Z)))
+        POTENTIALS = np.full((n_sources, len(ELECTRODES)),
+                             fill_value=np.nan,
+                             dtype=dtype)
+
+        for idx in range(n_sources):
+            source = sources.pop()
+            # it is crucial not to hold reference to the source
+            # to enable freeing of the loaded FEM solution
+
+            X_IDX[idx] = X.index(source.x)
+            Y_IDX[idx] = Y.index(source.y)
+            Z_IDX[idx] = Z.index(source.z)
+
+            try:
+                POTENTIALS[idx,
+                           :] = source.potential(ELECTRODES[:, 0],
+                                                 ELECTRODES[:, 1],
+                                                 ELECTRODES[:, 2])
+            except Exception:
+                for idx_e, (x, y, z) in enumerate(ELECTRODES):
+                    POTENTIALS[idx,
+                               idx_e] = source.potential(x, y, z)
+
+        return cls(X, Y, Z, POTENTIALS, ELECTRODES, X_IDX, Y_IDX, Z_IDX)
+
+    @staticmethod
+    def _minimal_int_type(max_value):
+        for int_type in [
+                         np.uint8,
+                         np.uint16,
+                         np.uint32,
+                         np.uint64,
+                         ]:
+            if np.iinfo(int_type).max >= max_value:
+                return int_type
+        else:
+            return int
+
+    def __iter__(self):
+        for idx in range(self.POTENTIALS.shape[0]):
+            yield self.Source(self, idx)
+
+    class Source(DegeneratedSourceBase):
+        __slots__ = ('_idx',)
+
+        def __init__(self, parent, idx):
+            super(DegeneratedIrregularSourcesFactory.Source,
+                  self).__init__(parent)
+            self._idx = idx
+
+        @property
+        def x(self):
+            parent = self._parent
+            return parent.X[parent.X_IDX[self._idx]]
+
+        @property
+        def y(self):
+            parent = self._parent
+            return parent.Y[parent.Y_IDX[self._idx]]
+
+        @property
+        def z(self):
+            parent = self._parent
+            return parent.Z[parent.Z_IDX[self._idx]]
+
+        @property
+        def POTENTIAL(self):
+            return self._parent.POTENTIALS[self._idx, :]
+
+        @property
+        def CSD(self):
+            parent = self._parent
+            return ((parent._IDX_X == parent.X_IDX[self._idx])
+                    & (parent._IDX_Y == parent.Y_IDX[self._idx_y])
+                    & (parent._IDX_Z == parent.Z_IDX[self._idx_z]))
+
+
 class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
     @classmethod
     def load_from_degenerated_sources_factory(cls, file):
