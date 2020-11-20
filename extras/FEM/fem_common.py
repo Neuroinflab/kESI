@@ -750,9 +750,9 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
         'ELECTRODES',
         ]
 
-    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
+    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES, *args):
         super(_DegeneratedSourcesFactoryBase,
-              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES)
+              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES, *args)
 
         self._X, self._Y, self._Z = np.meshgrid(self.X,
                                                 self.Y,
@@ -809,14 +809,16 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
         return self._MeasurementManager(self)
 
 
-class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
-    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
-        super(DegeneratedRegularSourcesFactory,
-              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES)
+class _DegeneratedPointSourcesFactoryBase(_DegeneratedSourcesFactoryBase):
+    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES, *args):
+        super(_DegeneratedPointSourcesFactoryBase,
+              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES, *args)
         self._IDX_X = np.arange(len(X)).reshape((-1, 1, 1))
         self._IDX_Y = np.arange(len(Y)).reshape((1, -1, 1))
         self._IDX_Z = np.arange(len(Z)).reshape((1, 1, -1))
 
+
+class DegeneratedRegularSourcesFactory(_DegeneratedPointSourcesFactoryBase):
     @classmethod
     def from_sources(cls, sources, ELECTRODES, dtype=None):
         sources = list(sources)
