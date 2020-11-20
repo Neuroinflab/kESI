@@ -962,7 +962,7 @@ class DegeneratedRegularSourcesFactory(_DegeneratedPointSourcesFactoryBase):
                     & (self._parent._IDX_Z == self._idx_z))
 
 
-class DegeneratedIrregularSourcesFactory(_DegeneratedPointSourcesFactoryBase):
+class _DegeneratedIrregularSourcesFactoryBase(_DegeneratedPointSourcesFactoryBase):
     _LoadableObject__ATTRIBUTES = (
             _DegeneratedPointSourcesFactoryBase._LoadableObject__ATTRIBUTES
             + [
@@ -972,9 +972,11 @@ class DegeneratedIrregularSourcesFactory(_DegeneratedPointSourcesFactoryBase):
                ])
 
     def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES, X_IDX, Y_IDX, Z_IDX):
-        super(DegeneratedIrregularSourcesFactory,
+        super(_DegeneratedIrregularSourcesFactoryBase,
               self).__init__(X, Y, Z, POTENTIALS, ELECTRODES, X_IDX, Y_IDX, Z_IDX)
 
+
+class DegeneratedIrregularSourcesFactory(_DegeneratedIrregularSourcesFactoryBase):
     @classmethod
     def from_sources(cls, sources, ELECTRODES, dtype=None):
         sources = list(sources)
