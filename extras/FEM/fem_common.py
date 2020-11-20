@@ -1194,31 +1194,39 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
                                                               idx_y,
                                                               idx_z]
 
-    def LoadableIntegratedSourcess(self, LoadableFunctionsClass):
-        class LoadableIntegratedSourcess(LoadableFunctionsClass):
-            _LoadableObject__ATTRIBUTES = LoadableFunctionsClass._LoadableObject__ATTRIBUTES + ['ELECTRODES', 'POTENTIALS']
+    @staticmethod
+    def LoadableIntegratedSourcess(LoadableFunctionsClass):
+        return LoadableIntegratedSourcess(LoadableFunctionsClass,
+                                          default_vectorization_level=DegeneratedIntegratedSourcesFactory.VECTOR_INTEGRATE_XYZ)
 
-            @classmethod
-            def from_factories(cls, csd_factory, integrated_sources,
-                               vectorization_level=DegeneratedIntegratedSourcesFactory.VECTOR_INTEGRATE_XYZ):
-                attributes = csd_factory.attribute_mapping()
-                attributes['ELECTRODES'] = integrated_sources.ELECTRODES
-                attributes['POTENTIALS'] = np.array([integrated_sources.integrate_potential(csd,
-                                                                                            vectorization_level=vectorization_level)
-                                                     for csd in csd_factory])
-                return cls.from_mapping(attributes)
 
-            class _Child(LoadableFunctionsClass._Child):
-                __slots__ = ()
+def LoadableIntegratedSourcess(LoadableFunctionsClass,
+                               default_vectorization_level):
+    class LoadableIntegratedSourcess(LoadableFunctionsClass):
+        _LoadableObject__ATTRIBUTES = LoadableFunctionsClass._LoadableObject__ATTRIBUTES + ['ELECTRODES',
+                                                                                            'POTENTIALS']
 
-                def csd(self, *args, **kwargs):
-                    return self(*args, **kwargs)
+        @classmethod
+        def from_factories(cls, csd_factory, integrated_sources,
+                           vectorization_level=default_vectorization_level):
+            attributes = csd_factory.attribute_mapping()
+            attributes['ELECTRODES'] = integrated_sources.ELECTRODES
+            attributes['POTENTIALS'] = np.array([integrated_sources.integrate_potential(csd,
+                                                                                        vectorization_level=vectorization_level)
+                                                 for csd in csd_factory])
+            return cls.from_mapping(attributes)
 
-                @property
-                def POTENTIAL(self):
-                    return self._parent.POTENTIALS[self._idx]
+        class _Child(LoadableFunctionsClass._Child):
+            __slots__ = ()
 
-        return LoadableIntegratedSourcess
+            def csd(self, *args, **kwargs):
+                return self(*args, **kwargs)
+
+            @property
+            def POTENTIAL(self):
+                return self._parent.POTENTIALS[self._idx]
+
+    return LoadableIntegratedSourcess
 
 
 if __name__ == '__main__':
