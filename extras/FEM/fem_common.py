@@ -512,14 +512,14 @@ class DecompressedSourcesXY(_DecompressedSourcesBase):
 class DecompressedSourcesXYZ(_DecompressedSourcesBase):
     def __iter__(self):
         for s in self._sources:
-            coords = [s.x, s.y, s.z]
-            for idx in itertools.permutations(range(3)):
-                permutated_coords = [coords[i] for i in idx]
-                if coords == permutated_coords and idx != (0, 1, 2):
+            seen = set()
+            for permuted_coords in itertools.permutations([s.x, s.y, s.z]):
+                if permuted_coords in seen:
                     continue
+                seen.add(permuted_coords)
 
                 for x, y, z in itertools.product(*map(self._mirroring_iterator,
-                                                      permutated_coords)):
+                                                      permuted_coords)):
                     yield self.Source(x, y, z, s)
 
     @staticmethod
