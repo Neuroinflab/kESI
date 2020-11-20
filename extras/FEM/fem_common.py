@@ -880,11 +880,14 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
                                 Y=None,
                                 Z=None,
                                 dtype=None,
-                                tolerance=np.finfo(float).eps):
+                                tolerance=np.finfo(float).eps,
+                                max_distance=None):
         NEW_ELECTRODES = np.full_like(ELECTRODES,
                                       fill_value=np.nan)
         MINIMAL_R2 = np.full(ELECTRODES.shape[0],
-                             fill_value=np.inf)
+                             fill_value=(np.inf
+                                         if max_distance is None
+                                         else max_distance**2))
         POTENTIALS = np.full((len(X), len(Y), len(Z), len(ELECTRODES)),
                              fill_value=np.nan,
                              dtype=dtype)
@@ -894,10 +897,12 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
                   + np.square(ELECTRODES[:, 1] - source.y)
                   + np.square(ELECTRODES[:, 2] - source.z))
 
-            IDX = ((abs(ELECTRODES[:, 0] - source.x) < tolerance)
-                   & (abs(ELECTRODES[:, 1] - source.y) < tolerance)
-                   & (abs(ELECTRODES[:, 2] - source.z) < tolerance)
-                   & (R2 < MINIMAL_R2))
+            IDX = R2 <= MINIMAL_R2
+            if max_distance is None:
+                IDX &= ((abs(ELECTRODES[:, 0] - source.x) < tolerance)
+                        & (abs(ELECTRODES[:, 1] - source.y) < tolerance)
+                        & (abs(ELECTRODES[:, 2] - source.z) < tolerance))
+
             if IDX.any():
                 for idx in np.where(IDX)[0]:
                     NEW_ELECTRODES[idx, :] = source.x, source.y, source.z
