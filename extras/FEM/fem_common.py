@@ -769,6 +769,7 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
 
     @classmethod
     def _integration_weights(cls, X):
+        # Regular `X` assumed
         dx = cls._d(X)
         n = len(X)
         if 2 ** int(np.log2(n - 1)) == n - 1:
