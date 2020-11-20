@@ -1230,6 +1230,74 @@ def LoadableIntegratedSourcess(LoadableFunctionsClass,
     return LoadableIntegratedSourcess
 
 
+class DegeneratedIntegratedIrregularSourcesFactory(_DegeneratedIrregularSourcesFactoryBase):
+    @classmethod
+    def load_from_degenerated_sources_factory(cls, file):
+        with np.load(file) as fh:
+            attributes = {attr: fh[attr] for attr in cls._LoadableObject__ATTRIBUTES}
+
+        POTENTIALS = attributes['POTENTIALS']
+
+        # WX, WY, WZ = [cls._integration_weights(attributes[a])
+        #               for a in ['X', 'Y', 'Z']]
+
+        # for i, (idx_x, idx_y, idx_z) in enumerate(zip(attributes['X_IDX'],
+        #                                               attributes['Y_IDX'],
+        #                                               attributes['Z_IDX'])):
+        #     POTENTIALS[i, :] *= WX[idx_x] * WY[idx_y] * WZ[idx_z]
+        # for i, w in enumerate(WX[attributes['X_IDX']]
+        #                       * WY[attributes['Y_IDX']]
+        #                       * WZ[attributes['Z_IDX']]):
+        #     POTENTIALS[i, :] *= w
+
+        for coordinate in ['X', 'Y', 'Z']:
+            W = cls._integration_weights(attributes[coordinate])
+            for i, w in enumerate(W):
+                POTENTIALS[attributes[f'{coordinate}_IDX'] == i, :] *= w
+
+        return cls.from_mapping(attributes)
+
+    (NO_VECTOR_INTEGRATION,
+     VECTOR_INTEGRATION) = range(2)
+
+    def __call__(self, csd,
+                 vectorization_level=VECTOR_INTEGRATION):
+        return self.IntegratedSource(self,
+                                     self.integrate_potential(csd, vectorization_level),
+                                     csd)
+
+    def integrate_potential(self, csd, vectorization_level=VECTOR_INTEGRATION):
+        if vectorization_level > self.NO_VECTOR_INTEGRATION:
+            try:
+                return self._vector_integrate(csd)
+
+            except Exception as e:
+                logger.warning(f'Vector integration yielded {e}')
+
+        return self._scalar_integrate(csd)
+
+    def _vector_integrate(self, csd):
+        return csd(self.X[self.X_IDX.reshape(-1, 1)],
+                   self.Y[self.Y_IDX.reshape(-1, 1)],
+                   self.Z[self.Z_IDX.reshape(-1, 1)]
+                   ) * self.POTENTIAL
+
+    def _scalar_integrate(self, csd):
+        POTENTIAL = 0.0
+        X, Y, Z = [getattr(self, c) for c in ['X', 'Y', 'Z']]
+        for (V, x, y, z) in zip(self.POTENTIALS,
+                                self.X_IDX,
+                                self.Y_IDX,
+                                self.Z_IDX):
+            POTENTIAL += V * csd(X[x], Y[y], Z[z])
+        return POTENTIAL
+
+    @staticmethod
+    def LoadableIntegratedSourcess(LoadableFunctionsClass):
+        return LoadableIntegratedSourcess(LoadableFunctionsClass,
+                                          default_vectorization_level=DegeneratedIntegratedIrregularSourcesFactory.VECTOR_INTEGRATION)
+
+
 if __name__ == '__main__':
     class DistanceSourceMock(object):
         def __init__(self, x, y, z):
