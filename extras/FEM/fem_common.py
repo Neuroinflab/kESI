@@ -1003,10 +1003,11 @@ class DegeneratedIrregularSourcesFactory(_DegeneratedPointSourcesFactoryBase):
                              fill_value=np.nan,
                              dtype=dtype)
 
-        for idx in range(n_sources):
+        while sources:
             source = sources.pop()
             # it is crucial not to hold reference to the source
             # to enable freeing of the loaded FEM solution
+            idx = len(sources)
 
             X_IDX[idx] = X.index(source.x)
             Y_IDX[idx] = Y.index(source.y)
