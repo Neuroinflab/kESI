@@ -881,17 +881,27 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
                                 Z=None,
                                 dtype=None,
                                 tolerance=np.finfo(float).eps):
-        ELECTRODES = ELECTRODES.copy()
-        POTENTIALS = fc.empty_array((len(X), len(Y), len(Z), len(ELECTRODES)),
-                                    dtype=dtype)
+        NEW_ELECTRODES = np.full_like(ELECTRODES,
+                                      fill_value=np.nan)
+        MINIMAL_R2 = np.full(ELECTRODES.shape[0],
+                             fill_value=np.inf)
+        POTENTIALS = np.full((len(X), len(Y), len(Z), len(ELECTRODES)),
+                             fill_value=np.nan,
+                             dtype=dtype)
 
         for source in sources:
+            R2 = (np.square(ELECTRODES[:, 0] - source.x)
+                  + np.square(ELECTRODES[:, 1] - source.y)
+                  + np.square(ELECTRODES[:, 2] - source.z))
+
             IDX = ((abs(ELECTRODES[:, 0] - source.x) < tolerance)
                    & (abs(ELECTRODES[:, 1] - source.y) < tolerance)
-                   & (abs(ELECTRODES[:, 2] - source.z) < tolerance))
+                   & (abs(ELECTRODES[:, 2] - source.z) < tolerance)
+                   & (R2 < MINIMAL_R2))
             if IDX.any():
                 for idx in np.where(IDX)[0]:
-                    ELECTRODES[idx, :] = source.x, source.y, source.z
+                    NEW_ELECTRODES[idx, :] = source.x, source.y, source.z
+                    MINIMAL_R2[idx] = R2[idx]
                     for idx_x, src_x in enumerate(X):
                         for idx_y, src_y in enumerate(Y):
                             for idx_z, src_z in enumerate(Z):
@@ -900,7 +910,7 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
                                            idx_z,
                                            idx] = source.potential(src_x, src_y, src_z)
 
-        return cls(X, Y, Z, POTENTIALS, ELECTRODES)
+        return cls(X, Y, Z, POTENTIALS, NEW_ELECTRODES)
 
     def __iter__(self):
         for x in self._IDX_X.flatten():
