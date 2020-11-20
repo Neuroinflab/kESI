@@ -928,7 +928,8 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
         __slots__ = ('_idx_x', '_idx_y', '_idx_z')
 
         def __init__(self, parent, x, y, z):
-            self._parent = parent
+            super(DegeneratedRegularSourcesFactory.Source,
+                  self).__init__(parent)
             self._idx_x = x
             self._idx_y = y
             self._idx_z = z
