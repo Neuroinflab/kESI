@@ -831,8 +831,9 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
             Z.add(source.z)
 
         X, Y, Z = map(sorted, [X, Y, Z])
-        POTENTIALS = fc.empty_array((len(X), len(Y), len(Z), len(ELECTRODES)),
-                                    dtype=dtype)
+        POTENTIALS = np.full((len(X), len(Y), len(Z), len(ELECTRODES)),
+                             fill_value=np.nan,
+                             dtype=dtype)
 
         while sources:
             source = sources.pop()
