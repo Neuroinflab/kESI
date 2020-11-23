@@ -25,6 +25,7 @@
 import configparser
 import logging
 import os
+import itertools
 
 import numpy as np
 from scipy.integrate import romb
@@ -447,10 +448,18 @@ class BroadcastableScalarFunction(object):
         return result
 
 
-class DecompressedSourcesXY(object):
+class _DecompressedSourcesBase(object):
     def __init__(self, sources):
         self._sources = sources
 
+    class Source(object):
+        __slots__ = ('_source',)
+
+        class IncompatibleSourceCoords(TypeError):
+            pass
+
+
+class DecompressedSourcesXY(_DecompressedSourcesBase):
     def __iter__(self):
         for s in self._sources:
             for x, y in ([(s.x, s.y)]
@@ -460,11 +469,8 @@ class DecompressedSourcesXY(object):
                     for yy in ([y] if y == 0 else [y, -y]):
                         yield self.Source(xx, yy, s)
 
-    class Source(object):
-        __slots__ = ('_source', '_flip_xy', '_wx', '_wy')
-
-        class IncompatibleSourceCoords(TypeError):
-            pass
+    class Source(_DecompressedSourcesBase.Source):
+        __slots__ = ('_flip_xy', '_wx', '_wy')
 
         def __init__(self, x, y, source):
             ax, ay = abs(x), abs(y)
@@ -501,6 +507,66 @@ class DecompressedSourcesXY(object):
             return self._source.potential(self._wx * X,
                                           self._wy * Y,
                                           Z)
+
+
+class DecompressedSourcesXYZ(_DecompressedSourcesBase):
+    def __iter__(self):
+        for s in self._sources:
+            seen = set()
+            for permuted_coords in itertools.permutations([s.x, s.y, s.z]):
+                if permuted_coords in seen:
+                    continue
+                seen.add(permuted_coords)
+
+                for x, y, z in itertools.product(*map(self._mirroring_iterator,
+                                                      permuted_coords)):
+                    yield self.Source(x, y, z, s)
+
+    @staticmethod
+    def _mirroring_iterator(x):
+        yield x
+        if x != 0:
+            yield -x
+
+    class Source(_DecompressedSourcesBase.Source):
+        __slots__ = ('_permutation',
+                     '_permutation_inv',
+                     '_weights')
+
+        def __init__(self, x, y, z, source):
+            ax, ay, az = abs(x), abs(y), abs(z)
+            if source.x != max(ax, ay, az) or source.z != min(ax, ay, az):
+                raise self.IncompatibleSourceCoords
+
+            self._source = source
+            self._permutation_inv = np.argsort([-ax, -ay, -az],
+                                               kind='stable')
+            self._permutation = np.argsort(self._permutation_inv)
+            self._weights = [1 if x > 0 else -1,
+                             1 if y > 0 else -1,
+                             1 if z > 0 else -1]
+
+        @property
+        def x(self):
+            return self._value_of_coordinate(0)
+
+        @property
+        def y(self):
+            return self._value_of_coordinate(1)
+
+        @property
+        def z(self):
+            return self._value_of_coordinate(2)
+
+        def _value_of_coordinate(self, coordinate):
+            idx = self._permutation[coordinate]
+            return self._weights[coordinate] * getattr(self._source,
+                                                       'xyz'[idx])
+
+        def potential(self, X, Y, Z):
+            coords = [a * b for a, b in zip([X, Y, Z], self._weights)]
+            permuted_coords = [coords[i] for i in self._permutation_inv]
+            return self._source.potential(*permuted_coords)
 
 
 class DegeneratedSourceBase(object):
@@ -684,9 +750,9 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
         'ELECTRODES',
         ]
 
-    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
+    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES, *args):
         super(_DegeneratedSourcesFactoryBase,
-              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES)
+              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES, *args)
 
         self._X, self._Y, self._Z = np.meshgrid(self.X,
                                                 self.Y,
@@ -703,6 +769,7 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
 
     @classmethod
     def _integration_weights(cls, X):
+        # Regular `X` assumed
         dx = cls._d(X)
         n = len(X)
         if 2 ** int(np.log2(n - 1)) == n - 1:
@@ -743,14 +810,16 @@ class _DegeneratedSourcesFactoryBase(_LoadableObjectBase):
         return self._MeasurementManager(self)
 
 
-class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
-    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES):
-        super(DegeneratedRegularSourcesFactory,
-              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES)
+class _DegeneratedPointSourcesFactoryBase(_DegeneratedSourcesFactoryBase):
+    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES, *args):
+        super(_DegeneratedPointSourcesFactoryBase,
+              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES, *args)
         self._IDX_X = np.arange(len(X)).reshape((-1, 1, 1))
         self._IDX_Y = np.arange(len(Y)).reshape((1, -1, 1))
         self._IDX_Z = np.arange(len(Z)).reshape((1, 1, -1))
 
+
+class DegeneratedRegularSourcesFactory(_DegeneratedPointSourcesFactoryBase):
     @classmethod
     def from_sources(cls, sources, ELECTRODES, dtype=None):
         sources = list(sources)
@@ -765,8 +834,9 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
             Z.add(source.z)
 
         X, Y, Z = map(sorted, [X, Y, Z])
-        POTENTIALS = fc.empty_array((len(X), len(Y), len(Z), len(ELECTRODES)),
-                                    dtype=dtype)
+        POTENTIALS = np.full((len(X), len(Y), len(Z), len(ELECTRODES)),
+                             fill_value=np.nan,
+                             dtype=dtype)
 
         while sources:
             source = sources.pop()
@@ -814,18 +884,33 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
                                 Y=None,
                                 Z=None,
                                 dtype=None,
-                                tolerance=np.finfo(float).eps):
-        ELECTRODES = ELECTRODES.copy()
-        POTENTIALS = fc.empty_array((len(X), len(Y), len(Z), len(ELECTRODES)),
-                                    dtype=dtype)
+                                tolerance=np.finfo(float).eps,
+                                max_distance=None):
+        NEW_ELECTRODES = np.full_like(ELECTRODES,
+                                      fill_value=np.nan)
+        MINIMAL_R2 = np.full(ELECTRODES.shape[0],
+                             fill_value=(np.inf
+                                         if max_distance is None
+                                         else max_distance**2))
+        POTENTIALS = np.full((len(X), len(Y), len(Z), len(ELECTRODES)),
+                             fill_value=np.nan,
+                             dtype=dtype)
 
         for source in sources:
-            IDX = ((abs(ELECTRODES[:, 0] - source.x) < tolerance)
-                   & (abs(ELECTRODES[:, 1] - source.y) < tolerance)
-                   & (abs(ELECTRODES[:, 2] - source.z) < tolerance))
+            R2 = (np.square(ELECTRODES[:, 0] - source.x)
+                  + np.square(ELECTRODES[:, 1] - source.y)
+                  + np.square(ELECTRODES[:, 2] - source.z))
+
+            IDX = R2 <= MINIMAL_R2
+            if max_distance is None:
+                IDX &= ((abs(ELECTRODES[:, 0] - source.x) < tolerance)
+                        & (abs(ELECTRODES[:, 1] - source.y) < tolerance)
+                        & (abs(ELECTRODES[:, 2] - source.z) < tolerance))
+
             if IDX.any():
                 for idx in np.where(IDX)[0]:
-                    ELECTRODES[idx, :] = source.x, source.y, source.z
+                    NEW_ELECTRODES[idx, :] = source.x, source.y, source.z
+                    MINIMAL_R2[idx] = R2[idx]
                     for idx_x, src_x in enumerate(X):
                         for idx_y, src_y in enumerate(Y):
                             for idx_z, src_z in enumerate(Z):
@@ -834,7 +919,7 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
                                            idx_z,
                                            idx] = source.potential(src_x, src_y, src_z)
 
-        return cls(X, Y, Z, POTENTIALS, ELECTRODES)
+        return cls(X, Y, Z, POTENTIALS, NEW_ELECTRODES)
 
     def __iter__(self):
         for x in self._IDX_X.flatten():
@@ -846,7 +931,8 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
         __slots__ = ('_idx_x', '_idx_y', '_idx_z')
 
         def __init__(self, parent, x, y, z):
-            self._parent = parent
+            super(DegeneratedRegularSourcesFactory.Source,
+                  self).__init__(parent)
             self._idx_x = x
             self._idx_y = y
             self._idx_z = z
@@ -875,6 +961,123 @@ class DegeneratedRegularSourcesFactory(_DegeneratedSourcesFactoryBase):
             return ((self._parent._IDX_X == self._idx_x)
                     & (self._parent._IDX_Y == self._idx_y)
                     & (self._parent._IDX_Z == self._idx_z))
+
+
+class _DegeneratedIrregularSourcesFactoryBase(_DegeneratedPointSourcesFactoryBase):
+    _LoadableObject__ATTRIBUTES = (
+            _DegeneratedPointSourcesFactoryBase._LoadableObject__ATTRIBUTES
+            + [
+               'X_IDX',
+               'Y_IDX',
+               'Z_IDX',
+               ])
+
+    def __init__(self, X, Y, Z, POTENTIALS, ELECTRODES, X_IDX, Y_IDX, Z_IDX):
+        super(_DegeneratedIrregularSourcesFactoryBase,
+              self).__init__(X, Y, Z, POTENTIALS, ELECTRODES, X_IDX, Y_IDX, Z_IDX)
+
+
+class DegeneratedIrregularSourcesFactory(_DegeneratedIrregularSourcesFactoryBase):
+    @classmethod
+    def from_sources(cls, sources, ELECTRODES, dtype=None):
+        sources = list(sources)
+        n_sources = len(sources)
+
+        X = set()
+        Y = set()
+        Z = set()
+
+        for source in sources:
+            X.add(source.x)
+            Y.add(source.y)
+            Z.add(source.z)
+
+        X, Y, Z = map(sorted, [X, Y, Z])
+        X_IDX = np.full(n_sources,
+                        fill_value=len(X),
+                        dtype=cls._minimal_int_type(len(X)))
+        Y_IDX = np.full(n_sources,
+                        fill_value=len(Y),
+                        dtype=cls._minimal_int_type(len(Y)))
+        Z_IDX = np.full(n_sources,
+                        fill_value=len(Z),
+                        dtype=cls._minimal_int_type(len(Z)))
+        POTENTIALS = np.full((n_sources, len(ELECTRODES)),
+                             fill_value=np.nan,
+                             dtype=dtype)
+
+        while sources:
+            source = sources.pop()
+            # it is crucial not to hold reference to the source
+            # to enable freeing of the loaded FEM solution
+            idx = len(sources)
+
+            X_IDX[idx] = X.index(source.x)
+            Y_IDX[idx] = Y.index(source.y)
+            Z_IDX[idx] = Z.index(source.z)
+
+            try:
+                POTENTIALS[idx,
+                           :] = source.potential(ELECTRODES[:, 0],
+                                                 ELECTRODES[:, 1],
+                                                 ELECTRODES[:, 2])
+            except Exception:
+                for idx_e, (x, y, z) in enumerate(ELECTRODES):
+                    POTENTIALS[idx,
+                               idx_e] = source.potential(x, y, z)
+
+        return cls(X, Y, Z, POTENTIALS, ELECTRODES, X_IDX, Y_IDX, Z_IDX)
+
+    @staticmethod
+    def _minimal_int_type(max_value):
+        for int_type in [
+                         np.uint8,
+                         np.uint16,
+                         np.uint32,
+                         np.uint64,
+                         ]:
+            if np.iinfo(int_type).max >= max_value:
+                return int_type
+        else:
+            return int
+
+    def __iter__(self):
+        for idx in range(self.POTENTIALS.shape[0]):
+            yield self.Source(self, idx)
+
+    class Source(DegeneratedSourceBase):
+        __slots__ = ('_idx',)
+
+        def __init__(self, parent, idx):
+            super(DegeneratedIrregularSourcesFactory.Source,
+                  self).__init__(parent)
+            self._idx = idx
+
+        @property
+        def x(self):
+            parent = self._parent
+            return parent.X[parent.X_IDX[self._idx]]
+
+        @property
+        def y(self):
+            parent = self._parent
+            return parent.Y[parent.Y_IDX[self._idx]]
+
+        @property
+        def z(self):
+            parent = self._parent
+            return parent.Z[parent.Z_IDX[self._idx]]
+
+        @property
+        def POTENTIAL(self):
+            return self._parent.POTENTIALS[self._idx, :]
+
+        @property
+        def CSD(self):
+            parent = self._parent
+            return ((parent._IDX_X == parent.X_IDX[self._idx])
+                    & (parent._IDX_Y == parent.Y_IDX[self._idx_y])
+                    & (parent._IDX_Z == parent.Z_IDX[self._idx_z]))
 
 
 class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
@@ -992,28 +1195,140 @@ class DegeneratedIntegratedSourcesFactory(_DegeneratedSourcesFactoryBase):
                                                               idx_y,
                                                               idx_z]
 
-    def LoadableIntegratedSourcess(self, LoadableFunctionsClass):
-        class LoadableIntegratedSourcess(LoadableFunctionsClass):
-            _LoadableObject__ATTRIBUTES = LoadableFunctionsClass._LoadableObject__ATTRIBUTES + ['ELECTRODES', 'POTENTIALS']
+    @staticmethod
+    def LoadableIntegratedSourcess(LoadableFunctionsClass):
+        return LoadableIntegratedSourcess(LoadableFunctionsClass,
+                                          default_vectorization_level=DegeneratedIntegratedSourcesFactory.VECTOR_INTEGRATE_XYZ)
 
-            @classmethod
-            def from_factories(cls, csd_factory, integrated_sources,
-                               vectorization_level=DegeneratedIntegratedSourcesFactory.VECTOR_INTEGRATE_XYZ):
-                attributes = csd_factory.attribute_mapping()
-                attributes['ELECTRODES'] = integrated_sources.ELECTRODES
-                attributes['POTENTIALS'] = np.array([integrated_sources.integrate_potential(csd,
-                                                                                            vectorization_level=vectorization_level)
-                                                     for csd in csd_factory])
-                return cls.from_mapping(attributes)
 
-            class _Child(LoadableFunctionsClass._Child):
-                __slots__ = ()
+def LoadableIntegratedSourcess(LoadableFunctionsClass,
+                               default_vectorization_level):
+    class LoadableIntegratedSourcess(LoadableFunctionsClass):
+        _LoadableObject__ATTRIBUTES = LoadableFunctionsClass._LoadableObject__ATTRIBUTES + ['ELECTRODES',
+                                                                                            'POTENTIALS']
 
-                def csd(self, *args, **kwargs):
-                    return self(*args, **kwargs)
+        @classmethod
+        def from_factories(cls, csd_factory, integrated_sources,
+                           vectorization_level=default_vectorization_level):
+            attributes = csd_factory.attribute_mapping()
+            attributes['ELECTRODES'] = integrated_sources.ELECTRODES
+            attributes['POTENTIALS'] = np.array([integrated_sources.integrate_potential(csd,
+                                                                                        vectorization_level=vectorization_level)
+                                                 for csd in csd_factory])
+            return cls.from_mapping(attributes)
 
-                @property
-                def POTENTIAL(self):
-                    return self._parent.POTENTIALS[self._idx]
+        class _Child(LoadableFunctionsClass._Child):
+            __slots__ = ()
 
-        return LoadableIntegratedSourcess
+            def csd(self, *args, **kwargs):
+                return self(*args, **kwargs)
+
+            @property
+            def POTENTIAL(self):
+                return self._parent.POTENTIALS[self._idx]
+
+    return LoadableIntegratedSourcess
+
+
+class DegeneratedIntegratedIrregularSourcesFactory(_DegeneratedIrregularSourcesFactoryBase):
+    @classmethod
+    def load_from_degenerated_sources_factory(cls, file):
+        with np.load(file) as fh:
+            attributes = {attr: fh[attr] for attr in cls._LoadableObject__ATTRIBUTES}
+
+        POTENTIALS = attributes['POTENTIALS']
+
+        # WX, WY, WZ = [cls._integration_weights(attributes[a])
+        #               for a in ['X', 'Y', 'Z']]
+
+        # for i, (idx_x, idx_y, idx_z) in enumerate(zip(attributes['X_IDX'],
+        #                                               attributes['Y_IDX'],
+        #                                               attributes['Z_IDX'])):
+        #     POTENTIALS[i, :] *= WX[idx_x] * WY[idx_y] * WZ[idx_z]
+        # for i, w in enumerate(WX[attributes['X_IDX']]
+        #                       * WY[attributes['Y_IDX']]
+        #                       * WZ[attributes['Z_IDX']]):
+        #     POTENTIALS[i, :] *= w
+
+        for coordinate in ['X', 'Y', 'Z']:
+            W = cls._integration_weights(attributes[coordinate])
+            for i, w in enumerate(W):
+                POTENTIALS[attributes[f'{coordinate}_IDX'] == i, :] *= w
+
+        return cls.from_mapping(attributes)
+
+    (NO_VECTOR_INTEGRATION,
+     VECTOR_INTEGRATION) = range(2)
+
+    def __call__(self, csd,
+                 vectorization_level=VECTOR_INTEGRATION):
+        return self.IntegratedSource(self,
+                                     self.integrate_potential(csd, vectorization_level),
+                                     csd)
+
+    def integrate_potential(self, csd, vectorization_level=VECTOR_INTEGRATION):
+        if vectorization_level > self.NO_VECTOR_INTEGRATION:
+            try:
+                return self._vector_integrate(csd)
+
+            except Exception as e:
+                logger.warning(f'Vector integration yielded {e}')
+
+        return self._scalar_integrate(csd)
+
+    def _vector_integrate(self, csd):
+        return csd(self.X[self.X_IDX.reshape(-1, 1)],
+                   self.Y[self.Y_IDX.reshape(-1, 1)],
+                   self.Z[self.Z_IDX.reshape(-1, 1)]
+                   ) * self.POTENTIAL
+
+    def _scalar_integrate(self, csd):
+        POTENTIAL = 0.0
+        X, Y, Z = [getattr(self, c) for c in ['X', 'Y', 'Z']]
+        for (V, x, y, z) in zip(self.POTENTIALS,
+                                self.X_IDX,
+                                self.Y_IDX,
+                                self.Z_IDX):
+            POTENTIAL += V * csd(X[x], Y[y], Z[z])
+        return POTENTIAL
+
+    @staticmethod
+    def LoadableIntegratedSourcess(LoadableFunctionsClass):
+        return LoadableIntegratedSourcess(LoadableFunctionsClass,
+                                          default_vectorization_level=DegeneratedIntegratedIrregularSourcesFactory.VECTOR_INTEGRATION)
+
+
+if __name__ == '__main__':
+    class DistanceSourceMock(object):
+        def __init__(self, x, y, z):
+            self.x = x
+            self.y = y
+            self.z = z
+
+        def potential(self, X, Y, Z):
+            return np.sqrt(np.square(X - self.x) + np.square(Y - self.y) + np.square(Z - self.z))
+
+
+    base_source = DistanceSourceMock(3, 2, 1)
+
+    for x, y, z in itertools.permutations([1, 2, 3]):
+        for wx, wy, wz in itertools.product([1, -1], repeat=3):
+            s = DecompressedSourcesXYZ.Source(x * wx, y * wy, z * wz, base_source)
+            assert (s.x, s.y, s.z) == (x * wx, y * wy, z * wz)
+
+    sources = list(DecompressedSourcesXYZ([base_source]))
+
+    assert 48 == len(sources)
+    assert 48 == len({(s.x, s.y, s.z) for s in sources})
+    assert 8 == len({tuple(sorted([s.x, s.y, s.z])) for s in sources})
+    assert 1 == len({tuple(sorted(map(abs, [s.x, s.y, s.z]))) for s in sources})
+
+    ELECTRODES = [(0, 0, 0),
+                  (1, 0, 0),
+                  (0, 1, 0),
+                  (0, 1, 1)]
+
+    for s in sources:
+        assert abs(s.potential(s.x, s.y, s.z)) < 1e-5
+        for x, y, z in ELECTRODES:
+            assert abs(s.potential(x, y, z) - np.sqrt(np.square(s.x - x) + np.square(s.y - y) + np.square(s.z - z))) < 1e-5
