@@ -157,7 +157,7 @@ sphere_r[] = {0.06,
               0.085,
               0.0875,
               0.09};
-sphere_element_length_factor[] = {0.15,
+sphere_element_length_factor[] = {0.06,
                                   0.01,
                                   0.005,
                                   0.005,
