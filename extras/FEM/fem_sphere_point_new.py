@@ -149,11 +149,11 @@ else:
             drx = 'x[0]'
             dry = 'x[1]'
             drz = 'x[2]'
-            r2 = f'({drx} * {drx} + {dry} * {dry} + {drz} * {drz})'
-            dst2 = f'({dx} * {dx} + {dy} * {dy} + {dz} * {dz})'
+            r_snk2 = f'({drx} * {drx} + {dry} * {dry} + {drz} * {drz})'
+            r_src2 = f'({dx} * {dx} + {dy} * {dy} + {dz} * {dz})'
             return Expression(f'''
                               {0.25 / np.pi} / conductivity
-                              * (1.0 / sqrt({r2}) - 1.0 / sqrt({dst2}))
+                              * (1.0 / sqrt({r_src2}) - 1.0 / sqrt({r_snk2}))
                               ''',
                               degree=self.degree,
                               domain=self._fm.mesh,
