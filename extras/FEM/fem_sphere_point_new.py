@@ -102,7 +102,7 @@ else:
             dot_src = f'({dx_src} * x[0] + {dy_src} * x[1] + {dz_src} * x[2]) / ({r_src} * {r_sphere})'
             dot_snk = f'({dx_snk} * x[0] + {dy_snk} * x[1] + {dz_snk} * x[2]) / ({r_snk} * {r_sphere})'
             return Expression(f'''
-                              -1 * {-0.25 / np.pi} / conductivity
+                              {-0.25 / np.pi} / conductivity
                               * ({dot_src} / {r_src2} - {dot_snk} / {r_snk2})
                               ''',
                               degree=self.degree,

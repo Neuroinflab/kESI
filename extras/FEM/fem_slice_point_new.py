@@ -53,8 +53,10 @@ else:
         MAX_ITER = 1000
 
         def _potential_gradient_normal(self, conductivity=0.0):
+            # projection on normal: src_z - x[2]
+            # projection on Z axis: x[2] - src_z
             return Expression('''
-                              0.25 / {pi} / conductivity
+                              -0.25 / {pi} / conductivity
                               * (src_z - x[2])
                               * pow((src_x - x[0])*(src_x - x[0])
                                     + (src_y - x[1])*(src_y - x[1])
