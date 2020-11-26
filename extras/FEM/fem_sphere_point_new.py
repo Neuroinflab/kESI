@@ -146,9 +146,9 @@ else:
             dx = '(x[0] - src_x)'
             dy = '(x[1] - src_y)'
             dz = '(x[2] - src_z)'
-            drx = 'x[0]'
-            dry = 'x[1]'
-            drz = 'x[2]'
+            drx = '(x[0] - snk_x)'
+            dry = '(x[1] - snk_y)'
+            drz = '(x[2] - snk_z)'
             r_snk2 = f'({drx} * {drx} + {dry} * {dry} + {drz} * {drz})'
             r_src2 = f'({dx} * {dx} + {dy} * {dy} + {dz} * {dz})'
             return Expression(f'''
@@ -160,6 +160,9 @@ else:
                               src_x=0.0,
                               src_y=0.0,
                               src_z=0.0,
+                              snk_x=0.0,
+                              snk_y=0.0,
+                              snk_z=0.0,
                               conductivity=conductivity)
 
         def _boundary_flux(self):
