@@ -150,21 +150,21 @@ n_meridians = 6;
 
 h = 1;
 sphere_r[] = {0.06,
-              0.077,
+//              0.077,
               0.079,
               0.08,
               0.0825,
               0.085,
               0.0875,
               0.09};
-sphere_element_length_factor[] = {0.06,
-                                  0.01,
-                                  0.005,
-                                  0.005,
-                                  0.025,
-                                  0.0125,
-                                  0.025,
-                                  0.0125};
+sphere_element_length_factor[] = {0.01,
+//                                  0.01,
+                                  0.001,
+                                  0.001,
+                                  0.0025,
+                                  0.00125,
+                                  0.0025,
+                                  0.00125};
 
 x = 0.; y = 0.; z = 0.;
 
@@ -199,10 +199,9 @@ EndFor
 
 Physical Volume ("brain") = {sphere_volumes[0],
                              sphere_volumes[1]};
-Physical Volume ("csf") = {sphere_volumes[2],
-                           sphere_volumes[3]};
-Physical Volume ("skull") = {sphere_volumes[4],
-                             sphere_volumes[5]};
-Physical Volume ("scalp") = {sphere_volumes[6],
-                             sphere_volumes[7]};
+Physical Volume ("csf") = {sphere_volumes[2]};
+Physical Volume ("skull") = {sphere_volumes[3],
+                             sphere_volumes[4]};
+Physical Volume ("scalp") = {sphere_volumes[5],
+                             sphere_volumes[6]};
 Physical Surface ("scalp") = sphere_surfaces[];
