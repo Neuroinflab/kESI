@@ -94,6 +94,108 @@ class GaussianSourceKCSD3D(GaussianSourceBase):
                                   self._c * self._fraction_of_erf_to_x_limit_in_0)
 
 
+class SphericalSplineSourceBase(SourceBase):
+    def __init__(self, x, y, z, nodes,
+                 coefficients=((1,),
+                               (-4, 12, -9, 2),
+                               )):
+        super(SphericalSplineSourceBase,
+              self).__init__(x, y, z)
+        self._nodes = nodes
+        self._coefficients = coefficients
+        self._a = 1.0 / self._integrate_spherically()
+
+    def _integrate_spherically(self):
+        acc = 0.0
+        coeffs = [0, 0, 0]
+        r0 = 0
+        for r, coefficients in zip(self._nodes,
+                                   self._coefficients):
+            coeffs[3:] = [c / i
+                          for i, c in enumerate(coefficients,
+                                                start=3)]
+            acc += (self._evaluate_polynomial(r, coeffs)
+                    - self._evaluate_polynomial(r0, coeffs))
+            r0 = r
+        return 4 * np.pi * acc
+
+    def csd(self, X, Y, Z):
+        R = self._distance(X, Y, Z)
+        CSD = np.zeros_like(R)
+        r0 = 0
+        for r, coefficients in zip(self._nodes,
+                                   self._coefficients):
+            IDX = (r0 <= R) & (R < r)
+            CSD[IDX] = self._evaluate_polynomial(R[IDX],
+                                                 coefficients)
+            r0 = r
+
+        return self._a * CSD
+
+    def _distance(self, X, Y, Z):
+        return np.sqrt(np.square(X - self.x)
+                       + np.square(Y - self.y)
+                       + np.square(Z - self.z))
+
+    def _evaluate_polynomial(self, X, coefficients):
+        ACC = 0
+        for c in reversed(coefficients):
+            ACC *= X
+            ACC += c
+
+        return ACC
+
+
+class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
+    def __init__(self, x, y, z, nodes,
+                 coefficients=((1,),
+                               (-4, 12, -9, 2),
+                               ),
+                 conductivity=1):
+        super(SphericalSplineSourceKCSD,
+              self).__init__(x, y, z, nodes, coefficients)
+        self.conductivity = conductivity
+
+    def potential(self, X, Y, Z):
+        R = self._distance(X, Y, Z)
+        r0 = 0
+        V = np.zeros_like(R)
+        coefs_inside = [0, 0]
+        coefs_outside = [0, 0, 0]
+        for r, coefficients in zip(self._nodes,
+                                   self._coefficients):
+            coefs_inside[2:] = [c / i
+                                for i, c in enumerate(coefficients,
+                                                      start=2)]
+
+            coefs_outside[3:] = [c / i
+                                 for i, c in enumerate(coefficients,
+                                                       start=3)]
+            IDX = R <= r0  # inside both polynomial limits
+            if IDX.any():
+                V[IDX] += (self._evaluate_polynomial(r, coefs_inside)
+                           - self._evaluate_polynomial(r0, coefs_inside))
+
+            IDX = ~IDX & (R < r)  # within polynomial limits
+            if IDX.any():
+                # here is the bug
+                _R = R[IDX]
+                V[IDX] += (self._evaluate_polynomial(r, coefs_inside)
+                           - self._evaluate_polynomial(_R, coefs_inside)
+                           + (self._evaluate_polynomial(_R, coefs_outside)
+                              - self._evaluate_polynomial(r0, coefs_outside)) / _R)
+
+            IDX = R >= r  # outside both polynomial limits
+            if IDX.any():
+                _R = R[IDX]
+                V[IDX] += (self._evaluate_polynomial(r, coefs_outside)
+                           - self._evaluate_polynomial(r0, coefs_outside)) / _R
+
+            r0 = r
+
+        return V * self._a / self.conductivity
+
+
 class PointSource(SourceBase):
     def __init__(self, x, y, z, conductivity, amplitude=1):
         super(PointSource, self).__init__(x, y, z)
