@@ -419,7 +419,7 @@ else:
                           for x, c in self.CONDUCTIVITY
                           if c != base_conductivity))
                     # # Eq. 18 at Piastra et al 2018
-                    + sum(Constant(c)
+                    - sum(Constant(c)
                           # * inner(self._facet_normal,
                           #         grad(self._base_potential_expression))
                           * self._base_potential_gradient_normal_expression

@@ -102,7 +102,7 @@ else:
             dot_src = f'({dx_src} * x[0] + {dy_src} * x[1] + {dz_src} * x[2]) / ({r_src} * {r_sphere})'
             dot_snk = f'({dx_snk} * x[0] + {dy_snk} * x[1] + {dz_snk} * x[2]) / ({r_snk} * {r_sphere})'
             return Expression(f'''
-                              -1 * {-0.25 / np.pi} / conductivity
+                              {-0.25 / np.pi} / conductivity
                               * ({dot_src} / {r_src2} - {dot_snk} / {r_snk2})
                               ''',
                               degree=self.degree,
@@ -146,20 +146,23 @@ else:
             dx = '(x[0] - src_x)'
             dy = '(x[1] - src_y)'
             dz = '(x[2] - src_z)'
-            drx = 'x[0]'
-            dry = 'x[1]'
-            drz = 'x[2]'
-            r2 = f'({drx} * {drx} + {dry} * {dry} + {drz} * {drz})'
-            dst2 = f'({dx} * {dx} + {dy} * {dy} + {dz} * {dz})'
+            drx = '(x[0] - snk_x)'
+            dry = '(x[1] - snk_y)'
+            drz = '(x[2] - snk_z)'
+            r_snk2 = f'({drx} * {drx} + {dry} * {dry} + {drz} * {drz})'
+            r_src2 = f'({dx} * {dx} + {dy} * {dy} + {dz} * {dz})'
             return Expression(f'''
                               {0.25 / np.pi} / conductivity
-                              * (1.0 / sqrt({r2}) - 1.0 / sqrt({dst2}))
+                              * (1.0 / sqrt({r_src2}) - 1.0 / sqrt({r_snk2}))
                               ''',
                               degree=self.degree,
                               domain=self._fm.mesh,
                               src_x=0.0,
                               src_y=0.0,
                               src_z=0.0,
+                              snk_x=0.0,
+                              snk_y=0.0,
+                              snk_z=0.0,
                               conductivity=conductivity)
 
         def _boundary_flux(self):
