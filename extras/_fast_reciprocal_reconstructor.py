@@ -203,6 +203,79 @@ class ckESI_reconstructor(object):
         return self.solver.leave_one_out_errors(rhs, regularization_parameter)
 
 
+class ckESI_kernel_constructor(object):
+    def __init__(self,
+                 model_source,
+                 convolver,
+                 source_indices,
+                 csd_indices,
+                 electrodes,
+                 weights=65):
+        if isinstance(weights, int):
+            self._src_circumference = weights
+            weights = si.romb(np.identity(weights)) / (weights - 1)
+        else:
+            self._src_circumference = len(weights)
+
+        self.convolver = convolver
+        self.source_indices = source_indices
+        self.csd_indices = csd_indices
+        self.model_source = model_source
+
+        self._create_pre_kernel(electrodes, weights)
+        self._create_kernel()
+        self._create_crosskernel()
+
+    def _create_pre_kernel(self, electrodes, weights):
+        SRC_X, SRC_Y, SRC_Z = np.meshgrid(self.convolver.SRC_X,
+                                          self.convolver.SRC_Y,
+                                          self.convolver.SRC_Z,
+                                          indexing='ij')
+        SRC_X = SRC_X[self.source_indices]
+        SRC_Y = SRC_Y[self.source_indices]
+        SRC_Z = SRC_Z[self.source_indices]
+        n_bases = SRC_X.size
+        if any(hasattr(e, 'correction_potential')
+               for e in electrodes):
+            POT_X, POT_Y, POT_Z = np.meshgrid(self.convolver.POT_X,
+                                              self.convolver.POT_Y,
+                                              self.convolver.POT_Z,
+                                              indexing='ij')
+        self._pre_kernel = np.full((n_bases, len(electrodes)),
+                                   np.nan)
+        for i, electrode in enumerate(electrodes):
+            POT = self.model_source.potential(electrode.x - SRC_X,
+                                              electrode.y - SRC_Y,
+                                              electrode.z - SRC_Z)
+            if hasattr(electrode, 'correction_potential'):
+                LEADFIELD = electrode.correction_potential(POT_X,
+                                                           POT_Y,
+                                                           POT_Z)
+                POT += self.convolver.leadfield_to_base_potentials(
+                    LEADFIELD,
+                    self.model_source.csd,
+                    [weights] * 3)[self.source_indices]
+
+            self._pre_kernel[:, i] = POT
+        self._pre_kernel /= n_bases
+
+    def _create_crosskernel(self):
+        self.cross_kernel = np.full((self.csd_indices.sum(),
+                                     self._pre_kernel.shape[1]),
+                                    np.nan)
+        SRC = np.zeros(self.convolver.shape('SRC'))
+        for i, PHI_COL in enumerate(self._pre_kernel.T):
+            SRC[self.source_indices] = PHI_COL
+            self.cross_kernel[:, i] = self.convolver.base_weights_to_csd(
+                SRC,
+                self.model_source.csd,
+                [self._src_circumference] * 3)[self.csd_indices]
+
+    def _create_kernel(self):
+        self.kernel = np.matmul(self._pre_kernel.T,
+                                self._pre_kernel) * len(self._pre_kernel)
+
+
 if __name__ == '__main__':
     import itertools
 
