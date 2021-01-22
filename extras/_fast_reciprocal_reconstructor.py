@@ -296,6 +296,79 @@ class ckESI_kernel_constructor(object):
                                 self._pre_kernel) * len(self._pre_kernel)
 
 
+class ckCSD_kernel_constructor_MOI(ckESI_kernel_constructor):
+    def __init__(self,
+                 model_source,
+                 convolver,
+                 source_indices,
+                 csd_indices,
+                 electrodes,
+                 slice_thickness,
+                 slice_conductivity,
+                 saline_conductivity,
+                 glass_conductivity=0.0,
+                 n=128
+                 ):
+        self.slice_thickness = slice_thickness
+        self.slice_conductivity = slice_conductivity
+        self.saline_conductivity = saline_conductivity
+        self.glass_conductivity = glass_conductivity
+        self.n = n
+        super(ckCSD_kernel_constructor_MOI,
+              self).__init__(model_source,
+                             convolver,
+                             source_indices,
+                             csd_indices,
+                             electrodes)
+
+    def _create_pre_kernel(self, electrodes, weights):
+        wtg = float(self.slice_conductivity - self.glass_conductivity) / (
+                    self.slice_conductivity + self.glass_conductivity)
+        wts = float(self.slice_conductivity - self.saline_conductivity) / (
+                    self.slice_conductivity + self.saline_conductivity)
+
+        weights = [1.0]
+        for i in range(self.n):
+            weights.append(wtg ** i * wts ** (i + 1))
+            weights.append(wtg ** (i + 1) * wts ** i)
+
+        for i in range(1, self.n + 1):
+            weights.append((wtg * wts) ** i)
+            weights.append((wtg * wts) ** i)
+
+        weights = np.array(weights)
+
+        SRC_X, SRC_Y, SRC_Z = np.meshgrid(self.convolver.SRC_X,
+                                          self.convolver.SRC_Y,
+                                          self.convolver.SRC_Z,
+                                          indexing='ij')
+        SRC_X = SRC_X[self.source_indices].reshape(-1, 1)
+        SRC_Y = SRC_Y[self.source_indices].reshape(-1, 1)
+        SRC_Z = SRC_Z[self.source_indices].reshape(-1, 1)
+        n_bases = SRC_X.size
+
+        self._pre_kernel = np.full((n_bases, len(electrodes)),
+                                   np.nan)
+        for i_ele, electrode in enumerate(electrodes):
+            ele_z = [electrode.z]
+            for i in range(self.n):
+                ele_z.append(2 * (i + 1) * self.slice_thickness - electrode.z)
+                ele_z.append(-2 * i * self.slice_thickness - electrode.z)
+
+            for i in range(1, self.n + 1):
+                ele_z.append(electrode.z + 2 * i * self.slice_thickness)
+                ele_z.append(electrode.z - 2 * i * self.slice_thickness)
+
+            ele_z = np.reshape(ele_z, (1, -1))
+
+            POT = self.model_source.potential(electrode.x - SRC_X,
+                                              electrode.y - SRC_Y,
+                                              ele_z - SRC_Z)
+
+            self._pre_kernel[:, i_ele] = np.matmul(POT, weights)
+        self._pre_kernel /= n_bases
+
+
 if __name__ == '__main__':
     import itertools
 
