@@ -260,16 +260,18 @@ class ckESI_kernel_constructor(object):
         self._pre_kernel /= n_bases
 
     def _create_crosskernel(self):
-        self.cross_kernel = np.full((self.csd_indices.sum(),
-                                     self._pre_kernel.shape[1]),
-                                    np.nan)
         SRC = np.zeros(self.convolver.shape('SRC'))
         for i, PHI_COL in enumerate(self._pre_kernel.T):
             SRC[self.source_indices] = PHI_COL
-            self.cross_kernel[:, i] = self.convolver.base_weights_to_csd(
-                SRC,
-                self.model_source.csd,
-                [self._src_circumference] * 3)[self.csd_indices]
+            CROSS_COL = self.convolver.base_weights_to_csd(
+                            SRC,
+                            self.model_source.csd,
+                            [self._src_circumference] * 3)[self.csd_indices]
+            if i == 0:
+                self.cross_kernel = np.full((CROSS_COL.size,
+                                             self._pre_kernel.shape[1]),
+                                            np.nan)
+            self.cross_kernel[:, i] = CROSS_COL
 
     def _create_kernel(self):
         self.kernel = np.matmul(self._pre_kernel.T,
