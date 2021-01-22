@@ -227,34 +227,53 @@ class ckESI_kernel_constructor(object):
         self._create_crosskernel()
 
     def _create_pre_kernel(self, electrodes, weights):
-        SRC_X, SRC_Y, SRC_Z = np.meshgrid(self.convolver.SRC_X,
-                                          self.convolver.SRC_Y,
-                                          self.convolver.SRC_Z,
-                                          indexing='ij')
-        SRC_X = SRC_X[self.source_indices]
-        SRC_Y = SRC_Y[self.source_indices]
-        SRC_Z = SRC_Z[self.source_indices]
+        kcsd_solution_available = hasattr(self.model_source.potential)
+
+        if kcsd_solution_available:
+            SRC_X, SRC_Y, SRC_Z = np.meshgrid(self.convolver.SRC_X,
+                                              self.convolver.SRC_Y,
+                                              self.convolver.SRC_Z,
+                                              indexing='ij')
+            SRC_X = SRC_X[self.source_indices]
+            SRC_Y = SRC_Y[self.source_indices]
+            SRC_Z = SRC_Z[self.source_indices]
+
         n_bases = SRC_X.size
-        if any(hasattr(e, 'correction_potential')
-               for e in electrodes):
+        if (not kcsd_solution_available
+            or any(hasattr(e, 'correction_potential')
+                   for e in electrodes)):
             POT_X, POT_Y, POT_Z = np.meshgrid(self.convolver.POT_X,
                                               self.convolver.POT_Y,
                                               self.convolver.POT_Z,
                                               indexing='ij')
-        self._pre_kernel = np.full((n_bases, len(electrodes)),
-                                   np.nan)
+
         for i, electrode in enumerate(electrodes):
-            POT = self.model_source.potential(electrode.x - SRC_X,
-                                              electrode.y - SRC_Y,
-                                              electrode.z - SRC_Z)
+            if kcsd_solution_available:
+                POT = self.model_source.potential(electrode.x - SRC_X,
+                                                  electrode.y - SRC_Y,
+                                                  electrode.z - SRC_Z)
+                LEADFIELD = 0
+            else:
+                POT = 0
+                LEADFIELD = electrode.base_potential(POT_X,
+                                                     POT_Y,
+                                                     POT_Z)
+
             if hasattr(electrode, 'correction_potential'):
-                LEADFIELD = electrode.correction_potential(POT_X,
-                                                           POT_Y,
-                                                           POT_Z)
+                LEADFIELD += electrode.correction_potential(POT_X,
+                                                            POT_Y,
+                                                            POT_Z)
+
+            if not isinstance(LEADFIELD, int):
                 POT += self.convolver.leadfield_to_base_potentials(
                     LEADFIELD,
                     self.model_source.csd,
                     [weights] * 3)[self.source_indices]
+
+            if i == 0:
+                n_bases = POT.size
+                self._pre_kernel = np.full((n_bases, len(electrodes)),
+                                           np.nan)
 
             self._pre_kernel[:, i] = POT
         self._pre_kernel /= n_bases
