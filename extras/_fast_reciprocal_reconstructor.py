@@ -227,7 +227,7 @@ class ckESI_kernel_constructor(object):
         self._create_crosskernel()
 
     def _create_pre_kernel(self, electrodes, weights):
-        kcsd_solution_available = hasattr(self.model_source.potential)
+        kcsd_solution_available = hasattr(self.model_source, 'potential')
 
         if kcsd_solution_available:
             SRC_X, SRC_Y, SRC_Z = np.meshgrid(self.convolver.SRC_X,
