@@ -238,7 +238,6 @@ class ckESI_kernel_constructor(object):
             SRC_Y = SRC_Y[self.source_indices]
             SRC_Z = SRC_Z[self.source_indices]
 
-        n_bases = SRC_X.size
         if (not kcsd_solution_available
             or any(hasattr(e, 'correction_potential')
                    for e in electrodes)):
