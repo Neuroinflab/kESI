@@ -262,9 +262,9 @@ class ckESI_kernel_constructor(object):
         for i, electrode in enumerate(electrodes):
             correction_available = hasattr(electrode, 'correction_potential')
 
-            leadfield_updated = (kcsd_solution_available
-                                 and self.csd_allowed_mask is None
-                                 and not correction_available)
+            leadfield_updated = not (kcsd_solution_available
+                                     and self.csd_allowed_mask is None
+                                     and not correction_available)
 
             if self.csd_allowed_mask is not None:
                 if correction_available and kcsd_solution_available:
