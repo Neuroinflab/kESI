@@ -211,7 +211,8 @@ class ckESI_kernel_constructor(object):
                  csd_indices,
                  electrodes,
                  weights=65,
-                 csd_allowed_mask=None):
+                 csd_allowed_mask=None,
+                 source_normalization_treshold=None):
         if isinstance(weights, int):
             self._src_circumference = weights
             weights = si.romb(np.identity(weights)) / (weights - 1)
@@ -223,6 +224,7 @@ class ckESI_kernel_constructor(object):
         self.csd_indices = csd_indices
         self.model_source = model_source
         self.csd_allowed_mask = csd_allowed_mask
+        self.source_normalization_treshold = source_normalization_treshold
 
         self._create_pre_kernel(electrodes, weights)
         self._create_kernel()
@@ -239,11 +241,6 @@ class ckESI_kernel_constructor(object):
             SRC_X = SRC_X[self.source_indices]
             SRC_Y = SRC_Y[self.source_indices]
             SRC_Z = SRC_Z[self.source_indices]
-
-        if self.csd_allowed_mask is not None:
-            self.source_current_not_normalized = self.integrate_source_potential(
-                self.csd_allowed_mask,
-                weights)
 
         if (not kcsd_solution_available
             or any(hasattr(e, 'correction_potential')
@@ -310,6 +307,22 @@ class ckESI_kernel_constructor(object):
             self._pre_kernel[:, i] = POT
         self._pre_kernel /= n_bases
 
+        if self.normalize_sources():
+            self.calculate_source_normalization_factor(weights)
+            self._pre_kernel *= self.source_normalization_factor.reshape(-1, 1)
+
+    def calculate_source_normalization_factor(self, weights):
+        current = self.integrate_source_potential(
+            self.csd_allowed_mask,
+            weights)
+        self.source_normalization_factor = 1.0 / np.where(abs(current) > self.source_normalization_treshold,
+                                                          current,
+                                                          self.source_normalization_treshold)
+
+    def normalize_sources(self):
+        return (self.csd_allowed_mask is not None
+                and self.source_normalization_treshold is not None)
+
     def alloc_leadfield_if_necessary(self, LEADFIELD):
         if LEADFIELD is not None:
             return LEADFIELD
@@ -335,7 +348,9 @@ class ckESI_kernel_constructor(object):
     def _create_crosskernel(self):
         SRC = np.zeros(self.convolver.shape('SRC'))
         for i, PHI_COL in enumerate(self._pre_kernel.T):
-            SRC[self.source_indices] = PHI_COL
+            SRC[self.source_indices] = (PHI_COL * self.source_normalization_factor
+                                        if self.normalize_sources()
+                                        else PHI_COL)
             CROSS_COL = self.convolver.base_weights_to_csd(
                             SRC,
                             self.model_source.csd,
