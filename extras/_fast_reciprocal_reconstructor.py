@@ -210,7 +210,8 @@ class ckESI_kernel_constructor(object):
                  source_indices,
                  csd_indices,
                  electrodes,
-                 weights=65):
+                 weights=65,
+                 csd_allowed_mask=None):
         if isinstance(weights, int):
             self._src_circumference = weights
             weights = si.romb(np.identity(weights)) / (weights - 1)
@@ -221,6 +222,7 @@ class ckESI_kernel_constructor(object):
         self.source_indices = source_indices
         self.csd_indices = csd_indices
         self.model_source = model_source
+        self.csd_allowed_mask = csd_allowed_mask
 
         self._create_pre_kernel(electrodes, weights)
         self._create_kernel()
@@ -238,36 +240,67 @@ class ckESI_kernel_constructor(object):
             SRC_Y = SRC_Y[self.source_indices]
             SRC_Z = SRC_Z[self.source_indices]
 
+        if self.csd_allowed_mask is not None:
+            self.source_current_not_normalized = self.integrate_source_potential(
+                self.csd_allowed_mask,
+                weights)
+
         if (not kcsd_solution_available
             or any(hasattr(e, 'correction_potential')
                    for e in electrodes)):
-            POT_X, POT_Y, POT_Z = np.meshgrid(self.convolver.POT_X,
-                                              self.convolver.POT_Y,
-                                              self.convolver.POT_Z,
-                                              indexing='ij')
+            POT_XYZ = np.meshgrid(self.convolver.POT_X,
+                                  self.convolver.POT_Y,
+                                  self.convolver.POT_Z,
+                                  indexing='ij')
+            if self.csd_allowed_mask is not None:
+                POT_XYZ_MASKED = [A[self.csd_allowed_mask]
+                                  for A in POT_XYZ]
 
+        if kcsd_solution_available and self.csd_allowed_mask is not None:
+            CSD_FORBIDDEN_MASK = ~self.csd_allowed_mask
+            POT_XYZ_CROPPED = [A[CSD_FORBIDDEN_MASK]
+                               for A in POT_XYZ]
+
+        LEADFIELD = None
         for i, electrode in enumerate(electrodes):
+            correction_available = hasattr(electrode, 'correction_potential')
+
+            leadfield_updated = (kcsd_solution_available
+                                 and self.csd_allowed_mask is None
+                                 and not correction_available)
+
+            if self.csd_allowed_mask is not None:
+                if correction_available and kcsd_solution_available:
+                    LEADFIELD = self.alloc_leadfield_if_necessary(LEADFIELD)
+                else:
+                    LEADFIELD = self.clear_leadfield(LEADFIELD)
+
+                if kcsd_solution_available:
+                    LEADFIELD[CSD_FORBIDDEN_MASK] = -electrode.base_potential(*POT_XYZ_CROPPED)
+                else:
+                    LEADFIELD[self.csd_allowed_mask] = electrode.base_potential(*POT_XYZ_MASKED)
+
+                if correction_available:
+                    LEADFIELD[self.csd_allowed_mask] += electrode.correction_potential(*POT_XYZ)[self.csd_allowed_mask]
+
+            else:
+                if kcsd_solution_available:
+                    if correction_available:
+                        LEADFIELD = electrode.correction_potential(*POT_XYZ)
+                else:
+                    LEADFIELD = electrode.base_potential(*POT_XYZ)
+                    if correction_available:
+                        LEADFIELD += electrode.correction_potential(*POT_XYZ)
+
             if kcsd_solution_available:
                 POT = self.model_source.potential(electrode.x - SRC_X,
                                                   electrode.y - SRC_Y,
                                                   electrode.z - SRC_Z)
-                LEADFIELD = 0
             else:
                 POT = 0
-                LEADFIELD = electrode.base_potential(POT_X,
-                                                     POT_Y,
-                                                     POT_Z)
 
-            if hasattr(electrode, 'correction_potential'):
-                LEADFIELD += electrode.correction_potential(POT_X,
-                                                            POT_Y,
-                                                            POT_Z)
-
-            if not isinstance(LEADFIELD, int):
-                POT += self.convolver.leadfield_to_base_potentials(
-                    LEADFIELD,
-                    self.model_source.csd,
-                    [weights] * 3)[self.source_indices]
+            if leadfield_updated:
+                POT += self.integrate_source_potential(LEADFIELD, weights)
 
             if i == 0:
                 n_bases = POT.size
@@ -276,6 +309,28 @@ class ckESI_kernel_constructor(object):
 
             self._pre_kernel[:, i] = POT
         self._pre_kernel /= n_bases
+
+    def alloc_leadfield_if_necessary(self, LEADFIELD):
+        if LEADFIELD is not None:
+            return LEADFIELD
+        return np.empty(self.convolver.shape('POT'))
+
+    def clear_leadfield(self, LEADFIELD):
+        if LEADFIELD is None:
+            return np.zeros(self.convolver.shape('POT'))
+
+        LEADFIELD.fill(0)
+        return LEADFIELD
+
+    def integrate_source_potential(self, leadfield, quadrature_weights):
+        return self.convolve_csd(leadfield,
+                                 quadrature_weights)[self.source_indices]
+
+    def convolve_csd(self, leadfield, quadrature_weights):
+        return self.convolver.leadfield_to_base_potentials(
+            leadfield,
+            self.model_source.csd,
+            [quadrature_weights] * 3)
 
     def _create_crosskernel(self):
         SRC = np.zeros(self.convolver.shape('SRC'))
