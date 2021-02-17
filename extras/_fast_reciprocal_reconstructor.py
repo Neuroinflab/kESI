@@ -323,17 +323,17 @@ class ckESI_kernel_constructor(object):
         return (self.csd_allowed_mask is not None
                 and self.source_normalization_treshold is not None)
 
-    def alloc_leadfield_if_necessary(self, LEADFIELD):
-        if LEADFIELD is not None:
-            return LEADFIELD
+    def alloc_leadfield_if_necessary(self, leadfield):
+        if leadfield is not None:
+            return leadfield
         return np.empty(self.convolver.shape('POT'))
 
-    def clear_leadfield(self, LEADFIELD):
-        if LEADFIELD is None:
+    def clear_leadfield(self, leadfield):
+        if leadfield is None:
             return np.zeros(self.convolver.shape('POT'))
 
-        LEADFIELD.fill(0)
-        return LEADFIELD
+        leadfield.fill(0)
+        return leadfield
 
     def integrate_source_potential(self, leadfield, quadrature_weights):
         return self.convolve_csd(leadfield,
