@@ -274,11 +274,12 @@ class ckESI_kernel_constructor(object):
 
                 if kcsd_solution_available:
                     LEADFIELD[CSD_FORBIDDEN_MASK] = -electrode.base_potential(*POT_XYZ_CROPPED)
+                    if correction_available:
+                        LEADFIELD[self.csd_allowed_mask] = electrode.correction_potential(*POT_XYZ)[self.csd_allowed_mask]
                 else:
                     LEADFIELD[self.csd_allowed_mask] = electrode.base_potential(*POT_XYZ_MASKED)
-
-                if correction_available:
-                    LEADFIELD[self.csd_allowed_mask] += electrode.correction_potential(*POT_XYZ)[self.csd_allowed_mask]
+                    if correction_available:
+                        LEADFIELD[self.csd_allowed_mask] += electrode.correction_potential(*POT_XYZ)[self.csd_allowed_mask]
 
             else:
                 if kcsd_solution_available:
