@@ -352,15 +352,27 @@ class ckESI_kernel_constructor(object):
             SRC[self.source_indices] = (PHI_COL * self.source_normalization_factor
                                         if self.normalize_sources()
                                         else PHI_COL)
-            CROSS_COL = self.convolver.base_weights_to_csd(
-                            SRC,
-                            self.model_source.csd,
-                            [self._src_circumference] * 3)[self.csd_indices]
+            CROSS_COL = self._base_weights_to_csd(SRC)
             if i == 0:
-                self.cross_kernel = np.full((CROSS_COL.size,
-                                             self._pre_kernel.shape[1]),
-                                            np.nan)
+                self._allocate_cross_kernel(CROSS_COL)
+
             self.cross_kernel[:, i] = CROSS_COL
+
+        self._zero_cross_kernel_where_csd_not_allowed()
+
+    def _allocate_cross_kernel(self, CROSS_COL):
+        self.cross_kernel = np.full((CROSS_COL.size,
+                                     self._pre_kernel.shape[1]),
+                                    np.nan)
+
+    def _base_weights_to_csd(self, BASE_WEIGHTS):
+        return self.convolver.base_weights_to_csd(BASE_WEIGHTS,
+                                                  self.model_source.csd,
+                                                  [self._src_circumference] * 3)[self.csd_indices]
+
+    def _zero_cross_kernel_where_csd_not_allowed(self):
+        if self.csd_allowed_mask is not None:
+            self.cross_kernel[~self.csd_allowed_mask[self.csd_indices], :] = 0
 
     def _create_kernel(self):
         self.kernel = np.matmul(self._pre_kernel.T,
