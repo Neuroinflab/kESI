@@ -214,9 +214,8 @@ class LeadfieldIntegrator(object):
 
         return assemble(csd * leadfield * self.model.dx)
 
-    def romberg(self, leadfield, src):
+    def romberg(self, leadfield, src, k=4):
         r = max(src._nodes)
-        k = 4
         n = 2 ** k + 1
         dxyz = r ** 3 / 2 ** (3 * k - 3)
         X = np.linspace(src.x - r,
@@ -254,6 +253,12 @@ parser.add_argument('-q', '--quiet',
                     action='store_true',
                     help='do not print results',
                     default=False)
+parser.add_argument('-k', '--k-romberg',
+                    type=int,
+                    dest='k',
+                    metavar='k',
+                    help='k parameter of the Romberg method',
+                    default=4)
 
 args = parser.parse_args()
 
@@ -304,7 +309,7 @@ for config in args.configs:
     v_corr_rec = integrator.fenics(leadfield_corr_ele,
                                    csd=csd_f)
 
-    v_corr_rec_int = integrator.romberg(leadfield_corr_ele, src)
+    v_corr_rec_int = integrator.romberg(leadfield_corr_ele, src, args.k)
 
     if writer is not None:
         writer.writerow(map(str,
