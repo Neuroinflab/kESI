@@ -236,6 +236,42 @@ class LeadfieldIntegrator(object):
                                         for yy, CSD_XY in zip(Y, CSD_X)])
                                for xx, CSD_X in zip(X, CSD)])
 
+    def romberg_legacy(self, leadfield, src, k=4):
+        from _fast_reciprocal_reconstructor import ckESI_convolver
+        r = max(src._nodes)
+        n = 2 ** k + 1
+        dxyz = r ** 3 / 2 ** (3 * k - 3)
+        X = np.linspace(src.x - r,
+                        src.x + r,
+                        n)
+        Y = np.linspace(src.y - r,
+                        src.y + r,
+                        n)
+        Z = np.linspace(src.z - r,
+                        src.z + r,
+                        n)
+
+        convolver = ckESI_convolver([X, Y, Z],
+                                    [X, Y, Z])
+
+        model_src = common.SphericalSplineSourceKCSD(0, 0, 0,
+                                                     src._nodes,
+                                                     src._coefficients,
+                                                     src.conductivity)
+
+        LEADFIELD = np.full([n, n, n], np.nan)
+
+        for i, x in enumerate(X):
+            for j, y in enumerate(Y):
+                for k, z in enumerate(Z):
+                    LEADFIELD[i, j, k] = leadfield(x, y, z)
+
+        weights = si.romb(np.identity(n), dx=r / (n // 2))
+        POT_CORR = convolver.leadfield_to_base_potentials(LEADFIELD,
+                                                          model_src.csd,
+                                                          (weights,) * 3)
+        return POT_CORR[n // 2, n // 2, n // 2]
+
 
 parser = argparse.ArgumentParser(description='Test different methods of potential calculation.')
 parser.add_argument('configs',
