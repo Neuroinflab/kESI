@@ -1,0 +1,333 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+import argparse
+import csv
+
+import numpy as np
+import scipy.integrate as si
+
+from dolfin import (Expression, Measure, inner, grad, assemble,
+                    Constant, KrylovSolver, DirichletBC)
+import dolfin
+
+import FEM.fem_sphere_point_new as fspn
+
+import _common_new as common
+
+
+x_ele = -0.0532907
+y_ele = -0.0486064
+z_ele = 0.016553
+
+STANDARD_DEVIATION = 8e-4
+
+x_src = x_ele + 4 * STANDARD_DEVIATION
+y_src = y_ele + 4 * STANDARD_DEVIATION
+z_src = z_ele - 4 * STANDARD_DEVIATION
+
+SPLINE_NODES = [STANDARD_DEVIATION, 3 * STANDARD_DEVIATION]
+SPLINE_COEFFS = [[1],
+                 [0,
+                  2.25 / STANDARD_DEVIATION,
+                  -1.5 / STANDARD_DEVIATION ** 2,
+                  0.25 / STANDARD_DEVIATION ** 3]]
+
+
+class NegativePotential(dolfin.UserExpression):
+    def __init__(self, potential, *args, **kwargs):
+        self._potential = potential
+        super(NegativePotential, self).__init__(*args, **kwargs)
+
+    def eval(self, value, x):
+        value[0] = self._potential(*x)
+
+
+class SphericalModelFEM(object):
+    GROUNDED_PLATE_AT = -0.088
+
+    def __init__(self, fem):
+        self.fem = fem
+        self.CONDUCTIVITY = list(fem.CONDUCTIVITY)
+        self.BOUNDARY_CONDUCTIVITY = list(fem.BOUNDARY_CONDUCTIVITY)
+
+        self.solver =  KrylovSolver("cg", "ilu")
+        self.solver.parameters["maximum_iterations"] = 1000
+        self.solver.parameters["absolute_tolerance"] = 1E-8
+
+        self.V = fem._fm._function_space
+        self.v = fem._fm.test_function()
+        self.u = fem._fm.trial_function()
+        self.dx = fem._dx
+        self.ds = fem._ds
+
+    def function(self):
+        return self.fem._fm.function()
+
+    def reciprocal_correction_potential(self, x, y, z):
+        dx_src = f'(x[0] - src_x)'
+        dy_src = f'(x[1] - src_y)'
+        dz_src = f'(x[2] - src_z)'
+
+        r_src2 = f'({dx_src} * {dx_src} + {dy_src} * {dy_src} + {dz_src} * {dz_src})'
+        r_src = f'sqrt({r_src2})'
+        r_sphere2 = '(x[0] * x[0] + x[1] * x[1] + x[2] * x[2])'
+
+        dot_src = f'({dx_src} * x[0] + {dy_src} * x[1] + {dz_src} * x[2]) / sqrt({r_src2} * {r_sphere2})'
+        potential_exp = Expression(f'''
+                                    {0.25 / np.pi} / conductivity
+                                    * (1.0 / {r_src})
+                                    ''',
+                                   degree=self.fem.degree,
+                                   domain=self.fem._fm._mesh,
+                                   conductivity=0.33,
+                                   src_x=0.0,
+                                   src_y=0.0,
+                                   src_z=0.0)
+        minus_potential_exp = Expression(f'''
+                                        {-0.25 / np.pi} / conductivity
+                                        * (1.0 / {r_src})
+                                        ''',
+                                         degree=self.fem.degree,
+                                         domain=self.fem._fm._mesh,
+                                         conductivity=0.33,
+                                         src_x=0.0,
+                                         src_y=0.0,
+                                         src_z=0.0)
+        potential_grad_dot = Expression(f'''
+                                        x[2] >= {self.GROUNDED_PLATE_AT} ?
+                                        -1 * {-0.25 / np.pi} / conductivity
+                                        * ({dot_src} / {r_src2})
+                                        : 0
+                                        ''',
+                                        degree=self.fem.degree,
+                                        domain=self.fem._fm._mesh,
+                                        conductivity=0.33,
+                                        src_x=0.0,
+                                        src_y=0.0,
+                                        src_z=0.0)
+
+        conductivity = fem.base_conductivity(x, y, z)
+
+        for expr in [potential_exp, potential_grad_dot, minus_potential_exp]:
+            expr.conductivity = conductivity
+            expr.src_x = x
+            expr.src_y = y
+            expr.src_z = z
+
+        print(' solving')
+
+        a = sum(inner(Constant(c) * grad(self.u), grad(self.v)) * self.dx(i)
+                for i, c in self.CONDUCTIVITY)
+        L = (-sum(inner((Constant(c - conductivity)
+                         * grad(potential_exp)),
+                        grad(self.v))
+                  * self.dx(i)
+                  for i, c in self.CONDUCTIVITY
+                  if c != conductivity)
+             + sum(Constant(c)
+                   * potential_grad_dot * self.v * self.ds(i)
+                   for i, c in self.BOUNDARY_CONDUCTIVITY)
+             )
+
+        return self.solve(L, a, minus_potential_exp)
+
+    def source_potential(self, csd=None, src=None):
+        if csd is None:
+            csd = self.callable_as_function(src.csd)
+
+        a = sum(Constant(c)
+                * inner(grad(self.u),
+                        grad(self.v))
+                * self.dx(i)
+                for i, c in self.CONDUCTIVITY)
+        L = csd * self.v * self.dx
+
+        return self.solve(L, a, Constant(0))
+
+    def source_correction(self, src):
+        potential_f = self.callable_as_function(src.potential)
+
+        conductivity = self.fem.base_conductivity(x_ele, y_ele, z_ele)
+
+        print(' solving')
+
+        a = sum(inner(Constant(c) * grad(self.u), grad(self.v)) * self.dx(i)
+                for i, c in self.CONDUCTIVITY)
+        L = (-sum(inner((Constant(c - conductivity)
+                         * grad(potential_f)),
+                        grad(self.v))
+                  * self.dx(i)
+                  for i, c in self.CONDUCTIVITY
+                  if c != conductivity)
+             - sum(Constant(c)
+                   * inner(grad(potential_f),
+                           dolfin.FacetNormal(self.fem._fm.mesh))
+                   * self.v * self.ds(i)
+                   for i, c in self.BOUNDARY_CONDUCTIVITY)
+             )
+        neg_potential_f = NegativePotential(src.potential, self.fem._fm.mesh)
+        return self.solve(L, a, neg_potential_f)
+
+    def callable_as_function(self, f):
+        n = self.V.dim()
+        d = self.fem._fm.mesh.geometry().dim()
+        dof_coordinates = self.V.tabulate_dof_coordinates()
+        dof_coordinates.resize((n, d))
+        dof_x = dof_coordinates[:, 0]
+        dof_y = dof_coordinates[:, 1]
+        dof_z = dof_coordinates[:, 2]
+        g = fem._fm.function()
+        g.vector()[:] = f(dof_x, dof_y, dof_z)
+        return g
+
+    def solve(self, L, a, plate_potential):
+        A = assemble(a)
+        b = assemble(L)
+        # print(' assembled')
+
+        dirichlet_bc = DirichletBC(self.V,
+                                   plate_potential,
+                                   (lambda x, on_boundary:
+                                    on_boundary
+                                    and x[2] < self.GROUNDED_PLATE_AT))
+
+        dirichlet_bc.apply(A, b)
+        # print(' modified')
+        f = self.function()
+        self.solver.solve(A, f.vector(), b)
+        # print(' solved')
+        return f
+
+
+
+
+class LeadfieldIntegrator(object):
+    def __init__(self, model):
+        self.model = model
+
+    def fenics(self, leadfield,
+               csd=None,
+               src=None):
+        if csd is None:
+            csd = self.model.callable_as_function(src.csd)
+
+        return assemble(csd * leadfield * self.model.dx)
+
+    def romberg(self, leadfield, src):
+        r = max(src._nodes)
+        k = 4
+        n = 2 ** k + 1
+        dxyz = r ** 3 / 2 ** (3 * k - 3)
+        X = np.linspace(src.x - r,
+                        src.x + r,
+                        n)
+        Y = np.linspace(src.y - r,
+                        src.y + r,
+                        n)
+        Z = np.linspace(src.z - r,
+                        src.z + r,
+                        n)
+        CSD = src.csd(X.reshape(-1, 1, 1),
+                      Y.reshape(1, -1, 1),
+                      Z.reshape(1, 1, -1))
+
+        return dxyz * si.romb([si.romb([si.romb([leadfield(xx, yy, zz)
+                                                  for zz in Z] * CSD_XY)
+                                        for yy, CSD_XY in zip(Y, CSD_X)])
+                               for xx, CSD_X in zip(X, CSD)])
+
+
+parser = argparse.ArgumentParser(description='Test different methods of potential calculation.')
+parser.add_argument('configs',
+                    metavar='config.ini',
+                    # dest='configs',
+                    nargs='+',
+                    help='FEM configs')
+parser.add_argument('-o', '--output',
+                    metavar='output.csv',
+                    dest='output',
+                    help='path to the output file',
+                    default=None)
+parser.add_argument('-q', '--quiet',
+                    dest='quiet',
+                    action='store_true',
+                    help='do not print results',
+                    default=False)
+
+args = parser.parse_args()
+
+HEADER = ['FEM',
+          'approximate',
+          'correction',
+          'reciprocal_correction',
+          'reciprocal_correction_romberg',
+          'config',
+          ]
+
+
+writer = None
+if args.output is not None:
+    writer = csv.writer(open(args.output, 'w', newline=''))
+    writer.writerow(HEADER)
+
+if not args.quiet:
+    print('    FEM\t'
+          '  appr. (err %)\t'
+          ' subtr. (err %)\t'
+          '     rec. sub. (err. %)\t'
+          'rec. sub. int. (err. %)\t'
+          'config')
+
+
+for config in args.configs:
+    fem = fspn.SpherePointSourcePotentialFEM(config)
+    model = SphericalModelFEM(fem)
+    integrator = LeadfieldIntegrator(model)
+
+    conductivity = fem.base_conductivity(x_src, y_src, z_src)
+    src = common.SphericalSplineSourceKCSD(x_src, y_src, z_src,
+                                           SPLINE_NODES,
+                                           SPLINE_COEFFS,
+                                           conductivity)
+
+    v_appr = src.potential(x_ele, y_ele, z_ele)
+
+    csd_f = model.callable_as_function(src.csd)
+    potential_fem = model.source_potential(csd=csd_f)
+    v_fem = potential_fem(x_ele, y_ele, z_ele)
+
+    correction = model.source_correction(src)
+    v_corr = correction(x_ele, y_ele, z_ele)
+
+    leadfield_corr_ele = model.reciprocal_correction_potential(x_ele, y_ele, z_ele)
+    v_corr_rec = integrator.fenics(leadfield_corr_ele,
+                                   csd=csd_f)
+
+    v_corr_rec_int = integrator.romberg(leadfield_corr_ele, src)
+
+    if writer is not None:
+        writer.writerow(map(str,
+                            [v_fem,
+                             v_appr,
+                             v_corr,
+                             v_corr_rec,
+                             v_corr_rec_int,
+                             config]))
+
+    if not args.quiet:
+        v_sub = v_appr + v_corr
+        v_sub_rec = v_appr + v_corr_rec
+        v_sub_rec_int = v_appr + v_corr_rec_int
+        print(f'{round(v_fem):>7d}\t'
+              f'{round(v_appr):>7d} '
+              f'({100 * (v_appr / v_fem - 1):5.2g})\t'
+              f'{round(v_sub):>7d} '
+              f'({100 * (v_sub / v_fem - 1):5.2g})\t'
+              f'        {round(v_sub_rec):>7d} '
+              f'({100 * (v_sub_rec / v_fem - 1):5.2g})\t'
+              f'        {round(v_sub_rec_int):>7d} '
+              f'({100 * (v_sub_rec_int / v_fem - 1):5.2g})\t'
+              f'{config}'
+              )
+
