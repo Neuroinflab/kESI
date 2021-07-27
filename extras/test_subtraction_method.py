@@ -236,11 +236,11 @@ class LeadfieldIntegrator(object):
                                         for yy, CSD_XY in zip(Y, CSD_X)])
                                for xx, CSD_X in zip(X, CSD)])
 
-    def romberg_legacy(self, leadfield, src, k=4):
+    def _legacy_romberg_by_convotulion(self, leadfield, src, k=4):
         from _fast_reciprocal_reconstructor import ckESI_convolver
         r = max(src._nodes)
         n = 2 ** k + 1
-        dxyz = r ** 3 / 2 ** (3 * k - 3)
+
         X = np.linspace(src.x - r,
                         src.x + r,
                         n)
