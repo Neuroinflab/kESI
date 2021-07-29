@@ -178,7 +178,11 @@ else:
     class SphereOnGroundedPlatePointSourcePotentialFEM(
             fc._SubtractionPointSourcePotentialFEM):
         MAX_ITER = 1000
-        GROUNDED_PLATE_AT = -0.088  # parametrize!!!
+
+        def __init__(self, config, grounded_plate_edge_z=-0.088):
+            super(SphereOnGroundedPlatePointSourcePotentialFEM,
+                  self).__init__(config)
+            self.grounded_plate_edge_z = grounded_plate_edge_z
 
         def _potential_gradient_normal(self, conductivity=0.0):
             dx_src = f'(x[0] - src_x)'
@@ -190,7 +194,7 @@ else:
 
             dot_src = f'({dx_src} * x[0] + {dy_src} * x[1] + {dz_src} * x[2]) / sqrt({r_src2} * {r_sphere2})'
             return Expression(f'''
-                               x[2] >= {self.GROUNDED_PLATE_AT} ?
+                               x[2] >= {self.grounded_plate_edge_z} ?
                                {-0.25 / np.pi} / conductivity
                                * ({dot_src} / {r_src2})
                                : 0
@@ -225,7 +229,7 @@ else:
                                        minus_potential_exp,
                                        (lambda x, on_boundary:
                                         on_boundary
-                                        and x[2] < self.GROUNDED_PLATE_AT))
+                                        and x[2] < self.grounded_plate_edge_z))
 
             logger.debug('Applying the "plate" Dirichlet BC')
             dirichlet_bc.apply(self._terms_with_unknown, self._known_terms)
