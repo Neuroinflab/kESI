@@ -271,12 +271,12 @@ class LeadfieldIntegrator(object):
 
 parser = argparse.ArgumentParser(description='Test different methods of potential calculation.')
 parser.add_argument('configs',
-                    metavar='config.ini',
+                    metavar='<config.ini>',
                     # dest='configs',
                     nargs='+',
                     help='FEM configs')
 parser.add_argument('-o', '--output',
-                    metavar='output.csv',
+                    metavar='<output.csv>',
                     dest='output',
                     help='path to the output file',
                     default=None)
