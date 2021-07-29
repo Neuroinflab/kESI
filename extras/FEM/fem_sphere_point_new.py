@@ -116,6 +116,7 @@ else:
                               snk_z=0.0)
 
         def base_conductivity(self, x, y, z):
+            # Duplicates SphereOnGroundedPlatePointSourcePotentialFEM
             return self.config.getfloat('brain', 'conductivity')
 
         def _modify_linear_equation(self, x, y, z):
@@ -172,6 +173,81 @@ else:
                             * f
                             * self._ds(s)
                             for s, c in self.BOUNDARY_CONDUCTIVITY))
+
+
+    class SphereOnGroundedPlatePointSourcePotentialFEM(
+            fc._SubtractionPointSourcePotentialFEM):
+        MAX_ITER = 1000
+        GROUNDED_PLATE_AT = -0.088  # parametrize!!!
+
+        def _potential_gradient_normal(self, conductivity=0.0):
+            dx_src = f'(x[0] - src_x)'
+            dy_src = f'(x[1] - src_y)'
+            dz_src = f'(x[2] - src_z)'
+
+            r_src2 = f'({dx_src} * {dx_src} + {dy_src} * {dy_src} + {dz_src} * {dz_src})'
+            r_sphere2 = '(x[0] * x[0] + x[1] * x[1] + x[2] * x[2])'
+
+            dot_src = f'({dx_src} * x[0] + {dy_src} * x[1] + {dz_src} * x[2]) / sqrt({r_src2} * {r_sphere2})'
+            return Expression(f'''
+                               x[2] >= {self.GROUNDED_PLATE_AT} ?
+                               {-0.25 / np.pi} / conductivity
+                               * ({dot_src} / {r_src2})
+                               : 0
+                               ''',
+                               degree=self.degree,
+                               domain=self._fm._mesh,
+                               conductivity=conductivity,
+                               src_x=0.0,
+                               src_y=0.0,
+                               src_z=0.0)
+
+        def base_conductivity(self, x, y, z):
+            # Duplicates SpherePointSourcePotentialFEM
+            return self.config.getfloat('brain', 'conductivity')
+
+        def _modify_linear_equation(self, x, y, z):
+            dx_src = f'(x[0] - {x})'
+            dy_src = f'(x[1] - {y})'
+            dz_src = f'(x[2] - {z})'
+
+            r_src2 = f'({dx_src} * {dx_src} + {dy_src} * {dy_src} + {dz_src} * {dz_src})'
+            r_src = f'sqrt({r_src2})'
+            conductivity = self.base_conductivity(x, y, z)
+            minus_potential_exp = Expression(f'''
+                                            {-0.25 / np.pi / conductivity}
+                                            / {r_src}
+                                            ''',
+                                             degree=self.degree,
+                                             domain=self._fm._mesh)
+
+            dirichlet_bc = DirichletBC(self._fm.function_space,
+                                       minus_potential_exp,
+                                       (lambda x, on_boundary:
+                                        on_boundary
+                                        and x[2] < self.GROUNDED_PLATE_AT))
+
+            logger.debug('Applying the "plate" Dirichlet BC')
+            dirichlet_bc.apply(self._terms_with_unknown, self._known_terms)
+            logger.debug('Done.')
+
+        def _potential_expression(self, conductivity=0.0):
+            dx_src = f'(x[0] - src_x)'
+            dy_src = f'(x[1] - src_y)'
+            dz_src = f'(x[2] - src_z)'
+
+            r_src2 = f'({dx_src} * {dx_src} + {dy_src} * {dy_src} + {dz_src} * {dz_src})'
+            r_src = f'sqrt({r_src2})'
+            return Expression(f'''
+                              {0.25 / np.pi}
+                              / ({r_src} * conductivity)
+                              ''',
+                              degree=self.degree,
+                              domain=self._fm._mesh,
+                              conductivity=conductivity,
+                              src_x=0.0,
+                              src_y=0.0,
+                              src_z=0.0)
 
 
     class PointSourceFactoryINI(fc.PointSourceFactoryINI):
