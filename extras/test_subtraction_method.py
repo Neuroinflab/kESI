@@ -55,7 +55,7 @@ class SphericalModelFEM(object):
         self.solver.parameters["maximum_iterations"] = 1000
         self.solver.parameters["absolute_tolerance"] = 1E-8
 
-        self.V = fem._fm._function_space
+        self.V = fem._fm.function_space
         self.v = fem._fm.test_function()
         self.u = fem._fm.trial_function()
         self.dx = fem._dx
