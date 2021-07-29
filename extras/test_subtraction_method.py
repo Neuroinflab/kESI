@@ -51,7 +51,7 @@ class SphericalModelFEM(object):
         self.CONDUCTIVITY = list(fem.CONDUCTIVITY)
         self.BOUNDARY_CONDUCTIVITY = list(fem.BOUNDARY_CONDUCTIVITY)
 
-        self.solver =  KrylovSolver("cg", "ilu")
+        self.solver = KrylovSolver("cg", "ilu")
         self.solver.parameters["maximum_iterations"] = 1000
         self.solver.parameters["absolute_tolerance"] = 1E-8
 
@@ -198,8 +198,6 @@ class SphericalModelFEM(object):
         self.solver.solve(A, f.vector(), b)
         # print(' solved')
         return f
-
-
 
 
 class LeadfieldIntegrator(object):
