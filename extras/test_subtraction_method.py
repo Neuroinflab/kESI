@@ -15,6 +15,7 @@ import FEM.fem_sphere_point_new as fspn
 
 import _common_new as common
 
+GROUNDED_PLATE_EDGE_Z = -0.088
 
 x_ele = -0.0532907
 y_ele = -0.0486064
@@ -44,7 +45,7 @@ class NegativePotential(dolfin.UserExpression):
 
 
 class SphericalModelFEM(object):
-    GROUNDED_PLATE_AT = -0.088
+    GROUNDED_PLATE_AT = GROUNDED_PLATE_EDGE_Z
 
     def __init__(self, fem):
         self.fem = fem
@@ -337,7 +338,9 @@ if not args.quiet:
 
 
 for config in args.configs:
-    fem = fspn.SpherePointSourcePotentialFEM(config)
+    fem = fspn.SphereOnGroundedPlatePointSourcePotentialFEM(
+                   config,
+                   grounded_plate_edge_z=GROUNDED_PLATE_EDGE_Z)
     model = SphericalModelFEM(fem)
     integrator = LeadfieldIntegrator(model)
 
@@ -356,7 +359,7 @@ for config in args.configs:
     correction = model.source_correction(src)
     v_corr = correction(x_ele, y_ele, z_ele)
 
-    leadfield_corr_ele = model.reciprocal_correction_potential(x_ele, y_ele, z_ele)
+    leadfield_corr_ele = fem.solve(x_ele, y_ele, z_ele)
     v_corr_rec = integrator.fenics(leadfield_corr_ele,
                                    csd=csd_f)
 
