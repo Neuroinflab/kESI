@@ -360,13 +360,13 @@ for config in args.configs:
         v_sub_rec_int = v_appr + v_corr_rec_int
         print(f'{round(v_fem):>7d}\t'
               f'{round(v_appr):>7d} '
-              f'({100 * (v_appr / v_fem - 1):5.2g})\t'
+              f'({100 * (v_appr / v_fem - 1):.2g})\t'
               f'{round(v_sub):>7d} '
-              f'({100 * (v_sub / v_fem - 1):5.2g})\t'
+              f'({100 * (v_sub / v_fem - 1):.2g})\t'
               f'        {round(v_sub_rec):>7d} '
-              f'({100 * (v_sub_rec / v_fem - 1):5.2g})\t'
+              f'({100 * (v_sub_rec / v_fem - 1):.2g})\t'
               f'        {round(v_sub_rec_int):>7d} '
-              f'({100 * (v_sub_rec_int / v_fem - 1):5.2g})\t'
+              f'({100 * (v_sub_rec_int / v_fem - 1):.2g})\t'
               f'{config}'
               )
 
