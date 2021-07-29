@@ -382,7 +382,11 @@ else:
                                               self._potential_function.vector(),
                                               self._known_terms)
 
+        @deprecated('Use `.correction_potential()` method instead.')
         def solve(self, x, y, z):
+            return self.correction_potential(x, y, z)
+
+        def correction_potential(self, x , y, z):
             with self.local_preprocessing_time:
                 logger.debug('Creating RHS...')
                 L = self._rhs(x, y, z)
