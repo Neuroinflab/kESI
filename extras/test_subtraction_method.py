@@ -15,25 +15,6 @@ import FEM.fem_sphere_point_new as fspn
 
 import _common_new as common
 
-GROUNDED_PLATE_EDGE_Z = -0.088
-
-x_ele = -0.0532907
-y_ele = -0.0486064
-z_ele = 0.016553
-
-STANDARD_DEVIATION = 8e-4
-
-x_src = x_ele + 4 * STANDARD_DEVIATION
-y_src = y_ele + 4 * STANDARD_DEVIATION
-z_src = z_ele - 4 * STANDARD_DEVIATION
-
-SPLINE_NODES = [STANDARD_DEVIATION, 3 * STANDARD_DEVIATION]
-SPLINE_COEFFS = [[1],
-                 [0,
-                  2.25 / STANDARD_DEVIATION,
-                  -1.5 / STANDARD_DEVIATION ** 2,
-                  0.25 / STANDARD_DEVIATION ** 3]]
-
 
 class NegativePotential(dolfin.UserExpression):
     def __init__(self, potential, *args, **kwargs):
@@ -45,9 +26,8 @@ class NegativePotential(dolfin.UserExpression):
 
 
 class SphericalModelFEM(object):
-    GROUNDED_PLATE_AT = GROUNDED_PLATE_EDGE_Z
-
-    def __init__(self, fem):
+    def __init__(self, fem, grounded_plate_at):
+        self.GROUNDED_PLATE_AT = grounded_plate_at
         self.fem = fem
         self.CONDUCTIVITY = list(fem.CONDUCTIVITY)
         self.BOUNDARY_CONDUCTIVITY = list(fem.BOUNDARY_CONDUCTIVITY)
@@ -308,11 +288,59 @@ parser.add_argument('-q', '--quiet',
 parser.add_argument('-k', '--k-romberg',
                     type=int,
                     dest='k',
-                    metavar='k',
-                    help='k parameter of the Romberg method',
+                    metavar="<Romberg's method k>",
+                    help="k parameter of the Romberg's method",
                     default=4)
+parser.add_argument('-g', '--grounded_plate_edge_z',
+                    type=float,
+                    dest='grounded_plate_edge_z',
+                    metavar="<grounded plate edge's z>",
+                    help='Z coordinate of the grounded plate',
+                    default=-0.088)
+parser.add_argument('-e', '--electrode-location',
+                    type=float,
+                    nargs=3,
+                    dest='electrode',
+                    metavar=("<electrode's X>",
+                             "<electrode's Y>",
+                             "<electrode's Z>",
+                             ),
+                    help='XYZ coordinates of the electrode',
+                    default=[-0.0532907,
+                             -0.0486064,
+                             0.016553])
+parser.add_argument('-s', '--source-location',
+                    type=float,
+                    nargs=3,
+                    dest='source',
+                    metavar=("<source's X>",
+                             "<source's Y>",
+                             "<source's Z>",
+                             ),
+                    help='XYZ coordinates of the source centroid',
+                    default=[-0.0532907 + 4 * 8e-4,
+                             -0.0486064 + 4 * 8e-4,
+                              0.016553 - 4 * 8e-4])
+parser.add_argument('-r', '--source_radius',
+                    type=float,
+                    dest='source_radius',
+                    metavar="<source's r>",
+                    help='radius of the source',
+                    default=3 * 8e-4)
 
 args = parser.parse_args()
+
+STANDARD_DEVIATION = args.source_radius / 3
+SPLINE_NODES = [STANDARD_DEVIATION, 3 * STANDARD_DEVIATION]
+SPLINE_COEFFS = [[1],
+                 [0,
+                  2.25 / STANDARD_DEVIATION,
+                  -1.5 / STANDARD_DEVIATION ** 2,
+                  0.25 / STANDARD_DEVIATION ** 3]]
+
+x_ele, y_ele, z_ele = args.electrode
+x_src, y_src, z_src = args.source
+
 
 HEADER = ['FEM',
           'approximate',
@@ -339,9 +367,9 @@ if not args.quiet:
 
 for config in args.configs:
     fem = fspn.SphereOnGroundedPlatePointSourcePotentialFEM(
-                   config,
-                   grounded_plate_edge_z=GROUNDED_PLATE_EDGE_Z)
-    model = SphericalModelFEM(fem)
+                    config,
+                    grounded_plate_edge_z=args.grounded_plate_edge_z)
+    model = SphericalModelFEM(fem, grounded_plate_at=args.grounded_plate_edge_z)
     integrator = LeadfieldIntegrator(model)
 
     conductivity = fem.base_conductivity(x_src, y_src, z_src)
