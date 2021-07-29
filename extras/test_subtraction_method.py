@@ -65,6 +65,23 @@ class SphericalModelFEM(object):
         return self.fem._fm.function()
 
     def reciprocal_correction_potential(self, x, y, z):
+        """
+        .. deprecated::
+                   Moved to `SphereOnGroundedPlatePointSourcePotentialFEM` class
+                   (rewritten) and available as its `.solve()` method.
+                   Preserved as the original code not obfuscated by the
+                   `_SubtractionPointSourcePotentialFEM` class protocol.
+
+        Parameters
+        ----------
+        x
+        y
+        z
+
+        Returns
+        -------
+
+        """
         dx_src = f'(x[0] - src_x)'
         dy_src = f'(x[1] - src_y)'
         dz_src = f'(x[2] - src_z)'
