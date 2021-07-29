@@ -54,9 +54,16 @@ except (ModuleNotFoundError, ImportError):
     logger.warning("Unable to import from dolfin")
 
 else:
-    class SpherePointSourcePotentialFEM(fc._SubtractionPointSourcePotentialFEM):
+    class _SphereSubtractionPointSourcePotentialFEM(
+                                        fc._SubtractionPointSourcePotentialFEM):
         MAX_ITER = 1000
 
+        def base_conductivity(self, x, y, z):
+            return self.config.getfloat('brain', 'conductivity')
+
+
+    class SpherePointSourcePotentialFEM(
+                                     _SphereSubtractionPointSourcePotentialFEM):
         def _potential_gradient_normal(self, conductivity=0.0):
             # (1 / r)' = -1 / dst^2
             # -1 * dz / dst
@@ -115,10 +122,6 @@ else:
                               snk_y=0.0,
                               snk_z=0.0)
 
-        def base_conductivity(self, x, y, z):
-            # Duplicates SphereOnGroundedPlatePointSourcePotentialFEM
-            return self.config.getfloat('brain', 'conductivity')
-
         def _modify_linear_equation(self, x, y, z):
             logger.debug('Defining point source to compensate boundary flux...')
             point = Point(0, 0, 0)
@@ -176,9 +179,7 @@ else:
 
 
     class SphereOnGroundedPlatePointSourcePotentialFEM(
-            fc._SubtractionPointSourcePotentialFEM):
-        MAX_ITER = 1000
-
+                                     _SphereSubtractionPointSourcePotentialFEM):
         def __init__(self, config, grounded_plate_edge_z=-0.088):
             self.grounded_plate_edge_z = grounded_plate_edge_z
             super(SphereOnGroundedPlatePointSourcePotentialFEM,
@@ -205,10 +206,6 @@ else:
                                src_x=0.0,
                                src_y=0.0,
                                src_z=0.0)
-
-        def base_conductivity(self, x, y, z):
-            # Duplicates SpherePointSourcePotentialFEM
-            return self.config.getfloat('brain', 'conductivity')
 
         def _modify_linear_equation(self, x, y, z):
             dx_src = f'(x[0] - {x})'
