@@ -350,13 +350,15 @@ HEADER = ['FEM',
           'config',
           ]
 
-
 writer = None
 if args.output is not None:
     writer = csv.writer(open(args.output, 'w', newline=''))
     writer.writerow(HEADER)
 
 if not args.quiet:
+    print(f'Electrode at: {x_ele} {y_ele} {z_ele}')
+    print(f'Source at: {x_src} {y_src} {z_src}')
+    print()
     print('    FEM\t'
           '  appr. (err %)\t'
           ' subtr. (err %)\t'
