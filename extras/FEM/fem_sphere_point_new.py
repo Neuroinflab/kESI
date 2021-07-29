@@ -180,9 +180,9 @@ else:
         MAX_ITER = 1000
 
         def __init__(self, config, grounded_plate_edge_z=-0.088):
+            self.grounded_plate_edge_z = grounded_plate_edge_z
             super(SphereOnGroundedPlatePointSourcePotentialFEM,
                   self).__init__(config)
-            self.grounded_plate_edge_z = grounded_plate_edge_z
 
         def _potential_gradient_normal(self, conductivity=0.0):
             dx_src = f'(x[0] - src_x)'
