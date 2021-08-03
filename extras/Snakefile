@@ -1,0 +1,11 @@
+rule PaperCombElectrode4SM_Composite_2_samples:
+    input: ["FEM/solutions/four_spheres_separate_cortex_composite_stereotactic/comb_2_sampled/9/{}_{:02d}.npz".format(a, b) for a in 'ABCDE' for b in range(13)]
+
+rule PaperCombElectrode4SM_Composite_sample:
+    input:
+		    "FEM/solutions/four_spheres_separate_cortex_composite_stereotactic/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/four_spheres_separate_cortex_composite_stereotactic/{CONFIG}.ini"
+    output:
+		    "FEM/solutions/four_spheres_separate_cortex_composite_stereotactic/{CONFIG}_sampled/{K}/{NAME}.npz"
+    shell:
+        "python paper_sample_spherical_solution.py -o {output} -c {input.CONFIG} -n {wildcards.NAME} -f 0 -k {wildcards.K}"
+
