@@ -247,11 +247,13 @@ class ckESI_kernel_constructor_no_cross(object):
                                   self.convolver.POT_Z,
                                   indexing='ij')
             if self.csd_allowed_mask is not None:
+                # XXX Applies CSD mask to potential XYZs ?
                 POT_XYZ_MASKED = [A[self.csd_allowed_mask]
                                   for A in POT_XYZ]
 
         if kcsd_solution_available and self.csd_allowed_mask is not None:
             CSD_FORBIDDEN_MASK = ~self.csd_allowed_mask
+            # XXX Applies CSD mask to potential XYZs ?
             POT_XYZ_CROPPED = [A[CSD_FORBIDDEN_MASK]
                                for A in POT_XYZ]
 
@@ -270,10 +272,12 @@ class ckESI_kernel_constructor_no_cross(object):
                     LEADFIELD = self.clear_leadfield(LEADFIELD)
 
                 if kcsd_solution_available:
+                    # XXX Applies CSD mask to potential ?
                     LEADFIELD[CSD_FORBIDDEN_MASK] = -electrode.base_potential(*POT_XYZ_CROPPED)
                     if correction_available:
                         LEADFIELD[self.csd_allowed_mask] = electrode.correction_potential(*POT_XYZ)[self.csd_allowed_mask]
                 else:
+                    # XXX Applies CSD mask to potential ?
                     LEADFIELD[self.csd_allowed_mask] = electrode.base_potential(*POT_XYZ_MASKED)
                     if correction_available:
                         LEADFIELD[self.csd_allowed_mask] += electrode.correction_potential(*POT_XYZ)[self.csd_allowed_mask]
