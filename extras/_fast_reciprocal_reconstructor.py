@@ -203,12 +203,11 @@ class ckESI_reconstructor(object):
         return self.solver.leave_one_out_errors(rhs, regularization_parameter)
 
 
-class ckESI_kernel_constructor(object):
+class ckESI_kernel_constructor_no_cross(object):
     def __init__(self,
                  model_source,
                  convolver,
                  source_indices,
-                 csd_indices,
                  electrodes,
                  weights=65,
                  csd_allowed_mask=None,
@@ -221,14 +220,12 @@ class ckESI_kernel_constructor(object):
 
         self.convolver = convolver
         self.source_indices = source_indices
-        self.csd_indices = csd_indices
         self.model_source = model_source
         self.csd_allowed_mask = csd_allowed_mask
         self.source_normalization_treshold = source_normalization_treshold
 
         self._create_pre_kernel(electrodes, weights)
         self._create_kernel()
-        self._create_crosskernel()
 
     def _create_pre_kernel(self, electrodes, weights):
         kcsd_solution_available = hasattr(self.model_source, 'potential')
@@ -346,6 +343,35 @@ class ckESI_kernel_constructor(object):
             self.model_source.csd,
             [quadrature_weights] * 3)
 
+    def _create_kernel(self):
+        self.kernel = np.matmul(self._pre_kernel.T,
+                                self._pre_kernel) * len(self._pre_kernel)
+
+
+class ckESI_kernel_constructor(ckESI_kernel_constructor_no_cross):
+    def __init__(self,
+                 model_source,
+                 convolver,
+                 source_indices,
+                 csd_indices,
+                 electrodes,
+                 weights=65,
+                 csd_allowed_mask=None,
+                 source_normalization_treshold=None):
+
+        super(ckESI_kernel_constructor,
+              self).__init__(model_source,
+                             convolver,
+                             source_indices,
+                             electrodes,
+                             weights,
+                             csd_allowed_mask=None,
+                             source_normalization_treshold=None)
+
+        self.csd_indices = csd_indices
+
+        self._create_crosskernel()
+
     def _create_crosskernel(self):
         SRC = np.zeros(self.convolver.shape('SRC'))
         for i, PHI_COL in enumerate(self._pre_kernel.T):
@@ -373,10 +399,6 @@ class ckESI_kernel_constructor(object):
     def _zero_cross_kernel_where_csd_not_allowed(self):
         if self.csd_allowed_mask is not None:
             self.cross_kernel[~self.csd_allowed_mask[self.csd_indices], :] = 0
-
-    def _create_kernel(self):
-        self.kernel = np.matmul(self._pre_kernel.T,
-                                self._pre_kernel) * len(self._pre_kernel)
 
 
 class ckCSD_kernel_constructor_MOI(ckESI_kernel_constructor):
