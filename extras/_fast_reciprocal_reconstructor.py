@@ -369,8 +369,8 @@ class ckESI_kernel_constructor(ckESI_kernel_constructor_no_cross):
                              source_indices,
                              electrodes,
                              weights,
-                             csd_allowed_mask=None,
-                             source_normalization_treshold=None)
+                             csd_allowed_mask=csd_allowed_mask,
+                             source_normalization_treshold=source_normalization_treshold)
 
         self.csd_indices = csd_indices
 
