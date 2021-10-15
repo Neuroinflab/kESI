@@ -210,7 +210,7 @@ class ckESI_kernel_constructor_no_cross(object):
                  source_indices,
                  electrodes,
                  weights=65,
-                 csd_allowed_mask=None,
+                 leadfield_allowed_mask=None,
                  source_normalization_treshold=None):
         if isinstance(weights, int):
             self._src_circumference = weights
@@ -221,7 +221,7 @@ class ckESI_kernel_constructor_no_cross(object):
         self.convolver = convolver
         self.source_indices = source_indices
         self.model_source = model_source
-        self.csd_allowed_mask = csd_allowed_mask
+        self.leadfield_allowed_mask = leadfield_allowed_mask
         self.source_normalization_treshold = source_normalization_treshold
 
         self._create_pre_kernel(electrodes, weights)
@@ -246,13 +246,13 @@ class ckESI_kernel_constructor_no_cross(object):
                                   self.convolver.POT_Y,
                                   self.convolver.POT_Z,
                                   indexing='ij')
-            if self.csd_allowed_mask is not None:
+            if self.leadfield_allowed_mask is not None:
                 # XXX Applies CSD mask to potential XYZs ?
-                POT_XYZ_MASKED = [A[self.csd_allowed_mask]
+                POT_XYZ_MASKED = [A[self.leadfield_allowed_mask]
                                   for A in POT_XYZ]
 
-        if kcsd_solution_available and self.csd_allowed_mask is not None:
-            CSD_FORBIDDEN_MASK = ~self.csd_allowed_mask
+        if kcsd_solution_available and self.leadfield_allowed_mask is not None:
+            CSD_FORBIDDEN_MASK = ~self.leadfield_allowed_mask
             # XXX Applies CSD mask to potential XYZs ?
             POT_XYZ_CROPPED = [A[CSD_FORBIDDEN_MASK]
                                for A in POT_XYZ]
@@ -262,10 +262,10 @@ class ckESI_kernel_constructor_no_cross(object):
             correction_available = hasattr(electrode, 'correction_potential')
 
             leadfield_updated = not (kcsd_solution_available
-                                     and self.csd_allowed_mask is None
+                                     and self.leadfield_allowed_mask is None
                                      and not correction_available)
 
-            if self.csd_allowed_mask is not None:
+            if self.leadfield_allowed_mask is not None:
                 if correction_available and kcsd_solution_available:
                     LEADFIELD = self.alloc_leadfield_if_necessary(LEADFIELD)
                 else:
@@ -275,12 +275,12 @@ class ckESI_kernel_constructor_no_cross(object):
                     # XXX Applies CSD mask to potential ?
                     LEADFIELD[CSD_FORBIDDEN_MASK] = -electrode.base_potential(*POT_XYZ_CROPPED)
                     if correction_available:
-                        LEADFIELD[self.csd_allowed_mask] = electrode.correction_potential(*POT_XYZ)[self.csd_allowed_mask]
+                        LEADFIELD[self.leadfield_allowed_mask] = electrode.correction_potential(*POT_XYZ)[self.leadfield_allowed_mask]
                 else:
                     # XXX Applies CSD mask to potential ?
-                    LEADFIELD[self.csd_allowed_mask] = electrode.base_potential(*POT_XYZ_MASKED)
+                    LEADFIELD[self.leadfield_allowed_mask] = electrode.base_potential(*POT_XYZ_MASKED)
                     if correction_available:
-                        LEADFIELD[self.csd_allowed_mask] += electrode.correction_potential(*POT_XYZ)[self.csd_allowed_mask]
+                        LEADFIELD[self.leadfield_allowed_mask] += electrode.correction_potential(*POT_XYZ)[self.leadfield_allowed_mask]
 
             else:
                 if kcsd_solution_available:
@@ -315,14 +315,14 @@ class ckESI_kernel_constructor_no_cross(object):
 
     def calculate_source_normalization_factor(self, weights):
         current = self.integrate_source_potential(
-            self.csd_allowed_mask,
+            self.leadfield_allowed_mask,
             weights)
         self.source_normalization_factor = 1.0 / np.where(abs(current) > self.source_normalization_treshold,
                                                           current,
                                                           self.source_normalization_treshold)
 
     def normalize_sources(self):
-        return (self.csd_allowed_mask is not None
+        return (self.leadfield_allowed_mask is not None
                 and self.source_normalization_treshold is not None)
 
     def alloc_leadfield_if_necessary(self, leadfield):
@@ -360,8 +360,9 @@ class ckESI_kernel_constructor(ckESI_kernel_constructor_no_cross):
                  csd_indices,
                  electrodes,
                  weights=65,
-                 csd_allowed_mask=None,
-                 source_normalization_treshold=None):
+                 leadfield_allowed_mask=None,
+                 source_normalization_treshold=None,
+                 csd_allowed_mask=None):
 
         super(ckESI_kernel_constructor,
               self).__init__(model_source,
@@ -369,10 +370,11 @@ class ckESI_kernel_constructor(ckESI_kernel_constructor_no_cross):
                              source_indices,
                              electrodes,
                              weights,
-                             csd_allowed_mask=csd_allowed_mask,
+                             leadfield_allowed_mask=leadfield_allowed_mask,
                              source_normalization_treshold=source_normalization_treshold)
 
         self.csd_indices = csd_indices
+        self.csd_allowed_mask = csd_allowed_mask
 
         self._create_crosskernel()
 
