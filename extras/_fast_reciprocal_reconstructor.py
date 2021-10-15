@@ -111,7 +111,8 @@ class ckESI_convolver(object):
                                mode='same')
 
     def csd_kernel(self, csd, ns, ds):
-        return csd(*np.meshgrid(*[d * np.linspace(-(n // 2), n // 2, n)
+        return csd(*np.meshgrid(*[np.array([0.]) if np.isnan(d) else
+                                  d * np.linspace(-(n // 2), n // 2, n)
                                   for d, n in zip(ds, ns)],
                                 indexing='ij',
                                 sparse=True))
@@ -398,9 +399,13 @@ class ckESI_kernel_constructor(ckESI_kernel_constructor_no_cross):
                                     np.nan)
 
     def _base_weights_to_csd(self, BASE_WEIGHTS):
+        csd_kernel_shape = [(1 if np.isnan(csd)
+                             else int(round(self._src_diameter * pot / csd) - 1))
+                            for pot, csd in zip(*map(self.convolver.ds,
+                                                     ['POT', 'CSD']))]
         return self.convolver.base_weights_to_csd(BASE_WEIGHTS,
                                                   self.model_source.csd,
-                                                  [self._src_diameter] * 3)[self.csd_indices]
+                                                  csd_kernel_shape)[self.csd_indices]
 
     def _zero_cross_kernel_where_csd_not_allowed(self):
         if self.csd_allowed_mask is not None:
