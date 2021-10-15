@@ -213,10 +213,10 @@ class ckESI_kernel_constructor_no_cross(object):
                  leadfield_allowed_mask=None,
                  source_normalization_treshold=None):
         if isinstance(weights, int):
-            self._src_circumference = weights
+            self._src_diameter = weights
             weights = si.romb(np.identity(weights)) / (weights - 1)
         else:
-            self._src_circumference = len(weights)
+            self._src_diameter = len(weights)
 
         self.convolver = convolver
         self.source_indices = source_indices
@@ -400,7 +400,7 @@ class ckESI_kernel_constructor(ckESI_kernel_constructor_no_cross):
     def _base_weights_to_csd(self, BASE_WEIGHTS):
         return self.convolver.base_weights_to_csd(BASE_WEIGHTS,
                                                   self.model_source.csd,
-                                                  [self._src_circumference] * 3)[self.csd_indices]
+                                                  [self._src_diameter] * 3)[self.csd_indices]
 
     def _zero_cross_kernel_where_csd_not_allowed(self):
         if self.csd_allowed_mask is not None:
