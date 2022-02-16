@@ -284,7 +284,79 @@ class ckESI_kernel_constructor_no_cross(object):
                                 self._pre_kernel) * len(self._pre_kernel)
 
 
-class ckESI_kernel_constructor(object):
+class ckESI_kernel_constructor_base(object):
+    def calculate_source_normalization_factor(self, weights):
+        current = self.integrate_source_potential(
+            self.leadfield_allowed_mask,
+            weights)
+        self.source_normalization_factor = 1.0 / np.where(abs(current) > self.source_normalization_treshold,
+                                                          current,
+                                                          self.source_normalization_treshold)
+
+    def normalize_sources(self):
+        return (self.leadfield_allowed_mask is not None
+                and self.source_normalization_treshold is not None)
+
+    def alloc_leadfield_if_necessary(self, leadfield):
+        if leadfield is not None:
+            return leadfield
+        return np.empty(self.convolver.shape('POT'))
+
+    def clear_leadfield(self, leadfield):
+        if leadfield is None:
+            return np.zeros(self.convolver.shape('POT'))
+
+        leadfield.fill(0)
+        return leadfield
+
+    def integrate_source_potential(self, leadfield, quadrature_weights):
+        return self.convolve_csd(leadfield,
+                                 quadrature_weights)[self.source_indices]
+
+    def convolve_csd(self, leadfield, quadrature_weights):
+        return self.convolver.leadfield_to_base_potentials(
+            leadfield,
+            self.model_source.csd,
+            [quadrature_weights] * 3)
+
+    def _create_kernel(self):
+        self.kernel = np.matmul(self._pre_kernel.T,
+                                self._pre_kernel) * len(self._pre_kernel)
+
+    def _create_crosskernel(self):
+        SRC = np.zeros(self.convolver.shape('SRC'))
+        for i, PHI_COL in enumerate(self._pre_kernel.T):
+            SRC[self.source_indices] = (PHI_COL * self.source_normalization_factor
+                                        if self.normalize_sources()
+                                        else PHI_COL)
+            CROSS_COL = self._base_weights_to_csd(SRC)
+            if i == 0:
+                self._allocate_cross_kernel(CROSS_COL)
+
+            self.cross_kernel[:, i] = CROSS_COL
+
+        self._zero_cross_kernel_where_csd_not_allowed()
+
+    def _allocate_cross_kernel(self, CROSS_COL):
+        self.cross_kernel = np.full((CROSS_COL.size,
+                                     self._pre_kernel.shape[1]),
+                                    np.nan)
+
+    def _base_weights_to_csd(self, BASE_WEIGHTS):
+        csd_kernel_shape = [(1 if np.isnan(csd)
+                             else int(round(self._src_diameter * pot / csd) - 1))
+                            for pot, csd in zip(*map(self.convolver.ds,
+                                                     ['POT', 'CSD']))]
+        return self.convolver.base_weights_to_csd(BASE_WEIGHTS,
+                                                  self.model_source.csd,
+                                                  csd_kernel_shape)[self.csd_indices]
+
+    def _zero_cross_kernel_where_csd_not_allowed(self):
+        if self.csd_allowed_mask is not None:
+            self.cross_kernel[~self.csd_allowed_mask[self.csd_indices], :] = 0
+
+
+class ckESI_kernel_constructor(ckESI_kernel_constructor_base):
     def __init__(self,
                  model_source,
                  convolver,
@@ -398,76 +470,6 @@ class ckESI_kernel_constructor(object):
         if self.normalize_sources():
             self.calculate_source_normalization_factor(weights)
             self._pre_kernel *= self.source_normalization_factor.reshape(-1, 1)
-
-    def calculate_source_normalization_factor(self, weights):
-        current = self.integrate_source_potential(
-            self.leadfield_allowed_mask,
-            weights)
-        self.source_normalization_factor = 1.0 / np.where(abs(current) > self.source_normalization_treshold,
-                                                          current,
-                                                          self.source_normalization_treshold)
-
-    def normalize_sources(self):
-        return (self.leadfield_allowed_mask is not None
-                and self.source_normalization_treshold is not None)
-
-    def alloc_leadfield_if_necessary(self, leadfield):
-        if leadfield is not None:
-            return leadfield
-        return np.empty(self.convolver.shape('POT'))
-
-    def clear_leadfield(self, leadfield):
-        if leadfield is None:
-            return np.zeros(self.convolver.shape('POT'))
-
-        leadfield.fill(0)
-        return leadfield
-
-    def integrate_source_potential(self, leadfield, quadrature_weights):
-        return self.convolve_csd(leadfield,
-                                 quadrature_weights)[self.source_indices]
-
-    def convolve_csd(self, leadfield, quadrature_weights):
-        return self.convolver.leadfield_to_base_potentials(
-            leadfield,
-            self.model_source.csd,
-            [quadrature_weights] * 3)
-
-    def _create_kernel(self):
-        self.kernel = np.matmul(self._pre_kernel.T,
-                                self._pre_kernel) * len(self._pre_kernel)
-
-    def _create_crosskernel(self):
-        SRC = np.zeros(self.convolver.shape('SRC'))
-        for i, PHI_COL in enumerate(self._pre_kernel.T):
-            SRC[self.source_indices] = (PHI_COL * self.source_normalization_factor
-                                        if self.normalize_sources()
-                                        else PHI_COL)
-            CROSS_COL = self._base_weights_to_csd(SRC)
-            if i == 0:
-                self._allocate_cross_kernel(CROSS_COL)
-
-            self.cross_kernel[:, i] = CROSS_COL
-
-        self._zero_cross_kernel_where_csd_not_allowed()
-
-    def _allocate_cross_kernel(self, CROSS_COL):
-        self.cross_kernel = np.full((CROSS_COL.size,
-                                     self._pre_kernel.shape[1]),
-                                    np.nan)
-
-    def _base_weights_to_csd(self, BASE_WEIGHTS):
-        csd_kernel_shape = [(1 if np.isnan(csd)
-                             else int(round(self._src_diameter * pot / csd) - 1))
-                            for pot, csd in zip(*map(self.convolver.ds,
-                                                     ['POT', 'CSD']))]
-        return self.convolver.base_weights_to_csd(BASE_WEIGHTS,
-                                                  self.model_source.csd,
-                                                  csd_kernel_shape)[self.csd_indices]
-
-    def _zero_cross_kernel_where_csd_not_allowed(self):
-        if self.csd_allowed_mask is not None:
-            self.cross_kernel[~self.csd_allowed_mask[self.csd_indices], :] = 0
 
 
 class ckCSD_kernel_constructor_MOI(ckESI_kernel_constructor):
