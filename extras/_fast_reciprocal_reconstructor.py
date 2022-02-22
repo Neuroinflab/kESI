@@ -843,3 +843,163 @@ if __name__ == '__main__':
     IDX = (slice(32, 100 - 32),) * 3
 
     assert abs(POT / POT_GT - 1)[IDX].max() < 1e-5
+
+
+if __name__ == '__main__':
+    import _common_new as common
+
+    CONDUCTIVITY = 0.3
+    R = 1.0
+    ROMBERG_K = 6
+    ROMBERG_N = 2 ** ROMBERG_K + 1
+
+    class TestElectrode(object):
+        x = R
+        y = R * 0.5
+        z = R * 2
+        base_conductivity = CONDUCTIVITY
+        dx = 2 * R / (ROMBERG_N - 1)
+
+        def correction_potential(self, X, Y, Z):
+            return (0.25 / np.pi / self.base_conductivity
+                   * np.power(np.square(X + self.x)
+                              + np.square(Y - self.y)
+                              + np.square(Z - self.z),
+                              -0.5))
+
+        def base_potential(self, X, Y, Z):
+            return (0.25 / np.pi / self.base_conductivity
+                    / (0.15 * self.dx
+                       + np.sqrt(np.square(X - self.x)
+                                 + np.square(Y - self.y)
+                                 + np.square(Z - self.z))))
+
+
+    class DummyParent(object):
+        def __init__(self, convolver, source_indices, model_source):
+            self.convolver = convolver
+            self.source_indices = source_indices
+            self.model_source = model_source
+
+
+    def get_source(x=0, y=0, z=0):
+        return common.GaussianSourceKCSD3D(x, y, z, R / 4, CONDUCTIVITY)
+
+
+    def assertRelativeErrorWithinTolerance(expected, observed,
+                                           tolerance=0,
+                                           echo=False):
+        max_error = abs(observed / expected - 1).max()
+        if echo:
+            print(max_error)
+        assert max_error <= tolerance
+
+
+    test_electrode = TestElectrode()
+    model_src = get_source()
+    X = np.linspace(R, 9 * R, 2 ** (ROMBERG_K + 2) + 1)
+    Y = np.linspace(-1.5 * R, 2.5 * R, 2 ** (ROMBERG_K + 1) + 1)
+    Z = np.linspace(0, 4 * R, 2 ** (ROMBERG_K + 1) + 1)
+
+    convolver = ckESI_convolver([X, Y, Z], [X, Y, Z])
+    romberg_weights = si.romb(np.identity(ROMBERG_N)) / (ROMBERG_N - 1)
+
+    parent = DummyParent(convolver,
+                         ((convolver.SRC_X >= 2 * R)
+                          & (convolver.SRC_X <= 8 * R))
+                         & ((convolver.SRC_Y >= -0.5 * R)
+                            & (convolver.SRC_Y <= 1.5 * R))
+                         & ((convolver.SRC_Z >= R)
+                            & (convolver.SRC_Z <= 3 * R)),
+                         model_src)
+
+    MASK_XY = (np.ones_like(convolver.SRC_X, dtype=bool)
+               & np.ones_like(convolver.SRC_Y, dtype=bool))
+    MASK_MINOR = (MASK_XY & (convolver.SRC_Z > 2 * R))
+    MASK_MAJOR = ~MASK_MINOR
+
+    # kCSD
+    reciprocal_src = get_source(test_electrode.x,
+                                test_electrode.y,
+                                test_electrode.z)
+    expected = reciprocal_src.potential(convolver.SRC_X,
+                                        convolver.SRC_Y,
+                                        convolver.SRC_Z)[parent.source_indices]
+    # kCSD analytical
+
+    tested = _PAE_kCSD_Analytical(parent, romberg_weights)
+    observed = tested(test_electrode)
+    assertRelativeErrorWithinTolerance(expected, observed, 1e-10)
+
+    # kCSD numeric
+    tested = _PAE_kCSD_Numerical(parent, romberg_weights)
+    observed = tested(test_electrode)
+    assertRelativeErrorWithinTolerance(expected, observed, 1e-2)
+
+    # kCSD masked
+    # kCSD masked analytical
+    tested = _PAE_kCSD_AnalyticalMasked(parent,
+                                        romberg_weights,
+                                        MASK_MAJOR)
+    observed_major = tested(test_electrode)
+    tested = _PAE_kCSD_AnalyticalMasked(parent,
+                                        romberg_weights,
+                                        MASK_MINOR)
+    observed_minor = tested(test_electrode)
+    assertRelativeErrorWithinTolerance(expected,
+                                       (observed_major + observed_minor),
+                                       1e-2)
+
+    # kCSD masked numerical
+    tested = _PAE_kCSD_NumericalMasked(parent,
+                                        romberg_weights,
+                                        MASK_MAJOR)
+    observed_major = tested(test_electrode)
+    tested = _PAE_kCSD_NumericalMasked(parent,
+                                        romberg_weights,
+                                        MASK_MINOR)
+    observed_minor = tested(test_electrode)
+    assertRelativeErrorWithinTolerance(expected,
+                                       (observed_major + observed_minor),
+                                       1e-2)
+
+    # kESI
+    expected += reciprocal_src.potential(-convolver.SRC_X,
+                                         convolver.SRC_Y,
+                                         convolver.SRC_Z)[parent.source_indices]
+
+    # kESI analytical
+    tested = _PAE_kESI_Analytical(parent, romberg_weights)
+    observed = tested(test_electrode)
+    assertRelativeErrorWithinTolerance(expected, observed, 1e-4)
+
+    # kESI numerical
+    tested = _PAE_kESI_Numerical(parent, romberg_weights)
+    observed = tested(test_electrode)
+    assertRelativeErrorWithinTolerance(expected, observed, 1e-2)
+
+    # kESI analytical masked
+    tested = _PAE_kESI_AnalyticalMasked(parent,
+                                        romberg_weights,
+                                        MASK_MAJOR)
+    observed_major = tested(test_electrode)
+    tested = _PAE_kESI_AnalyticalMasked(parent,
+                                        romberg_weights,
+                                        MASK_MINOR)
+    observed_minor = tested(test_electrode)
+    assertRelativeErrorWithinTolerance(expected,
+                                       (observed_major + observed_minor),
+                                       1e-2)
+
+    # kESI numerical masked
+    tested = _PAE_kESI_NumericalMasked(parent,
+                                        romberg_weights,
+                                        MASK_MAJOR)
+    observed_major = tested(test_electrode)
+    tested = _PAE_kESI_NumericalMasked(parent,
+                                        romberg_weights,
+                                        MASK_MINOR)
+    observed_minor = tested(test_electrode)
+    assertRelativeErrorWithinTolerance(expected,
+                                       (observed_major + observed_minor),
+                                       1e-2)
