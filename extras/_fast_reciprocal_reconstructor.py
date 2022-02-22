@@ -329,18 +329,6 @@ class ckESI_kernel_constructor_base(object):
         return (self.leadfield_allowed_mask is not None
                 and self.source_normalization_treshold is not None)
 
-    def alloc_leadfield_if_necessary(self, leadfield):
-        if leadfield is not None:
-            return leadfield
-        return np.empty(self.convolver.shape('POT'))
-
-    def clear_leadfield(self, leadfield):
-        if leadfield is None:
-            return np.zeros(self.convolver.shape('POT'))
-
-        leadfield.fill(0)
-        return leadfield
-
     def integrate_source_potential(self, leadfield, quadrature_weights):
         return self.convolve_csd(leadfield,
                                  quadrature_weights)[self.source_indices]
@@ -430,219 +418,270 @@ class ckESI_kernel_constructor_base(object):
     def _kcsd_solution_available(self):
         return hasattr(self.model_source, 'potential')
 
-    class _PotentialAtElectrodeBase(object):
-        def __init__(self, parent, weights):
-            self.parent = parent
-            self.weights = weights
 
-        def __call__(self, electrode):
-            return None
+def _sum_of_not_none(f):
+    @functools.wraps(f)
+    def wrapper(self, *args, **kwargs):
+        V, V_SUPER = f(self, *args, **kwargs)
+        if V_SUPER is not None:
+            V += V_SUPER
+        return V
+    return wrapper
 
-        @property
-        def convolver(self):
-            return self.parent.convolver
 
-        @property
-        def source_indices(self):
-            return self.parent.source_indices
+class _PAE_Base(object):
+    def __init__(self, parent, weights):
+        self.parent = parent
+        self.weights = weights
 
-        @property
-        def model_source(self):
-            return self.parent.model_source
+    def __call__(self, electrode):
+        return None
 
-    class _PotentialAtElectrodeAnalytical(_PotentialAtElectrodeBase):
-        def __init__(self, parent, weights):
-            super().__init__(parent, weights)
-            SRC_X, SRC_Y, SRC_Z = np.meshgrid(self.convolver.SRC_X,
-                                              self.convolver.SRC_Y,
-                                              self.convolver.SRC_Z,
-                                              indexing='ij')
-            self.SRC_X = SRC_X[self.source_indices]
-            self.SRC_Y = SRC_Y[self.source_indices]
-            self.SRC_Z = SRC_Z[self.source_indices]
+    @property
+    def convolver(self):
+        return self.parent.convolver
 
-        def __call__(self, electrode):
-            V = self.model_source.potential(electrode.x - self.SRC_X,
-                                            electrode.y - self.SRC_Y,
-                                            electrode.z - self.SRC_Z)
-            V_SUPER = super().__call__(electrode)
-            if V_SUPER is not None:
-                V += V_SUPER
+    @property
+    def source_indices(self):
+        return self.parent.source_indices
 
-            return V
+    @property
+    def model_source(self):
+        return self.parent.model_source
 
-    class _PotentialAtElectrodePotAttribute(_PotentialAtElectrodeBase):
-        def __init__(self, parent, weights):
-            super().__init__(parent, weights)
-            self.POT_XYZ = np.meshgrid(self.convolver.POT_X,
-                                       self.convolver.POT_Y,
-                                       self.convolver.POT_Z,
-                                       indexing='ij')
 
-    class _PotentialAtElectrodeFromLeadfield(_PotentialAtElectrodeBase):
-        def __call__(self, electrode):
-            self._create_leadfield(electrode)
-            V = self.integrate_source_potential()
-            V_SUPER = super().__call__(electrode)
-            if V_SUPER is not None:
-                V += V_SUPER
+class _PAE_PotAttribute(_PAE_Base):
+    def __init__(self, parent, weights):
+        super().__init__(parent, weights)
+        self.POT_XYZ = np.meshgrid(self.convolver.POT_X,
+                                   self.convolver.POT_Y,
+                                   self.convolver.POT_Z,
+                                   indexing='ij')
 
-            return V
 
-        def integrate_source_potential(self):
-            return self.convolve_csd()[self.source_indices]
+class _PAE_FromLeadfield(_PAE_Base):
+    @_sum_of_not_none
+    def __call__(self, electrode):
+        self._create_leadfield(electrode)
+        V = self.integrate_source_potential()
+        V_SUPER = super().__call__(electrode)
+        return V, V_SUPER
+        # if V_SUPER is not None:
+        #     V += V_SUPER
+        #
+        # return V
 
-        def convolve_csd(self):
-            return self.convolver.leadfield_to_base_potentials(
-                self.LEADFIELD,
-                self.model_source.csd,
-                [self.weights] * 3)
+    def integrate_source_potential(self):
+        return self.convolve_csd()[self.source_indices]
 
-    class _PotentialAtElectrodeMasked(_PotentialAtElectrodeFromLeadfield):
-        def __init__(self, parent, weights, leadfield_allowed_mask):
-            super().__init__(parent, weights)
-            self.leadfield_allowed_mask = leadfield_allowed_mask
+    def convolve_csd(self):
+        return self.convolver.leadfield_to_base_potentials(
+            self.LEADFIELD,
+            self.model_source.csd,
+            [self.weights] * 3)
 
-        def _create_leadfield(self, electrode):
-            self._provide_leadfield_array()
 
-        def _provide_leadfield_array(self):
-            self.clear_leadfield()
+class _PAE_Masked(_PAE_FromLeadfield):
+    def __init__(self, parent, weights, leadfield_allowed_mask):
+        super().__init__(parent, weights)
+        self.leadfield_allowed_mask = leadfield_allowed_mask
 
-        def clear_leadfield(self):
-            try:
-                self.LEADFIELD.fill(0)
+    def _create_leadfield(self, electrode):
+        self._provide_leadfield_array()
+        self._modify_leadfield(electrode)
 
-            except AttributeError:
-                self.LEADFIELD = np.zeros(self.convolver.shape('POT'))
+    def _modify_leadfield(self, electrode):
+        LEADFIELD = self._allowed_leadfield(electrode)
+        if LEADFIELD is not None:
+            self.LEADFIELD[self.leadfield_allowed_mask] = LEADFIELD
 
-    class _PotentialAtElectrodeLeadfieldForbiddenMask(
-            _PotentialAtElectrodeMasked):
-        """
-        `.POT_XYZ` attribute/property required
-        """
-        def __init__(self, parent, weights, leadfield_allowed_mask):
-            super().__init__(parent, weights, leadfield_allowed_mask)
+    def _provide_leadfield_array(self):
+        self.clear_leadfield()
 
-            self.csd_forbidden_mask = ~leadfield_allowed_mask
-            self.POT_XYZ_CROPPED = [A[self.csd_forbidden_mask] for A in self.POT_XYZ]
+    def clear_leadfield(self):
+        try:
+            self.LEADFIELD.fill(0)
 
-        def _create_leadfield(self, electrode):
-            super()._create_leadfield(electrode)
-            self.LEADFIELD[self.csd_forbidden_mask] = -electrode.base_potential(*self.POT_XYZ_CROPPED)
+        except AttributeError:
+            self.LEADFIELD = np.zeros(self.convolver.shape('POT'))
 
-    class _PotentialAtElectrodeNumericalMask(_PotentialAtElectrodeMasked):
-        """
-        `.POT_XYZ` attribute/property required
-        """
-        def __init__(self, parent, weights, leadfield_allowed_mask):
-            super().__init__(parent, weights, leadfield_allowed_mask)
+    def _allowed_leadfield(self, electrode):
+        return None
 
-            self.POT_XYZ_MASKED = [A[leadfield_allowed_mask] for A in self.POT_XYZ]
 
-        def _create_leadfield(self, electrode):
-            super()._create_leadfield(electrode)
-            self.LEADFIELD[self.leadfield_allowed_mask] += electrode.base_potential(*self.POT_XYZ_MASKED)
+class _PAE_LeadfieldForbiddenMask(_PAE_Masked):
+    """
+    `.POT_XYZ` attribute/property required
+    """
+    def __init__(self, parent, weights, leadfield_allowed_mask):
+        super().__init__(parent, weights, leadfield_allowed_mask)
 
-    class _PotentialAtElectrodeFromLeadfieldNotMasked(_PotentialAtElectrodeFromLeadfield):
-        def _create_leadfield(self, electrode):
-            self.LEADFIELD = None
+        self.csd_forbidden_mask = ~leadfield_allowed_mask
+        self.POT_XYZ_CROPPED = [A[self.csd_forbidden_mask] for A in self.POT_XYZ]
 
-    class _PotentialAtElectrodeNumerical(_PotentialAtElectrodeFromLeadfieldNotMasked):
-        """
-        `.POT_XYZ` attribute required
-        """
-        def _create_leadfield(self, electrode):
-            super()._create_leadfield(electrode)
-            LEADFIELD = electrode.base_potential(*self.POT_XYZ)
-            if self.LEADFIELD is not None:
-                self.LEADFIELD += LEADFIELD
-            else:
-                self.LEADFIELD = LEADFIELD
+    def _create_leadfield(self, electrode):
+        super()._create_leadfield(electrode)
+        self.LEADFIELD[self.csd_forbidden_mask] = -electrode.base_potential(*self.POT_XYZ_CROPPED)
+
+
+class _PAE_NumericalMask(_PAE_Masked):
+    """
+    `.POT_XYZ` attribute/property required
+    """
+    def __init__(self, parent, weights, leadfield_allowed_mask):
+        super().__init__(parent, weights, leadfield_allowed_mask)
+
+        self.POT_XYZ_MASKED = [A[leadfield_allowed_mask] for A in self.POT_XYZ]
+
+    @_sum_of_not_none
+    def _allowed_leadfield(self, electrode):
+        V_SUPER = super()._allowed_leadfield(electrode)
+        V = electrode.base_potential(*self.POT_XYZ_MASKED)
+        return V, V_SUPER
+        # if V_SUPER is not None:
+        #     V += V_SUPER
+        #
+        # return V
+
+
+
+class _PAE_FromLeadfieldNotMasked(_PAE_FromLeadfield):
+    def _create_leadfield(self, electrode):
+        self.LEADFIELD = None
+
+
+class _PAE_Numerical(_PAE_FromLeadfieldNotMasked):
+    """
+    `.POT_XYZ` attribute required
+    """
+    def _create_leadfield(self, electrode):
+        super()._create_leadfield(electrode)
+        LEADFIELD = electrode.base_potential(*self.POT_XYZ)
+        if self.LEADFIELD is not None:
+            self.LEADFIELD += LEADFIELD
+        else:
+            self.LEADFIELD = LEADFIELD
+
+# kCSD
+
+class _PAE_kCSD_Analytical(_PAE_Base):
+    def __init__(self, parent, weights):
+        super().__init__(parent, weights)
+        SRC_X, SRC_Y, SRC_Z = np.meshgrid(self.convolver.SRC_X,
+                                          self.convolver.SRC_Y,
+                                          self.convolver.SRC_Z,
+                                          indexing='ij')
+        self.SRC_X = SRC_X[self.source_indices]
+        self.SRC_Y = SRC_Y[self.source_indices]
+        self.SRC_Z = SRC_Z[self.source_indices]
+
+    @_sum_of_not_none
+    def __call__(self, electrode):
+        V = self.model_source.potential(electrode.x - self.SRC_X,
+                                        electrode.y - self.SRC_Y,
+                                        electrode.z - self.SRC_Z)
+        V_SUPER = super().__call__(electrode)
+        return V, V_SUPER
+        # if V_SUPER is not None:
+        #     V += V_SUPER
+        #
+        # return V
+
+
+class _PAE_kCSD_Numerical(_PAE_Numerical,
+                          _PAE_PotAttribute):
+    pass
+
+
+class _PAE_kCSD_Masked(_PAE_Masked):
+    @property
+    def POT_XYZ(self):
+        return np.meshgrid(self.convolver.POT_X,
+                           self.convolver.POT_Y,
+                           self.convolver.POT_Z,
+                           indexing='ij')
+
+
+class _PAE_kCSD_AnalyticalMasked(_PAE_kCSD_Masked,
+                                 _PAE_LeadfieldForbiddenMask,
+                                 _PAE_kCSD_Analytical):
+    pass
+
+
+class _PAE_kCSD_NumericalMasked(_PAE_NumericalMask,
+                                _PAE_kCSD_Masked):
+    pass
+
+# kESI
+
+class _PAE_kESI_Masked(_PAE_Masked,
+                       _PAE_PotAttribute):
+    @_sum_of_not_none
+    def _allowed_leadfield(self, electrode):
+        V_SUPER = super()._allowed_leadfield(electrode)
+        # `.correction_potential(XS)[IDX]` used instead of
+        # `.correction_potential(XS[IDX]) to simplify implementation
+        # of the method
+        V = electrode.correction_potential(*self.POT_XYZ)[self.leadfield_allowed_mask]
+        return V, V_SUPER
+        # if V_SUPER is not None:
+        #     V += V_SUPER
+        #
+        # return V
+
+
+class _PAE_kESI_AnalyticalMasked(_PAE_LeadfieldForbiddenMask,
+                                 _PAE_kESI_Masked,
+                                 _PAE_kCSD_Analytical):
+    def _provide_leadfield_array(self):
+        self.alloc_leadfield_if_necessary()
+
+    def alloc_leadfield_if_necessary(self):
+        if not hasattr(self, 'LEADFIELD'):
+            self.LEADFIELD = np.empty(self.convolver.shape('POT'))
+
+
+class _PAE_kESI_NumericalMasked(_PAE_NumericalMask,
+                                _PAE_kESI_Masked):
+    # MRO counts - it is crucial to finish call to
+    # `_PAE_kESI_Masked._create_leadfield()` (assign) before
+    # `_PAE_NumericalMask._create_leadfield()` (add)
+    pass
+
+
+class _PAE_kESI_NotMasked(_PAE_FromLeadfieldNotMasked,
+                          _PAE_PotAttribute):
+    def _create_leadfield(self, electrode):
+        super()._create_leadfield(electrode)
+        LEADFIELD = electrode.correction_potential(*self.POT_XYZ)
+        if self.LEADFIELD is not None:
+            self.LEADFIELD += LEADFIELD
+        else:
+            self.LEADFIELD = LEADFIELD
+
+
+class _PAE_kESI_Analytical(_PAE_kESI_NotMasked,
+                           _PAE_kCSD_Analytical):
+    pass
+
+
+class _PAE_kESI_Numerical(_PAE_kESI_NotMasked,
+                          _PAE_Numerical):
+    pass
 
 
 class ckESI_kernel_constructor(ckESI_kernel_constructor_base):
-    class _PotentialAtElectrode(
-            ckESI_kernel_constructor_base._PotentialAtElectrodeFromLeadfield,
-            ckESI_kernel_constructor_base._PotentialAtElectrodePotAttribute):
-        pass
-
-    class _PotentialAtElectrodeMasked(
-            ckESI_kernel_constructor_base._PotentialAtElectrodeMasked,
-            _PotentialAtElectrode):
-        def _create_leadfield(self, electrode):
-            super()._create_leadfield(electrode)
-            # `.correction_potential(XS)[IDX]` used instead of
-            # `.correction_potential(XS[IDX]) to simplify implementation
-            # of the method
-            CORRECTION = electrode.correction_potential(*self.POT_XYZ)[self.leadfield_allowed_mask]
-            self.LEADFIELD[self.leadfield_allowed_mask] = CORRECTION
-
-    class _PotentialAtElectrodeAnalyticalMasked(
-            ckESI_kernel_constructor_base._PotentialAtElectrodeLeadfieldForbiddenMask,
-            _PotentialAtElectrodeMasked,
-            ckESI_kernel_constructor_base._PotentialAtElectrodeAnalytical):
-        def _provide_leadfield_array(self):
-            self.alloc_leadfield_if_necessary()
-
-        def alloc_leadfield_if_necessary(self):
-            if not hasattr(self, 'LEADFIELD'):
-                self.LEADFIELD = np.empty(self.convolver.shape('POT'))
-
-    class _PotentialAtElectrodeNumericalMasked(
-        ckESI_kernel_constructor_base._PotentialAtElectrodeNumericalMask,
-        _PotentialAtElectrodeMasked):
-        # MRO counts - it is crucial to finish call to
-        # `_PotentialAtElectrodeMasked._create_leadfield()` (assign) before
-        # `_PotentialAtElectrodeNumericalMask._create_leadfield()` (add)
-        pass
-
-    class _PotentialAtElectrodeNotMasked(
-            ckESI_kernel_constructor_base._PotentialAtElectrodeFromLeadfieldNotMasked,
-            _PotentialAtElectrode):
-        def _create_leadfield(self, electrode):
-            super()._create_leadfield(electrode)
-            LEADFIELD = electrode.correction_potential(*self.POT_XYZ)
-            if self.LEADFIELD is not None:
-                self.LEADFIELD += LEADFIELD
-            else:
-                self.LEADFIELD = LEADFIELD
-
-    class _PotentialAtElectrodeAnalytical(
-            _PotentialAtElectrodeNotMasked,
-            ckESI_kernel_constructor_base._PotentialAtElectrodeAnalytical):
-        pass
-
-    class _PotentialAtElectrodeNumerical(
-            _PotentialAtElectrodeNotMasked,
-            ckESI_kernel_constructor_base._PotentialAtElectrodeNumerical):
-        pass
+    _PotentialAtElectrodeAnalytical = _PAE_kESI_Analytical
+    _PotentialAtElectrodeNumerical = _PAE_kESI_Numerical
+    _PotentialAtElectrodeAnalyticalMasked = _PAE_kESI_AnalyticalMasked
+    _PotentialAtElectrodeNumericalMasked = _PAE_kESI_NumericalMasked
 
 
 class ckCSD_kernel_constructor(ckESI_kernel_constructor_base):
-    class _PotentialAtElectrodeMasked(
-            ckESI_kernel_constructor_base._PotentialAtElectrodeMasked):
-        @property
-        def POT_XYZ(self):
-            return np.meshgrid(self.convolver.POT_X,
-                               self.convolver.POT_Y,
-                               self.convolver.POT_Z,
-                               indexing='ij')
-
-    class _PotentialAtElectrodeAnalyticalMasked(
-            _PotentialAtElectrodeMasked,
-            ckESI_kernel_constructor_base._PotentialAtElectrodeLeadfieldForbiddenMask,
-            ckESI_kernel_constructor_base._PotentialAtElectrodeAnalytical):
-        pass
-
-    class _PotentialAtElectrodeNumerical(
-            ckESI_kernel_constructor_base._PotentialAtElectrodeNumerical,
-            ckESI_kernel_constructor_base._PotentialAtElectrodePotAttribute):
-        pass
-
-    class _PotentialAtElectrodeNumericalMasked(ckESI_kernel_constructor_base._PotentialAtElectrodeNumericalMask,
-                                               _PotentialAtElectrodeMasked):
-        pass
+    _PotentialAtElectrodeAnalytical = _PAE_kCSD_Analytical
+    _PotentialAtElectrodeNumerical = _PAE_kCSD_Numerical
+    _PotentialAtElectrodeAnalyticalMasked = _PAE_kCSD_AnalyticalMasked
+    _PotentialAtElectrodeNumericalMasked = _PAE_kCSD_NumericalMasked
 
 
 class ckCSD_kernel_constructor_MOI(ckESI_kernel_constructor):
