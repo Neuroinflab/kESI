@@ -27,8 +27,6 @@ import numpy as np
 import scipy.integrate as si
 import scipy.signal as ssi
 
-import kesi
-
 try:
     from . import _common_new as common
     # When run as script raises:
