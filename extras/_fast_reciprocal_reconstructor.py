@@ -466,10 +466,6 @@ class _PAE_FromLeadfield(_PAE_Base):
         V = self.integrate_source_potential()
         V_SUPER = super().__call__(electrode)
         return V, V_SUPER
-        # if V_SUPER is not None:
-        #     V += V_SUPER
-        #
-        # return V
 
     def integrate_source_potential(self):
         return self.convolve_csd()[self.source_indices]
@@ -538,11 +534,6 @@ class _PAE_NumericalMask(_PAE_Masked):
         V_SUPER = super()._allowed_leadfield(electrode)
         V = electrode.base_potential(*self.POT_XYZ_MASKED)
         return V, V_SUPER
-        # if V_SUPER is not None:
-        #     V += V_SUPER
-        #
-        # return V
-
 
 
 class _PAE_FromLeadfieldNotMasked(_PAE_FromLeadfield):
@@ -582,10 +573,6 @@ class _PAE_kCSD_Analytical(_PAE_Base):
                                         electrode.z - self.SRC_Z)
         V_SUPER = super().__call__(electrode)
         return V, V_SUPER
-        # if V_SUPER is not None:
-        #     V += V_SUPER
-        #
-        # return V
 
 
 class _PAE_kCSD_Numerical(_PAE_Numerical,
@@ -624,10 +611,6 @@ class _PAE_kESI_Masked(_PAE_Masked,
         # of the method
         V = electrode.correction_potential(*self.POT_XYZ)[self.leadfield_allowed_mask]
         return V, V_SUPER
-        # if V_SUPER is not None:
-        #     V += V_SUPER
-        #
-        # return V
 
 
 class _PAE_kESI_AnalyticalMasked(_PAE_LeadfieldForbiddenMask,
@@ -643,9 +626,6 @@ class _PAE_kESI_AnalyticalMasked(_PAE_LeadfieldForbiddenMask,
 
 class _PAE_kESI_NumericalMasked(_PAE_NumericalMask,
                                 _PAE_kESI_Masked):
-    # MRO counts - it is crucial to finish call to
-    # `_PAE_kESI_Masked._create_leadfield()` (assign) before
-    # `_PAE_NumericalMask._create_leadfield()` (add)
     pass
 
 
