@@ -282,72 +282,52 @@ class ckESI_kernel_constructor_no_cross(object):
                                 self._pre_kernel) * len(self._pre_kernel)
 
 
-class ckESI_kernel_constructor_base(object):
+class ckESI_kernel_constructor(object):
     def __init__(self,
-                 model_source,
-                 convolver,
-                 source_indices,
-                 csd_indices,
+                 convolver_interface,
+                 potential_at_electrode,
                  electrodes,
-                 weights=65,
-                 leadfield_allowed_mask=None,
                  source_normalization_treshold=None,
                  csd_allowed_mask=None):
-        if isinstance(weights, int):
-            self._src_diameter = weights
-            weights = si.romb(np.identity(weights)) / (weights - 1)
-        else:
-            self._src_diameter = len(weights)
+        self.ci = convolver_interface
 
-        self.convolver = convolver
-        self.source_indices = source_indices
-        self.model_source = model_source
-        self.leadfield_allowed_mask = leadfield_allowed_mask
         self.source_normalization_treshold = source_normalization_treshold
-        self.csd_indices = csd_indices
         self.csd_allowed_mask = csd_allowed_mask
 
-        self._create_pre_kernel(electrodes,
-                                self._potential_at_electrode(
-                                    leadfield_allowed_mask,
-                                    weights))
-        self._normalize_pre_kernel(weights)
+        self._create_pre_kernel(electrodes, potential_at_electrode)
+        self._normalize_pre_kernel(potential_at_electrode)
         self._create_kernel()
         self._create_crosskernel()
 
-    def calculate_source_normalization_factor(self, weights):
-        current = self.integrate_source_potential(
-            self.leadfield_allowed_mask,
-            weights)
+    def _normalize_pre_kernel(self, potential_at_electrode):
+        self._pre_kernel /= self._pre_kernel.shape[0]
+        if self.source_normalization_requested(potential_at_electrode):
+            self.calculate_source_normalization_factor(
+                    potential_at_electrode.leadfield_allowed_mask)
+            self._pre_kernel *= self.source_normalization_factor.reshape(-1, 1)
+
+    def calculate_source_normalization_factor(self, leadfield_allowed_mask):
+        current = self.ci.integrate_source_potential(leadfield_allowed_mask)
         self.source_normalization_factor = 1.0 / np.where(abs(current) > self.source_normalization_treshold,
                                                           current,
                                                           self.source_normalization_treshold)
 
-    def source_normalization_requested(self):
-        return (self.leadfield_allowed_mask is not None
+    def source_normalization_requested(self, potential_at_electrode):
+        return (hasattr(potential_at_electrode, 'leadfield_allowed_mask')
                 and self.source_normalization_treshold is not None)
-
-    def integrate_source_potential(self, leadfield, quadrature_weights):
-        return self.convolve_csd(leadfield,
-                                 quadrature_weights)[self.source_indices]
-
-    def convolve_csd(self, leadfield, quadrature_weights):
-        return self.convolver.leadfield_to_base_potentials(
-            leadfield,
-            self.model_source.csd,
-            [quadrature_weights] * 3)
 
     def _create_kernel(self):
         self.kernel = np.matmul(self._pre_kernel.T,
                                 self._pre_kernel) * len(self._pre_kernel)
 
     def _create_crosskernel(self):
-        SRC = np.zeros(self.convolver.shape('SRC'))
+        SRC = self.ci.zeros('SRC')
         for i, PHI_COL in enumerate(self._pre_kernel.T):
-            SRC[self.source_indices] = (PHI_COL * self.source_normalization_factor
-                                        if self.source_normalization_requested()
-                                        else PHI_COL)
-            CROSS_COL = self._base_weights_to_csd(SRC)
+            self.ci.update_src(SRC,
+                               (PHI_COL * self.source_normalization_factor
+                                if self.source_normalization_requested()
+                                else PHI_COL))
+            CROSS_COL = self.ci.base_weights_to_csd(SRC)
             if i == 0:
                 self._allocate_cross_kernel(CROSS_COL)
 
@@ -360,24 +340,9 @@ class ckESI_kernel_constructor_base(object):
                                      self._pre_kernel.shape[1]),
                                     np.nan)
 
-    def _base_weights_to_csd(self, BASE_WEIGHTS):
-        csd_kernel_shape = [(1 if np.isnan(csd)
-                             else int(round(self._src_diameter * pot / csd) - 1))
-                            for pot, csd in zip(*map(self.convolver.ds,
-                                                     ['POT', 'CSD']))]
-        return self.convolver.base_weights_to_csd(BASE_WEIGHTS,
-                                                  self.model_source.csd,
-                                                  csd_kernel_shape)[self.csd_indices]
-
     def _zero_cross_kernel_where_csd_not_allowed(self):
         if self.csd_allowed_mask is not None:
-            self.cross_kernel[~self.csd_allowed_mask[self.csd_indices], :] = 0
-
-    def _normalize_pre_kernel(self, weights):
-        self._pre_kernel /= self._pre_kernel.shape[0]
-        if self.source_normalization_requested():
-            self.calculate_source_normalization_factor(weights)
-            self._pre_kernel *= self.source_normalization_factor.reshape(-1, 1)
+            self.cross_kernel[~self.ci.crop_csd(self.csd_allowed_mask), :] = 0
 
     def _create_pre_kernel(self, electrodes, potential_at_electrode):
         for i, electrode in enumerate(electrodes):
@@ -391,30 +356,64 @@ class ckESI_kernel_constructor_base(object):
             self._pre_kernel = np.full((n_bases, n_electrodes),
                                        np.nan)
 
-    def _potential_at_electrode(self, leadfield_allowed_mask, weights):
-        if leadfield_allowed_mask is None:
-            return self._potential_at_electrode_simple(weights)
 
-        return self._potential_at_electrode_masked(weights, leadfield_allowed_mask)
+class ConvolverInterface_base(object):
+    def __init__(self, convolver, csd, weights):
+        self.convolver = convolver
+        self.csd = csd
+        self.weights = weights
 
-    def _potential_at_electrode_simple(self, weights):
-        if self._kcsd_solution_available():
-            return self._PotentialAtElectrodeAnalytical(self, weights)
+    @property
+    def _src_diameter(self):
+        return len(self.weights)
 
-        return self._PotentialAtElectrodeNumerical(self, weights)
+    def convolve_csd(self, leadfield):
+        return self.convolver.leadfield_to_base_potentials(
+            leadfield,
+            self.csd,
+            [self.weights] * 3)
 
-    def _potential_at_electrode_masked(self, weights, leadfield_allowed_mask):
-        if self._kcsd_solution_available():
-            return self._PotentialAtElectrodeAnalyticalMasked(self,
-                                                              weights,
-                                                              leadfield_allowed_mask)
+    def zeros(self, name):
+        return np.zeros(self.convolver.shape(name))
 
-        return self._PotentialAtElectrodeNumericalMasked(self,
-                                                         weights,
-                                                         leadfield_allowed_mask)
+    def empty(self, name):
+        return np.empty(self.convolver.shape(name))
 
-    def _kcsd_solution_available(self):
-        return hasattr(self.model_source, 'potential')
+    def _base_weights_to_csd(self, base_weights):
+        csd_kernel_shape = [(1 if np.isnan(csd)
+                             else int(round(self._src_diameter * pot / csd) - 1))
+                            for pot, csd in zip(*map(self.convolver.ds,
+                                                     ['POT', 'CSD']))]
+        return self.convolver.base_weights_to_csd(base_weights,
+                                                  self.csd,
+                                                  csd_kernel_shape)
+
+    def meshgrid(self, name):
+        return np.meshgrid(*getattr(self.convolver,
+                                    f'{name}_MESH'),
+                           indexing='ij')
+
+
+class ConvolverInterfaceIndexed(ConvolverInterface_base):
+    def __init__(self, convolver, csd, weights, source_indices, csd_indices):
+        super().__init__(convolver, csd, weights)
+        self.source_indices = source_indices
+        self.csd_indices = csd_indices
+
+    def integrate_source_potential(self, leadfield):
+        return self.convolve_csd(leadfield)[self.source_indices]
+
+    def src_coords(self):
+        return [A[self.source_indices] for A in self.meshgrid('SRC')]
+
+    def update_src(self, src, values):
+        src[self.source_indices] = values
+
+    def base_weights_to_csd(self, base_weights):
+        return self.crop_csd(self._base_weights_to_csd(base_weights))
+
+    def crop_csd(self, csd):
+        return csd[self.csd_indices]
 
 
 def _sum_of_not_none(f):
@@ -428,56 +427,33 @@ def _sum_of_not_none(f):
 
 
 class _PAE_Base(object):
-    def __init__(self, parent, weights):
-        self.parent = parent
-        self.weights = weights
+    def __init__(self, convolver_interface):
+        self.convolver_interface = convolver_interface
 
     def __call__(self, electrode):
         return None
 
-    @property
-    def convolver(self):
-        return self.parent.convolver
-
-    @property
-    def source_indices(self):
-        return self.parent.source_indices
-
-    @property
-    def model_source(self):
-        return self.parent.model_source
-
 
 class _PAE_PotAttribute(_PAE_Base):
-    def __init__(self, parent, weights):
-        super().__init__(parent, weights)
-        self.POT_XYZ = np.meshgrid(self.convolver.POT_X,
-                                   self.convolver.POT_Y,
-                                   self.convolver.POT_Z,
-                                   indexing='ij')
+    def __init__(self, convolver_interface, **kwargs):
+        super().__init__(convolver_interface, **kwargs)
+        self.POT_XYZ = self.convolver_interface.meshgrid('POT')
 
 
 class _PAE_FromLeadfield(_PAE_Base):
     @_sum_of_not_none
     def __call__(self, electrode):
         self._create_leadfield(electrode)
-        V = self.integrate_source_potential()
-        V_SUPER = super().__call__(electrode)
-        return V, V_SUPER
+        return (self._integrate_source_potential(),
+                super().__call__(electrode))
 
-    def integrate_source_potential(self):
-        return self.convolve_csd()[self.source_indices]
-
-    def convolve_csd(self):
-        return self.convolver.leadfield_to_base_potentials(
-            self.LEADFIELD,
-            self.model_source.csd,
-            [self.weights] * 3)
+    def _integrate_source_potential(self):
+        return self.convolver_interface.integrate_source_potential(self.LEADFIELD)
 
 
 class _PAE_Masked(_PAE_FromLeadfield):
-    def __init__(self, parent, weights, leadfield_allowed_mask):
-        super().__init__(parent, weights)
+    def __init__(self, convolver_interface, leadfield_allowed_mask, **kwargs):
+        super().__init__(convolver_interface, **kwargs)
         self.leadfield_allowed_mask = leadfield_allowed_mask
 
     def _create_leadfield(self, electrode):
@@ -497,7 +473,7 @@ class _PAE_Masked(_PAE_FromLeadfield):
             self.LEADFIELD.fill(0)
 
         except AttributeError:
-            self.LEADFIELD = np.zeros(self.convolver.shape('POT'))
+            self.LEADFIELD = self.convolver_interface.zeros('POT')
 
     def _allowed_leadfield(self, electrode):
         return None
@@ -507,10 +483,10 @@ class _PAE_LeadfieldForbiddenMask(_PAE_Masked):
     """
     `.POT_XYZ` attribute/property required
     """
-    def __init__(self, parent, weights, leadfield_allowed_mask):
-        super().__init__(parent, weights, leadfield_allowed_mask)
+    def __init__(self, convolver_interface, **kwargs):
+        super().__init__(convolver_interface, **kwargs)
 
-        self.csd_forbidden_mask = ~leadfield_allowed_mask
+        self.csd_forbidden_mask = ~self.leadfield_allowed_mask
         self.POT_XYZ_CROPPED = [A[self.csd_forbidden_mask] for A in self.POT_XYZ]
 
     def _create_leadfield(self, electrode):
@@ -522,16 +498,15 @@ class _PAE_NumericalMask(_PAE_Masked):
     """
     `.POT_XYZ` attribute/property required
     """
-    def __init__(self, parent, weights, leadfield_allowed_mask):
-        super().__init__(parent, weights, leadfield_allowed_mask)
+    def __init__(self, convolver_interface, **kwargs):
+        super().__init__(convolver_interface, **kwargs)
 
-        self.POT_XYZ_MASKED = [A[leadfield_allowed_mask] for A in self.POT_XYZ]
+        self.POT_XYZ_MASKED = [A[self.leadfield_allowed_mask] for A in self.POT_XYZ]
 
     @_sum_of_not_none
     def _allowed_leadfield(self, electrode):
-        V_SUPER = super()._allowed_leadfield(electrode)
-        V = electrode.base_potential(*self.POT_XYZ_MASKED)
-        return V, V_SUPER
+        return (electrode.base_potential(*self.POT_XYZ_MASKED),
+                super()._allowed_leadfield(electrode))
 
 
 class _PAE_FromLeadfieldNotMasked(_PAE_FromLeadfield):
@@ -553,48 +528,40 @@ class _PAE_Numerical(_PAE_FromLeadfieldNotMasked):
 
 # kCSD
 
-class _PAE_kCSD_Analytical(_PAE_Base):
-    def __init__(self, parent, weights):
-        super().__init__(parent, weights)
-        SRC_X, SRC_Y, SRC_Z = np.meshgrid(self.convolver.SRC_X,
-                                          self.convolver.SRC_Y,
-                                          self.convolver.SRC_Z,
-                                          indexing='ij')
-        self.SRC_X = SRC_X[self.source_indices]
-        self.SRC_Y = SRC_Y[self.source_indices]
-        self.SRC_Z = SRC_Z[self.source_indices]
+class PAE_kCSD_Analytical(_PAE_Base):
+    def __init__(self, convolver_interface, potential, **kwargs):
+        super().__init__(convolver_interface, **kwargs)
+        self.potential = potential
+
+        self.SRC_X, self.SRC_Y, self.SRC_Z = self.convolver_interface.src_coords()
 
     @_sum_of_not_none
     def __call__(self, electrode):
-        V = self.model_source.potential(electrode.x - self.SRC_X,
-                                        electrode.y - self.SRC_Y,
-                                        electrode.z - self.SRC_Z)
-        V_SUPER = super().__call__(electrode)
-        return V, V_SUPER
+        return (self.potential(electrode.x - self.SRC_X,
+                               electrode.y - self.SRC_Y,
+                               electrode.z - self.SRC_Z),
+                super().__call__(electrode))
 
 
-class _PAE_kCSD_Numerical(_PAE_Numerical,
-                          _PAE_PotAttribute):
+class PAE_kCSD_Numerical(_PAE_Numerical,
+                         _PAE_PotAttribute):
     pass
 
 
 class _PAE_kCSD_Masked(_PAE_Masked):
     @property
     def POT_XYZ(self):
-        return np.meshgrid(self.convolver.POT_X,
-                           self.convolver.POT_Y,
-                           self.convolver.POT_Z,
-                           indexing='ij')
+        return self.convolver_interface.meshgrid('POT')
 
 
-class _PAE_kCSD_AnalyticalMasked(_PAE_kCSD_Masked,
-                                 _PAE_LeadfieldForbiddenMask,
-                                 _PAE_kCSD_Analytical):
+class PAE_kCSD_AnalyticalMasked(_PAE_kCSD_Masked,
+                                _PAE_LeadfieldForbiddenMask,
+                                PAE_kCSD_Analytical):
     pass
 
 
-class _PAE_kCSD_NumericalMasked(_PAE_NumericalMask,
-                                _PAE_kCSD_Masked):
+class PAE_kCSD_NumericalMasked(_PAE_NumericalMask,
+                               _PAE_kCSD_Masked):
     pass
 
 # kESI
@@ -603,27 +570,26 @@ class _PAE_kESI_Masked(_PAE_Masked,
                        _PAE_PotAttribute):
     @_sum_of_not_none
     def _allowed_leadfield(self, electrode):
-        V_SUPER = super()._allowed_leadfield(electrode)
         # `.correction_potential(XS)[IDX]` used instead of
         # `.correction_potential(XS[IDX]) to simplify implementation
         # of the method
-        V = electrode.correction_potential(*self.POT_XYZ)[self.leadfield_allowed_mask]
-        return V, V_SUPER
+        return (electrode.correction_potential(*self.POT_XYZ)[self.leadfield_allowed_mask],
+                super()._allowed_leadfield(electrode))
 
 
-class _PAE_kESI_AnalyticalMasked(_PAE_LeadfieldForbiddenMask,
-                                 _PAE_kESI_Masked,
-                                 _PAE_kCSD_Analytical):
+class PAE_kESI_AnalyticalMasked(_PAE_LeadfieldForbiddenMask,
+                                _PAE_kESI_Masked,
+                                PAE_kCSD_Analytical):
     def _provide_leadfield_array(self):
         self.alloc_leadfield_if_necessary()
 
     def alloc_leadfield_if_necessary(self):
         if not hasattr(self, 'LEADFIELD'):
-            self.LEADFIELD = np.empty(self.convolver.shape('POT'))
+            self.LEADFIELD = self.convolver_interface.empty('POT')
 
 
-class _PAE_kESI_NumericalMasked(_PAE_NumericalMask,
-                                _PAE_kESI_Masked):
+class PAE_kESI_NumericalMasked(_PAE_NumericalMask,
+                               _PAE_kESI_Masked):
     pass
 
 
@@ -638,101 +604,87 @@ class _PAE_kESI_NotMasked(_PAE_FromLeadfieldNotMasked,
             self.LEADFIELD = LEADFIELD
 
 
-class _PAE_kESI_Analytical(_PAE_kESI_NotMasked,
-                           _PAE_kCSD_Analytical):
+class PAE_kESI_Analytical(_PAE_kESI_NotMasked,
+                          PAE_kCSD_Analytical):
     pass
 
 
-class _PAE_kESI_Numerical(_PAE_kESI_NotMasked,
-                          _PAE_Numerical):
+class PAE_kESI_Numerical(_PAE_kESI_NotMasked,
+                         _PAE_Numerical):
     pass
 
 
-class ckESI_kernel_constructor(ckESI_kernel_constructor_base):
-    _PotentialAtElectrodeAnalytical = _PAE_kESI_Analytical
-    _PotentialAtElectrodeNumerical = _PAE_kESI_Numerical
-    _PotentialAtElectrodeAnalyticalMasked = _PAE_kESI_AnalyticalMasked
-    _PotentialAtElectrodeNumericalMasked = _PAE_kESI_NumericalMasked
-
-
-class ckCSD_kernel_constructor(ckESI_kernel_constructor_base):
-    _PotentialAtElectrodeAnalytical = _PAE_kCSD_Analytical
-    _PotentialAtElectrodeNumerical = _PAE_kCSD_Numerical
-    _PotentialAtElectrodeAnalyticalMasked = _PAE_kCSD_AnalyticalMasked
-    _PotentialAtElectrodeNumericalMasked = _PAE_kCSD_NumericalMasked
-
-
-class ckCSD_kernel_constructor_MOI(ckESI_kernel_constructor):
-    def __init__(self,
-                 model_source,
-                 convolver,
-                 source_indices,
-                 csd_indices,
-                 electrodes,
-                 slice_thickness,
-                 slice_conductivity,
-                 saline_conductivity,
-                 glass_conductivity=0.0,
-                 n=128
-                 ):
-        self.slice_thickness = slice_thickness
-        self.slice_conductivity = slice_conductivity
-        self.saline_conductivity = saline_conductivity
-        self.glass_conductivity = glass_conductivity
-        self.n = n
-        super(ckCSD_kernel_constructor_MOI,
-              self).__init__(model_source,
-                             convolver,
-                             source_indices,
-                             csd_indices,
-                             electrodes)
-
-    def _create_pre_kernel(self, electrodes, weights):
-        wtg = float(self.slice_conductivity - self.glass_conductivity) / (
-                    self.slice_conductivity + self.glass_conductivity)
-        wts = float(self.slice_conductivity - self.saline_conductivity) / (
-                    self.slice_conductivity + self.saline_conductivity)
-
-        weights = [1.0]
-        for i in range(self.n):
-            weights.append(wtg ** i * wts ** (i + 1))
-            weights.append(wtg ** (i + 1) * wts ** i)
-
-        for i in range(1, self.n + 1):
-            weights.append((wtg * wts) ** i)
-            weights.append((wtg * wts) ** i)
-
-        weights = np.array(weights)
-
-        SRC_X, SRC_Y, SRC_Z = np.meshgrid(self.convolver.SRC_X,
-                                          self.convolver.SRC_Y,
-                                          self.convolver.SRC_Z,
-                                          indexing='ij')
-        SRC_X = SRC_X[self.source_indices].reshape(-1, 1)
-        SRC_Y = SRC_Y[self.source_indices].reshape(-1, 1)
-        SRC_Z = SRC_Z[self.source_indices].reshape(-1, 1)
-        n_bases = SRC_X.size
-
-        self._pre_kernel = np.full((n_bases, len(electrodes)),
-                                   np.nan)
-        for i_ele, electrode in enumerate(electrodes):
-            ele_z = [electrode.z]
-            for i in range(self.n):
-                ele_z.append(2 * (i + 1) * self.slice_thickness - electrode.z)
-                ele_z.append(-2 * i * self.slice_thickness - electrode.z)
-
-            for i in range(1, self.n + 1):
-                ele_z.append(electrode.z + 2 * i * self.slice_thickness)
-                ele_z.append(electrode.z - 2 * i * self.slice_thickness)
-
-            ele_z = np.reshape(ele_z, (1, -1))
-
-            POT = self.model_source.potential(electrode.x - SRC_X,
-                                              electrode.y - SRC_Y,
-                                              ele_z - SRC_Z)
-
-            self._pre_kernel[:, i_ele] = np.matmul(POT, weights)
-        self._pre_kernel /= n_bases
+# class ckCSD_kernel_constructor_MOI(ckESI_kernel_constructor):
+#     def __init__(self,
+#                  model_source,
+#                  convolver,
+#                  source_indices,
+#                  csd_indices,
+#                  electrodes,
+#                  slice_thickness,
+#                  slice_conductivity,
+#                  saline_conductivity,
+#                  glass_conductivity=0.0,
+#                  n=128
+#                  ):
+#         self.slice_thickness = slice_thickness
+#         self.slice_conductivity = slice_conductivity
+#         self.saline_conductivity = saline_conductivity
+#         self.glass_conductivity = glass_conductivity
+#         self.n = n
+#         super(ckCSD_kernel_constructor_MOI,
+#               self).__init__(model_source,
+#                              convolver,
+#                              source_indices,
+#                              csd_indices,
+#                              electrodes)
+#
+#     def _create_pre_kernel(self, electrodes, weights):
+#         wtg = float(self.slice_conductivity - self.glass_conductivity) / (
+#                     self.slice_conductivity + self.glass_conductivity)
+#         wts = float(self.slice_conductivity - self.saline_conductivity) / (
+#                     self.slice_conductivity + self.saline_conductivity)
+#
+#         weights = [1.0]
+#         for i in range(self.n):
+#             weights.append(wtg ** i * wts ** (i + 1))
+#             weights.append(wtg ** (i + 1) * wts ** i)
+#
+#         for i in range(1, self.n + 1):
+#             weights.append((wtg * wts) ** i)
+#             weights.append((wtg * wts) ** i)
+#
+#         weights = np.array(weights)
+#
+#         SRC_X, SRC_Y, SRC_Z = np.meshgrid(self.ci.convolver.SRC_X,
+#                                           self.ci.convolver.SRC_Y,
+#                                           self.ci.convolver.SRC_Z,
+#                                           indexing='ij')
+#         SRC_X = SRC_X[self.source_indices].reshape(-1, 1)
+#         SRC_Y = SRC_Y[self.source_indices].reshape(-1, 1)
+#         SRC_Z = SRC_Z[self.source_indices].reshape(-1, 1)
+#         n_bases = SRC_X.size
+#
+#         self._pre_kernel = np.full((n_bases, len(electrodes)),
+#                                    np.nan)
+#         for i_ele, electrode in enumerate(electrodes):
+#             ele_z = [electrode.z]
+#             for i in range(self.n):
+#                 ele_z.append(2 * (i + 1) * self.slice_thickness - electrode.z)
+#                 ele_z.append(-2 * i * self.slice_thickness - electrode.z)
+#
+#             for i in range(1, self.n + 1):
+#                 ele_z.append(electrode.z + 2 * i * self.slice_thickness)
+#                 ele_z.append(electrode.z - 2 * i * self.slice_thickness)
+#
+#             ele_z = np.reshape(ele_z, (1, -1))
+#
+#             POT = self.model_source.potential(electrode.x - SRC_X,
+#                                               electrode.y - SRC_Y,
+#                                               ele_z - SRC_Z)
+#
+#             self._pre_kernel[:, i_ele] = np.matmul(POT, weights)
+#         self._pre_kernel /= n_bases
 
 
 if __name__ == '__main__':
@@ -826,6 +778,7 @@ if __name__ == '__main__':
 if __name__ == '__main__':
     import _common_new as common
 
+    ECHO = True
     CONDUCTIVITY = 0.3
     R = 1.0
     ROMBERG_K = 6
@@ -853,13 +806,6 @@ if __name__ == '__main__':
                                  + np.square(Z - self.z))))
 
 
-    class DummyParent(object):
-        def __init__(self, convolver, source_indices, model_source):
-            self.convolver = convolver
-            self.source_indices = source_indices
-            self.model_source = model_source
-
-
     def get_source(x=0, y=0, z=0):
         return common.GaussianSourceKCSD3D(x, y, z, R / 4, CONDUCTIVITY)
 
@@ -882,14 +828,17 @@ if __name__ == '__main__':
     convolver = ckESI_convolver([X, Y, Z], [X, Y, Z])
     romberg_weights = si.romb(np.identity(ROMBERG_N)) / (ROMBERG_N - 1)
 
-    parent = DummyParent(convolver,
-                         ((convolver.SRC_X >= 2 * R)
-                          & (convolver.SRC_X <= 8 * R))
-                         & ((convolver.SRC_Y >= -0.5 * R)
-                            & (convolver.SRC_Y <= 1.5 * R))
-                         & ((convolver.SRC_Z >= R)
-                            & (convolver.SRC_Z <= 3 * R)),
-                         model_src)
+    SRC_IDX = ((convolver.SRC_X >= 2 * R) & (convolver.SRC_X <= 8 * R)) & (
+                (convolver.SRC_Y >= -0.5 * R) & (
+                    convolver.SRC_Y <= 1.5 * R)) & (
+                     (convolver.SRC_Z >= R) & (convolver.SRC_Z <= 3 * R))
+
+    convolver_interface = ConvolverInterfaceIndexed(convolver,
+                                                    model_src.csd,
+                                                    romberg_weights,
+                                                    SRC_IDX,
+                                                    None)
+
 
     MASK_XY = (np.ones_like(convolver.SRC_X, dtype=bool)
                & np.ones_like(convolver.SRC_Y, dtype=bool))
@@ -902,82 +851,84 @@ if __name__ == '__main__':
                                 test_electrode.z)
     expected = reciprocal_src.potential(convolver.SRC_X,
                                         convolver.SRC_Y,
-                                        convolver.SRC_Z)[parent.source_indices]
+                                        convolver.SRC_Z)[SRC_IDX]
     # kCSD analytical
 
-    tested = _PAE_kCSD_Analytical(parent, romberg_weights)
+    tested = PAE_kCSD_Analytical(convolver_interface,
+                                 potential=model_src.potential)
     observed = tested(test_electrode)
-    assertRelativeErrorWithinTolerance(expected, observed, 1e-10)
+    assertRelativeErrorWithinTolerance(expected, observed, 1e-10, ECHO)
 
     # kCSD numeric
-    tested = _PAE_kCSD_Numerical(parent, romberg_weights)
+    tested = PAE_kCSD_Numerical(convolver_interface)
     observed = tested(test_electrode)
-    assertRelativeErrorWithinTolerance(expected, observed, 1e-2)
+    assertRelativeErrorWithinTolerance(expected, observed, 1e-2, ECHO)
 
     # kCSD masked
     # kCSD masked analytical
-    tested = _PAE_kCSD_AnalyticalMasked(parent,
-                                        romberg_weights,
-                                        MASK_MAJOR)
+    tested = PAE_kCSD_AnalyticalMasked(convolver_interface,
+                                       potential=model_src.potential,
+                                       leadfield_allowed_mask=MASK_MAJOR)
     observed_major = tested(test_electrode)
-    tested = _PAE_kCSD_AnalyticalMasked(parent,
-                                        romberg_weights,
-                                        MASK_MINOR)
+    tested = PAE_kCSD_AnalyticalMasked(convolver_interface,
+                                       potential=model_src.potential,
+                                       leadfield_allowed_mask=MASK_MINOR)
     observed_minor = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected,
                                        (observed_major + observed_minor),
-                                       1e-2)
+                                       1e-2,
+                                       ECHO)
 
     # kCSD masked numerical
-    tested = _PAE_kCSD_NumericalMasked(parent,
-                                        romberg_weights,
-                                        MASK_MAJOR)
+    tested = PAE_kCSD_NumericalMasked(convolver_interface,
+                                      leadfield_allowed_mask=MASK_MAJOR)
     observed_major = tested(test_electrode)
-    tested = _PAE_kCSD_NumericalMasked(parent,
-                                        romberg_weights,
-                                        MASK_MINOR)
+    tested = PAE_kCSD_NumericalMasked(convolver_interface,
+                                      leadfield_allowed_mask=MASK_MINOR)
     observed_minor = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected,
                                        (observed_major + observed_minor),
-                                       1e-2)
+                                       1e-2,
+                                       ECHO)
 
     # kESI
     expected += reciprocal_src.potential(-convolver.SRC_X,
                                          convolver.SRC_Y,
-                                         convolver.SRC_Z)[parent.source_indices]
+                                         convolver.SRC_Z)[SRC_IDX]
 
     # kESI analytical
-    tested = _PAE_kESI_Analytical(parent, romberg_weights)
+    tested = PAE_kESI_Analytical(convolver_interface,
+                                 potential=model_src.potential)
     observed = tested(test_electrode)
-    assertRelativeErrorWithinTolerance(expected, observed, 1e-4)
+    assertRelativeErrorWithinTolerance(expected, observed, 1e-4, ECHO)
 
     # kESI numerical
-    tested = _PAE_kESI_Numerical(parent, romberg_weights)
+    tested = PAE_kESI_Numerical(convolver_interface)
     observed = tested(test_electrode)
-    assertRelativeErrorWithinTolerance(expected, observed, 1e-2)
+    assertRelativeErrorWithinTolerance(expected, observed, 1e-2, ECHO)
 
     # kESI analytical masked
-    tested = _PAE_kESI_AnalyticalMasked(parent,
-                                        romberg_weights,
-                                        MASK_MAJOR)
+    tested = PAE_kESI_AnalyticalMasked(convolver_interface,
+                                       potential=model_src.potential,
+                                       leadfield_allowed_mask=MASK_MAJOR)
     observed_major = tested(test_electrode)
-    tested = _PAE_kESI_AnalyticalMasked(parent,
-                                        romberg_weights,
-                                        MASK_MINOR)
+    tested = PAE_kESI_AnalyticalMasked(convolver_interface,
+                                       potential=model_src.potential,
+                                       leadfield_allowed_mask=MASK_MINOR)
     observed_minor = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected,
                                        (observed_major + observed_minor),
-                                       1e-2)
+                                       1e-2,
+                                       ECHO)
 
     # kESI numerical masked
-    tested = _PAE_kESI_NumericalMasked(parent,
-                                        romberg_weights,
-                                        MASK_MAJOR)
+    tested = PAE_kESI_NumericalMasked(convolver_interface,
+                                      leadfield_allowed_mask=MASK_MAJOR)
     observed_major = tested(test_electrode)
-    tested = _PAE_kESI_NumericalMasked(parent,
-                                        romberg_weights,
-                                        MASK_MINOR)
+    tested = PAE_kESI_NumericalMasked(convolver_interface,
+                                      leadfield_allowed_mask=MASK_MINOR)
     observed_minor = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected,
                                        (observed_major + observed_minor),
-                                       1e-2)
+                                       1e-2,
+                                       ECHO)
