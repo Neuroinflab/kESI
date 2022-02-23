@@ -294,7 +294,8 @@ class ckESI_kernel_constructor(object):
         self.source_normalization_treshold = source_normalization_treshold
         self.csd_allowed_mask = csd_allowed_mask
 
-        self._create_pre_kernel(electrodes, potential_at_electrode)
+        with potential_at_electrode:
+            self._create_pre_kernel(electrodes, potential_at_electrode)
         self._normalize_pre_kernel(potential_at_electrode)
         self._create_kernel()
         self._create_crosskernel()
@@ -433,11 +434,24 @@ class _PAE_Base(object):
     def __call__(self, electrode):
         return None
 
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
 
 class _PAE_PotAttribute(_PAE_Base):
     def __init__(self, convolver_interface, **kwargs):
         super().__init__(convolver_interface, **kwargs)
+
+    def __enter__(self):
+        super().__enter__()
         self.POT_XYZ = self.convolver_interface.meshgrid('POT')
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        del self.POT_XYZ
+        super().__exit__(exc_type, exc_val, exc_tb)
 
 
 class _PAE_FromLeadfield(_PAE_Base):
@@ -446,6 +460,10 @@ class _PAE_FromLeadfield(_PAE_Base):
         self._create_leadfield(electrode)
         return (self._integrate_source_potential(),
                 super().__call__(electrode))
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        del self.LEADFIELD
+        super().__exit__(exc_type, exc_val, exc_tb)
 
     def _integrate_source_potential(self):
         return self.convolver_interface.integrate_source_potential(self.LEADFIELD)
@@ -486,8 +504,15 @@ class _PAE_LeadfieldForbiddenMask(_PAE_Masked):
     def __init__(self, convolver_interface, **kwargs):
         super().__init__(convolver_interface, **kwargs)
 
+    def __enter__(self):
+        super().__enter__()
         self.csd_forbidden_mask = ~self.leadfield_allowed_mask
         self.POT_XYZ_CROPPED = [A[self.csd_forbidden_mask] for A in self.POT_XYZ]
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        del self.POT_XYZ_CROPPED
+        del self.csd_forbidden_mask
+        super().__exit__(exc_type, exc_val, exc_tb)
 
     def _create_leadfield(self, electrode):
         super()._create_leadfield(electrode)
@@ -501,7 +526,13 @@ class _PAE_NumericalMask(_PAE_Masked):
     def __init__(self, convolver_interface, **kwargs):
         super().__init__(convolver_interface, **kwargs)
 
+    def __enter__(self):
+        super().__enter__()
         self.POT_XYZ_MASKED = [A[self.leadfield_allowed_mask] for A in self.POT_XYZ]
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        del self.POT_XYZ_MASKED
+        super().__exit__(exc_type, exc_val, exc_tb)
 
     @_sum_of_not_none
     def _allowed_leadfield(self, electrode):
@@ -533,7 +564,13 @@ class PAE_kCSD_Analytical(_PAE_Base):
         super().__init__(convolver_interface, **kwargs)
         self.potential = potential
 
+    def __enter__(self):
+        super().__enter__()
         self.SRC_X, self.SRC_Y, self.SRC_Z = self.convolver_interface.src_coords()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        del self.SRC_X, self.SRC_Y, self.SRC_Z
+        super().__exit__(exc_type, exc_val, exc_tb)
 
     @_sum_of_not_none
     def __call__(self, electrode):
@@ -856,12 +893,14 @@ if __name__ == '__main__':
 
     tested = PAE_kCSD_Analytical(convolver_interface,
                                  potential=model_src.potential)
-    observed = tested(test_electrode)
+    with tested:
+        observed = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected, observed, 1e-10, ECHO)
 
     # kCSD numeric
     tested = PAE_kCSD_Numerical(convolver_interface)
-    observed = tested(test_electrode)
+    with tested:
+        observed = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected, observed, 1e-2, ECHO)
 
     # kCSD masked
@@ -869,11 +908,13 @@ if __name__ == '__main__':
     tested = PAE_kCSD_AnalyticalMasked(convolver_interface,
                                        potential=model_src.potential,
                                        leadfield_allowed_mask=MASK_MAJOR)
-    observed_major = tested(test_electrode)
+    with tested:
+        observed_major = tested(test_electrode)
     tested = PAE_kCSD_AnalyticalMasked(convolver_interface,
                                        potential=model_src.potential,
                                        leadfield_allowed_mask=MASK_MINOR)
-    observed_minor = tested(test_electrode)
+    with tested:
+        observed_minor = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected,
                                        (observed_major + observed_minor),
                                        1e-2,
@@ -882,10 +923,12 @@ if __name__ == '__main__':
     # kCSD masked numerical
     tested = PAE_kCSD_NumericalMasked(convolver_interface,
                                       leadfield_allowed_mask=MASK_MAJOR)
-    observed_major = tested(test_electrode)
+    with tested:
+        observed_major = tested(test_electrode)
     tested = PAE_kCSD_NumericalMasked(convolver_interface,
                                       leadfield_allowed_mask=MASK_MINOR)
-    observed_minor = tested(test_electrode)
+    with tested:
+        observed_minor = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected,
                                        (observed_major + observed_minor),
                                        1e-2,
@@ -899,23 +942,27 @@ if __name__ == '__main__':
     # kESI analytical
     tested = PAE_kESI_Analytical(convolver_interface,
                                  potential=model_src.potential)
-    observed = tested(test_electrode)
+    with tested:
+        observed = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected, observed, 1e-4, ECHO)
 
     # kESI numerical
     tested = PAE_kESI_Numerical(convolver_interface)
-    observed = tested(test_electrode)
+    with tested:
+        observed = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected, observed, 1e-2, ECHO)
 
     # kESI analytical masked
     tested = PAE_kESI_AnalyticalMasked(convolver_interface,
                                        potential=model_src.potential,
                                        leadfield_allowed_mask=MASK_MAJOR)
-    observed_major = tested(test_electrode)
+    with tested:
+        observed_major = tested(test_electrode)
     tested = PAE_kESI_AnalyticalMasked(convolver_interface,
                                        potential=model_src.potential,
                                        leadfield_allowed_mask=MASK_MINOR)
-    observed_minor = tested(test_electrode)
+    with tested:
+        observed_minor = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected,
                                        (observed_major + observed_minor),
                                        1e-2,
@@ -924,10 +971,12 @@ if __name__ == '__main__':
     # kESI numerical masked
     tested = PAE_kESI_NumericalMasked(convolver_interface,
                                       leadfield_allowed_mask=MASK_MAJOR)
-    observed_major = tested(test_electrode)
+    with tested:
+        observed_major = tested(test_electrode)
     tested = PAE_kESI_NumericalMasked(convolver_interface,
                                       leadfield_allowed_mask=MASK_MINOR)
-    observed_minor = tested(test_electrode)
+    with tested:
+        observed_minor = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected,
                                        (observed_major + observed_minor),
                                        1e-2,
