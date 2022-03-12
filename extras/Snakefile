@@ -37,11 +37,11 @@ rule PaperCombINI:
         metadata.write(open(output[0], 'w'))
 
 
-rule Paper_solve:
+rule Paper_solve_n_concentric_spheres:
     input:
-        "FEM/fem_configs/paper/{CONFIG}.ini"
+        "FEM/fem_configs/paper/{N}SM/{MESH}/{CONFIG}.ini"
     output:
-        "FEM/solutions/paper/{CONFIG}/{NAME}.h5", METADATA="FEM/solutions/paper/{CONFIG}/{NAME}.ini"
+        "FEM/solutions/paper/{N}SM/{MESH}/{CONFIG}/{NAME}.h5", METADATA="FEM/solutions/paper/{N}SM/{MESH}/{CONFIG}/{NAME}.ini"
     resources:
         mem_mb=get_mem_mb
     params:
