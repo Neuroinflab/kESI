@@ -12,7 +12,7 @@ rule comb_trigger:
     shell: "touch {output}"
 
 rule slice_original_trigger:
-    input: ["FEM/solutions/paper/finite_slice/{{FEM}}/grid_3d_sampled/9/{x}_0_{z}.npz".format(x=x if x >= 0 else 'minus{}'.format(-x), z=z) for x in range(-24, 25, 12) for z in range(6, 49, 6)]
+    input: ["FEM/solutions/paper/finite_slice/{{FEM}}/grid_3d_sampled/9/{x}_0_{z}.npz".format(x=x if x >= 0 else 'minus{}'.format(-x), z=z) for x in range(-24, 25, 12) for z in range(6, 66, 6)]
     output: ".finite_slice__{FEM}_original"
     shell: "touch {output}"
 
