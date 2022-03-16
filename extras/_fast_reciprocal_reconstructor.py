@@ -298,7 +298,7 @@ class ckESI_kernel_constructor(object):
             self._create_pre_kernel(electrodes, potential_at_electrode)
         self._normalize_pre_kernel(potential_at_electrode)
         self._create_kernel()
-        self._create_crosskernel()
+        self._create_crosskernel(potential_at_electrode)
 
     def _normalize_pre_kernel(self, potential_at_electrode):
         self._pre_kernel /= self._pre_kernel.shape[0]
@@ -321,12 +321,12 @@ class ckESI_kernel_constructor(object):
         self.kernel = np.matmul(self._pre_kernel.T,
                                 self._pre_kernel) * len(self._pre_kernel)
 
-    def _create_crosskernel(self):
+    def _create_crosskernel(self, potential_at_electrode):
         SRC = self.ci.zeros('SRC')
         for i, PHI_COL in enumerate(self._pre_kernel.T):
             self.ci.update_src(SRC,
                                (PHI_COL * self.source_normalization_factor
-                                if self.source_normalization_requested()
+                                if self.source_normalization_requested(potential_at_electrode)
                                 else PHI_COL))
             CROSS_COL = self.ci.base_weights_to_csd(SRC)
             if i == 0:
