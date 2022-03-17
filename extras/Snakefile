@@ -18,7 +18,7 @@ rule slice_original_trigger:
 
 
 rule PaperSliceOriginalINI:
-    input: ["FEM/fem_configs/paper/{PATH}/grid_3d.ini"] +  ["FEM/solutions/paper/{{PATH}}/grid_3d/{x}_0_{z}.ini".format(x=x if x >= 0 else 'minus{}'.format(-x), z=z) for x in range(-24, 25, 12) for z in range(6, 49, 6)]
+    input: ["FEM/fem_configs/paper/{PATH}/grid_3d.ini"] +  ["FEM/solutions/paper/{{PATH}}/grid_3d/{x}_0_{z}.ini".format(x=x if x >= 0 else 'minus{}'.format(-x), z=z) for x in range(-24, 25, 12) for z in range(6, 66, 6)]
     output: "FEM/solutions/paper/{PATH}/grid_3d.ini"
     run:
         import configparser
