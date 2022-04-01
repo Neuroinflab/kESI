@@ -456,9 +456,9 @@ class ckCSD_kernel_constructor_MOI(ckESI_kernel_constructor):
                                           self.convolver.SRC_Y,
                                           self.convolver.SRC_Z,
                                           indexing='ij')
-        SRC_X = SRC_X[self.source_indices].reshape(-1, 1)
-        SRC_Y = SRC_Y[self.source_indices].reshape(-1, 1)
-        SRC_Z = SRC_Z[self.source_indices].reshape(-1, 1)
+        SRC_X = SRC_X[self.source_indices]
+        SRC_Y = SRC_Y[self.source_indices]
+        SRC_Z = SRC_Z[self.source_indices]
         n_bases = SRC_X.size
 
         self._pre_kernel = np.zeros((n_bases, len(electrodes)))
