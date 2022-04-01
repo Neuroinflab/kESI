@@ -452,8 +452,6 @@ class ckCSD_kernel_constructor_MOI(ckESI_kernel_constructor):
             weights.append((wtg * wts) ** i)
             weights.append((wtg * wts) ** i)
 
-        weights = np.array(weights)
-
         SRC_X, SRC_Y, SRC_Z = np.meshgrid(self.convolver.SRC_X,
                                           self.convolver.SRC_Y,
                                           self.convolver.SRC_Z,
@@ -463,8 +461,8 @@ class ckCSD_kernel_constructor_MOI(ckESI_kernel_constructor):
         SRC_Z = SRC_Z[self.source_indices].reshape(-1, 1)
         n_bases = SRC_X.size
 
-        self._pre_kernel = np.full((n_bases, len(electrodes)),
-                                   np.nan)
+        self._pre_kernel = np.zeros((n_bases, len(electrodes)))
+
         for i_ele, electrode in enumerate(electrodes):
             ele_z = [electrode.z]
             for i in range(self.n):
@@ -475,13 +473,12 @@ class ckCSD_kernel_constructor_MOI(ckESI_kernel_constructor):
                 ele_z.append(electrode.z + 2 * i * self.slice_thickness)
                 ele_z.append(electrode.z - 2 * i * self.slice_thickness)
 
-            ele_z = np.reshape(ele_z, (1, -1))
+            for z, w in zip(ele_z, weights):
+                self._pre_kernel[:, i_ele] += (w *
+                                               self.model_source.potential(electrode.x - SRC_X,
+                                                                           electrode.y - SRC_Y,
+                                                                           z - SRC_Z))
 
-            POT = self.model_source.potential(electrode.x - SRC_X,
-                                              electrode.y - SRC_Y,
-                                              ele_z - SRC_Z)
-
-            self._pre_kernel[:, i_ele] = np.matmul(POT, weights)
         self._pre_kernel /= n_bases
 
 
