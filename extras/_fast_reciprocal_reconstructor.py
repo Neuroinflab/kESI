@@ -301,7 +301,6 @@ class ckESI_kernel_constructor(object):
         self._create_crosskernel(potential_at_electrode)
 
     def _normalize_pre_kernel(self, potential_at_electrode):
-        self._pre_kernel /= self._pre_kernel.shape[0]
         if self.source_normalization_requested(potential_at_electrode):
             self.calculate_source_normalization_factor(
                     potential_at_electrode.leadfield_allowed_mask)
@@ -319,7 +318,7 @@ class ckESI_kernel_constructor(object):
 
     def _create_kernel(self):
         self.kernel = np.matmul(self._pre_kernel.T,
-                                self._pre_kernel) * len(self._pre_kernel)
+                                self._pre_kernel)
 
     def _create_crosskernel(self, potential_at_electrode):
         SRC = self.ci.zeros('SRC')
