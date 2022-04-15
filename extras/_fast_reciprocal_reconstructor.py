@@ -287,46 +287,27 @@ class ckESI_kernel_constructor(object):
                  convolver_interface,
                  potential_at_electrode,
                  electrodes,
-                 source_normalization_treshold=None,
                  csd_allowed_mask=None):
         self.ci = convolver_interface
 
-        self.source_normalization_treshold = source_normalization_treshold
         self.csd_allowed_mask = csd_allowed_mask
 
         with potential_at_electrode:
             self._create_pre_kernel(electrodes, potential_at_electrode)
-        self._normalize_pre_kernel(potential_at_electrode)
         self._create_kernel()
-        self._create_crosskernel(potential_at_electrode)
+        self._create_crosskernel()
 
-    def _normalize_pre_kernel(self, potential_at_electrode):
-        if self.source_normalization_requested(potential_at_electrode):
-            self.calculate_source_normalization_factor(
-                    potential_at_electrode.leadfield_allowed_mask)
-            self._pre_kernel *= self.source_normalization_factor.reshape(-1, 1)
-
-    def calculate_source_normalization_factor(self, leadfield_allowed_mask):
-        current = self.ci.integrate_source_potential(leadfield_allowed_mask)
-        self.source_normalization_factor = 1.0 / np.where(abs(current) > self.source_normalization_treshold,
-                                                          current,
-                                                          self.source_normalization_treshold)
-
-    def source_normalization_requested(self, potential_at_electrode):
-        return (hasattr(potential_at_electrode, 'leadfield_allowed_mask')
-                and self.source_normalization_treshold is not None)
+    def calculate_current(self, leadfield_allowed_mask):
+        return self.ci.integrate_source_potential(leadfield_allowed_mask)
 
     def _create_kernel(self):
         self.kernel = np.matmul(self._pre_kernel.T,
                                 self._pre_kernel)
 
-    def _create_crosskernel(self, potential_at_electrode):
+    def _create_crosskernel(self):
         SRC = self.ci.zeros('SRC')
         for i, PHI_COL in enumerate(self._pre_kernel.T):
-            self.ci.update_src(SRC,
-                               (PHI_COL * self.source_normalization_factor
-                                if self.source_normalization_requested(potential_at_electrode)
-                                else PHI_COL))
+            self.ci.update_src(SRC, PHI_COL)
             CROSS_COL = self.ci.base_weights_to_csd(SRC)
             if i == 0:
                 self._allocate_cross_kernel(CROSS_COL)
