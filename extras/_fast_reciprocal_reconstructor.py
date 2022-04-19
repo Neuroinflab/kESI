@@ -294,15 +294,17 @@ class ckESI_kernel_constructor(object):
 
         with potential_at_electrode:
             self._create_pre_kernel(electrodes, potential_at_electrode)
-        self._create_kernel()
+
+        self.kernel = self.create_kernel(self._pre_kernel)
         self._create_crosskernel()
 
     def calculate_current(self, leadfield_allowed_mask):
         return self.ci.integrate_source_potential(leadfield_allowed_mask)
 
-    def _create_kernel(self):
-        self.kernel = np.matmul(self._pre_kernel.T,
-                                self._pre_kernel)
+    @staticmethod
+    def create_kernel(base_images_at_electrodes):
+        return np.matmul(base_images_at_electrodes.T,
+                         base_images_at_electrodes)
 
     def _create_crosskernel(self):
         SRC = self.ci.zeros('SRC')
