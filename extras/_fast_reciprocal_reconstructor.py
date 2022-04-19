@@ -286,16 +286,13 @@ class ckESI_kernel_constructor(object):
     def __init__(self,
                  convolver_interface,
                  potential_at_electrode,
-                 electrodes,
-                 csd_allowed_mask=None):
+                 electrodes):
         self.ci = convolver_interface
-        self.csd_allowed_mask = csd_allowed_mask
 
         with potential_at_electrode:
             self._create_pre_kernel(electrodes, potential_at_electrode)
 
         self.kernel = self.create_kernel(self._pre_kernel)
-        self.create_crosskernel(self._pre_kernel)
 
     def calculate_current(self, leadfield_allowed_mask):
         return self.ci.integrate_source_potential(leadfield_allowed_mask)
@@ -304,29 +301,6 @@ class ckESI_kernel_constructor(object):
     def create_kernel(base_images_at_electrodes):
         return np.matmul(base_images_at_electrodes.T,
                          base_images_at_electrodes)
-
-    def create_crosskernel(self, base_images_at_electrodes):
-        SRC = self.ci.zeros('SRC')
-        for i, PHI_COL in enumerate(base_images_at_electrodes.T):
-            self.ci.update_src(SRC, PHI_COL)
-            CROSS_COL = self.ci.base_weights_to_csd(SRC)
-            if i == 0:
-                self._allocate_cross_kernel(CROSS_COL,
-                                            base_images_at_electrodes)
-
-            self.cross_kernel[:, i] = CROSS_COL
-
-        self._zero_cross_kernel_where_csd_not_allowed()
-        return self.cross_kernel
-
-    def _allocate_cross_kernel(self, CROSS_COL, base_images_at_electrodes):
-        self.cross_kernel = np.full((CROSS_COL.size,
-                                     base_images_at_electrodes.shape[1]),
-                                    np.nan)
-
-    def _zero_cross_kernel_where_csd_not_allowed(self):
-        if self.csd_allowed_mask is not None:
-            self.cross_kernel[~self.ci.crop_csd(self.csd_allowed_mask), :] = 0
 
     def _create_pre_kernel(self, electrodes, potential_at_electrode):
         for i, electrode in enumerate(electrodes):
@@ -339,6 +313,58 @@ class ckESI_kernel_constructor(object):
         if not hasattr(self, '_pre_kernel'):
             self._pre_kernel = np.full((n_bases, n_electrodes),
                                        np.nan)
+
+
+class ckESI_crosskernel_constructor(object):
+    def __init__(self,
+                 convolver_interface,
+                 csd_indices,
+                 csd_allowed_mask=None):
+        self.ci = convolver_interface
+        self.csd_indices = csd_indices
+        self.csd_allowed_mask = csd_allowed_mask
+
+    def __enter__(self):
+        self._base_weights = self.ci.zeros('SRC')
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        del self._base_weights
+        for attr in ['_n_electrodes', '_cross_kernel']:
+            if hasattr(self, attr):
+                delattr(self, attr)
+
+    def __call__(self, base_images_at_electrodes):
+        with self:
+            self._create_crosskernel(base_images_at_electrodes)
+            return self._cross_kernel
+
+    def _create_crosskernel(self, base_images_at_electrodes):
+        self._n_electrodes = base_images_at_electrodes.shape[1]
+        for i, base_images in enumerate(base_images_at_electrodes.T):
+            self.ci.update_src(self._base_weights, base_images)
+            self._set_crosskernel_column(i, self._bases_to_csd())
+
+        self._zero_crosskernel_where_csd_not_allowed()
+
+    def _set_crosskernel_column(self, i, column):
+        if i == 0:
+            self._allocate_cross_kernel(column.size)
+
+        self._cross_kernel[:, i] = column
+
+    def _bases_to_csd(self):
+        return self._crop_csd(self.ci.base_weights_to_csd(self._base_weights))
+
+    def _crop_csd(self, csd):
+        return csd[self.csd_indices]
+
+    def _allocate_cross_kernel(self, n_points):
+        self._cross_kernel = np.full((n_points, self._n_electrodes),
+                                     np.nan)
+
+    def _zero_crosskernel_where_csd_not_allowed(self):
+        if self.csd_allowed_mask is not None:
+            self._cross_kernel[~self._crop_csd(self.csd_allowed_mask), :] = 0
 
 
 class ConvolverInterface_base(object):
@@ -363,7 +389,7 @@ class ConvolverInterface_base(object):
     def empty(self, name):
         return np.empty(self.convolver.shape(name))
 
-    def _base_weights_to_csd(self, base_weights):
+    def base_weights_to_csd(self, base_weights):
         csd_kernel_shape = [(1 if np.isnan(csd)
                              else int(round(self._src_diameter * pot / csd) - 1))
                             for pot, csd in zip(*map(self.convolver.ds,
@@ -379,10 +405,9 @@ class ConvolverInterface_base(object):
 
 
 class ConvolverInterfaceIndexed(ConvolverInterface_base):
-    def __init__(self, convolver, csd, weights, source_indices, csd_indices):
+    def __init__(self, convolver, csd, weights, source_indices):
         super().__init__(convolver, csd, weights)
         self.source_indices = source_indices
-        self.csd_indices = csd_indices
 
     def integrate_source_potential(self, leadfield):
         return self.convolve_csd(leadfield)[self.source_indices]
@@ -392,12 +417,6 @@ class ConvolverInterfaceIndexed(ConvolverInterface_base):
 
     def update_src(self, src, values):
         src[self.source_indices] = values
-
-    def base_weights_to_csd(self, base_weights):
-        return self.crop_csd(self._base_weights_to_csd(base_weights))
-
-    def crop_csd(self, csd):
-        return csd[self.csd_indices]
 
 
 def _sum_of_not_none(f):
@@ -856,8 +875,7 @@ if __name__ == '__main__':
     convolver_interface = ConvolverInterfaceIndexed(convolver,
                                                     model_src.csd,
                                                     romberg_weights,
-                                                    SRC_IDX,
-                                                    None)
+                                                    SRC_IDX)
 
 
     MASK_XY = (np.ones_like(convolver.SRC_X, dtype=bool)
