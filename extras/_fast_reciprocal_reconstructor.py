@@ -289,14 +289,13 @@ class ckESI_kernel_constructor(object):
                  electrodes,
                  csd_allowed_mask=None):
         self.ci = convolver_interface
-
         self.csd_allowed_mask = csd_allowed_mask
 
         with potential_at_electrode:
             self._create_pre_kernel(electrodes, potential_at_electrode)
 
         self.kernel = self.create_kernel(self._pre_kernel)
-        self._create_crosskernel()
+        self.create_crosskernel(self._pre_kernel)
 
     def calculate_current(self, leadfield_allowed_mask):
         return self.ci.integrate_source_potential(leadfield_allowed_mask)
@@ -306,21 +305,23 @@ class ckESI_kernel_constructor(object):
         return np.matmul(base_images_at_electrodes.T,
                          base_images_at_electrodes)
 
-    def _create_crosskernel(self):
+    def create_crosskernel(self, base_images_at_electrodes):
         SRC = self.ci.zeros('SRC')
-        for i, PHI_COL in enumerate(self._pre_kernel.T):
+        for i, PHI_COL in enumerate(base_images_at_electrodes.T):
             self.ci.update_src(SRC, PHI_COL)
             CROSS_COL = self.ci.base_weights_to_csd(SRC)
             if i == 0:
-                self._allocate_cross_kernel(CROSS_COL)
+                self._allocate_cross_kernel(CROSS_COL,
+                                            base_images_at_electrodes)
 
             self.cross_kernel[:, i] = CROSS_COL
 
         self._zero_cross_kernel_where_csd_not_allowed()
+        return self.cross_kernel
 
-    def _allocate_cross_kernel(self, CROSS_COL):
+    def _allocate_cross_kernel(self, CROSS_COL, base_images_at_electrodes):
         self.cross_kernel = np.full((CROSS_COL.size,
-                                     self._pre_kernel.shape[1]),
+                                     base_images_at_electrodes.shape[1]),
                                     np.nan)
 
     def _zero_cross_kernel_where_csd_not_allowed(self):
