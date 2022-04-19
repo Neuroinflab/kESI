@@ -283,36 +283,38 @@ class ckESI_kernel_constructor_no_cross(object):
 
 
 class ckESI_kernel_constructor(object):
-    def __init__(self,
-                 convolver_interface,
-                 potential_at_electrode,
-                 electrodes):
-        self.ci = convolver_interface
-
-        with potential_at_electrode:
-            self._create_pre_kernel(electrodes, potential_at_electrode)
-
-        self.kernel = self.create_kernel(self._pre_kernel)
-
-    def calculate_current(self, leadfield_allowed_mask):
-        return self.ci.integrate_source_potential(leadfield_allowed_mask)
-
     @staticmethod
     def create_kernel(base_images_at_electrodes):
         return np.matmul(base_images_at_electrodes.T,
                          base_images_at_electrodes)
 
-    def _create_pre_kernel(self, electrodes, potential_at_electrode):
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        del self._base_images_at_electrodes
+
+    def create_base_images_at_electrodes(self,
+                                         electrodes,
+                                         potential_at_electrode):
+        with self:
+            with potential_at_electrode:
+                self._create_base_images_at_electrodes(electrodes,
+                                                       potential_at_electrode)
+
+            return self._base_images_at_electrodes
+
+    def _create_base_images_at_electrodes(self, electrodes, potential_at_electrode):
         for i, electrode in enumerate(electrodes):
             POT = potential_at_electrode(electrode)
 
             self._alloc_pre_kernel_if_necessary(POT.size, len(electrodes))
-            self._pre_kernel[:, i] = POT
+            self._base_images_at_electrodes[:, i] = POT
 
     def _alloc_pre_kernel_if_necessary(self, n_bases, n_electrodes):
         if not hasattr(self, '_pre_kernel'):
-            self._pre_kernel = np.full((n_bases, n_electrodes),
-                                       np.nan)
+            self._base_images_at_electrodes = np.full((n_bases, n_electrodes),
+                                                      np.nan)
 
 
 class ckESI_crosskernel_constructor(object):
