@@ -292,7 +292,7 @@ class ckESI_kernel_constructor(object):
         pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        del self._base_images_at_electrodes
+        del self._base_images
 
     def create_base_images_at_electrodes(self,
                                          electrodes,
@@ -302,19 +302,19 @@ class ckESI_kernel_constructor(object):
                 self._create_base_images_at_electrodes(electrodes,
                                                        potential_at_electrode)
 
-            return self._base_images_at_electrodes
+            return self._base_images
 
     def _create_base_images_at_electrodes(self, electrodes, potential_at_electrode):
         for i, electrode in enumerate(electrodes):
             POT = potential_at_electrode(electrode)
 
-            self._alloc_pre_kernel_if_necessary(POT.size, len(electrodes))
-            self._base_images_at_electrodes[:, i] = POT
+            self._alloc_base_images_if_necessary(POT.size, len(electrodes))
+            self._base_images[:, i] = POT
 
-    def _alloc_pre_kernel_if_necessary(self, n_bases, n_electrodes):
-        if not hasattr(self, '_pre_kernel'):
-            self._base_images_at_electrodes = np.full((n_bases, n_electrodes),
-                                                      np.nan)
+    def _alloc_base_images_if_necessary(self, n_bases, n_electrodes):
+        if not hasattr(self, '_base_images'):
+            self._base_images = np.full((n_bases, n_electrodes),
+                                        np.nan)
 
 
 class ckESI_crosskernel_constructor(object):
