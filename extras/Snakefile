@@ -1,3 +1,4 @@
+# snakemake .4SM_CSF_3_mm__uniform_coarser_1_comb -j 4 --resources mem_mb=100000 --restart-times 3
 rule all:
     input: ".4SM_composite_normal_2_stereotactic"
 
@@ -42,7 +43,7 @@ def get_mem_mb(wildcards, attempt):
     return 1_000 if attempt == 1 else (10_000 * 2 ** (attempt))
 
 def get_mem_mb_exponential(wildcards, attempt):
-    return 10_000 * 2 ** attempt
+    return 25_000 * 2 ** (attempt - 1)
 
 
 rule PaperCombINI:
@@ -95,7 +96,7 @@ rule Paper_solve_n_concentric_spheres:
     output:
         "FEM/solutions/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}/{NAME}.h5", METADATA="FEM/solutions/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}/{NAME}.ini"
     resources:
-        mem_mb=get_mem_mb
+        mem_mb=get_mem_mb_exponential
     params:
         max_mem=lambda wildcards, resources: resources.mem_mb * 1024
     shell:
@@ -112,7 +113,7 @@ rule sample_1SM:
     output:
 		    "FEM/solutions/paper/1SM/{CONFIG}_sampled/{K}/{NAME}.npz"
     resources:
-        mem_mb=get_mem_mb
+        mem_mb=get_mem_mb_exponential
     params:
         max_mem=lambda wildcards, resources: resources.mem_mb * 1024
     shell:
@@ -129,7 +130,7 @@ rule sample_4SM:
     output:
 		    "FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}_sampled/{K}/{NAME}.npz"
     resources:
-        mem_mb=get_mem_mb
+        mem_mb=get_mem_mb_exponential
     params:
         max_mem=lambda wildcards, resources: resources.mem_mb * 1024
     shell:
