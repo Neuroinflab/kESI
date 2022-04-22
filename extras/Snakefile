@@ -91,9 +91,9 @@ rule sample_finite_slice:
 
 rule Paper_solve_n_concentric_spheres:
     input:
-        "FEM/fem_configs/paper/{N}SM/{MESH}/{CONFIG}.ini"
+        "FEM/fem_configs/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}.ini"
     output:
-        "FEM/solutions/paper/{N}SM/{MESH}/{CONFIG}/{NAME}.h5", METADATA="FEM/solutions/paper/{N}SM/{MESH}/{CONFIG}/{NAME}.ini"
+        "FEM/solutions/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}/{NAME}.h5", METADATA="FEM/solutions/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}/{NAME}.ini"
     resources:
         mem_mb=get_mem_mb
     params:
@@ -125,9 +125,9 @@ rule sample_1SM:
 
 rule sample_4SM:
     input:
-		    "FEM/solutions/paper/4SM/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/4SM/{CONFIG}.ini"
+		    "FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}.ini"
     output:
-		    "FEM/solutions/paper/4SM/{CONFIG}_sampled/{K}/{NAME}.npz"
+		    "FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}_sampled/{K}/{NAME}.npz"
     resources:
         mem_mb=get_mem_mb
     params:
