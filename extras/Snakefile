@@ -39,11 +39,14 @@ rule PaperStereotacticINI:
         metadata.read(input)
         metadata.write(open(output[0], 'w'))
 
+
 def get_mem_mb(wildcards, attempt):
     return 1_000 if attempt == 1 else (10_000 * 2 ** (attempt))
 
-def get_mem_mb_exponential(wildcards, attempt):
-    return 25_000 * 2 ** (attempt - 1)
+def get_mem_mb_exponential(base_mem=12_500):
+    def f(wildcards, attempt):
+        return base_mem * 2 ** (attempt - 1)
+    return f
 
 
 rule PaperCombINI:
@@ -62,7 +65,7 @@ rule Paper_solve_finite_slice:
     output:
         "FEM/solutions/paper/finite_slice/{MESH}/{CONFIG}/{NAME}.h5", METADATA="FEM/solutions/paper/finite_slice/{MESH}/{CONFIG}/{NAME}.ini"
     resources:
-        mem_mb=get_mem_mb_exponential
+        mem_mb=get_mem_mb_exponential(25_000)
     params:
         max_mem=lambda wildcards, resources: resources.mem_mb * 1024
     shell:
@@ -79,7 +82,7 @@ rule sample_finite_slice:
     output:
 		    "FEM/solutions/paper/finite_slice/{CONFIG}_sampled/{K}/{NAME}.npz"
     resources:
-        mem_mb=get_mem_mb_exponential
+        mem_mb=get_mem_mb_exponential()
     params:
         max_mem=lambda wildcards, resources: resources.mem_mb * 1024
     shell:
@@ -96,7 +99,7 @@ rule Paper_solve_n_concentric_spheres:
     output:
         "FEM/solutions/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}/{NAME}.h5", METADATA="FEM/solutions/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}/{NAME}.ini"
     resources:
-        mem_mb=get_mem_mb_exponential
+        mem_mb=get_mem_mb_exponential()
     params:
         max_mem=lambda wildcards, resources: resources.mem_mb * 1024
     shell:
@@ -113,7 +116,7 @@ rule sample_1SM:
     output:
 		    "FEM/solutions/paper/1SM/{CONFIG}_sampled/{K}/{NAME}.npz"
     resources:
-        mem_mb=get_mem_mb_exponential
+        mem_mb=get_mem_mb_exponential()
     params:
         max_mem=lambda wildcards, resources: resources.mem_mb * 1024
     shell:
@@ -130,7 +133,7 @@ rule sample_4SM:
     output:
 		    "FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}_sampled/{K}/{NAME}.npz"
     resources:
-        mem_mb=get_mem_mb_exponential
+        mem_mb=get_mem_mb_exponential()
     params:
         max_mem=lambda wildcards, resources: resources.mem_mb * 1024
     shell:
