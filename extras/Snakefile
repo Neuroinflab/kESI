@@ -67,8 +67,8 @@ rule Paper_solve_finite_slice:
         max_mem=lambda wildcards, resources: resources.mem_mb * 1024
     shell:
         """
-        ulimit -v {params.max_mem}
-        echo {params.max_mem}
+        ulimit -v $(({resources.mem_mb} * 1024))
+        echo {resources.mem_mb} {params.max_mem} $( ulimit -v )
         python paper_solve_slice_on_plate.py -o {output.METADATA} -c {input[0]} -n {wildcards.NAME}
         """
 
@@ -84,8 +84,8 @@ rule sample_finite_slice:
         max_mem=lambda wildcards, resources: resources.mem_mb * 1024
     shell:
         """
-        ulimit -v {params.max_mem}
-        echo {params.max_mem}
+        ulimit -v $(({resources.mem_mb} * 1024))
+        echo {resources.mem_mb} {params.max_mem} $( ulimit -v )
         python paper_sample_slice_solution.py -o {output} -c {input.CONFIG} -n {wildcards.NAME} -r 0.0003 -k {wildcards.K}
         """
 
@@ -101,8 +101,8 @@ rule Paper_solve_n_concentric_spheres:
         max_mem=lambda wildcards, resources: resources.mem_mb * 1024
     shell:
         """
-        ulimit -v {params.max_mem}
-        echo {params.max_mem}
+        ulimit -v $(({resources.mem_mb} * 1024))
+        echo {resources.mem_mb} {params.max_mem} $( ulimit -v )
         python paper_solve_sphere_on_plate.py -o {output.METADATA} -c {input[0]} -n {wildcards.NAME} -g -0.088
         """
 
@@ -118,8 +118,8 @@ rule sample_1SM:
         max_mem=lambda wildcards, resources: resources.mem_mb * 1024
     shell:
         """
-        ulimit -v {params.max_mem}
-        echo {params.max_mem}
+        ulimit -v $(({resources.mem_mb} * 1024))
+        echo {resources.mem_mb} {params.max_mem} $( ulimit -v )
         python paper_sample_spherical_solution.py -o {output} -c {input.CONFIG} -n {wildcards.NAME} -f 0 -r 0.090 -k {wildcards.K}
         """
 
@@ -135,8 +135,8 @@ rule sample_4SM:
         max_mem=lambda wildcards, resources: resources.mem_mb * 1024
     shell:
         """
-        ulimit -v {params.max_mem}
-        echo {params.max_mem}
+        ulimit -v $(({resources.mem_mb} * 1024))
+        echo {resources.mem_mb} {params.max_mem} $( ulimit -v )
         python paper_sample_spherical_solution.py -o {output} -c {input.CONFIG} -n {wildcards.NAME} -f 0 -r 0.079 -k {wildcards.K}
         """
 
