@@ -98,6 +98,8 @@ rule Paper_solve_n_concentric_spheres:
         "FEM/fem_configs/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}.ini"
     output:
         "FEM/solutions/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}/{NAME}.h5", METADATA="FEM/solutions/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}/{NAME}.ini"
+    wildcard_constraints:
+        MODIFIER=".*"
     resources:
         mem_mb=get_mem_mb_exponential()
     params:
@@ -132,6 +134,8 @@ rule sample_4SM:
 		    "FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}.ini"
     output:
 		    "FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}_sampled/{K}/{NAME}.npz"
+    wildcard_constraints:
+        MODIFIER=".*"
     resources:
         mem_mb=get_mem_mb_exponential()
     params:
