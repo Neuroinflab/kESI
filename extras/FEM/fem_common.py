@@ -416,20 +416,20 @@ else:
                                    base_conductivity, x, y, z)
             self._setup_expression(self._base_potential_gradient_normal_expression,
                                    base_conductivity, x, y, z)
+            # Eq. 20 at Piastra et al 2018
             return (-sum((inner((Constant(c - base_conductivity)
                                  * grad(self._base_potential_expression)),
                                 grad(self._v))
                           * self._dx(x)
                           for x, c in self.CONDUCTIVITY
                           if c != base_conductivity))
-                    # # Eq. 18 at Piastra et al 2018
-                    - sum(Constant(c)
+                    - sum(Constant(base_conductivity)
                           # * inner(self._facet_normal,
                           #         grad(self._base_potential_expression))
                           * self._base_potential_gradient_normal_expression
                           * self._v
                           * self._ds(s)
-                          for s, c in self.BOUNDARY_CONDUCTIVITY))
+                          for s, _ in self.BOUNDARY_CONDUCTIVITY))
 
         def _setup_expression(self, expression, base_conductivity, x, y, z):
             expression.conductivity = base_conductivity
