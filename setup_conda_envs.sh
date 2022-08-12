@@ -12,6 +12,7 @@ do
 #  mamba install -c conda-forge --yes numpy scipy matplotlib pandas ipython ipython_genutils ipykernel importlib_metadata
   mamba install -c conda-forge --yes fenics meshio
   python setup.py develop
+  mamba clean -a --yes
   conda deactivate
 done
 
