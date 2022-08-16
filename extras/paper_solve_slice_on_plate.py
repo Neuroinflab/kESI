@@ -36,7 +36,7 @@ if __name__ == '__main__':
     setup_time = fc.fc.Stopwatch()
     total_solving_time = fc.fc.Stopwatch()
     with setup_time:
-        fem = fspn.SlicePointSourcePotentialFEM(args.config)
+        fem = fspn.SlicePointSourcePotentialFEM(fc.FunctionManagerINI(args.config))
 
     name = args.name
     ex, ey, ez = [fem._fm.getfloat(name, a) for a in 'xyz']

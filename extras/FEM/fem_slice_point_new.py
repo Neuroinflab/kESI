@@ -113,7 +113,7 @@ else:
         logging.basicConfig(level=logging.INFO)
 
         for config in sys.argv[1:]:
-            fem = SlicePointSourcePotentialFEM(config)
+            fem = SlicePointSourcePotentialFEM(fc.FunctionManagerINI(config))
             solution_filename_pattern = fem._fm.get('fem', 'solution_filename_pattern')
             solution_name_pattern = fem._fm.get('fem', 'solution_name_pattern')
             solution_metadata_filename = fem._fm.getpath('fem', 'solution_metadata_filename')

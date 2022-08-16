@@ -12,6 +12,7 @@ from dolfin import (Expression, Measure, inner, grad, assemble,
 import dolfin
 
 import FEM.fem_sphere_point_new as fspn
+import FEM.fem_common as fc
 
 import _common_new as common
 
@@ -369,7 +370,7 @@ if not args.quiet:
 
 for config in args.configs:
     fem = fspn.SphereOnGroundedPlatePointSourcePotentialFEM(
-                    config,
+                    fc.FunctionManagerINI(config),
                     grounded_plate_edge_z=args.grounded_plate_edge_z)
     model = SphericalModelFEM(fem, grounded_plate_at=args.grounded_plate_edge_z)
     integrator = LeadfieldIntegrator(model)

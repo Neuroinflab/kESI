@@ -180,10 +180,10 @@ else:
 
     class SphereOnGroundedPlatePointSourcePotentialFEM(
                                      _SphereSubtractionPointSourcePotentialFEM):
-        def __init__(self, config, grounded_plate_edge_z=-0.088):
+        def __init__(self, function_manager, grounded_plate_edge_z=-0.088):
             self.grounded_plate_edge_z = grounded_plate_edge_z
             super(SphereOnGroundedPlatePointSourcePotentialFEM,
-                  self).__init__(config)
+                  self).__init__(function_manager)
 
         def _potential_gradient_normal(self, conductivity=0.0):
             dx_src = f'(x[0] - src_x)'
@@ -257,7 +257,7 @@ else:
         logging.basicConfig(level=logging.INFO)
 
         for config in sys.argv[1:]:
-            fem = SpherePointSourcePotentialFEM(config)
+            fem = SpherePointSourcePotentialFEM(fc.FunctionManagerINI(config))
             solution_metadata_filename = fem._fm.getpath('fem', 'solution_metadata_filename')
             points = list(fem._fm.functions())
             for i, name in enumerate(points):

@@ -213,8 +213,8 @@ else:
 
 
     class _SubtractionPointSourcePotentialFEM(object):
-        def __init__(self, config):
-            self._fm = FunctionManagerINI(config)
+        def __init__(self, function_manager):
+            self._fm = function_manager
             self._setup_mesh(self._fm.getpath('fem', 'mesh')[:-5])
             self._load_config(self._fm.getpath('fem', 'config'))
             self.global_preprocessing_time = fc.Stopwatch()

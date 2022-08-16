@@ -8,6 +8,7 @@ import configparser
 import numpy as np
 
 import FEM.fem_slice_point_new as fspn
+import FEM.fem_common as fc
 
 
 if __name__ == '__main__':
@@ -60,7 +61,7 @@ if __name__ == '__main__':
     Z = np.linspace(0, args.radius, N)
 
     loading_start = datetime.datetime.now()
-    fem = fspn.SlicePointSourcePotentialFEM(args.config)
+    fem = fspn.SlicePointSourcePotentialFEM(fc.FunctionManagerINI(args.config))
     preprocess_start = datetime.datetime.now()
 
     try:

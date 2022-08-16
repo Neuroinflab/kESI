@@ -42,7 +42,7 @@ if __name__ == '__main__':
     setup_time = fc.fc.Stopwatch()
     total_solving_time = fc.fc.Stopwatch()
     with setup_time:
-        fem = fspn.SphereOnGroundedPlatePointSourcePotentialFEM(args.config,
+        fem = fspn.SphereOnGroundedPlatePointSourcePotentialFEM(fc.FunctionManagerINI(args.config),
                                                                 grounded_plate_edge_z=args.grounded_plate_edge_z)
 
     name = args.name

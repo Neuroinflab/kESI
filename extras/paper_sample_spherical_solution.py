@@ -8,6 +8,7 @@ import configparser
 import numpy as np
 
 import FEM.fem_sphere_point_new as fspn
+import FEM.fem_common as fc
 
 
 if __name__ == '__main__':
@@ -62,7 +63,7 @@ if __name__ == '__main__':
     r2_max = args.radius ** 2
 
     loading_start = datetime.datetime.now()
-    fem = fspn.SphereOnGroundedPlatePointSourcePotentialFEM(args.config)
+    fem = fspn.SphereOnGroundedPlatePointSourcePotentialFEM(fc.FunctionManagerINI(args.config))
     preprocess_start = datetime.datetime.now()
 
     try:
