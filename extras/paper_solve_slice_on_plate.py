@@ -32,6 +32,8 @@ if __name__ == '__main__':
                         default=False)
 
     args = parser.parse_args()
+    config = configparser.ConfigParser()
+    config.read(args.config)
 
     setup_time = fc.fc.Stopwatch()
     total_solving_time = fc.fc.Stopwatch()
@@ -40,7 +42,7 @@ if __name__ == '__main__':
         fem = fspn.SlicePointSourcePotentialFEM(function_manager)
 
     name = args.name
-    ex, ey, ez = [function_manager.getfloat(name, a) for a in 'xyz']
+    ex, ey, ez = [config.getfloat(name, a) for a in 'xyz']
     conductivity = fem.base_conductivity(ex, ey, ez)
 
     if not args.quiet:
@@ -49,7 +51,7 @@ if __name__ == '__main__':
     with total_solving_time:
         potential_corr = fem.correction_potential(ex, ey, ez)
 
-    metadata = {'filename': function_manager.get(name, 'filename'),
+    metadata = {'filename': config.get(name, 'filename'),
           'x': ex,
           'y': ey,
           'z': ez,
@@ -64,8 +66,8 @@ if __name__ == '__main__':
                 }
     function_manager.legacy_store(name, potential_corr, metadata)
 
-    config = configparser.ConfigParser()
-    config.add_section(name)
+    metadata_config = configparser.ConfigParser()
+    metadata_config.add_section(name)
     for k, v in metadata.items():
-        config.set(name, k, v if isinstance(v, str) else repr(v))
-    config.write(open(args.output, 'w'))
+        metadata_config.set(name, k, v if isinstance(v, str) else repr(v))
+    metadata_config.write(open(args.output, 'w'))
