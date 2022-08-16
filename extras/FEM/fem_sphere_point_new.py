@@ -278,8 +278,8 @@ else:
                 logger.info(' solving...')
                 function = fem.solve(x, y, z)
                 if function is not None:
-                    function_manager.store(name, function,
-                                  {'global_preprocessing_time': float(fem.global_preprocessing_time),
+                    function_manager.legacy_store(name, function,
+                                                  {'global_preprocessing_time': float(fem.global_preprocessing_time),
                                    'local_preprocessing_time': float(fem.local_preprocessing_time),
                                    'solving_time': float(fem.solving_time),
                                    'base_conductivity': fem.base_conductivity(x, y, z),

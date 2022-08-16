@@ -179,6 +179,7 @@ else:
         def getfloat(self, section, field):
             return self.config.getfloat(section, field)
 
+        @deprecated('New function format introduced')
         def set(self, section, field, value):
             value = value if isinstance(value, str) else repr(value)
 
@@ -189,14 +190,15 @@ else:
                 self.config.add_section(section)
                 return self.config.set(section, field, value)
 
-        def store(self, name, function, metadata):
+        @deprecated('New function format introduced')
+        def legacy_store(self, name, function, metadata):
             for key, value in metadata.items():
                 self.set(name, key, value)
 
-            return super(FunctionManagerINI,
-                         self).store(self._function_filename(name),
-                                     function)
+            return self.store(self._function_filename(name),
+                             function)
 
+        @deprecated('New function format introduced')
         def write(self, filename):
             self.config.write(open(filename, 'w'))
 
@@ -205,6 +207,7 @@ else:
                 if section != 'fem':
                     yield section
 
+        @deprecated('New function format introduced')
         def _set_degree(self, value):
             self.set('fem', 'degree', value)
 

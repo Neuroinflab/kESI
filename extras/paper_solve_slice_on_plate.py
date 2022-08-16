@@ -62,7 +62,7 @@ if __name__ == '__main__':
           'solving_time': float(fem.solving_time),
           'base_conductivity': conductivity,
                 }
-    function_manager.store(name, potential_corr, metadata)
+    function_manager.legacy_store(name, potential_corr, metadata)
 
     config = configparser.ConfigParser()
     config.add_section(name)

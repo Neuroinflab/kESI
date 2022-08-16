@@ -151,8 +151,8 @@ else:
                         filename = solution_filename_pattern.format(x=x_idx,
                                                                     y=y_idx,
                                                                     z=z_idx)
-                        function_manager.store(name, function,
-                                      {'filename': filename,
+                        function_manager.legacy_store(name, function,
+                                                      {'filename': filename,
                                        'x': x,
                                        'y': y,
                                        'z': z,

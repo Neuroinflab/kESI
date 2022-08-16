@@ -70,7 +70,7 @@ if __name__ == '__main__':
           'base_conductivity': conductivity,
           'grounded_plate_edge_z': args.grounded_plate_edge_z,
                 }
-    function_manager.store(name, potential_corr, metadata)
+    function_manager.legacy_store(name, potential_corr, metadata)
 
     config = configparser.ConfigParser()
     config.add_section(name)
