@@ -61,12 +61,13 @@ if __name__ == '__main__':
     Z = np.linspace(0, args.radius, N)
 
     loading_start = datetime.datetime.now()
-    fem = fspn.SlicePointSourcePotentialFEM(fc.FunctionManagerINI(args.config))
+    function_manager = fc.FunctionManagerINI(args.config)
+    fem = fspn.SlicePointSourcePotentialFEM(function_manager)
     preprocess_start = datetime.datetime.now()
 
     try:
         print(args.name)
-        correction_potential = fem._fm.load(args.name)
+        correction_potential = function_manager.load(args.name)
     except configparser.NoSectionError:
         print(' SOLUTION NOT FOUND')
         exit(-1)
@@ -98,9 +99,9 @@ if __name__ == '__main__':
                         X=X,
                         Y=Y,
                         Z=Z,
-                        LOCATION=[fem._fm.getfloat(args.name, c) for c in
+                        LOCATION=[function_manager.getfloat(args.name, c) for c in
                                   'xyz'],
-                        BASE_CONDUCTIVITY=fem._fm.getfloat(args.name,
+                        BASE_CONDUCTIVITY=function_manager.getfloat(args.name,
                                                            'base_conductivity'),
                         _PREPROCESSING_TIME=(
                                 start - preprocess_start).total_seconds(),

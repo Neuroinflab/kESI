@@ -36,10 +36,11 @@ if __name__ == '__main__':
     setup_time = fc.fc.Stopwatch()
     total_solving_time = fc.fc.Stopwatch()
     with setup_time:
-        fem = fspn.SlicePointSourcePotentialFEM(fc.FunctionManagerINI(args.config))
+        function_manager = fc.FunctionManagerINI(args.config)
+        fem = fspn.SlicePointSourcePotentialFEM(function_manager)
 
     name = args.name
-    ex, ey, ez = [fem._fm.getfloat(name, a) for a in 'xyz']
+    ex, ey, ez = [function_manager.getfloat(name, a) for a in 'xyz']
     conductivity = fem.base_conductivity(ex, ey, ez)
 
     if not args.quiet:
@@ -48,7 +49,7 @@ if __name__ == '__main__':
     with total_solving_time:
         potential_corr = fem.correction_potential(ex, ey, ez)
 
-    metadata = {'filename': fem._fm.get(name, 'filename'),
+    metadata = {'filename': function_manager.get(name, 'filename'),
           'x': ex,
           'y': ey,
           'z': ez,
@@ -61,8 +62,7 @@ if __name__ == '__main__':
           'solving_time': float(fem.solving_time),
           'base_conductivity': conductivity,
                 }
-    fem._fm.store(name, potential_corr,
-                  metadata)
+    function_manager.store(name, potential_corr, metadata)
 
     config = configparser.ConfigParser()
     config.add_section(name)

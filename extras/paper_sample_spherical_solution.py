@@ -63,12 +63,13 @@ if __name__ == '__main__':
     r2_max = args.radius ** 2
 
     loading_start = datetime.datetime.now()
-    fem = fspn.SphereOnGroundedPlatePointSourcePotentialFEM(fc.FunctionManagerINI(args.config))
+    function_manager = fc.FunctionManagerINI(args.config)
+    fem = fspn.SphereOnGroundedPlatePointSourcePotentialFEM(function_manager)
     preprocess_start = datetime.datetime.now()
 
     try:
         print(args.name)
-        correction_potential = fem._fm.load(args.name)
+        correction_potential = function_manager.load(args.name)
     except configparser.NoSectionError:
         print(' SOLUTION NOT FOUND')
         exit(-1)
@@ -108,9 +109,9 @@ if __name__ == '__main__':
                         X=X,
                         Y=Y,
                         Z=Z,
-                        LOCATION=[fem._fm.getfloat(args.name, c) for c in
+                        LOCATION=[function_manager.getfloat(args.name, c) for c in
                                   'xyz'],
-                        BASE_CONDUCTIVITY=fem._fm.getfloat(args.name,
+                        BASE_CONDUCTIVITY=function_manager.getfloat(args.name,
                                                            'base_conductivity'),
                         _R_LIMIT=[0, args.radius],
                         _PREPROCESSING_TIME=(

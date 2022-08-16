@@ -42,11 +42,12 @@ if __name__ == '__main__':
     setup_time = fc.fc.Stopwatch()
     total_solving_time = fc.fc.Stopwatch()
     with setup_time:
-        fem = fspn.SphereOnGroundedPlatePointSourcePotentialFEM(fc.FunctionManagerINI(args.config),
+        function_manager = fc.FunctionManagerINI(args.config)
+        fem = fspn.SphereOnGroundedPlatePointSourcePotentialFEM(function_manager,
                                                                 grounded_plate_edge_z=args.grounded_plate_edge_z)
 
     name = args.name
-    ex, ey, ez = [fem._fm.getfloat(name, a) for a in 'xyz']
+    ex, ey, ez = [function_manager.getfloat(name, a) for a in 'xyz']
     conductivity = fem.base_conductivity(ex, ey, ez)
 
     if not args.quiet:
@@ -55,7 +56,7 @@ if __name__ == '__main__':
     with total_solving_time:
         potential_corr = fem.correction_potential(ex, ey, ez)
 
-    metadata = {'filename': fem._fm.get(name, 'filename'),
+    metadata = {'filename': function_manager.get(name, 'filename'),
           'x': ex,
           'y': ey,
           'z': ez,
@@ -69,8 +70,7 @@ if __name__ == '__main__':
           'base_conductivity': conductivity,
           'grounded_plate_edge_z': args.grounded_plate_edge_z,
                 }
-    fem._fm.store(name, potential_corr,
-                  metadata)
+    function_manager.store(name, potential_corr, metadata)
 
     config = configparser.ConfigParser()
     config.add_section(name)
@@ -79,4 +79,4 @@ if __name__ == '__main__':
     config.write(open(args.output, 'w'))
 
 
-    # fem._fm.write(fem._fm.getpath('fem', 'solution_metadata_filename'))
+    # function_manager.write(function_manager.getpath('fem', 'solution_metadata_filename'))

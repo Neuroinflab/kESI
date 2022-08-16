@@ -257,19 +257,20 @@ else:
         logging.basicConfig(level=logging.INFO)
 
         for config in sys.argv[1:]:
-            fem = SpherePointSourcePotentialFEM(fc.FunctionManagerINI(config))
-            solution_metadata_filename = fem._fm.getpath('fem', 'solution_metadata_filename')
-            points = list(fem._fm.functions())
+            function_manager = fc.FunctionManagerINI(config)
+            fem = SpherePointSourcePotentialFEM(function_manager)
+            solution_metadata_filename = function_manager.getpath('fem', 'solution_metadata_filename')
+            points = list(function_manager.functions())
             for i, name in enumerate(points):
-                x = fem._fm.getfloat(name, 'x')
-                y = fem._fm.getfloat(name, 'y')
-                z = fem._fm.getfloat(name, 'z')
+                x = function_manager.getfloat(name, 'x')
+                y = function_manager.getfloat(name, 'y')
+                z = function_manager.getfloat(name, 'z')
                 logger.info('{} {:3.1f}%:{}\t(x = {:g}\ty = {:g}\tz = {:g})'.format(
                                config,
                                100. * i / len(points),
                                name,
                                x, y, z))
-                filename = fem._fm.getpath(name, 'filename')
+                filename = function_manager.getpath(name, 'filename')
                 if os.path.exists(filename):
                     logger.info(' found')
                     continue
@@ -277,7 +278,7 @@ else:
                 logger.info(' solving...')
                 function = fem.solve(x, y, z)
                 if function is not None:
-                    fem._fm.store(name, function,
+                    function_manager.store(name, function,
                                   {'global_preprocessing_time': float(fem.global_preprocessing_time),
                                    'local_preprocessing_time': float(fem.local_preprocessing_time),
                                    'solving_time': float(fem.solving_time),
@@ -288,4 +289,4 @@ else:
                 else:
                     logger.info(' failed')
 
-            fem._fm.write(solution_metadata_filename)
+            function_manager.write(solution_metadata_filename)

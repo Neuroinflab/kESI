@@ -113,12 +113,13 @@ else:
         logging.basicConfig(level=logging.INFO)
 
         for config in sys.argv[1:]:
-            fem = SlicePointSourcePotentialFEM(fc.FunctionManagerINI(config))
-            solution_filename_pattern = fem._fm.get('fem', 'solution_filename_pattern')
-            solution_name_pattern = fem._fm.get('fem', 'solution_name_pattern')
-            solution_metadata_filename = fem._fm.getpath('fem', 'solution_metadata_filename')
+            function_manager = fc.FunctionManagerINI(config)
+            fem = SlicePointSourcePotentialFEM(function_manager)
+            solution_filename_pattern = function_manager.get('fem', 'solution_filename_pattern')
+            solution_name_pattern = function_manager.get('fem', 'solution_name_pattern')
+            solution_metadata_filename = function_manager.getpath('fem', 'solution_metadata_filename')
             h = fem.config.getfloat('slice', 'thickness')
-            k = fem._fm.getint('fem', 'k')
+            k = function_manager.getint('fem', 'k')
             n = 2 ** k + 1
             margin = 0.5 * h / n
             Z = np.linspace(margin, h - margin, n)
@@ -133,8 +134,8 @@ else:
                         name = solution_name_pattern.format(x=x_idx,
                                                             y=y_idx,
                                                             z=z_idx)
-                        if fem._fm.has_solution(name):
-                            filename = fem._fm.getpath(name, 'filename')
+                        if function_manager.has_solution(name):
+                            filename = function_manager.getpath(name, 'filename')
                             if os.path.exists(filename):
                                 logger.info('{} {:3.1f}%\t(x = {:g}\ty = {:g},\tz={:g}) found'.format(
                                     config,
@@ -150,7 +151,7 @@ else:
                         filename = solution_filename_pattern.format(x=x_idx,
                                                                     y=y_idx,
                                                                     z=z_idx)
-                        fem._fm.store(name, function,
+                        function_manager.store(name, function,
                                       {'filename': filename,
                                        'x': x,
                                        'y': y,
@@ -160,5 +161,5 @@ else:
                                        'solving_time': float(fem.solving_time),
                                        'base_conductivity': fem.base_conductivity(x, y, z),
                                        })
-                    fem._fm.write(solution_metadata_filename)
+                    function_manager.write(solution_metadata_filename)
 
