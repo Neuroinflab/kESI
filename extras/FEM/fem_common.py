@@ -64,11 +64,43 @@ except (ModuleNotFoundError, ImportError):
     logger.warning("Unable to import from dolfin")
 
 else:
+    class LegacyConfigParser(object):
+        def __init__(self, config):
+            self._load_config(config)
+
+        def getpath(self, section, field):
+            return self._absolute_path(self.get(section, field))
+
+        def _absolute_path(self, relative_path):
+            return os.path.join(_DIRECTORY,
+                                relative_path)
+
+        def _load_config(self, config):
+            self.config = configparser.ConfigParser()
+            self.config.read(config)
+
+        def get(self, section, field):
+            return self.config.get(section, field)
+
+        def getint(self, section, field):
+            return self.config.getint(section, field)
+
+        def getfloat(self, section, field):
+            return self.config.getfloat(section, field)
+
+        def function_filename(self, name):
+            directory = os.path.dirname(self.getpath('fem',
+                                                     'solution_metadata_filename'))
+            return os.path.join(directory,
+                                self.get(name,
+                                         'filename'))
+
+
     class FunctionManager(object):
         function_name = 'potential'
 
         def __init__(self, mesh, degree=None, element_type='CG'):
-            self._mesh_filename = mesh
+            self.mesh_file = mesh
             self._degree = degree
             self.element_type = element_type
 
@@ -101,7 +133,7 @@ else:
                 return self._mesh
 
         def _load_mesh(self):
-            with XDMFFile(self._mesh_filename) as fh:
+            with XDMFFile(self.mesh_file) as fh:
                 self._mesh = Mesh()
                 fh.read(self._mesh)
 
@@ -216,10 +248,10 @@ else:
 
 
     class _SubtractionPointSourcePotentialFEM(object):
-        def __init__(self, function_manager):
+        def __init__(self, function_manager, config):
             self._fm = function_manager
-            self._setup_mesh(self._fm.getpath('fem', 'mesh')[:-5])
-            self._load_config(self._fm.getpath('fem', 'config'))
+            self._setup_mesh(self._fm.mesh_file[:-5])
+            self._load_config(config)
             self.global_preprocessing_time = fc.Stopwatch()
             self.local_preprocessing_time = fc.Stopwatch()
             self.solving_time = fc.Stopwatch()

@@ -38,14 +38,16 @@ if __name__ == '__main__':
                         default=False)
 
     args = parser.parse_args()
-    config = configparser.ConfigParser()
-    config.read(args.config)
+    config = fc.LegacyConfigParser(args.config)
 
     setup_time = fc.fc.Stopwatch()
     total_solving_time = fc.fc.Stopwatch()
     with setup_time:
-        function_manager = fc.FunctionManagerINI(args.config)
+        function_manager = fc.FunctionManager(config.getpath('fem', 'mesh'),
+                                              config.getint('fem', 'degree'),
+                                              config.get('fem', 'element_type'))
         fem = fspn.SphereOnGroundedPlatePointSourcePotentialFEM(function_manager,
+                                                                config.getpath('fem', 'config'),
                                                                 grounded_plate_edge_z=args.grounded_plate_edge_z)
 
     name = args.name
@@ -72,7 +74,8 @@ if __name__ == '__main__':
           'base_conductivity': conductivity,
           'grounded_plate_edge_z': args.grounded_plate_edge_z,
                 }
-    function_manager.legacy_store(name, potential_corr, metadata)
+    function_manager.store(config.function_filename(name),
+                           potential_corr)
 
     metadata_config = configparser.ConfigParser()
     metadata_config.add_section(name)

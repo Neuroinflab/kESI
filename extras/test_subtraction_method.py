@@ -369,8 +369,12 @@ if not args.quiet:
 
 
 for config in args.configs:
+    configuration = fc.LegacyConfigParser(config)
     fem = fspn.SphereOnGroundedPlatePointSourcePotentialFEM(
-                    fc.FunctionManagerINI(config),
+                    fc.FunctionManager(configuration.getpath('fem', 'mesh'),
+                                       configuration.getint('fem', 'degree'),
+                                       configuration.get('fem', 'element_type')),
+                    configuration.getpath('fem', 'config'),
                     grounded_plate_edge_z=args.grounded_plate_edge_z)
     model = SphericalModelFEM(fem, grounded_plate_at=args.grounded_plate_edge_z)
     integrator = LeadfieldIntegrator(model)

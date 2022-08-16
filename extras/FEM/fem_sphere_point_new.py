@@ -180,10 +180,10 @@ else:
 
     class SphereOnGroundedPlatePointSourcePotentialFEM(
                                      _SphereSubtractionPointSourcePotentialFEM):
-        def __init__(self, function_manager, grounded_plate_edge_z=-0.088):
+        def __init__(self, function_manager, config, grounded_plate_edge_z=-0.088):
             self.grounded_plate_edge_z = grounded_plate_edge_z
             super(SphereOnGroundedPlatePointSourcePotentialFEM,
-                  self).__init__(function_manager)
+                  self).__init__(function_manager, config)
 
         def _potential_gradient_normal(self, conductivity=0.0):
             dx_src = f'(x[0] - src_x)'

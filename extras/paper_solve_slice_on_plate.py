@@ -32,14 +32,16 @@ if __name__ == '__main__':
                         default=False)
 
     args = parser.parse_args()
-    config = configparser.ConfigParser()
-    config.read(args.config)
+    config = fc.LegacyConfigParser(args.config)
 
     setup_time = fc.fc.Stopwatch()
     total_solving_time = fc.fc.Stopwatch()
     with setup_time:
-        function_manager = fc.FunctionManagerINI(args.config)
-        fem = fspn.SlicePointSourcePotentialFEM(function_manager)
+        function_manager = fc.FunctionManager(config.getpath('fem', 'mesh'),
+                                              config.getint('fem', 'degree'),
+                                              config.get('fem', 'element_type'))
+        fem = fspn.SlicePointSourcePotentialFEM(function_manager,
+                                                config.getpath('fem', 'config'))
 
     name = args.name
     ex, ey, ez = [config.getfloat(name, a) for a in 'xyz']
@@ -64,7 +66,8 @@ if __name__ == '__main__':
           'solving_time': float(fem.solving_time),
           'base_conductivity': conductivity,
                 }
-    function_manager.legacy_store(name, potential_corr, metadata)
+    function_manager.store(config.function_filename(name),
+                           potential_corr)
 
     metadata_config = configparser.ConfigParser()
     metadata_config.add_section(name)
