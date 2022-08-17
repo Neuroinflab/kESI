@@ -16,18 +16,15 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output',
                         metavar='<output.npz>',
                         dest='output',
-                        help='path to the output file',
-                        nargs='?')
+                        help='path to the output file')
     parser.add_argument('-c', '--config',
                         metavar='<config.ini>',
                         dest='config',
-                        help='path to the FEM config file',
-                        nargs='?')
+                        help='path to the FEM config file')
     parser.add_argument('-n', '--name',
                         metavar='<solution name>',
                         dest='name',
-                        help='name of the solution',
-                        nargs='?')
+                        help='name of the solution')
     parser.add_argument('-q', '--quiet',
                         dest='quiet',
                         action='store_true',

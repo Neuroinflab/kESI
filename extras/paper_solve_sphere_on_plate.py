@@ -14,45 +14,38 @@ if __name__ == '__main__':
                         metavar='<metadata.ini>',
                         dest='output',
                         required=True,
-                        help='path to the metadata file',
-                        nargs='?')
+                        help='path to the metadata file')
     parser.add_argument('-c', '--config',
                         metavar='<config.ini>',
                         dest='config',
                         required=True,
-                        help='path to the model config file',
-                        nargs='?')
+                        help='path to the model config file')
     parser.add_argument('-e', '--electrodes',
                         metavar='<electrodes.ini>',
                         dest='electrodes',
                         required=True,
-                        help='path to the electrode location config file',
-                        nargs='?')
+                        help='path to the electrode location config file')
     parser.add_argument('-n', '--name',
                         metavar='<electrode name>',
                         dest='name',
                         required=True,
-                        help='name of the electrode',
-                        nargs='?')
+                        help='name of the electrode')
     parser.add_argument('-m', '--mesh',
                         metavar='<mesh.xdmf>',
                         dest='mesh',
                         required=True,
-                        help='path to the FEM mesh',
-                        nargs='?')
+                        help='path to the FEM mesh')
     parser.add_argument('-d', '--degree',
                         type=int,
                         metavar='<FEM element degree>',
                         dest='degree',
                         help='degree of FEM elements',
-                        default=1,
-                        nargs='?')
+                        default=1)
     parser.add_argument('--element-type',
                         metavar='<FEM element type>',
                         dest='element_type',
                         help='type of FEM elements',
-                        default='CG',
-                        nargs='?')
+                        default='CG')
     parser.add_argument('-g', '--grounded_plate_edge_z',
                         type=float,
                         dest='grounded_plate_edge_z',
