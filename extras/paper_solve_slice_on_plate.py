@@ -2,7 +2,6 @@
 # coding: utf-8
 
 import argparse
-import configparser
 
 import FEM.fem_slice_point_new as fspn
 import FEM.fem_common as fc
@@ -33,9 +32,26 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     config = fc.LegacyConfigParser(args.config)
+    fem_mesh = config.getpath('fem', 'mesh')
+    fem_degree = config.getint('fem', 'degree')
+    fem_element_type = config.get('fem', 'element_type')
+    model_config = config.getpath('fem', 'config')
+
+    name = args.name
+    function_filename = config.function_filename(name)
 
     setup_time = fc.fc.Stopwatch()
     total_solving_time = fc.fc.Stopwatch()
+
+    with fc.MetadataStorage(args.output,
+                            ['fem',
+                             'model',
+                             'electrode',
+                             'correction']) as metadata:
+        metadata.setpath('fem', 'mesh', fem_mesh)
+        metadata.set('fem', 'degree', fem_degree)
+        metadata.set('fem', 'element_type', fem_element_type)
+        metadata.setpath('model', 'config', model_config)
     with setup_time:
         function_manager = fc.FunctionManager(config.getpath('fem', 'mesh'),
                                               config.getint('fem', 'degree'),
@@ -43,34 +59,31 @@ if __name__ == '__main__':
         fem = fspn.SlicePointSourcePotentialFEM(function_manager,
                                                 config.getpath('fem', 'config'))
 
-    name = args.name
-    ex, ey, ez = [config.getfloat(name, a) for a in 'xyz']
-    conductivity = fem.base_conductivity(ex, ey, ez)
+        metadata.set('correction',
+                     'global_preprocessing_time',
+                     float(fem.global_preprocessing_time))
+
+    metadata.set('correction', 'setup_time', float(setup_time))
+
+    electrode_coords = [config.getfloat(name, a) for a in 'xyz']
+    for k, v in zip('xyz', electrode_coords):
+        metadata.set('electrode', k, v)
 
     if not args.quiet:
         print(' solving')
 
     with total_solving_time:
-        potential_corr = fem.correction_potential(ex, ey, ez)
+        potential_corr = fem.correction_potential(*electrode_coords)
 
-    metadata = {'filename': config.get(name, 'filename'),
-          'x': ex,
-          'y': ey,
-          'z': ez,
-          'setup_time': float(setup_time),
+    metadata.setfields(
+        'correction',
+        {
           'total_solving_time': float(total_solving_time),
-          'local_preprocessing_time': float(
-              fem.local_preprocessing_time),
-          'global_preprocessing_time': float(
-              fem.global_preprocessing_time),
+          'local_preprocessing_time': float(fem.local_preprocessing_time),
           'solving_time': float(fem.solving_time),
-          'base_conductivity': conductivity,
-                }
-    function_manager.store(config.function_filename(name),
-                           potential_corr)
+          'base_conductivity': fem.base_conductivity(*electrode_coords),
+        })
 
-    metadata_config = configparser.ConfigParser()
-    metadata_config.add_section(name)
-    for k, v in metadata.items():
-        metadata_config.set(name, k, v if isinstance(v, str) else repr(v))
-    metadata_config.write(open(args.output, 'w'))
+    function_manager.store(function_filename,
+                           potential_corr)
+    metadata.setpath('correction', 'filename', function_filename)
