@@ -46,7 +46,7 @@ if __name__ == '__main__':
                         dest='element_type',
                         help='type of FEM elements',
                         default='CG')
-    parser.add_argument('-g', '--grounded_plate_edge_z',
+    parser.add_argument('-g', '--grounded-plate-edge-z',
                         type=float,
                         dest='grounded_plate_edge_z',
                         metavar="<grounded plate edge's z>",
