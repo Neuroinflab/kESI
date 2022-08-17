@@ -95,6 +95,47 @@ else:
                                 self.get(name,
                                          'filename'))
 
+    class MetadataStorage(object):
+        def __init__(self, path, sections=()):
+            self._path = os.path.abspath(path)
+            self._directory = os.path.dirname(self._path)
+            self.config = configparser.ConfigParser()
+            for section in sections:
+                self.add_section(section)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            with open(self._path, 'w') as fh:
+                self.config.write(fh)
+
+        def add_section(self, section):
+            self.config.add_section(section)
+
+        def setpath(self, section, field, path):
+            return self.set(section, field, self.relpath(path))
+
+        def relpath(self, path):
+            return os.path.relpath(path, start=self._directory)
+
+        def set(self, section, field, value):
+            return self._set(section,
+                             field,
+                             value if isinstance(value, str) else repr(value))
+
+        def _set(self, section, field, value):
+            try:
+                return self.config.set(section, field, value)
+
+            except configparser.NoSectionError:
+                self.add_section(section)
+                return self.config.set(section, field, value)
+
+        def setfields(self, section, fields):
+            for k, v in fields.items():
+                self.set(section, k, v)
+
 
     class FunctionManager(object):
         function_name = 'potential'
