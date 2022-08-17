@@ -1,0 +1,85 @@
+rule GEO_NORMAL:
+    input: '{mesh_name}.geo.template'
+    output: 'meshes/{mesh_name}/normal.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/1.0/g' < {input} > {output}
+      """
+
+rule GEO_FINE:
+    input: '{mesh_name}.geo.template'
+    output: 'meshes/{mesh_name}/fine.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.5/g' < {input} > {output}
+      """
+
+rule GEO_FINER:
+    input: '{mesh_name}.geo.template'
+    output: 'meshes/{mesh_name}/finer.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.25/g' < {input} > {output}
+      """
+
+rule GEO_FINEST:
+    input: '{mesh_name}.geo.template'
+    output: 'meshes/{mesh_name}/finest.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.125/g' < {input} > {output}
+      """
+
+rule GEO_COARSE:
+    input: '{mesh_name}.geo.template'
+    output: 'meshes/{mesh_name}/coarse.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/2.0/g' < {input} > {output}
+      """
+
+rule GEO_COARSER:
+    input: '{mesh_name}.geo.template'
+    output: 'meshes/{mesh_name}/coarser.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/4.0/g' < {input} > {output}
+      """
+
+rule GEO_COARSEST:
+    input: '{mesh_name}.geo.template'
+    output: 'meshes/{mesh_name}/coarsest.geo'
+    shell: """
+       mkdir -p meshes/{wildcards.mesh_name}
+       sed 's/SED_RELATIVE_ELEMENT_SIZE/8.0/g' < {input} > {output}
+       """
+
+rule MSH:
+    input: '{mesh_name}.geo'
+    output: '{mesh_name}.msh'
+    shell: 'gmsh -3 -optimize_netgen {input} || gmsh -3 -optimize {input} || gmsh -3 {input}'
+
+rule XDMF:
+    input: '{mesh_name}.msh'
+    output: mesh='{mesh_name}.xdmf', subdomains='{mesh_name}_subdomains.xdmf',  boundaries='{mesh_name}_boundaries.xdmf'
+    run:
+        import meshio
+        # REQUIRES meshio v. 4.0.0
+        # see: https://github.com/nschloe/meshio/blob/master/CHANGELOG.md#v400-feb-18-2020
+        msh = meshio.read(str(input))
+
+        meshio.write(output.mesh,
+                     meshio.Mesh(points=msh.points,
+                                 cells=[("tetra", msh.cells_dict["tetra"]
+                                         )]))
+        meshio.write(str(output.boundaries),
+                     meshio.Mesh(points=msh.points,
+                                 cells=[("triangle", msh.cells_dict["triangle"])],
+                                 cell_data={"boundaries":
+                                            [msh.cell_data_dict["gmsh:physical"]["triangle"]]}))
+
+        meshio.write(str(output.subdomains),
+                     meshio.Mesh(points=msh.points,
+                                 cells=[("tetra", msh.cells_dict["tetra"])],
+                                 cell_data={"subdomains":
+                                            [msh.cell_data_dict["gmsh:physical"]["tetra"]]}))
