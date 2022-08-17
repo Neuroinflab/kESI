@@ -137,6 +137,27 @@ else:
                 self.set(section, k, v)
 
 
+    class MetadataReader(object):
+        def __init__(self, path):
+            self._path = os.path.abspath(path)
+            self._directory = os.path.dirname(self._path)
+            self.config = configparser.ConfigParser()
+            self.config.read(self._path)
+
+        def get(self, section, field):
+            return self.config.get(section, field)
+
+        def getint(self, section, field):
+            return self.config.getint(section, field)
+
+        def getfloat(self, section, field):
+            return self.config.getfloat(section, field)
+
+        def getpath(self, section, field):
+            return os.path.normpath(os.path.join(self._directory,
+                                                 self.get(section, field)))
+
+
     class FunctionManager(object):
         function_name = 'potential'
 
