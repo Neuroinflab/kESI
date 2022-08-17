@@ -162,3 +162,48 @@ rule sample_4SM:
         python paper_sample_spherical_solution.py -o {output} -c {input.CONFIG} -n {wildcards.NAME} -f 0 -r 0.079 -k {wildcards.K}
         """
 
+
+rule tutorial_case_study_trigger:
+    input: ["FEM/solutions/tutorial/case_study/sampled/9/{}.npz".format(name) for name in ['LZ_01', 'LZ_10', 'LAM_08', 'LAM_09', 'LPM_01', 'LPM_02', 'LPM_03', 'LPM_04', 'LPM_05', 'LZ_11', 'LK_01', 'LK_02', 'LK_03', 'LK_04', 'LK_05', 'LZ_12', 'LK_06', 'LK_07', 'LK_08', 'LK_09', 'LK_10', 'LK_11', 'RB_01', 'RB_02', 'LZ_13', 'LZ_14', 'LA_01', 'LA_02', 'LA_03', 'LZ_02', 'LA_04', 'LA_05', 'LA_06', 'LA_07', 'LA_08', 'LA_09', 'LA_10', 'LA_11', 'LA_12', 'LZ_03', 'LB_01', 'LB_02', 'LB_03', 'LB_04', 'LB_05', 'LB_06', 'LB_07', 'LB_08', 'LB_09', 'LZ_04', 'LB_10', 'LB_11', 'LB_12', 'LB_13', 'LB_14', 'LB_15', 'LC_01', 'LC_02', 'LC_03', 'LZ_05', 'LC_04', 'LC_05', 'LC_06', 'LC_07', 'LC_08', 'LC_09', 'LC_10', 'LC_11', 'LC_12', 'LZ_06', 'LP_01', 'LP_02', 'LP_03', 'LP_04', 'LP_05', 'LP_06', 'LP_07', 'LP_08', 'LP_09', 'LZ_07', 'LP_10', 'LP_11', 'LP_12', 'LP_13', 'LV_01', 'LV_02', 'LV_03', 'LZ_08', 'LV_04', 'LV_05', 'LV_06', 'LV_07', 'LV_08', 'LV_09', 'LV_10', 'LV_11', 'LV_12', 'LV_13', 'LZ_09', 'LV_14', 'LV_15', 'LV_16', 'LAM_01', 'LAM_02', 'LAM_03', 'LAM_04', 'LAM_05', 'LAM_06', 'LAM_07']]
+    output: ".tutorial_case_study"
+    shell: "touch {output}"
+
+
+rule tutorial_case_study_sample:
+    input:
+		    "FEM/solutions/tutorial/case_study/{NAME}.h5", CONFIG="FEM/solutions/tutorial/case_study/{NAME}.ini"
+    output:
+		    "FEM/solutions/tutorial/case_study/sampled/{K}/{NAME}.npz"
+    resources:
+        mem_mb=get_mem_mb_exponential()
+    params:
+        max_mem=lambda wildcards, resources: resources.mem_mb * 1024
+    shell:
+        """
+        ulimit -v $(({resources.mem_mb} * 1024))
+        echo {resources.mem_mb} {params.max_mem} $( ulimit -v )
+        python paper_sample_spherical_solution.py -o {output} -c {input.CONFIG} -f 0 -r 0.079 -k {wildcards.K}
+        """
+
+rule tutorial_case_study_solve:
+    input:
+        ELECTRODES="FEM/electrode_locations/tutorial/case_study.ini", MESH="FEM/meshes/meshes/four_spheres_csf_3_mm_plain/coarse.xdmf", CONFIG="FEM/model_properties/four_spheres_csf_3_mm.ini"
+    output:
+        "FEM/solutions/tutorial/case_study/{NAME}.h5", METADATA="FEM/solutions/tutorial/case_study/{NAME}.ini"
+    resources:
+        mem_mb=get_mem_mb_exponential()
+    params:
+        max_mem=lambda wildcards, resources: resources.mem_mb * 1024
+    shell:
+        """
+        ulimit -v $(({resources.mem_mb} * 1024))
+        echo {resources.mem_mb} {params.max_mem} $( ulimit -v )
+        python paper_solve_sphere_on_plate.py \
+          --mesh {input.MESH} \
+          --degree 3 \
+          --config {input.CONFIG} \
+          --grounded-plate-edge-z -0.088 \
+          --electrodes {input.ELECTRODES} \
+          --name {wildcards.NAME} \
+          --output {output.METADATA}
+        """
