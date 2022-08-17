@@ -1,3 +1,11 @@
+rule GEO:
+    input: '{mesh_name}.geo'
+    output: 'meshes/{mesh_name}/mesh.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      cp {input} {output}
+      """
+
 rule GEO_NORMAL:
     input: '{mesh_name}.geo.template'
     output: 'meshes/{mesh_name}/normal.geo'
