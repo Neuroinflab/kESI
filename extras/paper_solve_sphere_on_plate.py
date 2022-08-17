@@ -12,16 +12,19 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output',
                         metavar='<metadata.ini>',
                         dest='output',
+                        required=True,
                         help='path to the metadata file',
                         nargs='?')
     parser.add_argument('-c', '--config',
                         metavar='<config.ini>',
                         dest='config',
+                        required=True,
                         help='path to the FEM config file',
                         nargs='?')
     parser.add_argument('-n', '--name',
                         metavar='<solution name>',
                         dest='name',
+                        required=True,
                         help='name of the solution',
                         nargs='?')
     parser.add_argument('-g', '--grounded_plate_edge_z',
