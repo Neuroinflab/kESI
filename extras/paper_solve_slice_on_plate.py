@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import argparse
+import configparser
 
 import FEM.fem_slice_point_new as fspn
 import FEM.fem_common as fc
@@ -19,13 +20,38 @@ if __name__ == '__main__':
                         metavar='<config.ini>',
                         dest='config',
                         required=True,
-                        help='path to the FEM config file',
+                        help='path to the model config file',
+                        nargs='?')
+    parser.add_argument('-e', '--electrodes',
+                        metavar='<electrodes.ini>',
+                        dest='electrodes',
+                        required=True,
+                        help='path to the electrode location config file',
                         nargs='?')
     parser.add_argument('-n', '--name',
-                        metavar='<solution name>',
+                        metavar='<electrode name>',
                         dest='name',
                         required=True,
-                        help='name of the solution',
+                        help='name of the electrode',
+                        nargs='?')
+    parser.add_argument('-m', '--mesh',
+                        metavar='<mesh.xdmf>',
+                        dest='mesh',
+                        required=True,
+                        help='path to the FEM mesh',
+                        nargs='?')
+    parser.add_argument('-d', '--degree',
+                        type=int,
+                        metavar='<FEM element degree>',
+                        dest='degree',
+                        help='degree of FEM elements',
+                        default=1,
+                        nargs='?')
+    parser.add_argument('--element-type',
+                        metavar='<FEM element type>',
+                        dest='element_type',
+                        help='type of FEM elements',
+                        default='CG',
                         nargs='?')
     parser.add_argument('-q', '--quiet',
                         dest='quiet',
@@ -34,14 +60,8 @@ if __name__ == '__main__':
                         default=False)
 
     args = parser.parse_args()
-    config = fc.LegacyConfigParser(args.config)
-    fem_mesh = config.getpath('fem', 'mesh')
-    fem_degree = config.getint('fem', 'degree')
-    fem_element_type = config.get('fem', 'element_type')
-    model_config = config.getpath('fem', 'config')
 
-    name = args.name
-    function_filename = config.function_filename(name)
+    function_filename = args.output[:-3] + 'h5'
 
     setup_time = fc.fc.Stopwatch()
     total_solving_time = fc.fc.Stopwatch()
@@ -51,16 +71,17 @@ if __name__ == '__main__':
                              'model',
                              'electrode',
                              'correction']) as metadata:
-        metadata.setpath('fem', 'mesh', fem_mesh)
-        metadata.set('fem', 'degree', fem_degree)
-        metadata.set('fem', 'element_type', fem_element_type)
-        metadata.setpath('model', 'config', model_config)
+        metadata.setpath('fem', 'mesh', args.mesh)
+        metadata.set('fem', 'degree', args.degree)
+        metadata.set('fem', 'element_type', args.element_type)
+        metadata.setpath('model', 'config', args.config)
+
     with setup_time:
-        function_manager = fc.FunctionManager(config.getpath('fem', 'mesh'),
-                                              config.getint('fem', 'degree'),
-                                              config.get('fem', 'element_type'))
+        function_manager = fc.FunctionManager(args.mesh,
+                                              args.degree,
+                                              args.element_type)
         fem = fspn.SlicePointSourcePotentialFEM(function_manager,
-                                                config.getpath('fem', 'config'))
+                                                args.config)
 
         metadata.set('correction',
                      'global_preprocessing_time',
@@ -68,7 +89,9 @@ if __name__ == '__main__':
 
     metadata.set('correction', 'setup_time', float(setup_time))
 
-    electrode_coords = [config.getfloat(name, a) for a in 'xyz']
+    config = configparser.ConfigParser()
+    config.read(args.electrodes)
+    electrode_coords = [config.getfloat(args.name, a) for a in 'xyz']
     for k, v in zip('xyz', electrode_coords):
         metadata.set('electrode', k, v)
 
