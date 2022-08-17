@@ -72,12 +72,12 @@ if __name__ == '__main__':
                                    args.fill)
 
     if not args.quiet:
-        print(f'{args.name}\tLOADING: {preprocess_start - loading_start}')
-        print(f'{args.name}\tPREPROCESSING: {start - preprocess_start}')
+        print(f'LOADING: {preprocess_start - loading_start}')
+        print(f'PREPROCESSING: {start - preprocess_start}')
     for i_x, x in enumerate(X):
         if not args.quiet:
             print(
-                f'{args.name}\t{i_x}\t{x * 1000:.1f}mm\t{datetime.datetime.now() - start}')
+                f'{i_x}\t{x * 1000:.1f}mm\t{datetime.datetime.now() - start}')
         r2_x = x ** 2
         if r2_x > r2_max:
             continue

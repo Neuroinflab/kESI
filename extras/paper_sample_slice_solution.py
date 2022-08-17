@@ -70,12 +70,12 @@ if __name__ == '__main__':
                                    args.fill)
 
     if not args.quiet:
-        print(f'{args.name}\tLOADING: {preprocess_start - loading_start}')
-        print(f'{args.name}\tPREPROCESSING: {start - preprocess_start}')
+        print(f'LOADING: {preprocess_start - loading_start}')
+        print(f'PREPROCESSING: {start - preprocess_start}')
     for i_x, x in enumerate(X):
         if not args.quiet:
             print(
-                f'{args.name}\t{i_x}\t{x * 1000_000:.1f}um\t{datetime.datetime.now() - start}')
+                f'{i_x}\t{x * 1000_000:.1f}um\t{datetime.datetime.now() - start}')
 
         for i_y, y in enumerate(Y):
             for i_z, z in enumerate(Z):
