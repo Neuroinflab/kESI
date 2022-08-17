@@ -3,11 +3,9 @@
 
 import argparse
 import datetime
-import configparser
 
 import numpy as np
 
-import FEM.fem_sphere_point_new as fspn
 import FEM.fem_common as fc
 
 
@@ -20,11 +18,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--config',
                         metavar='<config.ini>',
                         dest='config',
-                        help='path to the FEM config file')
-    parser.add_argument('-n', '--name',
-                        metavar='<solution name>',
-                        dest='name',
-                        help='name of the solution')
+                        help='path to the solution metadata')
     parser.add_argument('-q', '--quiet',
                         dest='quiet',
                         action='store_true',
@@ -51,7 +45,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-
     N = 2 ** args.k + 1
     X = np.linspace(-args.radius, args.radius, N)
     Y = np.linspace(-args.radius, args.radius, N)
@@ -59,25 +52,25 @@ if __name__ == '__main__':
 
     r2_max = args.radius ** 2
 
-    loading_start = datetime.datetime.now()
-    function_manager = fc.FunctionManagerINI(args.config)
-    fem = fspn.SphereOnGroundedPlatePointSourcePotentialFEM(function_manager)
-    preprocess_start = datetime.datetime.now()
+    config = fc.MetadataReader(args.config)
 
-    try:
-        print(args.name)
-        correction_potential = function_manager.load(args.name)
-    except configparser.NoSectionError:
-        print(' SOLUTION NOT FOUND')
-        exit(-1)
+    preprocess_start = datetime.datetime.now()
+    function_manager = fc.FunctionManager(config.getpath('fem', 'mesh'),
+                                          config.getint('fem', 'degree'),
+                                          config.get('fem', 'element_type'))
+    loading_start = datetime.datetime.now()
+
+    correction_potential = function_manager.load(config.getpath('correction',
+                                                                'filename'))
+
+    ERROR_R = []
+    start = datetime.datetime.now()
 
     CORRECTION_POTENTIAL = np.full((len(X),
                                     len(Y),
                                     len(Z)),
                                    args.fill)
 
-    ERROR_R = []
-    start = datetime.datetime.now()
     if not args.quiet:
         print(f'{args.name}\tLOADING: {preprocess_start - loading_start}')
         print(f'{args.name}\tPREPROCESSING: {start - preprocess_start}')
@@ -106,13 +99,15 @@ if __name__ == '__main__':
                         X=X,
                         Y=Y,
                         Z=Z,
-                        LOCATION=[function_manager.getfloat(args.name, c) for c in
+                        LOCATION=[config.getfloat('electrode', c) for c in
                                   'xyz'],
-                        BASE_CONDUCTIVITY=function_manager.getfloat(args.name,
-                                                           'base_conductivity'),
+                        BASE_CONDUCTIVITY=config.getfloat('correction',
+                                                          'base_conductivity'),
                         _R_LIMIT=[0, args.radius],
                         _PREPROCESSING_TIME=(
-                                start - preprocess_start).total_seconds(),
+                                loading_start - preprocess_start).total_seconds(),
+                        _LOADING_TIME=(
+                                start - loading_start).total_seconds(),
                         _PROCESSING_TIME=(
                                 datetime.datetime.now() - start).total_seconds())
 
