@@ -264,11 +264,13 @@ else:
             self._fm = function_manager
             self._setup_mesh()
             self._load_config(config)
+            self._create_stopwatches()
+            self._set_degree(self.degree)
+
+        def _create_stopwatches(self):
             self.global_preprocessing_time = fc.Stopwatch()
             self.local_preprocessing_time = fc.Stopwatch()
             self.solving_time = fc.Stopwatch()
-
-            self._set_degree(self.degree)
 
         def _setup_mesh(self):
             self._boundaries = self._fm.load_boundaries()
