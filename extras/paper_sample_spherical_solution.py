@@ -72,8 +72,8 @@ if __name__ == '__main__':
                                    args.fill)
 
     if not args.quiet:
-        print(f'LOADING: {preprocess_start - loading_start}')
-        print(f'PREPROCESSING: {start - preprocess_start}')
+        print(f'PREPROCESSING: {loading_start - preprocess_start}')
+        print(f'LOADING: {start - loading_start}')
     for i_x, x in enumerate(X):
         if not args.quiet:
             print(
