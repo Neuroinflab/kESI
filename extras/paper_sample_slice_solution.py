@@ -34,7 +34,7 @@ if __name__ == '__main__':
                         type=int,
                         dest='k',
                         metavar="<k>",
-                        help="each dimansion is sampled in 2**k + 1 points",
+                        help="each dimension is sampled in 2**k + 1 points",
                         default=9)
     parser.add_argument('-r', '--sampling_radius',
                         type=float,
