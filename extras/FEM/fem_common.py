@@ -137,6 +137,18 @@ else:
                 self._mesh = Mesh()
                 fh.read(self._mesh)
 
+        def _load_mesh_data(self, name, dim):
+            with XDMFFile(f'{self.mesh_file[:-5]}_{name}.xdmf') as fh:
+                mvc = MeshValueCollection("size_t", self.mesh, dim)
+                fh.read(mvc, name)
+                return cpp.mesh.MeshFunctionSizet(self.mesh, mvc)
+
+        def load_boundaries(self):
+            return self._load_mesh_data('boundaries', 2)
+
+        def load_subdomains(self):
+            return self._load_mesh_data('subdomains', 3)
+
         @property
         def function_space(self):
             try:
@@ -250,7 +262,7 @@ else:
     class _SubtractionPointSourcePotentialFEM(object):
         def __init__(self, function_manager, config):
             self._fm = function_manager
-            self._setup_mesh(self._fm.mesh_file[:-5])
+            self._setup_mesh()
             self._load_config(config)
             self.global_preprocessing_time = fc.Stopwatch()
             self.local_preprocessing_time = fc.Stopwatch()
@@ -258,19 +270,9 @@ else:
 
             self._set_degree(self.degree)
 
-        def _load_mesh_data(self, path, name, dim):
-            with XDMFFile(path) as fh:
-                mvc = MeshValueCollection("size_t", self._fm.mesh, dim)
-                fh.read(mvc, name)
-                return cpp.mesh.MeshFunctionSizet(self._fm.mesh, mvc)
-
-        def _setup_mesh(self, mesh):
-            self._boundaries = self._load_mesh_data(mesh + '_boundaries.xdmf',
-                                                    "boundaries",
-                                                    2)
-            self._subdomains = self._load_mesh_data(mesh + '_subdomains.xdmf',
-                                                    "subdomains",
-                                                    3)
+        def _setup_mesh(self):
+            self._boundaries = self._fm.load_boundaries()
+            self._subdomains = self._fm.load_subdomains()
             # self._facet_normal = FacetNormal(self._fm.mesh)
 
         def _load_config(self, config):
