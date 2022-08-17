@@ -108,21 +108,6 @@ else:
         def degree(self):
             return self._degree
 
-        @degree.setter
-        def degree(self, value):
-            self._set_degree(value)
-
-        def _set_degree(self, value):
-            if self._degree != value:
-                self._degree = value
-                self._delete_function_space()
-
-        def _delete_function_space(self):
-            try:
-                del self._function_space
-            except AttributeError:
-                pass
-
         @property
         def mesh(self):
             try:
@@ -265,7 +250,7 @@ else:
             self._setup_mesh()
             self._load_config(config)
             self._create_stopwatches()
-            self._set_degree(self.degree)
+            self._global_preprocessing()
 
         def _create_stopwatches(self):
             self.global_preprocessing_time = fc.Stopwatch()
@@ -285,13 +270,7 @@ else:
         def degree(self):
             return self._fm.degree
 
-        @degree.setter
-        def degree(self, degree):
-            if degree != self.degree:
-                self._set_degree(degree)
-
-        def _set_degree(self, degree):
-            self._fm.degree = degree
+        def _global_preprocessing(self):
             with self.global_preprocessing_time:
                 logger.debug('Creating integration subdomains...')
                 self.create_integration_subdomains()
