@@ -175,7 +175,7 @@ rule tutorial_case_study_sample:
     output:
 		    "FEM/solutions/tutorial/case_study/sampled/{K}/{NAME}.npz"
     resources:
-        mem_mb=get_mem_mb_exponential()
+        mem_mb=get_mem_mb_exponential(7_500)
     params:
         max_mem=lambda wildcards, resources: resources.mem_mb * 1024
     shell:
@@ -191,7 +191,7 @@ rule tutorial_case_study_solve:
     output:
         "FEM/solutions/tutorial/case_study/{NAME}.h5", METADATA="FEM/solutions/tutorial/case_study/{NAME}.ini"
     resources:
-        mem_mb=get_mem_mb_exponential()
+        mem_mb=get_mem_mb_exponential(15_000)
     params:
         max_mem=lambda wildcards, resources: resources.mem_mb * 1024
     shell:
