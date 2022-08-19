@@ -148,7 +148,7 @@ Return
 
 n_meridians = 6;
 
-h = {SED_RELATIVE_ELEMENT_SIZE};
+h = SED_RELATIVE_ELEMENT_SIZE;
 sphere_r[] = {0.079,
               0.082,
               0.086,
