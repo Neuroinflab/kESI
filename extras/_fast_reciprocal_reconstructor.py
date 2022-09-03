@@ -512,7 +512,11 @@ class _PAE_LeadfieldCroppingAnalyticalBasesNumerically(_PAE_MaskedLeadfield):
 
     def _create_leadfield(self, electrode):
         super()._create_leadfield(electrode)
-        self.LEADFIELD[self.csd_forbidden_mask] = -electrode.base_potential(*self.POT_XYZ_CROPPED)
+        self.LEADFIELD[self.csd_forbidden_mask] = self._cropping_leadfield(
+            electrode)
+
+    def _cropping_leadfield(self, electrode):
+        return -getattr(electrode, self._LEADFIELD_METHOD)(*self.POT_XYZ_CROPPED)
 
 
 class _PAE_PotMaskedAttribute(_PAE_MaskedLeadfield,
@@ -532,7 +536,7 @@ class _PAE_PotMaskedAttribute(_PAE_MaskedLeadfield,
 class PAE_NumericalMasked(_PAE_PotMaskedAttribute):
     @_sum_of_not_none
     def _allowed_leadfield(self, electrode):
-        return (electrode.base_potential(*self.POT_XYZ_MASKED),
+        return (electrode.leadfield(*self.POT_XYZ_MASKED),
                 super()._allowed_leadfield(electrode))
 
 
@@ -541,13 +545,13 @@ class _PAE_FromLeadfieldNotMasked(_PAE_FromLeadfield):
         self.LEADFIELD = None
 
 
-class _PAE_LeadfieldFromBasePotential(_PAE_FromLeadfieldNotMasked):
+class _PAE_LeadfieldFromElectrode(_PAE_FromLeadfieldNotMasked):
     """
     `.POT_XYZ` attribute required
     """
     def _create_leadfield(self, electrode):
         super()._create_leadfield(electrode)
-        LEADFIELD = electrode.base_potential(*self.POT_XYZ)
+        LEADFIELD = electrode.leadfield(*self.POT_XYZ)
         if self.LEADFIELD is not None:
             self.LEADFIELD += LEADFIELD
         else:
@@ -583,7 +587,7 @@ deprecated, use PAE_Analytical instead"),
         super().__init__(*args, **kwargs)
 
 
-class PAE_Numerical(_PAE_LeadfieldFromBasePotential,
+class PAE_Numerical(_PAE_LeadfieldFromElectrode,
                     _PAE_PotAttribute):
     pass
 
@@ -599,7 +603,7 @@ deprecated, use PAE_Numerical instead"),
 class PAE_AnalyticalMaskedNumerically(_PAE_PotProperty,
                                       _PAE_LeadfieldCroppingAnalyticalBasesNumerically,
                                       PAE_Analytical):
-    pass
+    _LEADFIELD_METHOD = 'leadfield'
 
 
 class PAE_kCSD_AnalyticalMasked(PAE_AnalyticalMaskedNumerically):
@@ -622,7 +626,7 @@ deprecated, use PAE_NumericalMasked instead"),
 class _PAE_LeadfieldFromMaskedCorrectionPotential(_PAE_PotMaskedAttribute):
     @_sum_of_not_none
     def _allowed_leadfield(self, electrode):
-        return (electrode.correction_potential(*self.POT_XYZ_MASKED),
+        return (electrode.correction_leadfield(*self.POT_XYZ_MASKED),
                 super()._allowed_leadfield(electrode))
 
 
@@ -630,6 +634,8 @@ class PAE_AnalyticalMaskedAndCorrectedNumerically(
           _PAE_LeadfieldCroppingAnalyticalBasesNumerically,
           _PAE_LeadfieldFromMaskedCorrectionPotential,
           PAE_Analytical):
+    _LEADFIELD_METHOD = 'base_leadfield'
+
     def _provide_leadfield_array(self):
         self.alloc_leadfield_if_necessary()
 
@@ -646,21 +652,11 @@ class PAE_kESI_AnalyticalMasked(PAE_AnalyticalMaskedAndCorrectedNumerically):
         super().__init__(*args, **kwargs)
 
 
-class PAE_kESI_NumericalMasked(PAE_NumericalMasked,
-                               _PAE_LeadfieldFromMaskedCorrectionPotential):
-    def __init__(self, *args, **kwargs):
-        warnings.warn(DeprecationWarning("PAE_kESI_NumericalMasked class is \
-deprecated, use PAE_NumericalMasked instead \
-with appropriately modified electrode objects."),
-                      stacklevel=2)
-        super().__init__(*args, **kwargs)
-
-
 class _PAE_LeadfieldFromCorrectionPotential(_PAE_FromLeadfieldNotMasked,
                                             _PAE_PotAttribute):
     def _create_leadfield(self, electrode):
         super()._create_leadfield(electrode)
-        LEADFIELD = electrode.correction_potential(*self.POT_XYZ)
+        LEADFIELD = electrode.correction_leadfield(*self.POT_XYZ)
         if self.LEADFIELD is not None:
             self.LEADFIELD += LEADFIELD
         else:
@@ -676,16 +672,6 @@ class PAE_kESI_Analytical(PAE_AnalyticalCorrectedNumerically):
     def __init__(self, *args, **kwargs):
         warnings.warn(DeprecationWarning("PAE_kESI_Analytical class is \
     deprecated, use PAE_AnalyticalCorrectedNumerically instead"),
-                      stacklevel=2)
-        super().__init__(*args, **kwargs)
-
-
-class PAE_kESI_Numerical(_PAE_LeadfieldFromCorrectionPotential,
-                         _PAE_LeadfieldFromBasePotential):
-    def __init__(self, *args, **kwargs):
-        warnings.warn(DeprecationWarning("PAE_kESI_Numerical class is \
-deprecated, use PAE_Numerical instead \
-with appropriately modified electrode objects."),
                       stacklevel=2)
         super().__init__(*args, **kwargs)
 
@@ -858,21 +844,40 @@ if __name__ == '__main__':
     ROMBERG_K = 6
     ROMBERG_N = 2 ** ROMBERG_K + 1
 
-    class TestElectrode(object):
+    class TestElectrodeKESI(object):
         x = R
         y = R * 0.5
         z = R * 2
         base_conductivity = CONDUCTIVITY
         dx = 2 * R / (ROMBERG_N - 1)
 
-        def correction_potential(self, X, Y, Z):
+        def correction_leadfield(self, X, Y, Z):
             return (0.25 / np.pi / self.base_conductivity
                    * np.power(np.square(X + self.x)
                               + np.square(Y - self.y)
                               + np.square(Z - self.z),
                               -0.5))
 
-        def base_potential(self, X, Y, Z):
+        def base_leadfield(self, X, Y, Z):
+            return (0.25 / np.pi / self.base_conductivity
+                    / (0.15 * self.dx
+                       + np.sqrt(np.square(X - self.x)
+                                 + np.square(Y - self.y)
+                                 + np.square(Z - self.z))))
+
+        def leadfield(self, X, Y, Z):
+            return (self.base_leadfield(X, Y, Z)
+                    + self.correction_leadfield(X, Y, Z))
+
+
+    class TestElectrodeKCSD(object):
+        x = R
+        y = R * 0.5
+        z = R * 2
+        base_conductivity = CONDUCTIVITY
+        dx = 2 * R / (ROMBERG_N - 1)
+
+        def leadfield(self, X, Y, Z):
             return (0.25 / np.pi / self.base_conductivity
                     / (0.15 * self.dx
                        + np.sqrt(np.square(X - self.x)
@@ -893,7 +898,8 @@ if __name__ == '__main__':
         assert max_error <= tolerance
 
 
-    test_electrode = TestElectrode()
+    test_electrode_kcsd = TestElectrodeKCSD()
+    test_electrode_kesi = TestElectrodeKESI()
     model_src = get_source()
     X = np.linspace(R, 9 * R, 2 ** (ROMBERG_K + 2) + 1)
     Y = np.linspace(-1.5 * R, 2.5 * R, 2 ** (ROMBERG_K + 1) + 1)
@@ -919,9 +925,9 @@ if __name__ == '__main__':
     MASK_MAJOR = ~MASK_MINOR
 
     # kCSD
-    reciprocal_src = get_source(test_electrode.x,
-                                test_electrode.y,
-                                test_electrode.z)
+    reciprocal_src = get_source(test_electrode_kesi.x,
+                                test_electrode_kesi.y,
+                                test_electrode_kesi.z)
     expected = reciprocal_src.potential(convolver.SRC_X,
                                         convolver.SRC_Y,
                                         convolver.SRC_Z)[SRC_IDX]
@@ -930,13 +936,13 @@ if __name__ == '__main__':
     tested = PAE_Analytical(convolver_interface,
                             potential=model_src.potential)
     with tested:
-        observed = tested(test_electrode)
+        observed = tested(test_electrode_kcsd)
     assertRelativeErrorWithinTolerance(expected, observed, 1e-10, ECHO)
 
     # kCSD numeric
     tested = PAE_Numerical(convolver_interface)
     with tested:
-        observed = tested(test_electrode)
+        observed = tested(test_electrode_kcsd)
     assertRelativeErrorWithinTolerance(expected, observed, 1e-2, ECHO)
 
     # kCSD masked
@@ -945,12 +951,12 @@ if __name__ == '__main__':
                                              potential=model_src.potential,
                                              leadfield_allowed_mask=MASK_MAJOR)
     with tested:
-        observed_major = tested(test_electrode)
+        observed_major = tested(test_electrode_kcsd)
     tested = PAE_AnalyticalMaskedNumerically(convolver_interface,
                                              potential=model_src.potential,
                                              leadfield_allowed_mask=MASK_MINOR)
     with tested:
-        observed_minor = tested(test_electrode)
+        observed_minor = tested(test_electrode_kcsd)
     assertRelativeErrorWithinTolerance(expected,
                                        (observed_major + observed_minor),
                                        1e-2,
@@ -960,11 +966,11 @@ if __name__ == '__main__':
     tested = PAE_NumericalMasked(convolver_interface,
                                  leadfield_allowed_mask=MASK_MAJOR)
     with tested:
-        observed_major = tested(test_electrode)
+        observed_major = tested(test_electrode_kcsd)
     tested = PAE_NumericalMasked(convolver_interface,
                                  leadfield_allowed_mask=MASK_MINOR)
     with tested:
-        observed_minor = tested(test_electrode)
+        observed_minor = tested(test_electrode_kcsd)
     assertRelativeErrorWithinTolerance(expected,
                                        (observed_major + observed_minor),
                                        1e-2,
@@ -979,13 +985,13 @@ if __name__ == '__main__':
     tested = PAE_AnalyticalCorrectedNumerically(convolver_interface,
                                                 potential=model_src.potential)
     with tested:
-        observed = tested(test_electrode)
+        observed = tested(test_electrode_kesi)
     assertRelativeErrorWithinTolerance(expected, observed, 1e-4, ECHO)
 
     # kESI numerical
-    tested = PAE_kESI_Numerical(convolver_interface)
+    tested = PAE_Numerical(convolver_interface)
     with tested:
-        observed = tested(test_electrode)
+        observed = tested(test_electrode_kesi)
     assertRelativeErrorWithinTolerance(expected, observed, 1e-2, ECHO)
 
     # kESI analytical masked
@@ -993,26 +999,26 @@ if __name__ == '__main__':
                                                          potential=model_src.potential,
                                                          leadfield_allowed_mask=MASK_MAJOR)
     with tested:
-        observed_major = tested(test_electrode)
+        observed_major = tested(test_electrode_kesi)
     tested = PAE_AnalyticalMaskedAndCorrectedNumerically(convolver_interface,
                                                          potential=model_src.potential,
                                                          leadfield_allowed_mask=MASK_MINOR)
     with tested:
-        observed_minor = tested(test_electrode)
+        observed_minor = tested(test_electrode_kesi)
     assertRelativeErrorWithinTolerance(expected,
                                        (observed_major + observed_minor),
                                        1e-2,
                                        ECHO)
 
     # kESI numerical masked
-    tested = PAE_kESI_NumericalMasked(convolver_interface,
-                                      leadfield_allowed_mask=MASK_MAJOR)
+    tested = PAE_NumericalMasked(convolver_interface,
+                                 leadfield_allowed_mask=MASK_MAJOR)
     with tested:
-        observed_major = tested(test_electrode)
-    tested = PAE_kESI_NumericalMasked(convolver_interface,
-                                      leadfield_allowed_mask=MASK_MINOR)
+        observed_major = tested(test_electrode_kesi)
+    tested = PAE_NumericalMasked(convolver_interface,
+                                 leadfield_allowed_mask=MASK_MINOR)
     with tested:
-        observed_minor = tested(test_electrode)
+        observed_minor = tested(test_electrode_kesi)
     assertRelativeErrorWithinTolerance(expected,
                                        (observed_major + observed_minor),
                                        1e-2,
