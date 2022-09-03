@@ -23,6 +23,8 @@
 ###############################################################################
 
 import functools
+import warnings
+
 import numpy as np
 import scipy.integrate as si
 import scipy.signal as ssi
@@ -473,7 +475,7 @@ class _PAE_FromLeadfield(_PAE_Base):
         return self.convolver_interface.integrate_source_potential(self.LEADFIELD)
 
 
-class _PAE_Masked(_PAE_FromLeadfield):
+class _PAE_MaskedLeadfield(_PAE_FromLeadfield):
     def __init__(self, convolver_interface, leadfield_allowed_mask, **kwargs):
         super().__init__(convolver_interface, **kwargs)
         self.leadfield_allowed_mask = leadfield_allowed_mask
@@ -501,7 +503,7 @@ class _PAE_Masked(_PAE_FromLeadfield):
         return None
 
 
-class _PAE_LeadfieldForbiddenMask(_PAE_Masked):
+class _PAE_LeadfieldCroppingAnalyticalBasesNumerically(_PAE_MaskedLeadfield):
     """
     `.POT_XYZ` attribute/property required
     """
@@ -523,7 +525,7 @@ class _PAE_LeadfieldForbiddenMask(_PAE_Masked):
         self.LEADFIELD[self.csd_forbidden_mask] = -electrode.base_potential(*self.POT_XYZ_CROPPED)
 
 
-class _PAE_NumericalMask(_PAE_Masked):
+class _PAE_LeadfieldFromMaskedBasePotential(_PAE_MaskedLeadfield):
     """
     `.POT_XYZ` attribute/property required
     """
@@ -549,7 +551,7 @@ class _PAE_FromLeadfieldNotMasked(_PAE_FromLeadfield):
         self.LEADFIELD = None
 
 
-class _PAE_Numerical(_PAE_FromLeadfieldNotMasked):
+class _PAE_LeadfieldFromBasePotential(_PAE_FromLeadfieldNotMasked):
     """
     `.POT_XYZ` attribute required
     """
@@ -563,7 +565,7 @@ class _PAE_Numerical(_PAE_FromLeadfieldNotMasked):
 
 # kCSD
 
-class PAE_kCSD_Analytical(_PAE_Base):
+class PAE_Analytical(_PAE_Base):
     def __init__(self, convolver_interface, potential, **kwargs):
         super().__init__(convolver_interface, **kwargs)
         self.potential = potential
@@ -583,32 +585,63 @@ class PAE_kCSD_Analytical(_PAE_Base):
                                electrode.z - self.SRC_Z),
                 super().__call__(electrode))
 
+class PAE_kCSD_Analytical(PAE_Analytical):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(DeprecationWarning("PAE_kCSD_Analytical class is \
+deprecated, use PAE_Analytical instead"),
+                      stacklevel=2)
+        super().__init__(*args, **kwargs)
 
-class PAE_kCSD_Numerical(_PAE_Numerical,
-                         _PAE_PotAttribute):
+
+class PAE_Numerical(_PAE_LeadfieldFromBasePotential,
+                    _PAE_PotAttribute):
     pass
 
 
-class _PAE_kCSD_Masked(_PAE_Masked):
+class PAE_kCSD_Numerical(PAE_Numerical):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(DeprecationWarning("PAE_kCSD_Numerical class is \
+deprecated, use PAE_Numerical instead"),
+                      stacklevel=2)
+        super().__init__(*args, **kwargs)
+
+
+class _PAE_PotProperty(object):
     @property
     def POT_XYZ(self):
         return self.convolver_interface.meshgrid('POT')
 
 
-class PAE_kCSD_AnalyticalMasked(_PAE_kCSD_Masked,
-                                _PAE_LeadfieldForbiddenMask,
-                                PAE_kCSD_Analytical):
+class PAE_AnalyticalMaskedNumerically(_PAE_PotProperty,
+                                      _PAE_LeadfieldCroppingAnalyticalBasesNumerically,
+                                      PAE_Analytical):
     pass
 
 
-class PAE_kCSD_NumericalMasked(_PAE_NumericalMask,
-                               _PAE_kCSD_Masked):
+class PAE_kCSD_AnalyticalMasked(PAE_AnalyticalMaskedNumerically):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(DeprecationWarning("PAE_kCSD_AnalyticalMasked class is \
+    deprecated, use PAE_AnalyticalMaskedNumerically instead"),
+                      stacklevel=2)
+        super().__init__(*args, **kwargs)
+
+
+class PAE_NumericalMasked(_PAE_LeadfieldFromMaskedBasePotential,
+                          _PAE_PotProperty):
     pass
+
+
+class PAE_kCSD_NumericalMasked(PAE_NumericalMasked):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(DeprecationWarning("PAE_kCSD_NumericalMasked class is \
+deprecated, use PAE_NumericalMasked instead"),
+            stacklevel=2)
+        super().__init__(*args, **kwargs)
 
 # kESI
 
-class _PAE_kESI_Masked(_PAE_Masked,
-                       _PAE_PotAttribute):
+class _PAE_LeadfieldFromMaskedCorrectionPotential(_PAE_MaskedLeadfield,
+                                                  _PAE_PotAttribute):
     @_sum_of_not_none
     def _allowed_leadfield(self, electrode):
         # `.correction_potential(XS)[IDX]` used instead of
@@ -618,9 +651,10 @@ class _PAE_kESI_Masked(_PAE_Masked,
                 super()._allowed_leadfield(electrode))
 
 
-class PAE_kESI_AnalyticalMasked(_PAE_LeadfieldForbiddenMask,
-                                _PAE_kESI_Masked,
-                                PAE_kCSD_Analytical):
+class PAE_AnalyticalMaskedAndCorrectedNumerically(
+          _PAE_LeadfieldCroppingAnalyticalBasesNumerically,
+          _PAE_LeadfieldFromMaskedCorrectionPotential,
+          PAE_Analytical):
     def _provide_leadfield_array(self):
         self.alloc_leadfield_if_necessary()
 
@@ -629,13 +663,26 @@ class PAE_kESI_AnalyticalMasked(_PAE_LeadfieldForbiddenMask,
             self.LEADFIELD = self.convolver_interface.empty('POT')
 
 
-class PAE_kESI_NumericalMasked(_PAE_NumericalMask,
-                               _PAE_kESI_Masked):
-    pass
+class PAE_kESI_AnalyticalMasked(PAE_AnalyticalMaskedAndCorrectedNumerically):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(DeprecationWarning("PAE_kESI_AnalyticalMasked class is \
+    deprecated, use PAE_AnalyticalMaskedAndCorrectedNumerically instead"),
+                      stacklevel=2)
+        super().__init__(*args, **kwargs)
 
 
-class _PAE_kESI_NotMasked(_PAE_FromLeadfieldNotMasked,
-                          _PAE_PotAttribute):
+class PAE_kESI_NumericalMasked(_PAE_LeadfieldFromMaskedBasePotential,
+                               _PAE_LeadfieldFromMaskedCorrectionPotential):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(DeprecationWarning("PAE_kESI_NumericalMasked class is \
+deprecated, use PAE_NumericalMasked instead \
+with appropriately modified electrode objects."),
+                      stacklevel=2)
+        super().__init__(*args, **kwargs)
+
+
+class _PAE_LeadfieldFromCorrectionPotential(_PAE_FromLeadfieldNotMasked,
+                                            _PAE_PotAttribute):
     def _create_leadfield(self, electrode):
         super()._create_leadfield(electrode)
         LEADFIELD = electrode.correction_potential(*self.POT_XYZ)
@@ -645,14 +692,27 @@ class _PAE_kESI_NotMasked(_PAE_FromLeadfieldNotMasked,
             self.LEADFIELD = LEADFIELD
 
 
-class PAE_kESI_Analytical(_PAE_kESI_NotMasked,
-                          PAE_kCSD_Analytical):
+class PAE_AnalyticalCorrectedNumerically(_PAE_LeadfieldFromCorrectionPotential,
+                                         PAE_Analytical):
     pass
 
 
-class PAE_kESI_Numerical(_PAE_kESI_NotMasked,
-                         _PAE_Numerical):
-    pass
+class PAE_kESI_Analytical(PAE_AnalyticalCorrectedNumerically):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(DeprecationWarning("PAE_kESI_Analytical class is \
+    deprecated, use PAE_AnalyticalCorrectedNumerically instead"),
+                      stacklevel=2)
+        super().__init__(*args, **kwargs)
+
+
+class PAE_kESI_Numerical(_PAE_LeadfieldFromCorrectionPotential,
+                         _PAE_LeadfieldFromBasePotential):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(DeprecationWarning("PAE_kESI_Numerical class is \
+deprecated, use PAE_Numerical instead \
+with appropriately modified electrode objects."),
+                      stacklevel=2)
+        super().__init__(*args, **kwargs)
 
 
 # class ckCSD_kernel_constructor_MOI(ckESI_kernel_constructor):
@@ -894,28 +954,28 @@ if __name__ == '__main__':
                                         convolver.SRC_Z)[SRC_IDX]
     # kCSD analytical
 
-    tested = PAE_kCSD_Analytical(convolver_interface,
-                                 potential=model_src.potential)
+    tested = PAE_Analytical(convolver_interface,
+                            potential=model_src.potential)
     with tested:
         observed = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected, observed, 1e-10, ECHO)
 
     # kCSD numeric
-    tested = PAE_kCSD_Numerical(convolver_interface)
+    tested = PAE_Numerical(convolver_interface)
     with tested:
         observed = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected, observed, 1e-2, ECHO)
 
     # kCSD masked
     # kCSD masked analytical
-    tested = PAE_kCSD_AnalyticalMasked(convolver_interface,
-                                       potential=model_src.potential,
-                                       leadfield_allowed_mask=MASK_MAJOR)
+    tested = PAE_AnalyticalMaskedNumerically(convolver_interface,
+                                             potential=model_src.potential,
+                                             leadfield_allowed_mask=MASK_MAJOR)
     with tested:
         observed_major = tested(test_electrode)
-    tested = PAE_kCSD_AnalyticalMasked(convolver_interface,
-                                       potential=model_src.potential,
-                                       leadfield_allowed_mask=MASK_MINOR)
+    tested = PAE_AnalyticalMaskedNumerically(convolver_interface,
+                                             potential=model_src.potential,
+                                             leadfield_allowed_mask=MASK_MINOR)
     with tested:
         observed_minor = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected,
@@ -924,12 +984,12 @@ if __name__ == '__main__':
                                        ECHO)
 
     # kCSD masked numerical
-    tested = PAE_kCSD_NumericalMasked(convolver_interface,
-                                      leadfield_allowed_mask=MASK_MAJOR)
+    tested = PAE_NumericalMasked(convolver_interface,
+                                 leadfield_allowed_mask=MASK_MAJOR)
     with tested:
         observed_major = tested(test_electrode)
-    tested = PAE_kCSD_NumericalMasked(convolver_interface,
-                                      leadfield_allowed_mask=MASK_MINOR)
+    tested = PAE_NumericalMasked(convolver_interface,
+                                 leadfield_allowed_mask=MASK_MINOR)
     with tested:
         observed_minor = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected,
@@ -943,8 +1003,8 @@ if __name__ == '__main__':
                                          convolver.SRC_Z)[SRC_IDX]
 
     # kESI analytical
-    tested = PAE_kESI_Analytical(convolver_interface,
-                                 potential=model_src.potential)
+    tested = PAE_AnalyticalCorrectedNumerically(convolver_interface,
+                                                potential=model_src.potential)
     with tested:
         observed = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected, observed, 1e-4, ECHO)
@@ -956,14 +1016,14 @@ if __name__ == '__main__':
     assertRelativeErrorWithinTolerance(expected, observed, 1e-2, ECHO)
 
     # kESI analytical masked
-    tested = PAE_kESI_AnalyticalMasked(convolver_interface,
-                                       potential=model_src.potential,
-                                       leadfield_allowed_mask=MASK_MAJOR)
+    tested = PAE_AnalyticalMaskedAndCorrectedNumerically(convolver_interface,
+                                                         potential=model_src.potential,
+                                                         leadfield_allowed_mask=MASK_MAJOR)
     with tested:
         observed_major = tested(test_electrode)
-    tested = PAE_kESI_AnalyticalMasked(convolver_interface,
-                                       potential=model_src.potential,
-                                       leadfield_allowed_mask=MASK_MINOR)
+    tested = PAE_AnalyticalMaskedAndCorrectedNumerically(convolver_interface,
+                                                         potential=model_src.potential,
+                                                         leadfield_allowed_mask=MASK_MINOR)
     with tested:
         observed_minor = tested(test_electrode)
     assertRelativeErrorWithinTolerance(expected,
