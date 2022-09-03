@@ -867,9 +867,6 @@ if __name__ == '__main__':
     assert abs(POT / POT_GT - 1)[IDX].max() < 1e-5
 
 
-if __name__ == '__main__':
-    import _common_new as common
-
     ECHO = True
     CONDUCTIVITY = 0.3
     R = 1.0
