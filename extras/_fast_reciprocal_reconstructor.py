@@ -438,9 +438,6 @@ class _PAE_Base(object):
 
 
 class _PAE_PotAttribute(_PAE_Base):
-    def __init__(self, convolver_interface, **kwargs):
-        super().__init__(convolver_interface, **kwargs)
-
     def __enter__(self):
         super().__enter__()
         self.POT_XYZ = self.convolver_interface.meshgrid('POT')
@@ -497,9 +494,6 @@ class _PAE_LeadfieldCroppingAnalyticalBasesNumerically(_PAE_MaskedLeadfield):
     """
     `.POT_XYZ` attribute/property required
     """
-    def __init__(self, convolver_interface, **kwargs):
-        super().__init__(convolver_interface, **kwargs)
-
     def __enter__(self):
         super().__enter__()
         self.csd_forbidden_mask = ~self.leadfield_allowed_mask
@@ -519,9 +513,6 @@ class _PAE_LeadfieldFromMaskedBasePotential(_PAE_MaskedLeadfield):
     """
     `.POT_XYZ` attribute/property required
     """
-    def __init__(self, convolver_interface, **kwargs):
-        super().__init__(convolver_interface, **kwargs)
-
     def __enter__(self):
         super().__enter__()
         self.POT_XYZ_MASKED = [A[self.leadfield_allowed_mask] for A in self.POT_XYZ]
