@@ -447,6 +447,12 @@ class _PAE_PotAttribute(_PAE_Base):
         super().__exit__(exc_type, exc_val, exc_tb)
 
 
+class _PAE_PotProperty(object):
+    @property
+    def POT_XYZ(self):
+        return self.convolver_interface.meshgrid('POT')
+
+
 class _PAE_FromLeadfield(_PAE_Base):
     @_sum_of_not_none
     def __call__(self, electrode):
@@ -509,7 +515,8 @@ class _PAE_LeadfieldCroppingAnalyticalBasesNumerically(_PAE_MaskedLeadfield):
         self.LEADFIELD[self.csd_forbidden_mask] = -electrode.base_potential(*self.POT_XYZ_CROPPED)
 
 
-class _PAE_LeadfieldFromMaskedBasePotential(_PAE_MaskedLeadfield):
+class _PAE_PotMaskedAttribute(_PAE_MaskedLeadfield,
+                              _PAE_PotProperty):
     """
     `.POT_XYZ` attribute/property required
     """
@@ -521,6 +528,8 @@ class _PAE_LeadfieldFromMaskedBasePotential(_PAE_MaskedLeadfield):
         del self.POT_XYZ_MASKED
         super().__exit__(exc_type, exc_val, exc_tb)
 
+
+class PAE_NumericalMasked(_PAE_PotMaskedAttribute):
     @_sum_of_not_none
     def _allowed_leadfield(self, electrode):
         return (electrode.base_potential(*self.POT_XYZ_MASKED),
@@ -587,12 +596,6 @@ deprecated, use PAE_Numerical instead"),
         super().__init__(*args, **kwargs)
 
 
-class _PAE_PotProperty(object):
-    @property
-    def POT_XYZ(self):
-        return self.convolver_interface.meshgrid('POT')
-
-
 class PAE_AnalyticalMaskedNumerically(_PAE_PotProperty,
                                       _PAE_LeadfieldCroppingAnalyticalBasesNumerically,
                                       PAE_Analytical):
@@ -607,11 +610,6 @@ class PAE_kCSD_AnalyticalMasked(PAE_AnalyticalMaskedNumerically):
         super().__init__(*args, **kwargs)
 
 
-class PAE_NumericalMasked(_PAE_LeadfieldFromMaskedBasePotential,
-                          _PAE_PotProperty):
-    pass
-
-
 class PAE_kCSD_NumericalMasked(PAE_NumericalMasked):
     def __init__(self, *args, **kwargs):
         warnings.warn(DeprecationWarning("PAE_kCSD_NumericalMasked class is \
@@ -621,14 +619,10 @@ deprecated, use PAE_NumericalMasked instead"),
 
 # kESI
 
-class _PAE_LeadfieldFromMaskedCorrectionPotential(_PAE_MaskedLeadfield,
-                                                  _PAE_PotAttribute):
+class _PAE_LeadfieldFromMaskedCorrectionPotential(_PAE_PotMaskedAttribute):
     @_sum_of_not_none
     def _allowed_leadfield(self, electrode):
-        # `.correction_potential(XS)[IDX]` used instead of
-        # `.correction_potential(XS[IDX]) to simplify implementation
-        # of the method
-        return (electrode.correction_potential(*self.POT_XYZ)[self.leadfield_allowed_mask],
+        return (electrode.correction_potential(*self.POT_XYZ_MASKED),
                 super()._allowed_leadfield(electrode))
 
 
@@ -652,7 +646,7 @@ class PAE_kESI_AnalyticalMasked(PAE_AnalyticalMaskedAndCorrectedNumerically):
         super().__init__(*args, **kwargs)
 
 
-class PAE_kESI_NumericalMasked(_PAE_LeadfieldFromMaskedBasePotential,
+class PAE_kESI_NumericalMasked(PAE_NumericalMasked,
                                _PAE_LeadfieldFromMaskedCorrectionPotential):
     def __init__(self, *args, **kwargs):
         warnings.warn(DeprecationWarning("PAE_kESI_NumericalMasked class is \
