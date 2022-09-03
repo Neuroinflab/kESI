@@ -29,16 +29,6 @@ import numpy as np
 import scipy.integrate as si
 import scipy.signal as ssi
 
-try:
-    from . import _common_new as common
-    # When run as script raises:
-    #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
-    #  - `SystemError` (Python 3.3-5), or
-    #  - `ValueError` (Python 2.7).
-
-except (ImportError, SystemError, ValueError):
-    import _common_new as common
-
 
 def shape(axis, n=3):
     return [-1 if i == axis else 1
@@ -790,6 +780,7 @@ with appropriately modified electrode objects."),
 
 if __name__ == '__main__':
     import itertools
+    import _common_new as common
 
     ns = [6 * i for i in range(1, 4)]
     pot_mesh = [np.linspace(-1, 1, n // 3 + 1) for n in ns]
