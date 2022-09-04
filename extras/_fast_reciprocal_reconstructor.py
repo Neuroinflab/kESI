@@ -430,25 +430,10 @@ class PAE_Analytical(_PAE_Base):
                                electrode.z - self.SRC_Z),
                 super().__call__(electrode))
 
-class PAE_kCSD_Analytical(PAE_Analytical):
-    def __init__(self, *args, **kwargs):
-        warnings.warn(DeprecationWarning("PAE_kCSD_Analytical class is \
-deprecated, use PAE_Analytical instead"),
-                      stacklevel=2)
-        super().__init__(*args, **kwargs)
-
 
 class PAE_Numerical(_PAE_LeadfieldFromElectrode,
                     _PAE_PotAttribute):
     pass
-
-
-class PAE_kCSD_Numerical(PAE_Numerical):
-    def __init__(self, *args, **kwargs):
-        warnings.warn(DeprecationWarning("PAE_kCSD_Numerical class is \
-deprecated, use PAE_Numerical instead"),
-                      stacklevel=2)
-        super().__init__(*args, **kwargs)
 
 
 class PAE_AnalyticalMaskedNumerically(_PAE_PotProperty,
@@ -456,23 +441,6 @@ class PAE_AnalyticalMaskedNumerically(_PAE_PotProperty,
                                       PAE_Analytical):
     _LEADFIELD_METHOD = 'leadfield'
 
-
-class PAE_kCSD_AnalyticalMasked(PAE_AnalyticalMaskedNumerically):
-    def __init__(self, *args, **kwargs):
-        warnings.warn(DeprecationWarning("PAE_kCSD_AnalyticalMasked class is \
-    deprecated, use PAE_AnalyticalMaskedNumerically instead"),
-                      stacklevel=2)
-        super().__init__(*args, **kwargs)
-
-
-class PAE_kCSD_NumericalMasked(PAE_NumericalMasked):
-    def __init__(self, *args, **kwargs):
-        warnings.warn(DeprecationWarning("PAE_kCSD_NumericalMasked class is \
-deprecated, use PAE_NumericalMasked instead"),
-            stacklevel=2)
-        super().__init__(*args, **kwargs)
-
-# kESI
 
 class _PAE_LeadfieldFromMaskedCorrectionPotential(_PAE_PotMaskedAttribute):
     @_sum_of_not_none
@@ -495,14 +463,6 @@ class PAE_AnalyticalMaskedAndCorrectedNumerically(
             self.LEADFIELD = self.convolver_interface.empty('POT')
 
 
-class PAE_kESI_AnalyticalMasked(PAE_AnalyticalMaskedAndCorrectedNumerically):
-    def __init__(self, *args, **kwargs):
-        warnings.warn(DeprecationWarning("PAE_kESI_AnalyticalMasked class is \
-    deprecated, use PAE_AnalyticalMaskedAndCorrectedNumerically instead"),
-                      stacklevel=2)
-        super().__init__(*args, **kwargs)
-
-
 class _PAE_LeadfieldFromCorrectionPotential(_PAE_FromLeadfieldNotMasked,
                                             _PAE_PotAttribute):
     def _create_leadfield(self, electrode):
@@ -517,6 +477,48 @@ class _PAE_LeadfieldFromCorrectionPotential(_PAE_FromLeadfieldNotMasked,
 class PAE_AnalyticalCorrectedNumerically(_PAE_LeadfieldFromCorrectionPotential,
                                          PAE_Analytical):
     pass
+
+
+# DEPRECATED
+
+class PAE_kCSD_Analytical(PAE_Analytical):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(DeprecationWarning("PAE_kCSD_Analytical class is \
+deprecated, use PAE_Analytical instead"),
+                      stacklevel=2)
+        super().__init__(*args, **kwargs)
+
+
+class PAE_kCSD_Numerical(PAE_Numerical):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(DeprecationWarning("PAE_kCSD_Numerical class is \
+deprecated, use PAE_Numerical instead"),
+                      stacklevel=2)
+        super().__init__(*args, **kwargs)
+
+
+class PAE_kCSD_AnalyticalMasked(PAE_AnalyticalMaskedNumerically):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(DeprecationWarning("PAE_kCSD_AnalyticalMasked class is \
+    deprecated, use PAE_AnalyticalMaskedNumerically instead"),
+                      stacklevel=2)
+        super().__init__(*args, **kwargs)
+
+
+class PAE_kCSD_NumericalMasked(PAE_NumericalMasked):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(DeprecationWarning("PAE_kCSD_NumericalMasked class is \
+deprecated, use PAE_NumericalMasked instead"),
+                      stacklevel=2)
+        super().__init__(*args, **kwargs)
+
+
+class PAE_kESI_AnalyticalMasked(PAE_AnalyticalMaskedAndCorrectedNumerically):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(DeprecationWarning("PAE_kESI_AnalyticalMasked class is \
+    deprecated, use PAE_AnalyticalMaskedAndCorrectedNumerically instead"),
+                      stacklevel=2)
+        super().__init__(*args, **kwargs)
 
 
 class PAE_kESI_Analytical(PAE_AnalyticalCorrectedNumerically):
