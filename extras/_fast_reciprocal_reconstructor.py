@@ -222,6 +222,10 @@ class ConvolverInterface_base(object):
     def _src_diameter(self):
         return len(self.weights)
 
+    @property
+    def _src_radius(self):
+        return self._src_diameter // 2
+
     def convolve_csd(self, leadfield):
         return self.convolver.leadfield_to_base_potentials(
             leadfield,
@@ -236,7 +240,7 @@ class ConvolverInterface_base(object):
 
     def base_weights_to_csd(self, base_weights):
         csd_kernel_shape = [(1 if np.isnan(csd)
-                             else int(round(self._src_diameter * pot / csd) - 1))
+                             else int(round(self._src_radius * pot / csd)) * 2 + 1)
                             for pot, csd in zip(*map(self.convolver.ds,
                                                      ['POT', 'CSD']))]
         return self.convolver.base_weights_to_csd(base_weights,
