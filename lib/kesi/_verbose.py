@@ -380,6 +380,5 @@ class _Eigenreconstructor(object):
         return self._reconstructor._wrap_kernel_solution(solution)
 
 
-@deprecated('The class has been moved to `[Loadable]VerboseFFR`.  Use `[Loadable]VerboseFFR._CrossKernelReconstructor` instead.')
 class _CrossKernelReconstructor(_VerboseFunctionalFieldReconstructorBase._CrossKernelReconstructor):
     pass
