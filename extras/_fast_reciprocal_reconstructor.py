@@ -207,10 +207,10 @@ class ckESI_kernel_constructor(KernelConstructor):
 class CrossKernelConstructor(object):
     def __init__(self,
                  convolver_interface,
-                 csd_indices,
+                 csd_mask,
                  csd_allowed_mask=None):
         self.ci = convolver_interface
-        self.csd_indices = csd_indices
+        self.csd_mask = csd_mask
         self.csd_allowed_mask = csd_allowed_mask
 
     def __enter__(self):
@@ -245,7 +245,7 @@ class CrossKernelConstructor(object):
         return self._crop_csd(self.ci.base_weights_to_csd(self._base_weights))
 
     def _crop_csd(self, csd):
-        return csd[self.csd_indices]
+        return csd[self.csd_mask]
 
     def _allocate_cross_kernel(self, n_points):
         self._cross_kernel = np.full((n_points, self._n_electrodes),
@@ -261,6 +261,11 @@ class ckESI_crosskernel_constructor(CrossKernelConstructor):
                 'CrossKernelConstructor class')
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    @property
+    @deprecated('.csd_indices attribute', '.csd_mask')
+    def csd_indices(self):
+        return self.csd_mask
 
 
 class ConvolverInterface_base(object):
@@ -305,18 +310,23 @@ class ConvolverInterface_base(object):
 
 
 class ConvolverInterfaceIndexed(ConvolverInterface_base):
-    def __init__(self, convolver, csd, weights, source_indices):
+    def __init__(self, convolver, csd, weights, source_mask):
         super().__init__(convolver, csd, weights)
-        self.source_indices = source_indices
+        self.source_mask = source_mask
+
+    @property
+    @deprecated('.source_indices attribute', '.source_mask')
+    def source_indices(self):
+        return self.source_mask
 
     def integrate_source_potential(self, leadfield):
-        return self.convolve_csd(leadfield)[self.source_indices]
+        return self.convolve_csd(leadfield)[self.source_mask]
 
     def src_coords(self):
-        return [A[self.source_indices] for A in self.meshgrid('SRC')]
+        return [A[self.source_mask] for A in self.meshgrid('SRC')]
 
     def update_src(self, src, values):
-        src[self.source_indices] = values
+        src[self.source_mask] = values
 
 
 def _sum_of_not_none(f):
@@ -743,7 +753,7 @@ if __name__ == '__main__':
     convolver = Convolver([X, Y, Z], [X, Y, Z])
     romberg_weights = si.romb(np.identity(ROMBERG_N)) / (ROMBERG_N - 1)
 
-    SRC_IDX = ((convolver.SRC_X >= 2 * R) & (convolver.SRC_X <= 8 * R)) & (
+    SRC_MASK = ((convolver.SRC_X >= 2 * R) & (convolver.SRC_X <= 8 * R)) & (
                 (convolver.SRC_Y >= -0.5 * R) & (
                     convolver.SRC_Y <= 1.5 * R)) & (
                      (convolver.SRC_Z >= R) & (convolver.SRC_Z <= 3 * R))
@@ -751,7 +761,7 @@ if __name__ == '__main__':
     convolver_interface = ConvolverInterfaceIndexed(convolver,
                                                     model_src.csd,
                                                     romberg_weights,
-                                                    SRC_IDX)
+                                                    SRC_MASK)
 
 
     MASK_XY = (np.ones_like(convolver.SRC_X, dtype=bool)
@@ -765,7 +775,7 @@ if __name__ == '__main__':
                                 test_electrode_kesi.z)
     expected = reciprocal_src.potential(convolver.SRC_X,
                                         convolver.SRC_Y,
-                                        convolver.SRC_Z)[SRC_IDX]
+                                        convolver.SRC_Z)[SRC_MASK]
     # kCSD analytical
 
     tested = PAE_Analytical(convolver_interface,
@@ -814,7 +824,7 @@ if __name__ == '__main__':
     # kESI
     expected += reciprocal_src.potential(-convolver.SRC_X,
                                          convolver.SRC_Y,
-                                         convolver.SRC_Z)[SRC_IDX]
+                                         convolver.SRC_Z)[SRC_MASK]
 
     # kESI analytical
     tested = PAE_AnalyticalCorrectedNumerically(convolver_interface,
