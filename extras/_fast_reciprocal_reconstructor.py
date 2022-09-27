@@ -163,7 +163,7 @@ class ckESI_convolver(Convolver):
         return self.SRC_GRID
 
 
-class ckESI_kernel_constructor(object):
+class KernelConstructor(object):
     @staticmethod
     def create_kernel(base_images_at_electrodes):
         return np.matmul(base_images_at_electrodes.T,
@@ -198,7 +198,13 @@ class ckESI_kernel_constructor(object):
                                         np.nan)
 
 
-class ckESI_crosskernel_constructor(object):
+class ckESI_kernel_constructor(KernelConstructor):
+    @deprecated('class ckESI_kernel_constructor', 'KernelConstructor class')
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class CrossKernelConstructor(object):
     def __init__(self,
                  convolver_interface,
                  csd_indices,
@@ -248,6 +254,13 @@ class ckESI_crosskernel_constructor(object):
     def _zero_crosskernel_where_csd_not_allowed(self):
         if self.csd_allowed_mask is not None:
             self._cross_kernel[~self._crop_csd(self.csd_allowed_mask), :] = 0
+
+
+class ckESI_crosskernel_constructor(CrossKernelConstructor):
+    @deprecated('class ckESI_crosskernel_constructor',
+                'CrossKernelConstructor class')
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class ConvolverInterface_base(object):
