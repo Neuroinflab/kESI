@@ -103,17 +103,17 @@ class ckESI_convolver(object):
                                      csd,
                                      weights):
 
-        ds = self.ds('POT')
+        steps = self.steps('POT')
 
         ns = list(map(len, weights))
 
-        CSD = self.csd_kernel(csd, ns, ds)
+        CSD = self.csd_kernel(csd, ns, steps)
 
         WEIGHTS = functools.reduce(np.multiply,
                                    [d * (n - 1) * reshape(w, i)
                                     for i, (w, n, d) in enumerate(zip(weights,
                                                                       ns,
-                                                                      ds))])
+                                                                      steps))])
         return ssi.fftconvolve(LEADFIELD,
                                CSD * WEIGHTS,
                                mode='same')[self.src_idx('POT')]
@@ -126,20 +126,24 @@ class ckESI_convolver(object):
             BW = BASE_WEIGHTS
 
         return ssi.fftconvolve(BW,
-                               self.csd_kernel(csd, csd_ns, self.ds('CSD')),
+                               self.csd_kernel(csd, csd_ns, self.steps('CSD')),
                                mode='same')
 
-    def csd_kernel(self, csd, ns, ds):
-        return csd(*np.meshgrid(*[np.array([0.]) if np.isnan(d) else
-                                  d * np.linspace(-(n // 2), n // 2, n)
-                                  for d, n in zip(ds, ns)],
+    def csd_kernel(self, csd, ns, steps):
+        return csd(*np.meshgrid(*[np.array([0.]) if np.isnan(h) else
+                                  h * np.linspace(-(n // 2), n // 2, n)
+                                  for h, n in zip(steps, ns)],
                                 indexing='ij',
                                 sparse=True))
 
-    def ds(self, name):
+    def steps(self, name):
         return [(DIM[-1, -1, -1] - DIM[0, 0, 0]) / (DIM.size - 1)
                 for i, DIM in enumerate([getattr(self, f'{name}_{c}')
                                          for c in ['X', 'Y', 'Z']])]
+
+    @deprecated('.ds() method', '.steps()')
+    def ds(self, name):
+        return self.steps()
 
     def src_idx(self, name):
         return np.ix_(*[getattr(self, f'_SRC_{name}_IDX_{c}')
@@ -270,7 +274,7 @@ class ConvolverInterface_base(object):
     def base_weights_to_csd(self, base_weights):
         csd_kernel_shape = [(1 if np.isnan(csd)
                              else int(round(self._src_radius * pot / csd)) * 2 + 1)
-                            for pot, csd in zip(*map(self.convolver.ds,
+                            for pot, csd in zip(*map(self.convolver.steps,
                                                      ['POT', 'CSD']))]
         return self.convolver.base_weights_to_csd(base_weights,
                                                   self.csd,
@@ -610,7 +614,7 @@ if __name__ == '__main__':
     LEADFIELD = np.ones([S.shape[i] for i, S in enumerate(conv.POT_GRID)])
     LEADFIELD[conv.src_idx('POT')] -= 1
     acc = 8
-    for d in conv.ds('POT'):
+    for d in conv.steps('POT'):
         acc *= d
 
     POT = conv.leadfield_to_base_potentials(LEADFIELD,
@@ -633,7 +637,7 @@ if __name__ == '__main__':
                                                       + np.square(conv.POT_Z))
     WEIGHTS = si.romb(np.identity(65)) / 64
 
-    sd = conv.ds('POT')[0] * 64 / 6
+    sd = conv.steps('POT')[0] * 64 / 6
     model_src = common.SphericalSplineSourceKCSD(0, 0, 0,
                                                  [sd, 3 * sd],
                                                  [[1],
