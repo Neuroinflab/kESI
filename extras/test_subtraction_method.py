@@ -234,7 +234,7 @@ class LeadfieldIntegrator(object):
                                for xx, CSD_X in zip(X, CSD)])
 
     def _legacy_romberg_by_convotulion(self, leadfield, src, k=4):
-        from _fast_reciprocal_reconstructor import ckESI_convolver
+        from _fast_reciprocal_reconstructor import Convolver
         r = max(src._nodes)
         n = 2 ** k + 1
 
@@ -248,8 +248,8 @@ class LeadfieldIntegrator(object):
                         src.z + r,
                         n)
 
-        convolver = ckESI_convolver([X, Y, Z],
-                                    [X, Y, Z])
+        convolver = Convolver([X, Y, Z],
+                              [X, Y, Z])
 
         model_src = common.SphericalSplineSourceKCSD(0, 0, 0,
                                                      src._nodes,

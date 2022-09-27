@@ -53,9 +53,8 @@ def reshape(A, axis, n=3):
     return np.reshape(A, shape(axis, n))
 
 
-class ckESI_convolver(object):
-    def __init__(self, potential_grid,
-                 csd_grid):
+class Convolver(object):
+    def __init__(self, potential_grid, csd_grid):
         self.POT_GRID = []
         self.CSD_GRID = []
         self.SRC_GRID = []
@@ -82,21 +81,6 @@ class ckESI_convolver(object):
             setattr(self, f'SRC_{c}', SRC)
             setattr(self, f'_SRC_CSD_IDX_{c}', CSD_IDX)
             setattr(self, f'_SRC_POT_IDX_{c}', POT_IDX)
-
-    @property
-    @deprecated('.POT_MESH attribute', '.POT_GRID')
-    def POT_MESH(self):
-        return self.POT_GRID
-
-    @property
-    @deprecated('.CSD_MESH attribute', '.CSD_GRID')
-    def CSD_MESH(self):
-        return self.CSD_GRID
-
-    @property
-    @deprecated('.SRC_MESH attribute', '.SRC_GRID')
-    def SRC_MESH(self):
-        return self.SRC_GRID
 
     def leadfield_to_base_potentials(self,
                                      LEADFIELD,
@@ -141,10 +125,6 @@ class ckESI_convolver(object):
                 for i, DIM in enumerate([getattr(self, f'{name}_{c}')
                                          for c in ['X', 'Y', 'Z']])]
 
-    @deprecated('.ds() method', '.steps()')
-    def ds(self, name):
-        return self.steps()
-
     def src_idx(self, name):
         return np.ix_(*[getattr(self, f'_SRC_{name}_IDX_{c}')
                         for c in ['X', 'Y', 'Z']])
@@ -156,6 +136,31 @@ class ckESI_convolver(object):
     def shape(self, name):
         return tuple(S.shape[i]
                      for i, S in enumerate(getattr(self, f'{name}_GRID')))
+
+
+class ckESI_convolver(Convolver):
+    @deprecated('class ckESI_convolver', 'Convolver class')
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @deprecated('.ds() method', '.steps()')
+    def ds(self, name):
+        return self.steps()
+
+    @property
+    @deprecated('.POT_MESH attribute', '.POT_GRID')
+    def POT_MESH(self):
+        return self.POT_GRID
+
+    @property
+    @deprecated('.CSD_MESH attribute', '.CSD_GRID')
+    def CSD_MESH(self):
+        return self.CSD_GRID
+
+    @property
+    @deprecated('.SRC_MESH attribute', '.SRC_GRID')
+    def SRC_MESH(self):
+        return self.SRC_GRID
 
 
 class ckESI_kernel_constructor(object):
@@ -575,7 +580,7 @@ if __name__ == '__main__':
     csd_grid = [np.linspace(-1, 1, n // 2 + 1) for n in ns]
     src_grid = [np.linspace(-1, 1, n // 6 + 1) for n in ns]
 
-    conv = ckESI_convolver(pot_grid, csd_grid)
+    conv = Convolver(pot_grid, csd_grid)
 
     for name, expected_grid in [('POT', pot_grid),
                                 ('CSD', csd_grid),
@@ -629,7 +634,7 @@ if __name__ == '__main__':
         assert (abs(POT[idx_x, idx_y, idx_z] - wx * wy * wz) < 1e-11).all()
 
     grid = [np.linspace(-1.1, -1, 100)] * 3
-    conv = ckESI_convolver(grid, grid)
+    conv = Convolver(grid, grid)
 
     conductivity = 0.33
     LEADFIELD = 0.25 / np.pi / conductivity / np.sqrt(np.square(conv.POT_X)
@@ -722,7 +727,7 @@ if __name__ == '__main__':
     Y = np.linspace(-1.5 * R, 2.5 * R, 2 ** (ROMBERG_K + 1) + 1)
     Z = np.linspace(0, 4 * R, 2 ** (ROMBERG_K + 1) + 1)
 
-    convolver = ckESI_convolver([X, Y, Z], [X, Y, Z])
+    convolver = Convolver([X, Y, Z], [X, Y, Z])
     romberg_weights = si.romb(np.identity(ROMBERG_N)) / (ROMBERG_N - 1)
 
     SRC_IDX = ((convolver.SRC_X >= 2 * R) & (convolver.SRC_X <= 8 * R)) & (
