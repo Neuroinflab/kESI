@@ -30,6 +30,20 @@ import scipy.integrate as si
 import scipy.signal as ssi
 
 
+def deprecated(old, new):
+    def decorator(f):
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            warnings.warn(
+                DeprecationWarning(f"{old} is deprecated, use {new} instead"),
+                stacklevel=2)
+            return f(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
 def shape(axis, n=3):
     return [-1 if i == axis else 1
             for i in range(n)]
@@ -40,15 +54,15 @@ def reshape(A, axis, n=3):
 
 
 class ckESI_convolver(object):
-    def __init__(self, potential_mesh,
-                 csd_mesh):
-        self.POT_MESH = []
-        self.CSD_MESH = []
-        self.SRC_MESH = []
+    def __init__(self, potential_grid,
+                 csd_grid):
+        self.POT_GRID = []
+        self.CSD_GRID = []
+        self.SRC_GRID = []
 
         for i, (c, POT, CSD) in enumerate(zip(['X', 'Y', 'Z'],
-                                              potential_mesh,
-                                              csd_mesh)):
+                                              potential_grid,
+                                              csd_grid)):
             POT = reshape(POT, i)
             CSD = reshape(CSD, i)
 
@@ -59,15 +73,30 @@ class ckESI_convolver(object):
                 return_indices=True)
             SRC = reshape(SRC, i)
 
-            self.POT_MESH.append(POT)
-            self.CSD_MESH.append(CSD)
-            self.SRC_MESH.append(SRC)
+            self.POT_GRID.append(POT)
+            self.CSD_GRID.append(CSD)
+            self.SRC_GRID.append(SRC)
 
             setattr(self, f'CSD_{c}', CSD)
             setattr(self, f'POT_{c}', POT)
             setattr(self, f'SRC_{c}', SRC)
             setattr(self, f'_SRC_CSD_IDX_{c}', CSD_IDX)
             setattr(self, f'_SRC_POT_IDX_{c}', POT_IDX)
+
+    @property
+    @deprecated('.POT_MESH attribute', '.POT_GRID')
+    def POT_MESH(self):
+        return self.POT_GRID
+
+    @property
+    @deprecated('.CSD_MESH attribute', '.CSD_GRID')
+    def CSD_MESH(self):
+        return self.CSD_GRID
+
+    @property
+    @deprecated('.SRC_MESH attribute', '.SRC_GRID')
+    def SRC_MESH(self):
+        return self.SRC_GRID
 
     def leadfield_to_base_potentials(self,
                                      LEADFIELD,
@@ -122,7 +151,7 @@ class ckESI_convolver(object):
 
     def shape(self, name):
         return tuple(S.shape[i]
-                     for i, S in enumerate(getattr(self, f'{name}_MESH')))
+                     for i, S in enumerate(getattr(self, f'{name}_GRID')))
 
 
 class ckESI_kernel_constructor(object):
@@ -249,7 +278,7 @@ class ConvolverInterface_base(object):
 
     def meshgrid(self, name):
         return np.meshgrid(*getattr(self.convolver,
-                                    f'{name}_MESH'),
+                                    f'{name}_GRID'),
                            indexing='ij')
 
 
@@ -538,23 +567,23 @@ if __name__ == '__main__':
     import _common_new as common
 
     ns = [6 * i for i in range(1, 4)]
-    pot_mesh = [np.linspace(-1, 1, n // 3 + 1) for n in ns]
-    csd_mesh = [np.linspace(-1, 1, n // 2 + 1) for n in ns]
-    src_mesh = [np.linspace(-1, 1, n // 6 + 1) for n in ns]
+    pot_grid = [np.linspace(-1, 1, n // 3 + 1) for n in ns]
+    csd_grid = [np.linspace(-1, 1, n // 2 + 1) for n in ns]
+    src_grid = [np.linspace(-1, 1, n // 6 + 1) for n in ns]
 
-    conv = ckESI_convolver(pot_mesh, csd_mesh)
+    conv = ckESI_convolver(pot_grid, csd_grid)
 
-    for name, expected_mesh in [('POT', pot_mesh),
-                                ('CSD', csd_mesh),
-                                ('SRC', src_mesh)]:
-        observed_mesh = getattr(conv, f'{name}_MESH')
+    for name, expected_grid in [('POT', pot_grid),
+                                ('CSD', csd_grid),
+                                ('SRC', src_grid)]:
+        observed_grid = getattr(conv, f'{name}_GRID')
 
         for i, (coord, expected) in enumerate(zip(['X', 'Y', 'Z'],
-                                                  expected_mesh)):
+                                                  expected_grid)):
             observed = getattr(conv, f'{name}_{coord}')
 
-            assert (observed == observed_mesh[i]).all()
-            assert observed.shape == observed_mesh[i].shape
+            assert (observed == observed_grid[i]).all()
+            assert observed.shape == observed_grid[i].shape
 
             assert (observed.flatten() == expected).all()
             for j, n in enumerate(observed.shape):
@@ -569,7 +598,7 @@ if __name__ == '__main__':
         for i_y in range(conv.SRC_Y.shape[1]):
             for i_z in range(conv.SRC_Z.shape[2]):
                 SRC = np.zeros(
-                    [S.shape[i] for i, S in enumerate(conv.SRC_MESH)])
+                    [S.shape[i] for i, S in enumerate(conv.SRC_GRID)])
                 SRC[i_x, i_y, i_z] = 2
                 CSD = conv.base_weights_to_csd(SRC, csd, [3, 3, 5])
                 EXP = 2 * csd(conv.CSD_X - conv.SRC_X[i_x, 0, 0],
@@ -578,7 +607,7 @@ if __name__ == '__main__':
                 ERR = CSD - EXP
                 assert abs(ERR).max() < 1e-11
 
-    LEADFIELD = np.ones([S.shape[i] for i, S in enumerate(conv.POT_MESH)])
+    LEADFIELD = np.ones([S.shape[i] for i, S in enumerate(conv.POT_GRID)])
     LEADFIELD[conv.src_idx('POT')] -= 1
     acc = 8
     for d in conv.ds('POT'):
@@ -595,8 +624,8 @@ if __name__ == '__main__':
                                                                    repeat=3):
         assert (abs(POT[idx_x, idx_y, idx_z] - wx * wy * wz) < 1e-11).all()
 
-    mesh = [np.linspace(-1.1, -1, 100)] * 3
-    conv = ckESI_convolver(mesh, mesh)
+    grid = [np.linspace(-1.1, -1, 100)] * 3
+    conv = ckESI_convolver(grid, grid)
 
     conductivity = 0.33
     LEADFIELD = 0.25 / np.pi / conductivity / np.sqrt(np.square(conv.POT_X)
@@ -614,7 +643,7 @@ if __name__ == '__main__':
                                                    0.25 / sd ** 3]],
                                                  conductivity)
 
-    POT_GT = model_src.potential(*conv.SRC_MESH)
+    POT_GT = model_src.potential(*conv.SRC_GRID)
     POT = conv.leadfield_to_base_potentials(LEADFIELD, model_src.csd,
                                             [WEIGHTS] * 3)
     IDX = (slice(32, 100 - 32),) * 3
