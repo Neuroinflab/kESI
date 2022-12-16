@@ -186,3 +186,43 @@ rule tutorial_case_study_solve:
           --name {wildcards.NAME} \
           --output {output.METADATA}
         """
+
+
+rule paper_slice_trigger:
+    input: ["FEM/solutions/paper/circular_slice/{{MESH}}/{{DEGREE}}/sampled/9/{}_0_{}.npz".format(x, z) for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
+    output: ".paper_slice_{MESH}_{DEGREE}"
+    shell: "touch {output}"
+
+
+rule paper_slice_sample:
+    input:
+		    "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/{NAME}.h5", CONFIG="FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/{NAME}.ini"
+    output:
+		    "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/sampled/{K}/{NAME}.npz"
+    resources:
+        mem_mb=get_mem_mb_exponential(7_500)
+    shell:
+        """
+        ulimit -v $(({resources.mem_mb} * 1024))
+        python paper_sample_slice_solution.py -o {output} -c {input.CONFIG} -f 0 -r 0.0003 -k {wildcards.K}
+        """
+
+
+rule paper_slice_solve:
+    input:
+        ELECTRODES="FEM/electrode_locations/paper/circular_slice/grid_3d.ini", MESH_PATH="FEM/meshes/meshes/circular_slice/{MESH}.xdmf", CONFIG="FEM/model_properties/circular_slice.ini"
+    output:
+        "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/{NAME}.h5", METADATA="FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/{NAME}.ini"
+    resources:
+        mem_mb=get_mem_mb_exponential(15_000)
+    shell:
+        """
+        ulimit -v $(({resources.mem_mb} * 1024))
+        python paper_solve_slice_on_plate.py \
+          --mesh {input.MESH_PATH} \
+          --degree {wildcards.DEGREE} \
+          --config {input.CONFIG} \
+          --electrodes {input.ELECTRODES} \
+          --name {wildcards.NAME} \
+          --output {output.METADATA}
+        """
