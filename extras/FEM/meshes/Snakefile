@@ -46,6 +46,14 @@ rule GEO_SUPERFINE:
       sed 's/SED_RELATIVE_ELEMENT_SIZE/0.0625/g' < {input} > {output}
       """
 
+rule GEO_SUPERFINER:
+    input: '{mesh_name}.geo.template'
+    output: 'meshes/{mesh_name}/superfiner.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.03125/g' < {input} > {output}
+      """
+
 rule GEO_COARSE:
     input: '{mesh_name}.geo.template'
     output: 'meshes/{mesh_name}/coarse.geo'
