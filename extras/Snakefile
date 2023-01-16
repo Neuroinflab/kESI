@@ -239,7 +239,7 @@ rule paper_4SM_sample:
     input:
 		    "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/{NAME}.h5", CONFIG="FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/{NAME}.ini"
     output:
-		    "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/sampled/9/{NAME}.npz"
+		    "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/sampled/{K}/{NAME}.npz"
     resources:
         mem_mb=get_mem_mb_exponential(7_500)
     shell:
