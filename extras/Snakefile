@@ -228,6 +228,26 @@ rule paper_slice_solve:
         """
 
 
+rule paper_composite_slice_solve:
+    input:
+        ELECTRODES="FEM/electrode_locations/paper/circular_slice/grid_3d.ini", MESH_PATH="FEM/meshes/circular_slice_composite.xdmf", CONFIG="FEM/model_properties/circular_slice.ini"
+    output:
+        "FEM/solutions/paper/circular_slice/composite/{DEGREE}/{NAME}.h5", METADATA="FEM/solutions/paper/circular_slice/composite/{DEGREE}/{NAME}.ini"
+    resources:
+        mem_mb=get_mem_mb_exponential(15_000)
+    shell:
+        """
+        ulimit -v $(({resources.mem_mb} * 1024))
+        python paper_solve_slice_on_plate.py \
+          --mesh {input.MESH_PATH} \
+          --degree {wildcards.DEGREE} \
+          --config {input.CONFIG} \
+          --electrodes {input.ELECTRODES} \
+          --name {wildcards.NAME} \
+          --output {output.METADATA}
+        """
+
+
 
 rule paper_4SM_trigger:
     input: ["FEM/solutions/paper/four_spheres_{{GEOMETRY}}/{{MESH}}/{{DEGREE}}/sampled/9/{}_{:02d}.npz".format(x, z) for x in ['B', 'D'] for z in range(0, 12)]
