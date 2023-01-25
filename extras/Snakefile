@@ -288,3 +288,60 @@ rule paper_4SM_solve:
           --name {wildcards.NAME} \
           --output {output.METADATA}
         """
+
+
+rule paper_4SM_forward:
+   input:
+       ELECTRODES="{SRC_DIR}/electrodes.csv",
+       SOURCES="{SRC_DIR}/{NAME}.npz",
+       MESH_PATH="FEM/meshes/meshes/four_spheres_{GEOMETRY}_plain/{MESH}.xdmf",
+       CONFIG="FEM/model_properties/four_spheres_{GEOMETRY}.ini"
+   output:
+       "{SRC_DIR}/images/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/{NAME}.csv"
+   shell:
+       """
+       python paper_forward_model_four_spheres.py \
+         --mesh {input.MESH_PATH} \
+         --degree {wildcards.DEGREE} \
+         --config {input.CONFIG} \
+         --grounded-plate-edge-z -0.088 \
+         --electrodes {input.ELECTRODES} \
+         --sources {input.SOURCES} \
+         --output {output}
+       """
+
+
+rule paper_fair_sources:
+    input:
+        [f"{{PATH}}/{method}_{data}.npz" for method in ['kCSD', 'kESI'] for data in ['analysis', 'eigensources']]
+    output:
+        "{PATH}/fair_sources.npz"
+    params:
+        PREFIXES=[f"{{PATH}}/{method}" for method in ['kCSD', 'kESI']]
+    shell:
+        "python paper_mix_eigensources.py -o {output} {params.PREFIXES}"
+
+
+PAPER_4SM_ELECTRODES = [f'{x}_{i:02d}' for i in range(0, 12) for x in ['B', 'D']]
+PAPER_4SM_OUTPUT_DIR = "FEM/solutions/paper/images/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/kernels/{K,\d+}"
+PAPER_4SM_OUTPUT = [f'{PAPER_4SM_OUTPUT_DIR}/{name}' for name in (['electrodes.csv', 'src_mask.npz'] + [f'{method}_{data}.npz' for method in ['kCSD', 'kESI'] for data in ['phi', 'kernel', 'crosskernel', 'analysis', 'eigensources']])]
+PAPER_4SM_INPUT_DIR = 'FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/sampled/{K}'
+
+rule paper_4SM_kernel:
+    input:
+        [f"{PAPER_4SM_INPUT_DIR}/{name}.npz" for name in PAPER_4SM_ELECTRODES]
+    output:
+        PAPER_4SM_OUTPUT
+    params:
+        INPUT_DIR=PAPER_4SM_INPUT_DIR,
+        ELECTRODES=PAPER_4SM_ELECTRODES,
+        OUTPUT_DIR='FEM/solutions/paper/images/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/kernels/{K,\d+}'
+    shell:
+        """
+        mkdir -p {params.OUTPUT_DIR}
+        python paper_calculate_kernels_four_spheres.py \
+          --output {params.OUTPUT_DIR} \
+          --input {params.INPUT_DIR} \
+          -k 5 \
+          {params.ELECTRODES}
+        """
