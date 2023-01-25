@@ -198,7 +198,7 @@ rule paper_slice_sample:
     input:
 		    "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/{NAME}.h5", CONFIG="FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/{NAME}.ini"
     output:
-		    "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/sampled/{K}/{NAME}.npz"
+		    "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/sampled/{K,\d+}/{NAME}.npz"
     resources:
         mem_mb=get_mem_mb_exponential(7_500)
     shell:
@@ -259,7 +259,7 @@ rule paper_4SM_sample:
     input:
 		    "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/{NAME}.h5", CONFIG="FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/{NAME}.ini"
     output:
-		    "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/sampled/{K}/{NAME}.npz"
+		    "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/sampled/{K,\d+}/{NAME}.npz"
     resources:
         mem_mb=get_mem_mb_exponential(7_500)
     shell:
