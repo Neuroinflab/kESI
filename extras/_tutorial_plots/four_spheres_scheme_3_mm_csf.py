@@ -122,7 +122,7 @@ with plt.xkcd():
 
     plot_layer(60,
                cbf.BLUE,
-               'CBF',
+               'CSF',
                -45,
                '82 mm',
                -20,
