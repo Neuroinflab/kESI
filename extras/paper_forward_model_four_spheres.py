@@ -7,7 +7,6 @@ import configparser
 import numpy as np
 import pandas as pd
 import scipy.interpolate as si
-import pandas
 import dolfin
 
 import FEM.fem_common as fc
