@@ -67,11 +67,11 @@ if __name__ == '__main__':
                         default=6,
                         dest='k',
                         help='K parameter of the Romberg method')
-    parser.add_argument('-h', '--thickness',
+    parser.add_argument('--thickness',
                         type=float,
-                        dest=h,
+                        dest='h',
                         metavar='<thickness>',
-                        help='slice thickness in meters and side of the cubic volume of interest',
+                        help='slice thickness in meters (and length of an edge of the cubic volume of interest)',
                         default=3e-4)
     parser.add_argument('electrodes',
                         metavar='<electrode name>',
