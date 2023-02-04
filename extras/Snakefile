@@ -322,10 +322,13 @@ rule paper_fair_sources:
         "python paper_mix_eigensources.py -o {output} {params.PREFIXES}"
 
 
+PAPER_INPUT_DIR = "FEM/solutions/paper"
+PAPER_IMAGES_DIR = "FEM/solutions/paper/images"
+
 PAPER_4SM_ELECTRODES = [f'{x}_{i:02d}' for i in range(0, 12) for x in ['B', 'D']]
-PAPER_4SM_OUTPUT_DIR = "FEM/solutions/paper/images/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/kernels/{K,\d+}"
+PAPER_4SM_OUTPUT_DIR = f"{PAPER_IMAGES_DIR}/four_spheres_{{GEOMETRY}}/{{MESH}}/{{DEGREE}}/kernels/{{K,\\d+}}"
 PAPER_4SM_OUTPUT = [f'{PAPER_4SM_OUTPUT_DIR}/{name}' for name in (['electrodes.csv', 'src_mask.npz'] + [f'{method}_{data}.npz' for method in ['kCSD', 'kESI'] for data in ['phi', 'kernel', 'crosskernel', 'analysis', 'eigensources']])]
-PAPER_4SM_INPUT_DIR = 'FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/sampled/{K}'
+PAPER_4SM_INPUT_DIR = f"{PAPER_INPUT_DIR}/four_spheres_{{GEOMETRY}}/{{MESH}}/{{DEGREE}}/sampled/{{K}}"
 
 rule paper_4SM_kernel:
     input:
@@ -343,5 +346,31 @@ rule paper_4SM_kernel:
           --output {params.OUTPUT_DIR} \
           --input {params.INPUT_DIR} \
           -k 5 \
+          {params.ELECTRODES}
+        """
+
+
+PAPER_SLICE_ELECTRODES = ["{}_0_{}".format(x, z) for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
+PAPER_SLICE_OUTPUT_DIR = f"{PAPER_IMAGES_DIR}/circular_slice/{{MESH}}/{{DEGREE}}/kernels/{{K,\\d+}}"
+PAPER_SLICE_OUTPUT = [f'{PAPER_SLICE_OUTPUT_DIR}/{name}' for name in (['electrodes.csv', 'src_mask.npz'] + [f'{method}_{data}.npz' for method in ['kCSD', 'kESI'] for data in ['phi', 'kernel', 'crosskernel', 'analysis', 'eigensources']])]
+PAPER_SLICE_INPUT_DIR = f"{PAPER_INPUT_DIR}/circular_slice/{{MESH}}/{{DEGREE}}/sampled/{{K}}"
+
+rule paper_slice_kernel:
+    input:
+        [f"{PAPER_SLICE_INPUT_DIR}/{name}.npz" for name in PAPER_SLICE_ELECTRODES]
+    output:
+        PAPER_SLICE_OUTPUT
+    params:
+        INPUT_DIR=PAPER_SLICE_INPUT_DIR,
+        ELECTRODES=PAPER_SLICE_ELECTRODES,
+        OUTPUT_DIR=PAPER_SLICE_OUTPUT_DIR
+    shell:
+        """
+        mkdir -p {params.OUTPUT_DIR}
+        python paper_calculate_kernels_slice.py \
+          --output {params.OUTPUT_DIR} \
+          --input {params.INPUT_DIR} \
+          -k 6 \
+          -h 0.0003 \
           {params.ELECTRODES}
         """
