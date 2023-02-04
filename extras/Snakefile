@@ -374,3 +374,47 @@ rule paper_slice_kernel:
           -h 0.0003 \
           {params.ELECTRODES}
         """
+
+
+rule paper_slice_forward:
+   input:
+       ELECTRODES="{SRC_DIR}/electrodes.csv",
+       SOURCES="{SRC_DIR}/{NAME}.npz",
+       MESH_PATH="FEM/meshes/meshes/circular_slice/{MESH}.xdmf",
+       CONFIG="FEM/model_properties/circular_slice.ini"
+   output:
+       "{SRC_DIR}/images/circular_slice/{MESH}/{DEGREE}/{NAME}.csv"
+   shell:
+       """
+       python paper_forward_model_slice.py \
+         --mesh {input.MESH_PATH} \
+         --degree {wildcards.DEGREE} \
+         --config {input.CONFIG} \
+         --ground-potential 0.0 \
+         --electrodes {input.ELECTRODES} \
+         --sources {input.SOURCES} \
+         --output {output} \
+         --quiet
+       """
+
+
+rule paper_composite_slice_forward:
+   input:
+       ELECTRODES="{SRC_DIR}/electrodes.csv",
+       SOURCES="{SRC_DIR}/{NAME}.npz",
+       MESH_PATH="FEM/meshes/circular_slice_composite.xdmf",
+       CONFIG="FEM/model_properties/circular_slice.ini"
+   output:
+       "{SRC_DIR}/images/circular_slice_composite/{DEGREE}/{NAME}.csv"
+   shell:
+       """
+       python paper_forward_model_slice.py \
+         --mesh {input.MESH_PATH} \
+         --degree {wildcards.DEGREE} \
+         --config {input.CONFIG} \
+         --ground-potential 0.0 \
+         --electrodes {input.ELECTRODES} \
+         --sources {input.SOURCES} \
+         --output {output} \
+         --quiet
+       """
