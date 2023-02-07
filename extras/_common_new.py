@@ -387,7 +387,7 @@ class FourSphereModel(object):
             # dp_rad, dp_tan, r = self.decompose_dipole(P, dp_loc)
             # self._set_dipole_r(r)
 
-            adjusted_theta = self.adjust_theta(self.loc, ELECTRODES)
+            ele_dist, adjusted_theta = self.adjust_theta(self.loc, ELECTRODES)
             adjusted_phi_angle = self.adjust_phi_angle(self.dp_tan,
                                                        self.loc,
                                                        ELECTRODES)
@@ -426,7 +426,7 @@ class FourSphereModel(object):
                 warnings.warn("cos_theta out of [-1, 1]", RuntimeWarning)
                 cos_theta = np.maximum(-1, np.minimum(1, cos_theta))
 
-            return np.arccos(cos_theta)
+            return ele_dist, np.arccos(cos_theta)
 
         def adjust_phi_angle(self, p, dp_loc, ele_pos):
             r_ele = np.sqrt(np.sum(ele_pos ** 2, axis=1))
