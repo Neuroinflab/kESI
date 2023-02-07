@@ -426,8 +426,7 @@ class FourSphereModel(object):
                 warnings.warn("cos_theta out of [-1, 1]", RuntimeWarning)
                 cos_theta = np.maximum(-1, np.minimum(1, cos_theta))
 
-            theta = np.arccos(cos_theta)
-            return theta
+            return np.arccos(cos_theta)
 
         def adjust_phi_angle(self, p, dp_loc, ele_pos):
             r_ele = np.sqrt(np.sum(ele_pos ** 2, axis=1))
