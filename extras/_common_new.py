@@ -445,8 +445,8 @@ class FourSphereModel(object):
                     rad_phi = mag_rad * Lfactor_rad
 
                     # #tangential
-                    Lfuncprod = np.sum(C * lpmv(1, P_val, cos_theta)
-                                       for C, P_val in zip(coef, self.n))
+                    Lfuncprod = np.sum([C * lpmv(1, P_val, cos_theta)
+                                        for C, P_val in zip(coef, self.n)])
 
                     tan_phi = -1 * mag_tan * _cos * np.array(Lfuncprod)
                     potentials[i] = rad_phi + tan_phi
