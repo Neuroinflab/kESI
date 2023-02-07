@@ -548,18 +548,25 @@ if __name__ == '__main__':
                                                      5.00 * BRAIN_CONDUCTIVITY,
                                                      0.05 * BRAIN_CONDUCTIVITY,
                                                      1.00 * BRAIN_CONDUCTIVITY)
-    RADIUS = common.FourSphereModel.Properties(7.9, 8.0, 8.5, 9.0)
-    X, Y, Z = np.meshgrid(np.linspace(-8.9, 8.9, 10),
-                          np.linspace(-8.9, 8.9, 10),
-                          np.linspace(-8.9, 8.9, 10))
-    ELECTRODES = pd.DataFrame({'X': X.flatten(),
-                               'Y': Y.flatten(),
-                               'Z': Z.flatten(),
-                               })
+    SCALP_R = 9.0
+    RADIUS = common.FourSphereModel.Properties(7.9, 8.0, 8.5, SCALP_R)
+
+    N = 1000
+    np.random.seed(42)
+    ELECTRODES = pd.DataFrame({
+        'PHI': np.random.uniform(-np.pi, np.pi, N),
+        'THETA': 2 * np.arcsin(np.sqrt(np.random.uniform(0, 1, N))) - np.pi / 2
+        })
+
+    ELECTRODES['X'] = SCALP_R * np.sin(ELECTRODES.THETA)
+    _XY_R = SCALP_R * np.cos(ELECTRODES.THETA)
+    ELECTRODES['Y'] = _XY_R * np.cos(ELECTRODES.PHI)
+    ELECTRODES['Z'] = _XY_R * np.sin(ELECTRODES.PHI)
+
     DF = ELECTRODES.copy()
     oldFourSM = common.FourSphereModel(CONDUCTIVITY,
                                        RADIUS,
-                                       ELECTRODES)
+                                       ELECTRODES[['X', 'Y', 'Z']])
     newFourSM = FourSphereModel(CONDUCTIVITY,
                                 RADIUS)
 
