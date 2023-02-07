@@ -363,38 +363,50 @@ class FourSphereModel(object):
         return self._PointDipole(self, np.array(loc), P)
 
     class _PointDipole(object):
-        def __init__(self, model, loc, P):
+        def __init__(self, model, dipole_loc, dipole_moment):
             self.model = model
-            self.loc = loc
-            self.P = np.reshape(P, (1, -1))
-            self.dp_rad, self.dp_tan, r = self.decompose_dipole()
-            self._set_dipole_r(r)
+            self.set_dipole_loc(dipole_loc)
+            self.decompose_dipole(np.reshape(dipole_moment,
+                                             (1, -1)))
+            self._set_dipole_r()
 
-        def decompose_dipole(self):
-            dist_dp = np.linalg.norm(self.loc)
-            dp_rad = (np.dot(self.P, self.loc) / dist_dp) * (self.loc / dist_dp)
-            dp_tan = self.P - dp_rad
-            return dp_rad, dp_tan, dist_dp
+        def set_dipole_loc(self, loc):
+            self.loc_r = np.sqrt(np.square(loc).sum())
+            self.loc_v = (np.reshape(loc, (1, -1)) / self.loc_r
+                          if self.loc_r != 0
+                          else np.array([[0, 0, 1]]))
 
-        def _set_dipole_r(self, r):
-            self.rz = r
-            self.rz1 = r / self.model.radius.brain
-            # self.r1z = 1. / self.rz1
+        @property
+        def loc(self):
+            return self.loc_r * self.loc_v.flatten()
+
+        @property
+        def rz(self):
+            return self.loc_r
+
+        def decompose_dipole(self, P):
+            self.p_rad = self.north_vector(P)
+            self.p_tan = P - self.p_rad
+
+        def north_vector(self, V):
+            return np.matmul(self.north_projection(V),
+                             self.loc_v)
+
+        def north_projection(self, V):
+            return np.matmul(V,
+                             self.loc_v.T)
+
+        def _set_dipole_r(self):
+            self.rz1 = self.loc_r / self.model.radius.brain
 
         def __call__(self, X, Y, Z):
-            # P = np.reshape(P, (1, -1))
             ELECTRODES = np.vstack([X, Y, Z]).T
-            # dp_rad, dp_tan, r = self.decompose_dipole(P, dp_loc)
-            # self._set_dipole_r(r)
 
             ele_dist, adjusted_theta = self.adjust_theta(self.loc, ELECTRODES)
-            adjusted_phi_angle = self.adjust_phi_angle(self.dp_tan,
-                                                       self.loc,
-                                                       ELECTRODES)
 
-            sign_rad = np.sign(np.dot(self.P, self.loc))
-            mag_rad = sign_rad * np.linalg.norm(self.dp_rad)
-            mag_tan = np.linalg.norm(self.dp_tan)  # sign_tan * np.linalg.norm(dp_tan)
+            sign_rad = np.sign(self.north_projection(self.p_rad))
+            mag_rad = sign_rad * np.linalg.norm(self.p_rad)
+            mag_tan = np.linalg.norm(self.p_tan)  # sign_tan * np.linalg.norm(dp_tan)
 
             coef = self.H(self.model.n, self.model.radius.scalp)
             cos_theta = np.cos(adjusted_theta)
@@ -411,7 +423,8 @@ class FourSphereModel(object):
                                  for C, P_val in zip(coef, self.model.n)])
                          for ct in cos_theta]
 
-            tan_phi = -1 * mag_tan * np.sin(adjusted_phi_angle) * np.array(Lfuncprod)
+            tan_cosinus = self.tan_versor_cosinus(ELECTRODES).flatten()
+            tan_phi = -1 * mag_tan * tan_cosinus * np.array(Lfuncprod)
             return (rad_phi + tan_phi) / (4 * np.pi * self.model.conductivity.brain * (self.rz ** 2))
 
         def adjust_theta(self, dp_loc, ele_pos):
@@ -428,30 +441,31 @@ class FourSphereModel(object):
 
             return ele_dist, np.arccos(cos_theta)
 
-        def adjust_phi_angle(self, p, dp_loc, ele_pos):
-            r_ele = np.sqrt(np.sum(ele_pos ** 2, axis=1))
+        def tan_versor_cosinus(self, ele_pos):
+            ele_north = self.north_vector(ele_pos)
+            ele_parallel = ele_pos - ele_north
+            ele_parallel_v = ele_parallel / np.sqrt(np.square(ele_parallel).sum(axis=1).reshape(-1, 1))
 
-            proj_rxyz_rz = (np.dot(ele_pos, dp_loc) / np.sum(dp_loc **2)).reshape(len(ele_pos),1) * dp_loc.reshape(1, 3)
-            rxy = ele_pos - proj_rxyz_rz
-            x = np.cross(p, dp_loc)
-            cos_phi = np.dot(rxy, x.T) / np.dot(np.linalg.norm(rxy, axis=1).reshape(len(rxy), 1),
-                                                np.linalg.norm(x, axis=1).reshape(1, len(x)))
-            if abs(cos_phi).max() - 1 > 1e-10:
-                warnings.warn("cos_phi out of [-1 - 1e-10, 1 + 1e-10]",
+            tan_parallel = self.p_tan - self.north_vector(self.p_tan)
+            tan_r = np.sqrt(np.square(tan_parallel).sum())
+            if tan_r == 0:
+                warnings.warn("no tangential dipole",
+                              RuntimeWarning)
+                return np.zeros((ele_pos.shape[0], 1))
+
+            tan_parallel_v = tan_parallel / tan_r
+            cos = np.matmul(ele_parallel_v,
+                            tan_parallel_v.T)
+
+            if abs(cos).max() - 1 > 1e-10:
+                warnings.warn("cos out of [-1 - 1e-10, 1 + 1e-10]",
                               RuntimeWarning)
 
-            if np.isnan(cos_phi).any():
-                warnings.warn("invalid value of cos_phi", RuntimeWarning)
-                cos_phi = np.nan_to_num(cos_phi)
+            if np.isnan(cos).any():
+                warnings.warn("invalid value of cos", RuntimeWarning)
+                cos = np.nan_to_num(cos)
 
-            phi_temp = np.arccos(np.maximum(-1, np.minimum(1, cos_phi)))
-            phi = phi_temp
-            range_test = np.dot(rxy, p.T)
-            for i in range(len(r_ele)):
-                for j in range(len(p)):
-                    if range_test[i, j] < 0:
-                        phi[i,j] = 2 * np.pi - phi_temp[i, j]
-            return phi.flatten()
+            return cos
 
         def H(self, n, r_ele):
             if r_ele < self.radius.brain:
@@ -557,7 +571,7 @@ if __name__ == '__main__':
     newDipoleFourSM = newFourSM(list(LOC), list(P))
     DF['NEW'] = newDipoleFourSM(ELECTRODES.X,
                                 ELECTRODES.Y,
-                                ELECTRODES.Z)
+                                ELECTRODES.Z).flatten()
     assert np.abs((DF.OLD - DF.NEW) / DF.OLD).max() < 1e-10
 
     dipole = newFourSM([7.437628862425826, 1.9929066472894097, -1.3662702569423635e-15],
