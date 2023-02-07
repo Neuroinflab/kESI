@@ -414,12 +414,12 @@ class FourSphereModel(object):
                                                    adjusted_theta,
                                                    tan_cosinus)):
                 try:
-                    coef = self.H(self.model.n, _r)
+                    coef = self.H(self.n, _r)
 
                     cos_theta = np.cos(_theta)
 
                     # radial
-                    n_coef = self.model.n * coef
+                    n_coef = self.n * coef
                     rad_coef = np.insert(n_coef, 0, 0)
                     Lprod = np.polynomial.legendre.Legendre(rad_coef)
                     Lfactor_rad = Lprod(cos_theta)
@@ -427,7 +427,7 @@ class FourSphereModel(object):
 
                     # #tangential
                     Lfuncprod = np.sum(C * lpmv(1, P_val, cos_theta)
-                                       for C, P_val in zip(coef, self.model.n))
+                                       for C, P_val in zip(coef, self.n))
 
                     tan_phi = -1 * mag_tan * _cos * np.array(Lfuncprod)
                     potentials[i] = rad_phi + tan_phi
@@ -493,6 +493,10 @@ class FourSphereModel(object):
                 print("Invalid electrode position")
                 return
             return T1 + T2
+
+        @property
+        def n(self):
+            return self.model.n
 
         def A1(self, n):
             Z_n = self.Z(n)
