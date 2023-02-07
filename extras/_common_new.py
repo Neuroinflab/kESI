@@ -403,29 +403,38 @@ class FourSphereModel(object):
             ELECTRODES = np.vstack([X, Y, Z]).T
 
             ele_dist, adjusted_theta = self.adjust_theta(self.loc, ELECTRODES)
+            tan_cosinus = self.tan_versor_cosinus(ELECTRODES).flatten()
 
             sign_rad = np.sign(self.north_projection(self.p_rad))
             mag_rad = sign_rad * np.linalg.norm(self.p_rad)
             mag_tan = np.linalg.norm(self.p_tan)  # sign_tan * np.linalg.norm(dp_tan)
 
-            coef = self.H(self.model.n, self.model.radius.scalp)
-            cos_theta = np.cos(adjusted_theta)
+            potentials = np.zeros_like(tan_cosinus)
+            for i, (_r, _theta, _cos) in enumerate(zip(ele_dist,
+                                                   adjusted_theta,
+                                                   tan_cosinus)):
+                try:
+                    coef = self.H(self.model.n, _r)
 
-            # radial
-            n_coef = self.model.n * coef
-            rad_coef = np.insert(n_coef, 0, 0)
-            Lprod = np.polynomial.legendre.Legendre(rad_coef)
-            Lfactor_rad = Lprod(cos_theta)
-            rad_phi = mag_rad * Lfactor_rad
+                    cos_theta = np.cos(_theta)
 
-            # #tangential
-            Lfuncprod = [np.sum([C * lpmv(1, P_val, ct)
-                                 for C, P_val in zip(coef, self.model.n)])
-                         for ct in cos_theta]
+                    # radial
+                    n_coef = self.model.n * coef
+                    rad_coef = np.insert(n_coef, 0, 0)
+                    Lprod = np.polynomial.legendre.Legendre(rad_coef)
+                    Lfactor_rad = Lprod(cos_theta)
+                    rad_phi = mag_rad * Lfactor_rad
 
-            tan_cosinus = self.tan_versor_cosinus(ELECTRODES).flatten()
-            tan_phi = -1 * mag_tan * tan_cosinus * np.array(Lfuncprod)
-            return (rad_phi + tan_phi) / (4 * np.pi * self.model.conductivity.brain * (self.rz ** 2))
+                    # #tangential
+                    Lfuncprod = np.sum(C * lpmv(1, P_val, cos_theta)
+                                       for C, P_val in zip(coef, self.model.n))
+
+                    tan_phi = -1 * mag_tan * _cos * np.array(Lfuncprod)
+                    potentials[i] = rad_phi + tan_phi
+                except:
+                    potentials[i] = np.nan
+
+            return potentials / (4 * np.pi * self.model.conductivity.brain * (self.rz ** 2))
 
         def adjust_theta(self, dp_loc, ele_pos):
             ele_dist = np.linalg.norm(ele_pos, axis=1)
