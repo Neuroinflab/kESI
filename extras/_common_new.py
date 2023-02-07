@@ -336,28 +336,46 @@ class FourSphereModel(object):
         self.s34 = conductivity.skull / conductivity.scalp
 
     def V(self, n):
+        try:
+            return self._V
+        except AttributeError:
+            n = self.n
+
         k = (n+1.) / n
         Factor = ((self.r34**n - self.r43**(n+1))
                   / (k * self.r34**n + self.r43**(n+1)))
         num = self.s34 / k - Factor
         den = self.s34 + Factor
-        return num / den
+        self._V = num / den
+        return self._V
 
     def Y(self, n):
+        try:
+            return self._Y
+        except AttributeError:
+            n = self.n
+
         k = n / (n+1.)
         V_n = self.V(n)
         r23n = self.r23 ** n
         r32n1 = self.r32 ** (n + 1)
         Factor = ((r23n * k - V_n * r32n1)
                   / (r23n + V_n * r32n1))
-        return (self.s23 * k - Factor) / (self.s23 + Factor)
+        self._Y = (self.s23 * k - Factor) / (self.s23 + Factor)
+        return self._Y
 
     def Z(self, n):
+        try:
+            return self._Z
+        except AttributeError:
+            n = self.n
+
         k = (n+1.) / n
         Y_n = self.Y(n)
         r12n = self.r12 ** n
         r21n1 = self.r21 ** (n + 1)
-        return (r12n - k * Y_n * r21n1) / (r12n + Y_n * r21n1)
+        self._Z = (r12n - k * Y_n * r21n1) / (r12n + Y_n * r21n1)
+        return self._Z
 
     def __call__(self, loc, P):
         return self._PointDipole(self, np.array(loc), P)
@@ -414,7 +432,8 @@ class FourSphereModel(object):
                                                    adjusted_theta,
                                                    tan_cosinus)):
                 try:
-                    coef = self.H(self.n, _r)
+                    # coef = self.H(self.n, _r)
+                    coef = self.H(_r)
 
                     cos_theta = np.cos(_theta)
 
@@ -476,7 +495,9 @@ class FourSphereModel(object):
 
             return cos
 
-        def H(self, n, r_ele):
+        # def H(self, n, r_ele):
+        def H(self, r_ele):
+            n = self.n
             if r_ele < self.radius.brain:
                 T1 = ((r_ele / self.radius.brain)**n) * self.A1(n)
                 T2 = ((self.rz / r_ele)**(n + 1))
@@ -499,31 +520,74 @@ class FourSphereModel(object):
             return self.model.n
 
         def A1(self, n):
+            try:
+                return self._A1
+            except AttributeError:
+                n = self.n
+
             Z_n = self.Z(n)
             k = (n + 1.) / n
-            return self.rz1 ** (n + 1) * (Z_n + self.s12 * k) / (self.s12 - Z_n)
+            self._A1 = self.rz1 ** (n + 1) * (Z_n + self.s12 * k) / (self.s12 - Z_n)
+            return self._A1
 
         def A2(self, n):
-            return ((self.A1(n) + self.rz1 ** (n + 1))
+            try:
+                return self._A2
+            except AttributeError:
+                n = self.n
+
+            self._A2 = ((self.A1(n) + self.rz1 ** (n + 1))
                     / (self.Y(n) * self.r21 ** (n + 1) + self.r12 ** n))
 
+            return self._A2
+
         def A3(self, n):
-            return ((self.A2(n) + self.B2(n))
+            try:
+                return self._A3
+            except AttributeError:
+                n = self.n
+
+            self._A3 = ((self.A2(n) + self.B2(n))
                     / (self.r23 ** n + self.V(n) * self.r32 ** (n + 1)))
+            return self._A3
 
         def B2(self, n):
-            return self.A2(n) * self.Y(n)
+            try:
+                return self._B2
+            except AttributeError:
+                n = self.n
+
+            self._B2 = self.A2(n) * self.Y(n)
+            return self._B2
 
         def A4(self, n):
+            try:
+                return self._A4
+            except AttributeError:
+                n = self.n
+
             k = (n+1.) / n
-            return k * ((self.A3(n) + self.B3(n))
+            self._A4 = k * ((self.A3(n) + self.B3(n))
                         / (k * self.r34 ** n + self.r43 ** (n + 1)))
+            return self._A4
 
         def B3(self, n):
-            return self.A3(n) * self.V(n)
+            try:
+                return self._B3
+            except AttributeError:
+                n = self.n
+
+            self._B3 = self.A3(n) * self.V(n)
+            return self._B3
 
         def B4(self, n):
-            return self.A4(n) * n / (n + 1.)
+            try:
+                return self._B4
+            except AttributeError:
+                n = self.n
+
+            self._B4 = self.A4(n) * n / (n + 1.)
+            return self._B4
 
         def __getattr__(self, name):
             return getattr(self.model, name)
