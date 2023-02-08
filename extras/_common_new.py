@@ -312,9 +312,8 @@ class FourSphereModel(object):
                                         ])
 
     I = 10.
-    n = np.arange(1, 100)
-
-    def __init__(self, conductivity, radius):
+    def __init__(self, conductivity, radius, n=100):
+        self.n = np.arange(1, n)
         self._set_radii(radius)
         self._set_conductivities(conductivity)
 
