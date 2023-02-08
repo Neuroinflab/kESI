@@ -103,7 +103,11 @@ else:
             self._dirichlet_bc.apply(self._known_terms)
             logger.debug('Done.')
 
-        def _potential_expression(self, conductivity=0.0):
+        def _potential_expression(self,
+                                  conductivity=0.0,
+                                  x=0.0,
+                                  y=0.0,
+                                  z=0.0):
             return Expression('''
                               0.25 / {pi} / conductivity
                               / sqrt((src_x - x[0])*(src_x - x[0])
@@ -112,7 +116,7 @@ else:
                               '''.format(pi=np.pi),
                               degree=self.degree,
                               domain=self._fm.mesh,
-                              src_x=0.0,
-                              src_y=0.0,
-                              src_z=0.0,
+                              src_x=x,
+                              src_y=y,
+                              src_z=z,
                               conductivity=conductivity)
