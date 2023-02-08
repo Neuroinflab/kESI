@@ -390,12 +390,22 @@ rule paper_slice_forward:
          --mesh {input.MESH_PATH} \
          --degree {wildcards.DEGREE} \
          --config {input.CONFIG} \
-         --ground-potential 0.0 \
          --electrodes {input.ELECTRODES} \
          --sources {input.SOURCES} \
          --output {output} \
          --quiet
        """
+#        """
+#        python paper_forward_model_slice.py \
+#          --mesh {input.MESH_PATH} \
+#          --degree {wildcards.DEGREE} \
+#          --config {input.CONFIG} \
+#          --ground-potential 0.0 \
+#          --electrodes {input.ELECTRODES} \
+#          --sources {input.SOURCES} \
+#          --output {output} \
+#          --quiet
+#        """
 
 
 rule paper_composite_slice_forward:
@@ -412,9 +422,19 @@ rule paper_composite_slice_forward:
          --mesh {input.MESH_PATH} \
          --degree {wildcards.DEGREE} \
          --config {input.CONFIG} \
-         --ground-potential 0.0 \
          --electrodes {input.ELECTRODES} \
          --sources {input.SOURCES} \
          --output {output} \
          --quiet
        """
+#        """
+#        python paper_forward_model_slice.py \
+#          --mesh {input.MESH_PATH} \
+#          --degree {wildcards.DEGREE} \
+#          --config {input.CONFIG} \
+#          --ground-potential 0.0 \
+#          --electrodes {input.ELECTRODES} \
+#          --sources {input.SOURCES} \
+#          --output {output} \
+#          --quiet
+#        """
