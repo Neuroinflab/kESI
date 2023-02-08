@@ -16,7 +16,7 @@ class ForwardModel(object):
     # XXX: duplicated code with FEM classes
     def __init__(self, mesh, degree, config,
                  quiet=True,
-                 ground_potential=0.,
+                 ground_potential=None,
                  element_type='CG'):
         self.quiet=quiet
         self.ground_potential = ground_potential
@@ -58,7 +58,7 @@ class ForwardModel(object):
         self.csd_f.vector()[:] = csd_interpolator(self.dof_coords)
 
         dirichlet_bc_gt = dolfin.DirichletBC(self.V,
-                                             dolfin.Constant(self.ground_potential),
+                                             dolfin.Constant(self._potential_at_dome()),
                                              (lambda x, on_boundary:
                                               on_boundary and x[2] > 0))
         test = self.fm.test_function()
@@ -87,6 +87,14 @@ class ForwardModel(object):
         solver.solve(A, potential.vector(), b)
 
         return potential
+
+    def _potential_at_dome(self):
+        if self.ground_potential is not None:
+            return self.ground_potential
+
+        radius = self.config.getfloat('dome', 'radius')
+        saline_conductivity = self.config.getfloat('saline', 'conductivity')
+        return 0.5 / (np.pi * saline_conductivity * radius)
 
 
 if __name__ == '__main__':
@@ -131,8 +139,7 @@ if __name__ == '__main__':
                         type=float,
                         dest='ground_potential',
                         metavar="<ground potential>",
-                        help='the potential at the grounded slice-covering dome',
-                        default=0.)
+                        help='the potential at the grounded slice-covering dome')
     parser.add_argument('-q', '--quiet',
                         dest='quiet',
                         action='store_true',
