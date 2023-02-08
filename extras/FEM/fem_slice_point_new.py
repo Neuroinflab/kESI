@@ -52,6 +52,11 @@ else:
     class SlicePointSourcePotentialFEM(fc._SubtractionPointSourcePotentialFEM):
         MAX_ITER = 1000
 
+        def __init__(self, function_manager, config, ground_potential=None):
+            self.ground_potential = ground_potential
+            super(SlicePointSourcePotentialFEM,
+                  self).__init__(function_manager, config)
+
         def _potential_gradient_normal(self, conductivity=0.0):
             # projection on normal: src_z - x[2]
             # projection on Z axis: x[2] - src_z
@@ -74,14 +79,20 @@ else:
             return self.config.getfloat('slice', 'conductivity')
 
         def _boundary_condition(self, x, y, z):
-            approximate_potential = self._potential_expression(self.config.getfloat('saline',
-                                                                                    'conductivity'))
             radius = self.config.getfloat('dome', 'radius')
             return DirichletBC(self._fm.function_space,
-                               Constant(approximate_potential(0, 0, radius)
+                               Constant(self._potential_at_dome(radius)
                                         - self._base_potential_expression(0, 0, radius)),
                                self._boundaries,
                                self.config.getint('dome', 'surface'))
+
+        def _potential_at_dome(self, radius):
+            if self.ground_potential is not None:
+                return self.ground_potential
+
+            saline_conductivity = self.config.getfloat('saline', 'conductivity')
+            kCSD_potential = self._potential_expression(saline_conductivity)
+            return 2 * kCSD_potential(0, 0, radius)
 
         def _modify_linear_equation(self, x, y, z):
             logger.debug('Defining boundary condition...')
