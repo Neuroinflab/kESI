@@ -509,7 +509,7 @@ class FourSphereModel(object):
                 T1 = ((r_ele / self.radius.scalp)**n) * self.A4(n)
                 T2 = ((self.radius.scalp / r_ele)**(n + 1)) * self.B4(n)
             else:
-                print("Invalid electrode position")
+                print("Invalid electrode position: {:f} (off by {:e})".format(r_ele, r_ele - self.radius.scalp))
                 return
             return T1 + T2
 
