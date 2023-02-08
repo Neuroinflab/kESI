@@ -46,6 +46,11 @@ if __name__ == '__main__':
                         dest='element_type',
                         help='type of FEM elements',
                         default='CG')
+    parser.add_argument('-g', '--ground-potential',
+                        type=float,
+                        dest='ground_potential',
+                        metavar="<ground potential>",
+                        help='the potential at the grounded slice-covering dome')
     parser.add_argument('-q', '--quiet',
                         dest='quiet',
                         action='store_true',
@@ -74,7 +79,8 @@ if __name__ == '__main__':
                                                   args.degree,
                                                   args.element_type)
             fem = fspn.SlicePointSourcePotentialFEM(function_manager,
-                                                    args.config)
+                                                    args.config,
+                                                    ground_potential=args.ground_potential)
 
             metadata.set('correction',
                          'global_preprocessing_time',
