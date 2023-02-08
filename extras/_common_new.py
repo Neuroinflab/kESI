@@ -311,7 +311,6 @@ class FourSphereModel(object):
                                         'scalp',
                                         ])
 
-    I = 10.
     def __init__(self, conductivity, radius, n=100):
         self.n = np.arange(1, n)
         self._set_radii(radius)
