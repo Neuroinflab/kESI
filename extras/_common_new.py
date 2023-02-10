@@ -4,8 +4,10 @@
 #                                                                             #
 #    kESI                                                                     #
 #                                                                             #
-#    Copyright (C) 2019-2020 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
+#    Copyright (C) 2019-2021 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
 #    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
+#    Copyright (C) 2021-2023 Jakub M. Dzik (Institute of Applied Psychology;  #
+#    Faculty of Management and Social Communication; Jagiellonian University) #
 #                                                                             #
 #    This software is free software: you can redistribute it and/or modify    #
 #    it under the terms of the GNU General Public License as published by     #
@@ -25,6 +27,7 @@ import logging
 import collections
 import operator
 import warnings
+import configparser
 
 import numpy as np
 from scipy.special import erf, lpmv
@@ -304,19 +307,30 @@ class FourSphereModel(object):
     Based on https://github.com/Neuroinflab/fourspheremodel
     by Chaitanya Chintaluri
     """
-    Properties = collections.namedtuple('FourSpheres',
-                                        ['brain',
-                                        'csf',
-                                        'skull',
-                                        'scalp',
-                                        ])
+    _LAYERS = ['brain',
+               'csf',
+               'skull',
+               'scalp',
+               ]
+    class Properties(collections.namedtuple('FourSpheres',
+                                            _LAYERS)):
+        @classmethod
+        def from_config(cls, path, field):
+            config = configparser.ConfigParser()
+            config.read(path)
+            return cls(*[config.getfloat(section, field)
+                         for section in FourSphereModel._LAYERS])
 
-    I = 10.
-    n = np.arange(1, 100)
-
-    def __init__(self, conductivity, radius):
+    def __init__(self, conductivity, radius, n=100):
+        self.n = np.arange(1, n)
         self._set_radii(radius)
         self._set_conductivities(conductivity)
+
+    @classmethod
+    def from_config(cls, path, n=100):
+        return cls(cls.Properties.from_config(path, 'conductivity'),
+                   cls.Properties.from_config(path, 'radius'),
+                   n)
 
     def _set_radii(self, radius):
         self.radius = radius
@@ -336,83 +350,127 @@ class FourSphereModel(object):
         self.s34 = conductivity.skull / conductivity.scalp
 
     def V(self, n):
+        try:
+            return self._V
+        except AttributeError:
+            n = self.n
+
         k = (n+1.) / n
         Factor = ((self.r34**n - self.r43**(n+1))
                   / (k * self.r34**n + self.r43**(n+1)))
         num = self.s34 / k - Factor
         den = self.s34 + Factor
-        return num / den
+        self._V = num / den
+        return self._V
 
     def Y(self, n):
+        try:
+            return self._Y
+        except AttributeError:
+            n = self.n
+
         k = n / (n+1.)
         V_n = self.V(n)
         r23n = self.r23 ** n
         r32n1 = self.r32 ** (n + 1)
         Factor = ((r23n * k - V_n * r32n1)
                   / (r23n + V_n * r32n1))
-        return (self.s23 * k - Factor) / (self.s23 + Factor)
+        self._Y = (self.s23 * k - Factor) / (self.s23 + Factor)
+        return self._Y
 
     def Z(self, n):
+        try:
+            return self._Z
+        except AttributeError:
+            n = self.n
+
         k = (n+1.) / n
         Y_n = self.Y(n)
         r12n = self.r12 ** n
         r21n1 = self.r21 ** (n + 1)
-        return (r12n - k * Y_n * r21n1) / (r12n + Y_n * r21n1)
+        self._Z = (r12n - k * Y_n * r21n1) / (r12n + Y_n * r21n1)
+        return self._Z
 
     def __call__(self, loc, P):
-        return self._PointDipole(self, np.array(loc), P)
+        return self._PointDipole(self,
+                                 np.reshape(loc,
+                                            (1, 3)),
+                                 np.reshape(P,
+                                            (1, 3)))
 
     class _PointDipole(object):
-        def __init__(self, model, loc, P):
+        def __init__(self, model, dipole_loc, dipole_moment):
             self.model = model
-            self.loc = loc
-            self.P = np.reshape(P, (1, -1))
-            self.dp_rad, self.dp_tan, r = self.decompose_dipole()
-            self._set_dipole_r(r)
+            self.set_dipole_loc(dipole_loc)
+            self.decompose_dipole(dipole_moment)
+            self._set_dipole_r()
 
-        def decompose_dipole(self):
-            dist_dp = np.linalg.norm(self.loc)
-            dp_rad = (np.dot(self.P, self.loc) / dist_dp) * (self.loc / dist_dp)
-            dp_tan = self.P - dp_rad
-            return dp_rad, dp_tan, dist_dp
+        def set_dipole_loc(self, loc):
+            self.loc_r = np.sqrt(np.square(loc).sum())
+            self.loc_v = (loc / self.loc_r
+                          if self.loc_r != 0
+                          else np.array([[0, 0, 1]]))
 
-        def _set_dipole_r(self, r):
-            self.rz = r
-            self.rz1 = r / self.model.radius.brain
-            # self.r1z = 1. / self.rz1
+        @property
+        def loc(self):
+            return self.loc_r * self.loc_v.flatten()
+
+        @property
+        def rz(self):
+            return self.loc_r
+
+        def decompose_dipole(self, P):
+            self.p_rad = self.north_vector(P)
+            self.p_tan = P - self.p_rad
+
+        def north_vector(self, V):
+            return np.matmul(self.north_projection(V),
+                             self.loc_v)
+
+        def north_projection(self, V):
+            return np.matmul(V,
+                             self.loc_v.T)
+
+        def _set_dipole_r(self):
+            self.rz1 = self.loc_r / self.model.radius.brain
 
         def __call__(self, X, Y, Z):
-            # P = np.reshape(P, (1, -1))
             ELECTRODES = np.vstack([X, Y, Z]).T
-            # dp_rad, dp_tan, r = self.decompose_dipole(P, dp_loc)
-            # self._set_dipole_r(r)
 
-            adjusted_theta = self.adjust_theta(self.loc, ELECTRODES)
-            adjusted_phi_angle = self.adjust_phi_angle(self.dp_tan,
-                                                       self.loc,
-                                                       ELECTRODES)
+            ele_dist, adjusted_theta = self.adjust_theta(self.loc, ELECTRODES)
+            tan_cosinus = self.tan_versor_cosinus(ELECTRODES).flatten()
 
-            sign_rad = np.sign(np.dot(self.P, self.loc))
-            mag_rad = sign_rad * np.linalg.norm(self.dp_rad)
-            mag_tan = np.linalg.norm(self.dp_tan)  # sign_tan * np.linalg.norm(dp_tan)
+            sign_rad = np.sign(self.north_projection(self.p_rad))
+            mag_rad = sign_rad * np.linalg.norm(self.p_rad)
+            mag_tan = np.linalg.norm(self.p_tan)  # sign_tan * np.linalg.norm(dp_tan)
 
-            coef = self.H(self.model.n, self.model.radius.scalp)
-            cos_theta = np.cos(adjusted_theta)
+            potentials = np.zeros_like(tan_cosinus)
+            for i, (_r, _theta, _cos) in enumerate(zip(ele_dist,
+                                                   adjusted_theta,
+                                                   tan_cosinus)):
+                try:
+                    # coef = self.H(self.n, _r)
+                    coef = self.H(_r)
 
-            # radial
-            n_coef = self.model.n * coef
-            rad_coef = np.insert(n_coef, 0, 0)
-            Lprod = np.polynomial.legendre.Legendre(rad_coef)
-            Lfactor_rad = Lprod(cos_theta)
-            rad_phi = mag_rad * Lfactor_rad
+                    cos_theta = np.cos(_theta)
 
-            # #tangential
-            Lfuncprod = [np.sum([C * lpmv(1, P_val, ct)
-                                 for C, P_val in zip(coef, self.model.n)])
-                         for ct in cos_theta]
+                    # radial
+                    n_coef = self.n * coef
+                    rad_coef = np.insert(n_coef, 0, 0)
+                    Lprod = np.polynomial.legendre.Legendre(rad_coef)
+                    Lfactor_rad = Lprod(cos_theta)
+                    rad_phi = mag_rad * Lfactor_rad
 
-            tan_phi = -1 * mag_tan * np.sin(adjusted_phi_angle) * np.array(Lfuncprod)
-            return (rad_phi + tan_phi) / (4 * np.pi * self.model.conductivity.brain * (self.rz ** 2))
+                    # #tangential
+                    Lfuncprod = np.sum([C * lpmv(1, P_val, cos_theta)
+                                        for C, P_val in zip(coef, self.n)])
+
+                    tan_phi = -1 * mag_tan * _cos * np.array(Lfuncprod)
+                    potentials[i] = rad_phi + tan_phi
+                except:
+                    potentials[i] = np.nan
+
+            return potentials / (4 * np.pi * self.model.conductivity.brain * (self.rz ** 2))
 
         def adjust_theta(self, dp_loc, ele_pos):
             ele_dist = np.linalg.norm(ele_pos, axis=1)
@@ -426,35 +484,37 @@ class FourSphereModel(object):
                 warnings.warn("cos_theta out of [-1, 1]", RuntimeWarning)
                 cos_theta = np.maximum(-1, np.minimum(1, cos_theta))
 
-            theta = np.arccos(cos_theta)
-            return theta
+            return ele_dist, np.arccos(cos_theta)
 
-        def adjust_phi_angle(self, p, dp_loc, ele_pos):
-            r_ele = np.sqrt(np.sum(ele_pos ** 2, axis=1))
+        def tan_versor_cosinus(self, ele_pos):
+            ele_north = self.north_vector(ele_pos)
+            ele_parallel = ele_pos - ele_north
+            ele_parallel_v = ele_parallel / np.sqrt(np.square(ele_parallel).sum(axis=1).reshape(-1, 1))
 
-            proj_rxyz_rz = (np.dot(ele_pos, dp_loc) / np.sum(dp_loc **2)).reshape(len(ele_pos),1) * dp_loc.reshape(1, 3)
-            rxy = ele_pos - proj_rxyz_rz
-            x = np.cross(p, dp_loc)
-            cos_phi = np.dot(rxy, x.T) / np.dot(np.linalg.norm(rxy, axis=1).reshape(len(rxy), 1),
-                                                np.linalg.norm(x, axis=1).reshape(1, len(x)))
-            if abs(cos_phi).max() - 1 > 1e-10:
-                warnings.warn("cos_phi out of [-1 - 1e-10, 1 + 1e-10]",
+            tan_parallel = self.p_tan - self.north_vector(self.p_tan)
+            tan_r = np.sqrt(np.square(tan_parallel).sum())
+            if tan_r == 0:
+                warnings.warn("no tangential dipole",
+                              RuntimeWarning)
+                return np.zeros((ele_pos.shape[0], 1))
+
+            tan_parallel_v = tan_parallel / tan_r
+            cos = np.matmul(ele_parallel_v,
+                            tan_parallel_v.T)
+
+            if abs(cos).max() - 1 > 1e-10:
+                warnings.warn("cos out of [-1 - 1e-10, 1 + 1e-10]",
                               RuntimeWarning)
 
-            if np.isnan(cos_phi).any():
-                warnings.warn("invalid value of cos_phi", RuntimeWarning)
-                cos_phi = np.nan_to_num(cos_phi)
+            if np.isnan(cos).any():
+                warnings.warn("invalid value of cos", RuntimeWarning)
+                cos = np.nan_to_num(cos)
 
-            phi_temp = np.arccos(np.maximum(-1, np.minimum(1, cos_phi)))
-            phi = phi_temp
-            range_test = np.dot(rxy, p.T)
-            for i in range(len(r_ele)):
-                for j in range(len(p)):
-                    if range_test[i, j] < 0:
-                        phi[i,j] = 2 * np.pi - phi_temp[i, j]
-            return phi.flatten()
+            return cos
 
-        def H(self, n, r_ele):
+        # def H(self, n, r_ele):
+        def H(self, r_ele):
+            n = self.n
             if r_ele < self.radius.brain:
                 T1 = ((r_ele / self.radius.brain)**n) * self.A1(n)
                 T2 = ((self.rz / r_ele)**(n + 1))
@@ -468,36 +528,83 @@ class FourSphereModel(object):
                 T1 = ((r_ele / self.radius.scalp)**n) * self.A4(n)
                 T2 = ((self.radius.scalp / r_ele)**(n + 1)) * self.B4(n)
             else:
-                print("Invalid electrode position")
+                print("Invalid electrode position: {:f} (off by {:e})".format(r_ele, r_ele - self.radius.scalp))
                 return
             return T1 + T2
 
+        @property
+        def n(self):
+            return self.model.n
+
         def A1(self, n):
+            try:
+                return self._A1
+            except AttributeError:
+                n = self.n
+
             Z_n = self.Z(n)
             k = (n + 1.) / n
-            return self.rz1 ** (n + 1) * (Z_n + self.s12 * k) / (self.s12 - Z_n)
+            self._A1 = self.rz1 ** (n + 1) * (Z_n + self.s12 * k) / (self.s12 - Z_n)
+            return self._A1
 
         def A2(self, n):
-            return ((self.A1(n) + self.rz1 ** (n + 1))
+            try:
+                return self._A2
+            except AttributeError:
+                n = self.n
+
+            self._A2 = ((self.A1(n) + self.rz1 ** (n + 1))
                     / (self.Y(n) * self.r21 ** (n + 1) + self.r12 ** n))
 
+            return self._A2
+
         def A3(self, n):
-            return ((self.A2(n) + self.B2(n))
+            try:
+                return self._A3
+            except AttributeError:
+                n = self.n
+
+            self._A3 = ((self.A2(n) + self.B2(n))
                     / (self.r23 ** n + self.V(n) * self.r32 ** (n + 1)))
+            return self._A3
 
         def B2(self, n):
-            return self.A2(n) * self.Y(n)
+            try:
+                return self._B2
+            except AttributeError:
+                n = self.n
+
+            self._B2 = self.A2(n) * self.Y(n)
+            return self._B2
 
         def A4(self, n):
+            try:
+                return self._A4
+            except AttributeError:
+                n = self.n
+
             k = (n+1.) / n
-            return k * ((self.A3(n) + self.B3(n))
+            self._A4 = k * ((self.A3(n) + self.B3(n))
                         / (k * self.r34 ** n + self.r43 ** (n + 1)))
+            return self._A4
 
         def B3(self, n):
-            return self.A3(n) * self.V(n)
+            try:
+                return self._B3
+            except AttributeError:
+                n = self.n
+
+            self._B3 = self.A3(n) * self.V(n)
+            return self._B3
 
         def B4(self, n):
-            return self.A4(n) * n / (n + 1.)
+            try:
+                return self._B4
+            except AttributeError:
+                n = self.n
+
+            self._B4 = self.A4(n) * n / (n + 1.)
+            return self._B4
 
         def __getattr__(self, name):
             return getattr(self.model, name)
@@ -535,18 +642,25 @@ if __name__ == '__main__':
                                                      5.00 * BRAIN_CONDUCTIVITY,
                                                      0.05 * BRAIN_CONDUCTIVITY,
                                                      1.00 * BRAIN_CONDUCTIVITY)
-    RADIUS = common.FourSphereModel.Properties(7.9, 8.0, 8.5, 9.0)
-    X, Y, Z = np.meshgrid(np.linspace(-8.9, 8.9, 10),
-                          np.linspace(-8.9, 8.9, 10),
-                          np.linspace(-8.9, 8.9, 10))
-    ELECTRODES = pd.DataFrame({'X': X.flatten(),
-                               'Y': Y.flatten(),
-                               'Z': Z.flatten(),
-                               })
+    SCALP_R = 9.0
+    RADIUS = common.FourSphereModel.Properties(7.9, 8.0, 8.5, SCALP_R)
+
+    N = 1000
+    np.random.seed(42)
+    ELECTRODES = pd.DataFrame({
+        'PHI': np.random.uniform(-np.pi, np.pi, N),
+        'THETA': 2 * np.arcsin(np.sqrt(np.random.uniform(0, 1, N))) - np.pi / 2
+        })
+
+    ELECTRODES['X'] = SCALP_R * np.sin(ELECTRODES.THETA)
+    _XY_R = SCALP_R * np.cos(ELECTRODES.THETA)
+    ELECTRODES['Y'] = _XY_R * np.cos(ELECTRODES.PHI)
+    ELECTRODES['Z'] = _XY_R * np.sin(ELECTRODES.PHI)
+
     DF = ELECTRODES.copy()
     oldFourSM = common.FourSphereModel(CONDUCTIVITY,
                                        RADIUS,
-                                       ELECTRODES)
+                                       ELECTRODES[['X', 'Y', 'Z']])
     newFourSM = FourSphereModel(CONDUCTIVITY,
                                 RADIUS)
 
@@ -558,7 +672,7 @@ if __name__ == '__main__':
     newDipoleFourSM = newFourSM(list(LOC), list(P))
     DF['NEW'] = newDipoleFourSM(ELECTRODES.X,
                                 ELECTRODES.Y,
-                                ELECTRODES.Z)
+                                ELECTRODES.Z).flatten()
     assert np.abs((DF.OLD - DF.NEW) / DF.OLD).max() < 1e-10
 
     dipole = newFourSM([7.437628862425826, 1.9929066472894097, -1.3662702569423635e-15],

@@ -38,12 +38,12 @@ class FourSphereModel(object):
     Based on https://github.com/Neuroinflab/fourspheremodel
     by Chaitanya Chintaluri
     """
-    Properies = collections.namedtuple('FourSpheres',
-                                       ['brain',
-                                        'csf',
-                                        'skull',
-                                        'scalp',
-                                        ])
+    Properties = collections.namedtuple('FourSpheres',
+                                        ['brain',
+                                         'csf',
+                                         'skull',
+                                         'scalp',
+                                         ])
 
     I = 10.
     n = np.arange(1, 100)
