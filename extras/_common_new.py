@@ -326,6 +326,12 @@ class FourSphereModel(object):
         self._set_radii(radius)
         self._set_conductivities(conductivity)
 
+    @classmethod
+    def from_config(cls, path, n=100):
+        return cls(cls.Properties.from_config(path, 'conductivity'),
+                   cls.Properties.from_config(path, 'radius'),
+                   n)
+
     def _set_radii(self, radius):
         self.radius = radius
         self.r12 = radius.brain / radius.csf
