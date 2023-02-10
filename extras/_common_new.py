@@ -386,19 +386,22 @@ class FourSphereModel(object):
         return self._Z
 
     def __call__(self, loc, P):
-        return self._PointDipole(self, np.array(loc), P)
+        return self._PointDipole(self,
+                                 np.reshape(loc,
+                                            (1, 3)),
+                                 np.reshape(P,
+                                            (1, 3)))
 
     class _PointDipole(object):
         def __init__(self, model, dipole_loc, dipole_moment):
             self.model = model
             self.set_dipole_loc(dipole_loc)
-            self.decompose_dipole(np.reshape(dipole_moment,
-                                             (1, -1)))
+            self.decompose_dipole(dipole_moment)
             self._set_dipole_r()
 
         def set_dipole_loc(self, loc):
             self.loc_r = np.sqrt(np.square(loc).sum())
-            self.loc_v = (np.reshape(loc, (1, -1)) / self.loc_r
+            self.loc_v = (loc / self.loc_r
                           if self.loc_r != 0
                           else np.array([[0, 0, 1]]))
 
