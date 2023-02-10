@@ -23,7 +23,6 @@
 ###############################################################################
 
 import sys
-import configparser
 
 import numpy as np
 import pandas as pd
@@ -58,9 +57,9 @@ RADIUS = FourSphereModel.Properties(
 
 SCALP_R = RADIUS.scalp
 
-DIPOLE_R = 7.8
+DIPOLE_R = 78e-3
 DIPOLE_LOC = np.array([[0., 0., DIPOLE_R]])
-DIPOLE_P = np.array([[1., 0., 0.]])
+DIPOLE_P = np.array([[1e-2, 0., 0.]])
 
 N = 1000
 
@@ -193,15 +192,6 @@ class SubtractionDipoleSourcePotentialFEM(fc._SubtractionPointSourcePotentialFEM
 analyticalModel = FourSphereModel(CONDUCTIVITY, RADIUS)
 analyticalDipole = analyticalModel(DIPOLE_LOC, DIPOLE_P)
 
-ELECTRODES_SI = 0.01 * np.transpose([ELECTRODES[c] for c in 'XYZ'])
-CONDUCTIVITY_SI = FourSphereModel.Properties(*(100 * np.array(CONDUCTIVITY)))
-RADIUS_SI = FourSphereModel.Properties(*(0.01 * np.array(RADIUS)))
-
-analyticalModelSI = FourSphereModel(CONDUCTIVITY_SI,
-                                    RADIUS_SI)
-analyticalDipoleSI = analyticalModelSI(0.01 * DIPOLE_LOC,
-                                       0.01 * DIPOLE_P)
-
 fem = SubtractionDipoleSourcePotentialFEM(fc.FunctionManager(MESH, DEGREE, 'CG'),
                                           CONFIG)
 
@@ -224,7 +214,7 @@ ELECTRODES['BASE_POTENTIAL'] = potential_base(0.01 * DIPOLE_LOC,
                                               ELECTRODES_SI).flatten()
 
 _TMP = []
-for x, y, z in ELECTRODES_SI:
+for x, y, z in zip(*[ELECTRODES[c] for c in 'XYZ']):
     try:
         _TMP.append(potential_correction(x, y, z))
     except RuntimeError:
@@ -236,7 +226,7 @@ ELECTRODES['FEM_CORRECTION'] = _TMP
 
 ELECTRODES['FEM_POTENTIAL'] = ELECTRODES.BASE_POTENTIAL + ELECTRODES.FEM_CORRECTION
 ELECTRODES['ANALYTICAL_POTENTIAL'] = analyticalDipole(*[ELECTRODES[c] for c in 'XYZ']).flatten()
-ELECTRODES['ANALYTICAL_POTENTIAL_SI'] = analyticalDipoleSI(*ELECTRODES_SI.T).flatten()
+
 
 #plt.ion()
 fig, axes = plt.subplots(2, 1,
@@ -268,12 +258,8 @@ for ax, scale in zip(axes, ['symlog', 'linear']):
             label='FEM-corrected')
     ax.plot(ELECTRODES.X, ELECTRODES.ANALYTICAL_POTENTIAL,
             ls='--',
-            color=cbf.ORANGE,
-            label='Analitical')
-    ax.plot(ELECTRODES.X, ELECTRODES.ANALYTICAL_POTENTIAL_SI,
-            ls=':',
             color=cbf.VERMILION,
-            label='Analitical (SI)')
+            label='Analitical')
 
     ax.legend(loc='best')
 
