@@ -51,8 +51,8 @@ RADIUS = FourSphereModel.Properties.from_config(CONFIG, 'radius')
 SCALP_R = RADIUS.scalp
 
 DIPOLE_R = 78e-3
-DIPOLE_LOC = np.array([[0., 0., DIPOLE_R]])
-DIPOLE_P = np.array([[1e-2, 0., 0.]])
+DIPOLE_LOC = [0., 0., DIPOLE_R]
+DIPOLE_P = [0.002, 0.003, 0.005]
 
 N = 1000
 
@@ -204,9 +204,9 @@ class DipoleKCSD(object):
                 / RADIUS ** 3
                 * np.matmul(R, self.p.T))
 
-potential_correction = fem.correction_potential(DIPOLE_LOC.flatten(),
-                                                DIPOLE_P.flatten())
 
+potential_correction = fem.correction_potential(DIPOLE_LOC,
+                                                DIPOLE_P)
 
 potential_base = DipoleKCSD(DIPOLE_LOC,
                             DIPOLE_P,
