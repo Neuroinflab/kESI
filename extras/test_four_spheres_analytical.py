@@ -44,15 +44,15 @@ CONFIG = 'FEM/model_properties/four_spheres_csf_3_mm.ini'
 MESH = sys.argv[1]
 DEGREE = int(sys.argv[2])
 
+DIPOLE_R = 78e-3
+DIPOLE_LOC = [0., 0., DIPOLE_R]
+DIPOLE_P = [0.002, 0.003, 0.005]
+
 
 CONDUCTIVITY = FourSphereModel.Properties.from_config(CONFIG, 'conductivity')
 RADIUS = FourSphereModel.Properties.from_config(CONFIG, 'radius')
 
 SCALP_R = RADIUS.scalp
-
-DIPOLE_R = 78e-3
-DIPOLE_LOC = [0., 0., DIPOLE_R]
-DIPOLE_P = [0.002, 0.003, 0.005]
 
 N = 1000
 
@@ -61,9 +61,6 @@ ELECTRODES = pd.DataFrame({'R': np.linspace(-_XY_R, _XY_R, N)})
 ELECTRODES['X'] = np.sin(np.pi / 3) * ELECTRODES.R
 ELECTRODES['Y'] = np.cos(np.pi / 3) * ELECTRODES.R
 ELECTRODES['Z'] = DIPOLE_R
-
-ELECTRODES_LOC = np.transpose([ELECTRODES[c] for c in 'XYZ'])
-
 #np.random.seed(42)
 #ELECTRODES = pd.DataFrame({
 #    'PHI': np.random.uniform(-np.pi, np.pi, N),
@@ -75,6 +72,37 @@ ELECTRODES_LOC = np.transpose([ELECTRODES[c] for c in 'XYZ'])
 #_XY_R = ELECTRODES.R * np.cos(ELECTRODES.THETA)
 #ELECTRODES['Y'] = _XY_R * np.cos(ELECTRODES.PHI)
 #ELECTRODES['Z'] = _XY_R * np.sin(ELECTRODES.PHI)
+
+ELECTRODES_LOC = np.transpose([ELECTRODES[c] for c in 'XYZ'])
+
+
+
+analyticalModel = FourSphereModel(CONDUCTIVITY, RADIUS)
+analyticalDipole = analyticalModel(DIPOLE_LOC, DIPOLE_P)
+
+ELECTRODES['ANALYTICAL_POTENTIAL'] = analyticalDipole(*ELECTRODES_LOC.T).flatten()
+
+
+
+class DipoleKCSD(object):
+    def __init__(self, loc, p, conductivity):
+        self.loc = np.reshape(loc, (1, 3))
+        self.p = np.reshape(p, (1, 3))
+        self.conductivity = conductivity
+
+    def __call__(self, X, Y, Z):
+        R = np.vstack([X, Y, Z]).T - self.loc
+        RADIUS = np.sqrt(np.square(R).sum(axis=1)).reshape(-1, 1)
+        return (0.25 / (np.pi * self.conductivity)
+                / RADIUS ** 3
+                * np.matmul(R, self.p.T))
+
+potential_base = DipoleKCSD(DIPOLE_LOC,
+                            DIPOLE_P,
+                            CONDUCTIVITY.brain)
+
+ELECTRODES['BASE_POTENTIAL'] = potential_base(*ELECTRODES_LOC.T).flatten()
+
 
 
 class SubtractionDipoleSourcePotentialFEM(fc._SubtractionPointSourcePotentialFEM):
@@ -185,34 +213,13 @@ class SubtractionDipoleSourcePotentialFEM(fc._SubtractionPointSourcePotentialFEM
         return self.config.getfloat('brain', 'conductivity')
 
 
-analyticalModel = FourSphereModel(CONDUCTIVITY, RADIUS)
-analyticalDipole = analyticalModel(DIPOLE_LOC, DIPOLE_P)
 
 fem = SubtractionDipoleSourcePotentialFEM(fc.FunctionManager(MESH, DEGREE, 'CG'),
                                           CONFIG)
 
-class DipoleKCSD(object):
-    def __init__(self, loc, p, conductivity):
-        self.loc = np.reshape(loc, (1, 3))
-        self.p = np.reshape(p, (1, 3))
-        self.conductivity = conductivity
-
-    def __call__(self, X, Y, Z):
-        R = np.vstack([X, Y, Z]).T - self.loc
-        RADIUS = np.sqrt(np.square(R).sum(axis=1)).reshape(-1, 1)
-        return (0.25 / (np.pi * self.conductivity)
-                / RADIUS ** 3
-                * np.matmul(R, self.p.T))
-
-
 potential_correction = fem.correction_potential(DIPOLE_LOC,
                                                 DIPOLE_P)
 
-potential_base = DipoleKCSD(DIPOLE_LOC,
-                            DIPOLE_P,
-                            CONDUCTIVITY.brain)
-
-ELECTRODES['BASE_POTENTIAL'] = potential_base(*ELECTRODES_LOC.T).flatten()
 
 _TMP = []
 for x, y, z in ELECTRODES_LOC:
@@ -222,11 +229,8 @@ for x, y, z in ELECTRODES_LOC:
         _TMP.append(np.nan)
 
 ELECTRODES['FEM_CORRECTION'] = _TMP
-#ELECTRODES['FEM_CORRECTION'] = [potential_correction(x, y, z)
-#                                for x, y, z in zip(*[ELECTRODES[c] / 100 for c in 'XYZ'])]
-
 ELECTRODES['FEM_POTENTIAL'] = ELECTRODES.BASE_POTENTIAL + ELECTRODES.FEM_CORRECTION
-ELECTRODES['ANALYTICAL_POTENTIAL'] = analyticalDipole(*[ELECTRODES[c] for c in 'XYZ']).flatten()
+
 
 
 #plt.ion()
