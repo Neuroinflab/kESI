@@ -49,10 +49,10 @@ DIPOLE_LOC = [0., 0., DIPOLE_R]
 DIPOLE_P = [0.002, 0.003, 0.005]
 
 
-CONDUCTIVITY = FourSphereModel.Properties.from_config(CONFIG, 'conductivity')
-RADIUS = FourSphereModel.Properties.from_config(CONFIG, 'radius')
 
-SCALP_R = RADIUS.scalp
+analyticalModel = FourSphereModel.from_config(CONFIG)
+
+SCALP_R = analyticalModel.radius.scalp
 
 N = 1000
 
@@ -77,7 +77,6 @@ ELECTRODES_LOC = np.transpose([ELECTRODES[c] for c in 'XYZ'])
 
 
 
-analyticalModel = FourSphereModel(CONDUCTIVITY, RADIUS)
 analyticalDipole = analyticalModel(DIPOLE_LOC, DIPOLE_P)
 
 ELECTRODES['ANALYTICAL_POTENTIAL'] = analyticalDipole(*ELECTRODES_LOC.T).flatten()
@@ -99,7 +98,7 @@ class DipoleKCSD(object):
 
 potential_base = DipoleKCSD(DIPOLE_LOC,
                             DIPOLE_P,
-                            CONDUCTIVITY.brain)
+                            analyticalModel.conductivity.brain)
 
 ELECTRODES['BASE_POTENTIAL'] = potential_base(*ELECTRODES_LOC.T).flatten()
 
@@ -248,7 +247,7 @@ for ax, scale in zip(axes, ['symlog', 'linear']):
     for y in [-1, 1]:
         ax.axhline(y, ls=':', color=cbf.BLACK)
 
-    for r in RADIUS:
+    for r in analyticalModel.radius:
         x = np.sqrt(r ** 2 - DIPOLE_R ** 2)
         ax.axvline(x, ls=':', color=cbf.BLACK)
         ax.axvline(-x, ls=':', color=cbf.BLACK)
