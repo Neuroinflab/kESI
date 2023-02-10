@@ -45,15 +45,8 @@ MESH = sys.argv[1]
 DEGREE = int(sys.argv[2])
 
 
-config = configparser.ConfigParser()
-config.read(CONFIG)
-
-CONDUCTIVITY = FourSphereModel.Properties(
-                   *[config.getfloat(name, 'conductivity') / 100
-                     for name in ['brain', 'csf', 'skull', 'scalp']])
-RADIUS = FourSphereModel.Properties(
-             *[config.getfloat(name, 'radius') * 100
-               for name in ['brain', 'csf', 'skull', 'scalp']])
+CONDUCTIVITY = FourSphereModel.Properties.from_config(CONFIG, 'conductivity')
+RADIUS = FourSphereModel.Properties.from_config(CONFIG, 'radius')
 
 SCALP_R = RADIUS.scalp
 
@@ -67,6 +60,8 @@ _XY_R = np.sqrt(SCALP_R ** 2 - DIPOLE_R ** 2)
 ELECTRODES = pd.DataFrame({'X': np.linspace(-_XY_R, _XY_R, N)})
 ELECTRODES['Y'] = 0.0
 ELECTRODES['Z'] = DIPOLE_R
+
+ELECTRODES_LOC = np.transpose([ELECTRODES[c] for c in 'XYZ'])
 
 #np.random.seed(42)
 #ELECTRODES = pd.DataFrame({
@@ -203,18 +198,18 @@ def potential_base(loc, p, conductivity, X):
             * np.matmul(R, np.reshape(p, (3, 1))))
 
 
-potential_correction = fem.correction_potential(0.01 * DIPOLE_LOC.flatten(),
-                                                0.01 * DIPOLE_P.flatten())
+potential_correction = fem.correction_potential(DIPOLE_LOC.flatten(),
+                                                DIPOLE_P.flatten())
 
 
 
-ELECTRODES['BASE_POTENTIAL'] = potential_base(0.01 * DIPOLE_LOC,
-                                              0.01 * DIPOLE_P,
-                                              100 * CONDUCTIVITY.brain,
-                                              ELECTRODES_SI).flatten()
+ELECTRODES['BASE_POTENTIAL'] = potential_base(DIPOLE_LOC,
+                                              DIPOLE_P,
+                                              analyticalModel.conductivity.brain,
+                                              ELECTRODES_LOC).flatten()
 
 _TMP = []
-for x, y, z in zip(*[ELECTRODES[c] for c in 'XYZ']):
+for x, y, z in ELECTRODES_LOC:
     try:
         _TMP.append(potential_correction(x, y, z))
     except RuntimeError:
