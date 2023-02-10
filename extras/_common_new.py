@@ -27,6 +27,7 @@ import logging
 import collections
 import operator
 import warnings
+import configparser
 
 import numpy as np
 from scipy.special import erf, lpmv
@@ -306,12 +307,19 @@ class FourSphereModel(object):
     Based on https://github.com/Neuroinflab/fourspheremodel
     by Chaitanya Chintaluri
     """
-    Properties = collections.namedtuple('FourSpheres',
-                                        ['brain',
-                                        'csf',
-                                        'skull',
-                                        'scalp',
-                                        ])
+    _LAYERS = ['brain',
+               'csf',
+               'skull',
+               'scalp',
+               ]
+    class Properties(collections.namedtuple('FourSpheres',
+                                            _LAYERS)):
+        @classmethod
+        def from_config(cls, path, field):
+            config = configparser.ConfigParser()
+            config.read(path)
+            return cls(*[config.getfloat('brain', field)
+                         for section in FourSphereModel._LAYERS])
 
     def __init__(self, conductivity, radius, n=100):
         self.n = np.arange(1, n)
