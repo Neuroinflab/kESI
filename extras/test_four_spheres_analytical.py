@@ -57,8 +57,9 @@ DIPOLE_P = np.array([[1e-2, 0., 0.]])
 N = 1000
 
 _XY_R = np.sqrt(SCALP_R ** 2 - DIPOLE_R ** 2)
-ELECTRODES = pd.DataFrame({'X': np.linspace(-_XY_R, _XY_R, N)})
-ELECTRODES['Y'] = 0.0
+ELECTRODES = pd.DataFrame({'R': np.linspace(-_XY_R, _XY_R, N)})
+ELECTRODES['X'] = np.sin(np.pi / 3) * ELECTRODES.R
+ELECTRODES['Y'] = np.cos(np.pi / 3) * ELECTRODES.R
 ELECTRODES['Z'] = DIPOLE_R
 
 ELECTRODES_LOC = np.transpose([ELECTRODES[c] for c in 'XYZ'])
@@ -243,15 +244,15 @@ for ax, scale in zip(axes, ['symlog', 'linear']):
         ax.axvline(x, ls=':', color=cbf.BLACK)
         ax.axvline(-x, ls=':', color=cbf.BLACK)
 
-    ax.plot(ELECTRODES.X, ELECTRODES.BASE_POTENTIAL,
+    ax.plot(ELECTRODES.R, ELECTRODES.BASE_POTENTIAL,
             color=cbf.YELLOW,
             ls='-',
             label='kCSD approximation')
-    ax.plot(ELECTRODES.X, ELECTRODES.FEM_POTENTIAL,
+    ax.plot(ELECTRODES.R, ELECTRODES.FEM_POTENTIAL,
             ls='-',
             color=cbf.SKY_BLUE,
             label='FEM-corrected')
-    ax.plot(ELECTRODES.X, ELECTRODES.ANALYTICAL_POTENTIAL,
+    ax.plot(ELECTRODES.R, ELECTRODES.ANALYTICAL_POTENTIAL,
             ls='--',
             color=cbf.VERMILION,
             label='Analitical')
