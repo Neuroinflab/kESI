@@ -318,7 +318,7 @@ class FourSphereModel(object):
         def from_config(cls, path, field):
             config = configparser.ConfigParser()
             config.read(path)
-            return cls(*[config.getfloat('brain', field)
+            return cls(*[config.getfloat(section, field)
                          for section in FourSphereModel._LAYERS])
 
     def __init__(self, conductivity, radius, n=100):
