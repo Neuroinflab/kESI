@@ -191,23 +191,28 @@ analyticalDipole = analyticalModel(DIPOLE_LOC, DIPOLE_P)
 fem = SubtractionDipoleSourcePotentialFEM(fc.FunctionManager(MESH, DEGREE, 'CG'),
                                           CONFIG)
 
-def potential_base(loc, p, conductivity, X):
-    R = np.reshape(X, (-1, 3)) - np.reshape(loc, (1, 3))
-    RADIUS = np.sqrt(np.square(R).sum(axis=1)).reshape(-1, 1)
-    return (0.25 / (np.pi * conductivity)
-            / RADIUS ** 3
-            * np.matmul(R, np.reshape(p, (3, 1))))
+class DipoleKCSD(object):
+    def __init__(self, loc, p, conductivity):
+        self.loc = np.reshape(loc, (1, 3))
+        self.p = np.reshape(p, (1, 3))
+        self.conductivity = conductivity
 
+    def __call__(self, X, Y, Z):
+        R = np.vstack([X, Y, Z]).T - self.loc
+        RADIUS = np.sqrt(np.square(R).sum(axis=1)).reshape(-1, 1)
+        return (0.25 / (np.pi * self.conductivity)
+                / RADIUS ** 3
+                * np.matmul(R, self.p.T))
 
 potential_correction = fem.correction_potential(DIPOLE_LOC.flatten(),
                                                 DIPOLE_P.flatten())
 
 
+potential_base = DipoleKCSD(DIPOLE_LOC,
+                            DIPOLE_P,
+                            CONDUCTIVITY.brain)
 
-ELECTRODES['BASE_POTENTIAL'] = potential_base(DIPOLE_LOC,
-                                              DIPOLE_P,
-                                              analyticalModel.conductivity.brain,
-                                              ELECTRODES_LOC).flatten()
+ELECTRODES['BASE_POTENTIAL'] = potential_base(*ELECTRODES_LOC.T).flatten()
 
 _TMP = []
 for x, y, z in ELECTRODES_LOC:
