@@ -438,3 +438,12 @@ rule paper_composite_slice_forward:
 #          --output {output} \
 #          --quiet
 #        """
+
+rule mesh:
+    output:
+        "FEM/meshes/{TARGET}"
+    shell:
+        """
+        cd FEM/meshes
+        snakemake -j 1 {wildcards.TARGET}
+        """
