@@ -437,45 +437,35 @@ class FourSphereModel(object):
         def __call__(self, X, Y, Z):
             ELECTRODES = np.vstack([X, Y, Z]).T
 
-            ele_dist, adjusted_theta = self.adjust_theta(self.loc, ELECTRODES)
+            ele_dist = np.linalg.norm(ELECTRODES, axis=1)
+            COS_THETA = self.cos_theta(ELECTRODES / ele_dist.reshape(-1, 1))
             tan_cosinus = self.tan_versor_cosinus(ELECTRODES).flatten()
+
+            COEF = self.H_v(ele_dist)
+            LPMV = lpmv(1,                      # expensive for n >= 10_000;
+                        self.n.reshape(1, -1),  # line_profiler claims 99.7%
+                        COS_THETA)              # experimental complexity O(n^2)
+            LFUNCPROD = (COEF * LPMV).sum(axis=1)
+
+            NCOEF = self.n * COEF
+            RAD_COEF = np.hstack([np.zeros((COEF.shape[0], 1)),
+                                  NCOEF])
+            LFACTOR = np.polynomial.legendre.legval(COS_THETA.flatten(),
+                                                    RAD_COEF.T,
+                                                    tensor=False)
 
             sign_rad = np.sign(self.north_projection(self.p_rad))
             mag_rad = sign_rad * np.linalg.norm(self.p_rad)
             mag_tan = np.linalg.norm(self.p_tan)  # sign_tan * np.linalg.norm(dp_tan)
 
-            potentials = np.zeros_like(tan_cosinus)
-            for i, (_r, _theta, _cos) in enumerate(zip(ele_dist,
-                                                   adjusted_theta,
-                                                   tan_cosinus)):
-                try:
-                    # coef = self.H(self.n, _r)
-                    coef = self.H(_r)
-
-                    cos_theta = np.cos(_theta)
-
-                    # radial
-                    n_coef = self.n * coef
-                    rad_coef = np.insert(n_coef, 0, 0)
-                    Lprod = np.polynomial.legendre.Legendre(rad_coef)
-                    Lfactor_rad = Lprod(cos_theta)
-                    rad_phi = mag_rad * Lfactor_rad
-
-                    # #tangential
-                    Lfuncprod = np.sum([C * lpmv(1, P_val, cos_theta)
-                                        for C, P_val in zip(coef, self.n)])
-
-                    tan_phi = -1 * mag_tan * _cos * np.array(Lfuncprod)
-                    potentials[i] = rad_phi + tan_phi
-                except:
-                    potentials[i] = np.nan
-
+            tan_potential = -mag_tan * tan_cosinus * LFUNCPROD
+            rad_potential = mag_rad * LFACTOR
+            potentials = tan_potential + rad_potential
             return potentials / (4 * np.pi * self.model.conductivity.brain * (self.rz ** 2))
 
-        def adjust_theta(self, dp_loc, ele_pos):
-            ele_dist = np.linalg.norm(ele_pos, axis=1)
-            dist_dp = np.linalg.norm(dp_loc)
-            cos_theta = np.dot(ele_pos, dp_loc) / (ele_dist * dist_dp)
+        def cos_theta(self, ele_versors):
+            cos_theta = self.north_projection(ele_versors)
+
             if np.isnan(cos_theta).any():
                 warnings.warn("invalid value of cos_theta", RuntimeWarning)
                 cos_theta = np.nan_to_num(cos_theta)
@@ -484,7 +474,7 @@ class FourSphereModel(object):
                 warnings.warn("cos_theta out of [-1, 1]", RuntimeWarning)
                 cos_theta = np.maximum(-1, np.minimum(1, cos_theta))
 
-            return ele_dist, np.arccos(cos_theta)
+            return cos_theta
 
         def tan_versor_cosinus(self, ele_pos):
             ele_north = self.north_vector(ele_pos)
@@ -512,31 +502,64 @@ class FourSphereModel(object):
 
             return cos
 
-        # def H(self, n, r_ele):
-        def H(self, r_ele):
-            n = self.n
-            if r_ele < self.radius.brain:
-                T1 = ((r_ele / self.radius.brain)**n) * self.A1(n)
-                T2 = ((self.rz / r_ele)**(n + 1))
-            elif r_ele < self.radius.csf:
-                T1 = ((r_ele / self.radius.csf)**n) * self.A2(n)
-                T2 = ((self.radius.csf / r_ele)**(n + 1)) * self.B2(n)
-            elif r_ele < self.radius.skull:
-                T1 = ((r_ele / self.radius.skull)**n) * self.A3(n)
-                T2 = ((self.radius.skull / r_ele)**(n + 1)) * self.B3(n)
-            elif r_ele <= self.radius.scalp:
-                T1 = ((r_ele / self.radius.scalp)**n) * self.A4(n)
-                T2 = ((self.radius.scalp / r_ele)**(n + 1)) * self.B4(n)
-            else:
-                print("Invalid electrode position: {:f} (off by {:e})".format(r_ele, r_ele - self.radius.scalp))
-                return
-            return T1 + T2
+
+        def H_v(self, r_ele):
+            COEF = np.full((len(r_ele), len(self.n)),
+                           np.nan)
+            IDX_LOW = r_ele >= self.loc_r
+
+            for i, r in zip(np.arange(len(r_ele))[~IDX_LOW],
+                            r_ele[~IDX_LOW]):
+                print("Invalid position of electrode #{:d}: {:f} (off by {:e})".format(
+                      i, r, r - self.loc_r))
+
+            IDX_HIGH = r_ele < self.radius.brain
+            IDX = IDX_LOW & IDX_HIGH
+            if IDX.any():
+                _r_ele = r_ele[IDX].reshape(-1, 1)
+                T1 = ((_r_ele / self.radius.brain) ** self.n) * self.A1()
+                T2 = ((self.rz / _r_ele) ** (self.n + 1))
+                COEF[IDX, :] = T1 + T2
+
+            IDX_LOW[IDX_HIGH] = False
+            IDX_HIGH = r_ele < self.radius.csf
+            IDX = IDX_LOW & IDX_HIGH
+            if IDX.any():
+                _r_ele = r_ele[IDX].reshape(-1, 1)
+                T1 = ((_r_ele / self.radius.csf) ** self.n) * self.A2()
+                T2 = ((self.radius.csf / _r_ele) ** (self.n + 1)) * self.B2()
+                COEF[IDX, :] = T1 + T2
+
+            IDX_LOW[IDX_HIGH] = False
+            IDX_HIGH = r_ele < self.radius.skull
+            IDX = IDX_LOW & IDX_HIGH
+            if IDX.any():
+                _r_ele = r_ele[IDX].reshape(-1, 1)
+                T1 = ((_r_ele / self.radius.skull) ** self.n) * self.A3()
+                T2 = ((self.radius.skull / _r_ele) ** (self.n + 1)) * self.B3()
+                COEF[IDX, :] = T1 + T2
+
+            IDX_LOW[IDX_HIGH] = False
+            IDX_HIGH = r_ele <= self.radius.scalp
+            IDX = IDX_LOW & IDX_HIGH
+            if IDX.any():
+                _r_ele = r_ele[IDX].reshape(-1, 1)
+                T1 = ((_r_ele / self.radius.scalp) ** self.n) * self.A4()
+                T2 = ((self.radius.scalp / _r_ele) ** (self.n + 1)) * self.B4()
+                COEF[IDX, :] = T1 + T2
+
+            for i, r in zip(np.arange(len(r_ele))[~IDX_HIGH],
+                            r_ele[~IDX_HIGH]):
+                print("Invalid position of electrode #{:d}: {:f} (off by {:e})".format(
+                      i, r, r - self.radius.scalp))
+
+            return COEF
 
         @property
         def n(self):
             return self.model.n
 
-        def A1(self, n):
+        def A1(self, n=None):
             try:
                 return self._A1
             except AttributeError:
@@ -547,7 +570,7 @@ class FourSphereModel(object):
             self._A1 = self.rz1 ** (n + 1) * (Z_n + self.s12 * k) / (self.s12 - Z_n)
             return self._A1
 
-        def A2(self, n):
+        def A2(self, n=None):
             try:
                 return self._A2
             except AttributeError:
@@ -558,7 +581,7 @@ class FourSphereModel(object):
 
             return self._A2
 
-        def A3(self, n):
+        def A3(self, n=None):
             try:
                 return self._A3
             except AttributeError:
@@ -568,7 +591,7 @@ class FourSphereModel(object):
                     / (self.r23 ** n + self.V(n) * self.r32 ** (n + 1)))
             return self._A3
 
-        def B2(self, n):
+        def B2(self, n=None):
             try:
                 return self._B2
             except AttributeError:
@@ -577,7 +600,7 @@ class FourSphereModel(object):
             self._B2 = self.A2(n) * self.Y(n)
             return self._B2
 
-        def A4(self, n):
+        def A4(self, n=None):
             try:
                 return self._A4
             except AttributeError:
@@ -588,7 +611,7 @@ class FourSphereModel(object):
                         / (k * self.r34 ** n + self.r43 ** (n + 1)))
             return self._A4
 
-        def B3(self, n):
+        def B3(self, n=None):
             try:
                 return self._B3
             except AttributeError:
@@ -597,7 +620,7 @@ class FourSphereModel(object):
             self._B3 = self.A3(n) * self.V(n)
             return self._B3
 
-        def B4(self, n):
+        def B4(self, n=None):
             try:
                 return self._B4
             except AttributeError:
