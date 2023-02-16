@@ -447,81 +447,81 @@ MESH_DIR = "FEM/meshes/"
 rule GEO:
     input: f'{MESH_DIR}{{mesh_name}}.geo'
     output: f'{MESH_DIR}meshes/{{mesh_name}}/mesh.geo'
-    shell: """
-      mkdir -p meshes/{wildcards.mesh_name}
-      cp {input} {output}
+    shell: f"""
+      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
+      cp {{input}} {{output}}
       """
 
 rule GEO_NORMAL:
     input: f'{MESH_DIR}{{mesh_name}}.geo.template'
     output: f'{MESH_DIR}meshes/{{mesh_name}}/normal.geo'
-    shell: """
-      mkdir -p meshes/{wildcards.mesh_name}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/1.0/g' < {input} > {output}
+    shell: f"""
+      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/1.0/g' < {{input}} > {{output}}
       """
 
 rule GEO_FINE:
     input: f'{MESH_DIR}{{mesh_name}}.geo.template'
     output: f'{MESH_DIR}meshes/{{mesh_name}}/fine.geo'
-    shell: """
-      mkdir -p meshes/{wildcards.mesh_name}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.5/g' < {input} > {output}
+    shell: f"""
+      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.5/g' < {{input}} > {{output}}
       """
 
 rule GEO_FINER:
     input: f'{MESH_DIR}{{mesh_name}}.geo.template'
     output: f'{MESH_DIR}meshes/{{mesh_name}}/finer.geo'
-    shell: """
-      mkdir -p meshes/{wildcards.mesh_name}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.25/g' < {input} > {output}
+    shell: f"""
+      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.25/g' < {{input}} > {{output}}
       """
 
 rule GEO_FINEST:
     input: f'{MESH_DIR}{{mesh_name}}.geo.template'
     output: f'{MESH_DIR}meshes/{{mesh_name}}/finest.geo'
-    shell: """
-      mkdir -p meshes/{wildcards.mesh_name}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.125/g' < {input} > {output}
+    shell: f"""
+      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.125/g' < {{input}} > {{output}}
       """
 
 rule GEO_SUPERFINE:
     input: f'{MESH_DIR}{{mesh_name}}.geo.template'
     output: f'{MESH_DIR}meshes/{{mesh_name}}/superfine.geo'
-    shell: """
-      mkdir -p meshes/{wildcards.mesh_name}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.0625/g' < {input} > {output}
+    shell: f"""
+      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.0625/g' < {{input}} > {{output}}
       """
 
 rule GEO_SUPERFINER:
     input: f'{MESH_DIR}{{mesh_name}}.geo.template'
     output: f'{MESH_DIR}meshes/{{mesh_name}}/superfiner.geo'
-    shell: """
-      mkdir -p meshes/{wildcards.mesh_name}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.03125/g' < {input} > {output}
+    shell: f"""
+      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.03125/g' < {{input}} > {{output}}
       """
 
 rule GEO_COARSE:
     input: f'{MESH_DIR}{{mesh_name}}.geo.template'
     output: f'{MESH_DIR}meshes/{{mesh_name}}/coarse.geo'
-    shell: """
-      mkdir -p meshes/{wildcards.mesh_name}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/2.0/g' < {input} > {output}
+    shell: f"""
+      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/2.0/g' < {{input}} > {{output}}
       """
 
 rule GEO_COARSER:
     input: f'{MESH_DIR}{{mesh_name}}.geo.template'
     output: f'{MESH_DIR}meshes/{{mesh_name}}/coarser.geo'
-    shell: """
-      mkdir -p meshes/{wildcards.mesh_name}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/4.0/g' < {input} > {output}
+    shell: f"""
+      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/4.0/g' < {{input}} > {{output}}
       """
 
 rule GEO_COARSEST:
     input: f'{MESH_DIR}{{mesh_name}}.geo.template'
     output: f'{MESH_DIR}meshes/{{mesh_name}}/coarsest.geo'
-    shell: """
-       mkdir -p meshes/{wildcards.mesh_name}
-       sed 's/SED_RELATIVE_ELEMENT_SIZE/8.0/g' < {input} > {output}
+    shell: f"""
+       mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
+       sed 's/SED_RELATIVE_ELEMENT_SIZE/8.0/g' < {{input}} > {{output}}
        """
 
 rule MSH:
