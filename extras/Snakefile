@@ -190,7 +190,7 @@ rule tutorial_case_study_solve:
 
 rule paper_slice_trigger:
     input: ["FEM/solutions/paper/circular_slice/{{MESH}}/{{DEGREE}}/sampled/9/{}_0_{}.npz".format(x, z) for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
-    output: ".paper_slice_{MESH}_{DEGREE}"
+    output: ".paper_slice_{MESH}_{DEGREE,\d}"
     shell: "touch {output}"
 
 
@@ -198,7 +198,7 @@ rule paper_slice_sample:
     input:
 		    "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/{NAME}.h5", CONFIG="FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/{NAME}.ini"
     output:
-		    "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/sampled/{K,\d+}/{NAME}.npz"
+		    "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE,\d}/sampled/{K,\d+}/{NAME}.npz"
     resources:
         mem_mb=get_mem_mb_exponential(7_500)
     shell:
@@ -212,7 +212,7 @@ rule paper_slice_solve:
     input:
         ELECTRODES="FEM/electrode_locations/paper/circular_slice/grid_3d.ini", MESH_PATH="FEM/meshes/meshes/circular_slice/{MESH}.xdmf", CONFIG="FEM/model_properties/circular_slice.ini"
     output:
-        "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/{NAME}.h5", METADATA="FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/{NAME}.ini"
+        "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE,\d}/{NAME}.h5", METADATA="FEM/solutions/paper/circular_slice/{MESH}/{DEGREE,\d}/{NAME}.ini"
     resources:
         mem_mb=get_mem_mb_exponential(15_000)
     shell:
@@ -251,7 +251,7 @@ rule paper_composite_slice_solve:
 
 rule paper_4SM_trigger:
     input: ["FEM/solutions/paper/four_spheres_{{GEOMETRY}}/{{MESH}}/{{DEGREE}}/sampled/9/{}_{:02d}.npz".format(x, z) for x in ['B', 'D'] for z in range(0, 12)]
-    output: ".paper_four_spheres_{GEOMETRY}_{MESH}_{DEGREE}"
+    output: ".paper_four_spheres_{GEOMETRY}_{MESH}_{DEGREE,\d}"
     shell: "touch {output}"
 
 
@@ -259,7 +259,7 @@ rule paper_4SM_sample:
     input:
 		    "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/{NAME}.h5", CONFIG="FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/{NAME}.ini"
     output:
-		    "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/sampled/{K,\d+}/{NAME}.npz"
+		    "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE,\d}/sampled/{K,\d+}/{NAME}.npz"
     resources:
         mem_mb=get_mem_mb_exponential(7_500)
     shell:
@@ -273,7 +273,7 @@ rule paper_4SM_solve:
     input:
         ELECTRODES="FEM/electrode_locations/paper/four_spheres/comb.ini", MESH_PATH="FEM/meshes/meshes/four_spheres_{GEOMETRY}_plain/{MESH}.xdmf", CONFIG="FEM/model_properties/four_spheres_{GEOMETRY}.ini"
     output:
-        "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/{NAME}.h5", METADATA="FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/{NAME}.ini"
+        "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE,\d}/{NAME}.h5", METADATA="FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE,\d}/{NAME}.ini"
     resources:
         mem_mb=get_mem_mb_exponential(15_000)
     shell:
@@ -297,7 +297,7 @@ rule paper_4SM_forward:
        MESH_PATH="FEM/meshes/meshes/four_spheres_{GEOMETRY}_plain/{MESH}.xdmf",
        CONFIG="FEM/model_properties/four_spheres_{GEOMETRY}.ini"
    output:
-       "{SRC_DIR}/images/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/{NAME}.csv"
+       "{SRC_DIR}/images/four_spheres_{GEOMETRY}/{MESH}/{DEGREE,\d}/{NAME}.csv"
    shell:
        """
        python paper_forward_model_four_spheres.py \
@@ -326,7 +326,7 @@ PAPER_INPUT_DIR = "FEM/solutions/paper"
 PAPER_IMAGES_DIR = "FEM/solutions/paper/images"
 
 PAPER_4SM_ELECTRODES = [f'{x}_{i:02d}' for i in range(0, 12) for x in ['B', 'D']]
-PAPER_4SM_OUTPUT_DIR = f"{PAPER_IMAGES_DIR}/four_spheres_{{GEOMETRY}}/{{MESH}}/{{DEGREE}}/kernels/{{K,\\d+}}"
+PAPER_4SM_OUTPUT_DIR = f"{PAPER_IMAGES_DIR}/four_spheres_{{GEOMETRY}}/{{MESH}}/{{DEGREE,\d}}/kernels/{{K,\\d+}}"
 PAPER_4SM_OUTPUT = [f'{PAPER_4SM_OUTPUT_DIR}/{name}' for name in (['electrodes.csv', 'src_mask.npz'] + [f'{method}_{data}.npz' for method in ['kCSD', 'kESI'] for data in ['phi', 'kernel', 'crosskernel', 'analysis', 'eigensources']])]
 PAPER_4SM_INPUT_DIR = f"{PAPER_INPUT_DIR}/four_spheres_{{GEOMETRY}}/{{MESH}}/{{DEGREE}}/sampled/{{K}}"
 
@@ -338,7 +338,7 @@ rule paper_4SM_kernel:
     params:
         INPUT_DIR=PAPER_4SM_INPUT_DIR,
         ELECTRODES=PAPER_4SM_ELECTRODES,
-        OUTPUT_DIR='FEM/solutions/paper/images/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/kernels/{K,\d+}'
+        OUTPUT_DIR='FEM/solutions/paper/images/four_spheres_{GEOMETRY}/{MESH}/{DEGREE,\d}/kernels/{K,\d+}'
     shell:
         """
         mkdir -p {params.OUTPUT_DIR}
@@ -351,7 +351,7 @@ rule paper_4SM_kernel:
 
 
 PAPER_SLICE_ELECTRODES = ["{}_0_{}".format(x, z) for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
-PAPER_SLICE_OUTPUT_DIR = f"{PAPER_IMAGES_DIR}/circular_slice/{{MESH}}/{{DEGREE}}/kernels/{{K,\\d+}}"
+PAPER_SLICE_OUTPUT_DIR = f"{PAPER_IMAGES_DIR}/circular_slice/{{MESH}}/{{DEGREE,\d}}/kernels/{{K,\\d+}}"
 PAPER_SLICE_OUTPUT = [f'{PAPER_SLICE_OUTPUT_DIR}/{name}' for name in (['electrodes.csv', 'src_mask.npz'] + [f'{method}_{data}.npz' for method in ['kCSD', 'kESI'] for data in ['phi', 'kernel', 'crosskernel', 'analysis', 'eigensources']])]
 PAPER_SLICE_INPUT_DIR = f"{PAPER_INPUT_DIR}/circular_slice/{{MESH}}/{{DEGREE}}/sampled/{{K}}"
 
@@ -383,7 +383,7 @@ rule paper_slice_forward:
        MESH_PATH="FEM/meshes/meshes/circular_slice/{MESH}.xdmf",
        CONFIG="FEM/model_properties/circular_slice.ini"
    output:
-       "{SRC_DIR}/images/circular_slice/{MESH}/{DEGREE}/{NAME}.csv"
+       "{SRC_DIR}/images/circular_slice/{MESH}/{DEGREE,\d}/{NAME}.csv"
    shell:
        """
        python paper_forward_model_slice.py \
