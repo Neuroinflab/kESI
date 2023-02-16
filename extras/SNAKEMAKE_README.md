@@ -32,3 +32,17 @@ where:
 | _\_subdomains.xdmf_ and _\_subdomains.h5_ | _FEniCS_ mesh domains |
 | _\_boundaries.xdmf_ and _\_boundaries.h5_ | _FEniCS_ boundaries   |
 
+
+### Solutions
+
+Most of kESI data is stored in the _FEM/solutions_ directory.
+It does not  contain any tracked files, thus it may be softlinked
+or mounted as a dedicated filesystem.
+
+The _FEM/solutions/tutorial_ directory contains tutorial-related data,
+thus its content is discussed therein.
+
+The _FEM/solutions/paper_ directory contains publication-related data.
+For the sake of readability the **_FEM/solutions/paper_ path is omitted
+in the further text**, that is all paths are relative to the root
+of the _FEM/solutions/paper_ subtree unless stated otherwise.
