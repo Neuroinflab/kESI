@@ -57,3 +57,24 @@ contains its metadata.
 File _\<geometry\>/\<granularity\>/\<degree\>/sampled/\<k\>/\<electrode\>.npz_
 contains the **sampled leadfield correction** of the electrode saved in _NumPy_
 format.  The correction is sampled on a regular, $(2^k + 1)^3$ grid.
+
+Directories following pattern
+_images/\<geometry\>/\<granularity\>/\<degree\>/kernels/\<k\>/_
+contain kESI/kCSD kernel-related files derived from
+_\<geometry\>/\<granularity\>/\<degree\>/sampled/\<k\>/*.npz_
+sampled leadfields.
+
+| file                           | content                                                        |
+|--------------------------------|----------------------------------------------------------------|
+| _electrodes.csv_               | positions of electrodes                                        |
+| _src_mask.npz_                 | positions of source centroids                                  |
+| _\<method\>\_phi.npz_          | the transfer matrix ($\Phi$) of _\<method\>_                   |
+| _\<method\>\_kernel.npz_       | the kernel matrix of _\<method\>_                              |
+| _\<method\>\_crosskernel.npz_  | the volumetric crosskernel tensor of _\<method\>_              |
+| _\<method\>\_analysis.npz_     | auxilary analytical data of _\<method\>_                       |
+| _\<method\>\_eigensources.npz_ | the volumetric eigensource tensor of _\<method\>_              |
+| _fair\_sources.npz_            | average of appropriate volumetric eigensources of both methods |
+
+_\<method\>_ may be either _kCSD_ or _kESI_.  Note that
+_images/\<geometry\>/\<granularity\>/\<degree\>/kernels/\<k\>/kCSD\_*.npz_
+files are redundant.
