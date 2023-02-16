@@ -439,11 +439,117 @@ rule paper_composite_slice_forward:
 #          --quiet
 #        """
 
-rule mesh:
-    output:
-        "FEM/meshes/{TARGET}"
-    shell:
-        """
-        cd FEM/meshes
-        snakemake -j 1 {wildcards.TARGET}
-        """
+
+
+
+MESH_DIR = "FEM/meshes/"
+
+rule GEO:
+    input: f'{MESH_DIR}{{mesh_name}}.geo'
+    output: f'{MESH_DIR}meshes/{{mesh_name}}/mesh.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      cp {input} {output}
+      """
+
+rule GEO_NORMAL:
+    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
+    output: f'{MESH_DIR}meshes/{{mesh_name}}/normal.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/1.0/g' < {input} > {output}
+      """
+
+rule GEO_FINE:
+    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
+    output: f'{MESH_DIR}meshes/{{mesh_name}}/fine.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.5/g' < {input} > {output}
+      """
+
+rule GEO_FINER:
+    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
+    output: f'{MESH_DIR}meshes/{{mesh_name}}/finer.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.25/g' < {input} > {output}
+      """
+
+rule GEO_FINEST:
+    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
+    output: f'{MESH_DIR}meshes/{{mesh_name}}/finest.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.125/g' < {input} > {output}
+      """
+
+rule GEO_SUPERFINE:
+    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
+    output: f'{MESH_DIR}meshes/{{mesh_name}}/superfine.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.0625/g' < {input} > {output}
+      """
+
+rule GEO_SUPERFINER:
+    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
+    output: f'{MESH_DIR}meshes/{{mesh_name}}/superfiner.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.03125/g' < {input} > {output}
+      """
+
+rule GEO_COARSE:
+    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
+    output: f'{MESH_DIR}meshes/{{mesh_name}}/coarse.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/2.0/g' < {input} > {output}
+      """
+
+rule GEO_COARSER:
+    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
+    output: f'{MESH_DIR}meshes/{{mesh_name}}/coarser.geo'
+    shell: """
+      mkdir -p meshes/{wildcards.mesh_name}
+      sed 's/SED_RELATIVE_ELEMENT_SIZE/4.0/g' < {input} > {output}
+      """
+
+rule GEO_COARSEST:
+    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
+    output: f'{MESH_DIR}meshes/{{mesh_name}}/coarsest.geo'
+    shell: """
+       mkdir -p meshes/{wildcards.mesh_name}
+       sed 's/SED_RELATIVE_ELEMENT_SIZE/8.0/g' < {input} > {output}
+       """
+
+rule MSH:
+    input: f'{MESH_DIR}{{mesh_name}}.geo'
+    output: f'{MESH_DIR}{{mesh_name}}.msh'
+    shell: 'gmsh -3 -optimize_netgen {input} || gmsh -3 -optimize {input} || gmsh -3 {input}'
+
+rule XDMF:
+    input: f'{MESH_DIR}{{mesh_name}}.msh'
+    output: mesh=f'{MESH_DIR}{{mesh_name}}.xdmf', subdomains=f'{MESH_DIR}{{mesh_name}}_subdomains.xdmf',  boundaries=f'{MESH_DIR}{{mesh_name}}_boundaries.xdmf'
+    run:
+        import meshio
+        # REQUIRES meshio v. 4.0.0
+        # see: https://github.com/nschloe/meshio/blob/master/CHANGELOG.md#v400-feb-18-2020
+        msh = meshio.read(str(input))
+
+        meshio.write(output.mesh,
+                     meshio.Mesh(points=msh.points,
+                                 cells=[("tetra", msh.cells_dict["tetra"]
+                                         )]))
+        meshio.write(str(output.boundaries),
+                     meshio.Mesh(points=msh.points,
+                                 cells=[("triangle", msh.cells_dict["triangle"])],
+                                 cell_data={"boundaries":
+                                            [msh.cell_data_dict["gmsh:physical"]["triangle"]]}))
+
+        meshio.write(str(output.subdomains),
+                     meshio.Mesh(points=msh.points,
+                                 cells=[("tetra", msh.cells_dict["tetra"])],
+                                 cell_data={"subdomains":
+                                            [msh.cell_data_dict["gmsh:physical"]["tetra"]]}))
