@@ -21,7 +21,8 @@ where:
 (_FEM/meshes/\<stem\>.geo.template_),
 - _\<granularity\>_ is either of _coarsest_, _coarser_, _coarse_, _normal_,
   _fine_, _finer_, _finest_, _superfine_, _superfinest_ (in descending order
-  of granularity),
+  of mesh granularity; other names are allowed for meshes of the same geometry
+  but not derived from the geometry template),
 - _suffix_ determines content of the file(files).
 
 | suffix                                    | content               |
