@@ -15,11 +15,11 @@ templates (_*.geo.template_).
 Most of compiled meshes are stored in the _FEM/meshes/meshes_ directory
 which does not contain any tracked files, thus it may be softlinked or mounted
 as a dedicated filesystem.  Paths to files in the directory follow pattern
-_FEM/meshes/meshes/\<geometry\>/\<mesh granularity\>\<suffix\>_
+_FEM/meshes/meshes/\<geometry\>/\<granularity\>\<suffix\>_
 where:
 - _\<geometry\>_ is the stem of the geometry template file
 (_FEM/meshes/\<stem\>.geo.template_),
-- _\<mesh granularity\>_ is either of _coarsest_, _coarser_, _coarse_, _normal_,
+- _\<granularity\>_ is either of _coarsest_, _coarser_, _coarse_, _normal_,
   _fine_, _finer_, _finest_, _superfine_, _superfinest_ (in descending order
   of granularity),
 - _suffix_ determines content of the file(files).
