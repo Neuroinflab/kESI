@@ -47,3 +47,13 @@ The _FEM/solutions/paper_ directory contains publication-related data.
 For the sake of readability the **_FEM/solutions/paper_ path is omitted
 in the further text**, that is all paths are relative to the root
 of the _FEM/solutions/paper_ subtree unless stated otherwise.
+
+Directories following pattern _\<geometry\>/\<granularity\>/\<degree\>/_
+contain corrections of leadfields of electrodes, which are crucial for kESI.
+File _\<geometry\>/\<granularity\>/\<degree\>/\<electrode\>.h5_ contains
+correction of the leadfield of the electrode _\<electrode\>_ saved as a _FEniCS_
+function and file _\<geometry\>/\<granularity\>/\<degree\>/\<electrode\>.ini_
+contains its metadata.
+File _\<geometry\>/\<granularity\>/\<degree\>/sampled/\<k\>/\<electrode\>.npz_
+contains the **sampled leadfield correction** of the electrode saved in _NumPy_
+format.  The correction is sampled on a regular, $(2^k + 1)^3$ grid.
