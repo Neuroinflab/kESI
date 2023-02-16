@@ -228,24 +228,25 @@ rule paper_slice_solve:
         """
 
 
-rule paper_composite_slice_solve:
-    input:
-        ELECTRODES="FEM/electrode_locations/paper/circular_slice/grid_3d.ini", MESH_PATH="FEM/meshes/circular_slice_composite.xdmf", CONFIG="FEM/model_properties/circular_slice.ini"
-    output:
-        "FEM/solutions/paper/circular_slice/composite/{DEGREE}/{NAME}.h5", METADATA="FEM/solutions/paper/circular_slice/composite/{DEGREE}/{NAME}.ini"
-    resources:
-        mem_mb=get_mem_mb_exponential(15_000)
-    shell:
-        """
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_solve_slice_on_plate.py \
-          --mesh {input.MESH_PATH} \
-          --degree {wildcards.DEGREE} \
-          --config {input.CONFIG} \
-          --electrodes {input.ELECTRODES} \
-          --name {wildcards.NAME} \
-          --output {output.METADATA}
-        """
+#rule paper_composite_slice_solve:
+#    input:
+#        ELECTRODES="FEM/electrode_locations/paper/circular_slice/grid_3d.ini", MESH_PATH="FEM/meshes/circular_slice_composite.xdmf", CONFIG="FEM/model_properties/circular_slice.ini"
+#    output:
+#        "FEM/solutions/paper/circular_slice/composite/{DEGREE,\d}/{NAME}.h5", METADATA="FEM/solutions/paper/circular_slice/composite/{DEGREE,\d}/{NAME}.ini"
+#    resources:
+#        mem_mb=get_mem_mb_exponential(15_000)
+#    shell:
+#        """
+#        ulimit -v $(({resources.mem_mb} * 1024))
+#        python paper_solve_slice_on_plate.py \
+#          --mesh {input.MESH_PATH} \
+#          --degree {wildcards.DEGREE} \
+#          --config {input.CONFIG} \
+#          --ground-potential 0.0 \
+#          --electrodes {input.ELECTRODES} \
+#          --name {wildcards.NAME} \
+#          --output {output.METADATA}
+#        """
 
 
 
@@ -408,38 +409,39 @@ rule paper_slice_forward:
 #        """
 
 
-rule paper_composite_slice_forward:
-   input:
-       ELECTRODES="{SRC_DIR}/electrodes.csv",
-       SOURCES="{SRC_DIR}/{NAME}.npz",
-       MESH_PATH="FEM/meshes/circular_slice_composite.xdmf",
-       CONFIG="FEM/model_properties/circular_slice.ini"
-   output:
-       "{SRC_DIR}/images/circular_slice/composite/{DEGREE}/{NAME}.csv"
-   shell:
-       """
-       python paper_forward_model_slice.py \
-         --mesh {input.MESH_PATH} \
-         --degree {wildcards.DEGREE} \
-         --config {input.CONFIG} \
-         --electrodes {input.ELECTRODES} \
-         --sources {input.SOURCES} \
-         --output {output} \
-         --quiet
-       """
-#        """
-#        python paper_forward_model_slice.py \
-#          --mesh {input.MESH_PATH} \
-#          --degree {wildcards.DEGREE} \
-#          --config {input.CONFIG} \
-#          --ground-potential 0.0 \
-#          --electrodes {input.ELECTRODES} \
-#          --sources {input.SOURCES} \
-#          --output {output} \
-#          --quiet
-#        """
 
 
+#rule paper_composite_slice_forward:
+#   input:
+#       ELECTRODES="{SRC_DIR}/electrodes.csv",
+#       SOURCES="{SRC_DIR}/{NAME}.npz",
+#       MESH_PATH="FEM/meshes/circular_slice_composite.xdmf",
+#       CONFIG="FEM/model_properties/circular_slice.ini"
+#   output:
+#       "{SRC_DIR}/images/circular_slice/composite/{DEGREE,\d}/{NAME}.csv"
+#   shell:
+#       """
+#       python paper_forward_model_slice.py \
+#         --mesh {input.MESH_PATH} \
+#         --degree {wildcards.DEGREE} \
+#         --config {input.CONFIG} \
+#         --ground-potential 0.0 \
+#         --electrodes {input.ELECTRODES} \
+#         --sources {input.SOURCES} \
+#         --output {output} \
+#         --quiet
+#       """
+# #        """
+# #        python paper_forward_model_slice.py \
+# #          --mesh {input.MESH_PATH} \
+# #          --degree {wildcards.DEGREE} \
+# #          --config {input.CONFIG} \
+# #          --ground-potential 0.0 \
+# #          --electrodes {input.ELECTRODES} \
+# #          --sources {input.SOURCES} \
+# #          --output {output} \
+# #          --quiet
+# #        """
 
 
 MESH_DIR = "FEM/meshes/"
@@ -449,6 +451,14 @@ rule GEO:
     output: f'{MESH_DIR}meshes/{{mesh_name}}/mesh.geo'
     shell: f"""
       mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
+      cp {{input}} {{output}}
+      """
+
+rule GEO_circular_slice_composite:
+    input: f'{MESH_DIR}circular_slice_composite.geo'
+    output: f'{MESH_DIR}meshes/circular_slice/composite.geo'
+    shell: f"""
+      mkdir -p {MESH_DIR}meshes/circular_slice
       cp {{input}} {{output}}
       """
 
