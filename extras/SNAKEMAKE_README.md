@@ -89,6 +89,10 @@ for the _\<geometry\>/\<granularity\>/\<degree\>_ subpath.
 
 ## Files
 
+### Leadfield correction function
+
+A _FEniCS_ 3D scalar function \[V/A\].
+
 ### Leadfield correction metadata
 
 An _*.ini_ file.
@@ -108,4 +112,4 @@ An _*.ini_ file.
 |            | local_preprocessing_time  | location-dependent preprocessing time \[s\]          |
 |            | solving_time              | time of FEM equation solving \[s\]                   |
 |            | base_conductivity         | base conductivity used by renormalization \[S/m\]    |
-|            | filename                  | relative path to the correction (_FEniCS_ function)  |
+|            | filename                  | relative path to the correction function             |
