@@ -113,3 +113,20 @@ An _*.ini_ file.
 |            | solving_time              | time of FEM equation solving \[s\]                   |
 |            | base_conductivity         | base conductivity used by renormalization \[S/m\]    |
 |            | filename                  | relative path to the correction function             |
+
+
+### Sampled leadfield correction
+
+A compressed NumPy file (_*.npz_).
+
+| array                   | shape        | type          | content                                           |
+|-------------------------|--------------|---------------|---------------------------------------------------|
+| _CORRECTION\_POTENTIAL_ | (nx, ny, nz) | float \[V/A\] | sampled leadfield correction                      |
+| _X_                     | (nx,)        | float \[m\]   | X nodes of the sampling grid                      |
+| _Y_                     | (ny,)        | float \[m\]   | Y nodes of the sampling grid                      |
+| _Z_                     | (nz,)        | float \[m\]   | Z nodes of the sampling grid                      |
+| _LOCATION_              | (3,)         | float \[m\]   | X, Y, Z coordinates of the electrode              |
+| _BASE\_CONDUCTIVITY_    | ()           | float \[S/m\] | base conductivity used by renormalization         |
+| _\_PREPROCESSING\_TIME_ | ()           | float \[s\]   | construction time of the `FunctionManager` object |
+| _\_LOADING\_TIME_       | ()           | float \[s\]   | loading time of the leadfield correction function |
+| _\_PROCESSING\_TIME_    | ()           | float \[s\]   | leadfield correction sampling time                |
