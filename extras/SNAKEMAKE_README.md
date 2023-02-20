@@ -164,9 +164,9 @@ A compressed NumPy file (_*.npz_).
 
 A compressed NumPy file (_*.npz_).
 
-| array | shape        | type            | content                                                           |
-|-------|--------------|-----------------|-------------------------------------------------------------------|
-| _PHI_ | $m \times n$ | float \[ $V$ \] | `PHI\[i, j\]` is value of `i`th base function at `j`-th electrode |
+| array | shape        | type            | content                                                         |
+|-------|--------------|-----------------|-----------------------------------------------------------------|
+| _PHI_ | $m \times n$ | float \[ $V$ \] | `PHI[i, j]` is value of `i`th base function at `j`-th electrode |
 
 
 ### Kernel matrix
