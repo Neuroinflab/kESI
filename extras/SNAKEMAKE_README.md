@@ -162,3 +162,20 @@ A compressed NumPy file (_*.npz_).
 $$
 K = \Phi^T \Phi
 $$
+
+
+### Analysis matrices
+
+| array          | shape  | type  | content                                   |
+|----------------|--------|-------|-------------------------------------------|
+| _EIGENVALUES_  | (n,)   | float | Kernel eigenvalues ($\lambda = \Sigma^2$) |
+| _EIGENSOURCES_ | (m, n) | float | Eigensources in the cananical form $U$    |
+| _LAMBDAS_      | (n,)   | float | $\Phi$ singular values ($\Sigma$)         |
+| _EIGENVECTORS_ | (n, n) | float | Kernel eigenvalues $V$                    |
+
+$$
+\Phi = U \Sigma V^T
+$$
+$$
+K = V \lambda V^T
+$$
