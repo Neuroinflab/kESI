@@ -164,7 +164,7 @@ K = \Phi^T \Phi
 $$
 
 
-### Analysis matrices
+### Auxilary analytical data
 
 | array          | shape  | type            | content                                   |
 |----------------|--------|-----------------|-------------------------------------------|
@@ -182,7 +182,7 @@ K = V \lambda V^T
 $$
 
 
-### Cross-kernel tensor
+### Volumetric cross-kernel tensor
 
 The tensor yields volumetric CSD reconstruction.
 
