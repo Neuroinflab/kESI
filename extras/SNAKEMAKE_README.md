@@ -134,12 +134,12 @@ A compressed NumPy file (_*.npz_).
 
 ### Positions of source centroids
 
-| array    | shape        | type        | content                      |
-|----------|--------------|-------------|------------------------------|
-| _MASK_   | (nx, ny, nz) | bool        | mask of nodes with centroids |
-| _X_      | (nx, 1, 1)   | float \[m\] | X nodes of the centroid grid |
-| _Y_      | (1, ny, 1)   | float \[m\] | Y nodes of the centroid grid |
-| _Z_      | (1, 1, nz)   | float \[m\] | Z nodes of the centroid grid |
+| array  | shape        | type        | content                      |
+|--------|--------------|-------------|------------------------------|
+| _MASK_ | (nx, ny, nz) | bool        | mask of nodes with centroids |
+| _X_    | (nx, 1, 1)   | float \[m\] | X nodes of the centroid grid |
+| _Y_    | (1, ny, 1)   | float \[m\] | Y nodes of the centroid grid |
+| _Z_    | (1, 1, nz)   | float \[m\] | Z nodes of the centroid grid |
 
 `MASK.sum() == m` where `m` is the number of base functions.
 
@@ -148,6 +148,6 @@ A compressed NumPy file (_*.npz_).
 
 ($\Phi$ matrix)
 
-| array   | shape  | type        | content                                                           |
-|---------|--------|-------------|-------------------------------------------------------------------|
-| _PHI_   | (m, n) | float \[V\] | `PHI\[i, j\]` is value of `i`th base function at `j`-th electrode |
+| array | shape  | type        | content                                                           |
+|-------|--------|-------------|-------------------------------------------------------------------|
+| _PHI_ | (m, n) | float \[V\] | `PHI\[i, j\]` is value of `i`th base function at `j`-th electrode |
