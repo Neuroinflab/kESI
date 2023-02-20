@@ -151,3 +151,14 @@ A compressed NumPy file (_*.npz_).
 | array | shape  | type        | content                                                           |
 |-------|--------|-------------|-------------------------------------------------------------------|
 | _PHI_ | (m, n) | float \[V\] | `PHI\[i, j\]` is value of `i`th base function at `j`-th electrode |
+
+
+### Kernel matrix
+
+| array    | shape  | type  | content               |
+|----------|--------|-------|-----------------------|
+| _KERNEL_ | (n, n) | float | the kernel matrix $K$ |
+
+$$
+K = \Phi^T \Phi
+$$
