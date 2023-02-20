@@ -142,3 +142,12 @@ A compressed NumPy file (_*.npz_).
 | _Z_      | (1, 1, nz)   | float \[m\] | Z nodes of the centroid grid |
 
 `MASK.sum() == m` where `m` is the number of base functions.
+
+
+### Transfer matrix
+
+($\Phi$ matrix)
+
+| array   | shape  | type        | content                                                           |
+|---------|--------|-------------|-------------------------------------------------------------------|
+| _PHI_   | (m, n) | float \[V\] | `PHI\[i, j\]` is value of `i`th base function at `j`-th electrode |
