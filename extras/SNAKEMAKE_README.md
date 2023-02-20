@@ -204,8 +204,6 @@ $$
 
 ### Volumetric cross-kernel tensor
 
-The tensor yields volumetric CSD reconstruction.
-
 A compressed NumPy file (_*.npz_).
 
 | array         | shape                                                  | type                  | content                                 |
@@ -215,13 +213,9 @@ A compressed NumPy file (_*.npz_).
 | _Y_           | $1 \times n^{CSD}_y \times 1$                          | float \[ $m$ \]       | Y nodes of the CSD sampling grid        |
 | _Z_           | $1 \times 1 \times n^{CSD}_z$                          | float \[ $m$ \]       | Z nodes of the CSD sampling grid        |
 
-$$
-C = \overline{K} K^{-1} V ,
-$$
-
+The tensor yields volumetric CSD reconstruction $C = \overline{K} K^{-1} V$,
 where $V$ is a vector (matrix in case of timepoints) of measured potentials and
-$C$ is an $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z$ array of samples of
-a volumetric CSD reconstruction.
+$C$ is an $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z$ array.
 
 
 ### Volumetric eigensource tensor
