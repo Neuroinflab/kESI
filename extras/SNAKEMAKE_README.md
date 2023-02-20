@@ -146,6 +146,8 @@ A CSV file.
 
 ### Positions of source centroids
 
+A compressed NumPy file (_*.npz_).
+
 | array  | shape                                         | type            | content                      |
 |--------|-----------------------------------------------|-----------------|------------------------------|
 | _MASK_ | $n^{SRC}_x \times n^{SRC}_y \times n^{SRC}_z$ | bool            | mask of nodes with centroids |
@@ -160,12 +162,16 @@ A CSV file.
 
 ($\Phi$ matrix)
 
+A compressed NumPy file (_*.npz_).
+
 | array | shape        | type            | content                                                           |
 |-------|--------------|-----------------|-------------------------------------------------------------------|
 | _PHI_ | $m \times n$ | float \[ $V$ \] | `PHI\[i, j\]` is value of `i`th base function at `j`-th electrode |
 
 
 ### Kernel matrix
+
+A compressed NumPy file (_*.npz_).
 
 | array    | shape        | type              | content               |
 |----------|--------------|-------------------|-----------------------|
@@ -177,6 +183,8 @@ $$
 
 
 ### Auxilary analytical data
+
+A compressed NumPy file (_*.npz_).
 
 | array          | shape        | type            | content                                   |
 |----------------|--------------|-----------------|-------------------------------------------|
@@ -198,6 +206,8 @@ $$
 
 The tensor yields volumetric CSD reconstruction.
 
+A compressed NumPy file (_*.npz_).
+
 | array         | shape                                                  | type                  | content                                 |
 |---------------|--------------------------------------------------------|-----------------------|-----------------------------------------|
 | _CROSSKERNEL_ | $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times n$ | float \[ $W / m^3$ \] | The crosskernel tensor ($\overline{K}$) |
@@ -215,6 +225,8 @@ a volumetric CSD reconstruction.
 
 
 ### Volumetric eigensource tensor
+
+A compressed NumPy file (_*.npz_).
 
 | array   | shape                                                  | type                  | content                          |
 |---------|--------------------------------------------------------|-----------------------|----------------------------------|
