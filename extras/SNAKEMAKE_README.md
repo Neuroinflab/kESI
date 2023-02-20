@@ -91,45 +91,45 @@ for the _\<geometry\>/\<granularity\>/\<degree\>_ subpath.
 
 ### Leadfield correction function
 
-A _FEniCS_ 3D scalar function \[$V/A$\].
+A _FEniCS_ 3D scalar function \[ $V/A$ \].
 
 ### Leadfield correction metadata
 
 An _*.ini_ file.
 
-| section    | field                     | value                                                  |
-|------------|---------------------------|--------------------------------------------------------|
-| fem        | mesh                      | path to the main mesh file                             |
-|            | degree                    | degree of the element                                  |
-|            | element_type              | type of the element                                    |
-| model      | config                    | path to model properties (conductivity etc.)           |
-| electrode  | x                         | X coordinate of the point electrode \[$m$\]            |
-|            | y                         | Y coordinate of the point electrode \[$m$\]            |
-|            | z                         | Z coordinate of the point electrode \[$m$\]            |
-| correction | global_preprocessing_time | location-independent preprocessing time \[$s$\]        |
-|            | setup_time                | total function manager and FEM initiation time \[$s$\] |
-|            | total_solving_time        | total time of location-dependent processing \[$s$\]    |
-|            | local_preprocessing_time  | location-dependent preprocessing time \[$s$\]          |
-|            | solving_time              | time of FEM equation solving \[$s$\]                   |
-|            | base_conductivity         | base conductivity used by renormalization \[$S/m$\]    |
-|            | filename                  | relative path to the correction function               |
+| section    | field                     | value                                                    |
+|------------|---------------------------|----------------------------------------------------------|
+| fem        | mesh                      | path to the main mesh file                               |
+|            | degree                    | degree of the element                                    |
+|            | element_type              | type of the element                                      |
+| model      | config                    | path to model properties (conductivity etc.)             |
+| electrode  | x                         | X coordinate of the point electrode \[ $m$ \]            |
+|            | y                         | Y coordinate of the point electrode \[ $m$ \]            |
+|            | z                         | Z coordinate of the point electrode \[ $m$ \]            |
+| correction | global_preprocessing_time | location-independent preprocessing time \[ $s$ \]        |
+|            | setup_time                | total function manager and FEM initiation time \[ $s$ \] |
+|            | total_solving_time        | total time of location-dependent processing \[ $s$ \]    |
+|            | local_preprocessing_time  | location-dependent preprocessing time \[ $s$ \]          |
+|            | solving_time              | time of FEM equation solving \[ $s$ \]                   |
+|            | base_conductivity         | base conductivity used by renormalization \[ $S/m$ \]    |
+|            | filename                  | relative path to the correction function                 |
 
 
 ### Sampled leadfield correction
 
 A compressed NumPy file (_*.npz_).
 
-| array                   | shape        | type            | content                                           |
-|-------------------------|--------------|-----------------|---------------------------------------------------|
-| _CORRECTION\_POTENTIAL_ | (nx, ny, nz) | float \[$V/A\$] | sampled leadfield correction                      |
-| _X_                     | (nx,)        | float \[$m$\]   | X nodes of the sampling grid                      |
-| _Y_                     | (ny,)        | float \[$m$\]   | Y nodes of the sampling grid                      |
-| _Z_                     | (nz,)        | float \[$m$\]   | Z nodes of the sampling grid                      |
-| _LOCATION_              | (3,)         | float \[$m$\]   | X, Y, Z coordinates of the electrode              |
-| _BASE\_CONDUCTIVITY_    | ()           | float \[S/m\]   | base conductivity used by renormalization         |
-| _\_PREPROCESSING\_TIME_ | ()           | float \[$s$\]   | construction time of the `FunctionManager` object |
-| _\_LOADING\_TIME_       | ()           | float \[$s$\]   | loading time of the leadfield correction function |
-| _\_PROCESSING\_TIME_    | ()           | float \[$s$\]   | leadfield correction sampling time                |
+| array                   | shape        | type              | content                                           |
+|-------------------------|--------------|-------------------|---------------------------------------------------|
+| _CORRECTION\_POTENTIAL_ | (nx, ny, nz) | float \[ $V/A$ \] | sampled leadfield correction                      |
+| _X_                     | (nx,)        | float \[ $m$ \]   | X nodes of the sampling grid                      |
+| _Y_                     | (ny,)        | float \[ $m$ \]   | Y nodes of the sampling grid                      |
+| _Z_                     | (nz,)        | float \[ $m$ \]   | Z nodes of the sampling grid                      |
+| _LOCATION_              | (3,)         | float \[ $m$ \]   | X, Y, Z coordinates of the electrode              |
+| _BASE\_CONDUCTIVITY_    | ()           | float \[ $S/m$ \] | base conductivity used by renormalization         |
+| _\_PREPROCESSING\_TIME_ | ()           | float \[ $s$ \]   | construction time of the `FunctionManager` object |
+| _\_LOADING\_TIME_       | ()           | float \[ $s$ \]   | loading time of the leadfield correction function |
+| _\_PROCESSING\_TIME_    | ()           | float \[ $s$ \]   | leadfield correction sampling time                |
 
 
 ### Positions of source centroids
@@ -137,9 +137,9 @@ A compressed NumPy file (_*.npz_).
 | array  | shape        | type          | content                      |
 |--------|--------------|---------------|------------------------------|
 | _MASK_ | (nx, ny, nz) | bool          | mask of nodes with centroids |
-| _X_    | (nx, 1, 1)   | float \[$m$\] | X nodes of the centroid grid |
-| _Y_    | (1, ny, 1)   | float \[$m$\] | Y nodes of the centroid grid |
-| _Z_    | (1, 1, nz)   | float \[$m$\] | Z nodes of the centroid grid |
+| _X_    | (nx, 1, 1)   | float \[ $m$ \] | X nodes of the centroid grid |
+| _Y_    | (1, ny, 1)   | float \[ $m$ \] | Y nodes of the centroid grid |
+| _Z_    | (1, 1, nz)   | float \[ $m$ \] | Z nodes of the centroid grid |
 
 `MASK.sum() == m` where `m` is the number of base functions.
 
@@ -148,16 +148,16 @@ A compressed NumPy file (_*.npz_).
 
 ($\Phi$ matrix)
 
-| array | shape  | type          | content                                                           |
-|-------|--------|---------------|-------------------------------------------------------------------|
-| _PHI_ | (m, n) | float \[$V$\] | `PHI\[i, j\]` is value of `i`th base function at `j`-th electrode |
+| array | shape  | type            | content                                                           |
+|-------|--------|-----------------|-------------------------------------------------------------------|
+| _PHI_ | (m, n) | float \[ $V$ \] | `PHI\[i, j\]` is value of `i`th base function at `j`-th electrode |
 
 
 ### Kernel matrix
 
-| array    | shape  | type            | content               |
-|----------|--------|-----------------|-----------------------|
-| _KERNEL_ | (n, n) | float \[$V^2$\] | the kernel matrix $K$ |
+| array    | shape  | type              | content               |
+|----------|--------|-------------------|-----------------------|
+| _KERNEL_ | (n, n) | float \[ $V^2$ \] | the kernel matrix $K$ |
 
 $$
 K = \Phi^T \Phi
@@ -166,16 +166,17 @@ $$
 
 ### Analysis matrices
 
-| array          | shape  | type          | content                                   |
-|----------------|--------|---------------|-------------------------------------------|
-| _EIGENVALUES_  | (n,)   | float \[$V$\] | Kernel eigenvalues ($\lambda = \Sigma^2$) |
-| _EIGENSOURCES_ | (m, n) | float         | Eigensources in the cananical form $U$    |
-| _LAMBDAS_      | (n,)   | float         | $\Phi$ singular values ($\Sigma$)         |
-| _EIGENVECTORS_ | (n, n) | float         | Kernel eigenvalues $V$                    |
+| array          | shape  | type            | content                                   |
+|----------------|--------|-----------------|-------------------------------------------|
+| _EIGENVALUES_  | (n,)   | float \[ $V$ \] | Kernel eigenvalues ($\lambda = \Sigma^2$) |
+| _EIGENSOURCES_ | (m, n) | float           | Eigensources in the cananical form $U$    |
+| _LAMBDAS_      | (n,)   | float           | $\Phi$ singular values ($\Sigma$)         |
+| _EIGENVECTORS_ | (n, n) | float           | Kernel eigenvalues $V$                    |
 
 $$
 \Phi = U \Sigma V^T
 $$
+
 $$
 K = V \lambda V^T
 $$
@@ -185,16 +186,17 @@ $$
 
 The tensor yields volumetric CSD reconstruction.
 
-| array         | shape           | type                | content                                 |
-|---------------|-----------------|---------------------|-----------------------------------------|
-| _CROSSKERNEL_ | (nx, ny, nz, n) | float \[$W / m^3$\] | The crosskernel tensor ($\overline{K}$) |
-| _X_           | (nx, 1, 1)      | float \[$m$\]       | X nodes of the CSD sampling grid        |
-| _Y_           | (1, ny, 1)      | float \[$m$\]       | Y nodes of the CSD sampling grid        |
-| _Z_           | (1, 1, nz)      | float \[$m$\]       | Z nodes of the CSD sampling grid        |
+| array         | shape           | type                  | content                                 |
+|---------------|-----------------|-----------------------|-----------------------------------------|
+| _CROSSKERNEL_ | (nx, ny, nz, n) | float \[ $W / m^3$ \] | The crosskernel tensor ($\overline{K}$) |
+| _X_           | (nx, 1, 1)      | float \[ $m$ \]       | X nodes of the CSD sampling grid        |
+| _Y_           | (1, ny, 1)      | float \[ $m$ \]       | Y nodes of the CSD sampling grid        |
+| _Z_           | (1, 1, nz)      | float \[ $m$ \]       | Z nodes of the CSD sampling grid        |
 
 $$
 C = \overline{K} K^{-1} V ,
 $$
+
 where $V$ is a vector (matrix in case of timepoints) of measured potentials and
 $C$ is an $n_x \times n_y \times n_z$ array of samples of a volumetric CSD
 reconstruction.
