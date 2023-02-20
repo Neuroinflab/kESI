@@ -179,3 +179,22 @@ $$
 $$
 K = V \lambda V^T
 $$
+
+
+### Cross-kernel tensor
+
+The tensor yields volumetric CSD reconstruction.
+
+| array         | shape           | type                | content                                 |
+|---------------|-----------------|---------------------|-----------------------------------------|
+| _CROSSKERNEL_ | (nx, ny, nz, n) | float \[$W / m^3$\] | The crosskernel tensor ($\overline{K}$) |
+| _X_           | (nx, 1, 1)      | float \[$m$\]       | X nodes of the CSD sampling grid        |
+| _Y_           | (1, ny, 1)      | float \[$m$\]       | Y nodes of the CSD sampling grid        |
+| _Z_           | (1, 1, nz)      | float \[$m$\]       | Z nodes of the CSD sampling grid        |
+
+$$
+C = \overline{K} K^{-1} V ,
+$$
+where $V$ is a vector (matrix in case of timepoints) of measured potentials and
+$C$ is an $n_x \times n_y \times n_z$ array of samples of a volumetric CSD
+reconstruction.
