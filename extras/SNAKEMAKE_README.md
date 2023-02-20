@@ -130,3 +130,15 @@ A compressed NumPy file (_*.npz_).
 | _\_PREPROCESSING\_TIME_ | ()           | float \[s\]   | construction time of the `FunctionManager` object |
 | _\_LOADING\_TIME_       | ()           | float \[s\]   | loading time of the leadfield correction function |
 | _\_PROCESSING\_TIME_    | ()           | float \[s\]   | leadfield correction sampling time                |
+
+
+### Positions of source centroids
+
+| array    | shape        | type        | content                      |
+|----------|--------------|-------------|------------------------------|
+| _MASK_   | (nx, ny, nz) | bool        | mask of nodes with centroids |
+| _X_      | (nx, 1, 1)   | float \[m\] | X nodes of the centroid grid |
+| _Y_      | (1, ny, 1)   | float \[m\] | Y nodes of the centroid grid |
+| _Z_      | (1, 1, nz)   | float \[m\] | Z nodes of the centroid grid |
+
+`MASK.sum() == m` where `m` is the number of base functions.
