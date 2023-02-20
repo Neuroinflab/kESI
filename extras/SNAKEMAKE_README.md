@@ -200,3 +200,13 @@ $$
 where $V$ is a vector (matrix in case of timepoints) of measured potentials and
 $C$ is an $n_x \times n_y \times n_z$ array of samples of a volumetric CSD
 reconstruction.
+
+
+### Volumetric eigensource tensor
+
+| array   | shape           | type                  | content                          |
+|---------|-----------------|-----------------------|----------------------------------|
+| _CSD_   | (nx, ny, nz, n) | float \[ $A / m^3$ \] | sampled CSDs of n eigensources   |
+| _X_     | (nx, 1, 1)      | float \[ $m$ \]       | X nodes of the CSD sampling grid |
+| _Y_     | (1, ny, 1)      | float \[ $m$ \]       | Y nodes of the CSD sampling grid |
+| _Z_     | (1, 1, nz)      | float \[ $m$ \]       | Z nodes of the CSD sampling grid |
