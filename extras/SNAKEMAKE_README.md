@@ -132,6 +132,18 @@ A compressed NumPy file (_*.npz_).
 | _\_PROCESSING\_TIME_    | scalar                                        | float \[ $s$ \]   | leadfield correction sampling time                |
 
 
+### Position of electrodes
+
+A CSV file.
+
+| field  | type            | content                     |
+|--------|-----------------|-----------------------------|
+| _NAME_ | str             | name of the electrode       |
+| _X_    | float \[ $m$ \] | X position of the electrode |
+| _Y_    | float \[ $m$ \] | Y position of the electrode |
+| _Z_    | float \[ $m$ \] | Z position of the electrode |
+
+
 ### Positions of source centroids
 
 | array  | shape                                         | type            | content                      |
