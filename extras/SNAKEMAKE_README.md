@@ -247,6 +247,32 @@ A CSV file.
 
 ### Leadfield correction solving
 
+_paper\_solve\_slice\_on\_plate.py_ and _paper\_solve\_sphere\_on\_plate.py_
+take mesh, electrode location and model properties as input and calculate
+the leadfield correction _FEniCS_ function.
+
+| argument         | description                                                                                              |
+|------------------|----------------------------------------------------------------------------------------------------------|
+| `--output`       | path to the metadata file (function filename is inferred by substituting the '.ini' extension with '.h5' |
+| `--config`       | path to the model config file                                                                            |
+| `--electrodes`   | path to the electrode location file                                                                      |
+| `--name`         | name of the electrode                                                                                    |
+| `--mesh`         | path to the main _FEniCS_ mesh                                                                           |
+| `--degree`       | degree of the FEM element (defaults to 1)                                                                |
+| `--element-type` | type of the FEM element (defaults to `'CG'` (Continuous Galerkin)                                        |
+| `--quiet`        | supress control messages                                                                                 |
+
+#### Slice specific
+
+The `--ground-potential` parameter is the potantial \[ $V$ \] at the grounded
+slice-covering dome.  If not given a $0 V$ grounding is assumed at infinity.
+
+
+#### Sphere specific
+
+The `--grounded-plate-edge-z` parameter is the Z coordinate \[ $m$ \] of the
+edge of the grounded ($0 V$ potential) conductive plate.  Defaults to $-88 mm$.
+
 
 ### Leadfield correction sampling
 
