@@ -276,10 +276,34 @@ edge of the grounded ($0 V$ potential) conductive plate.  Defaults to $-88 mm$.
 
 ### Leadfield correction sampling
 
+_paper\_sample\_slice\_solution.py_ and _paper\_sample\_spherical\_solution.py_
+take _FEniCS_ function and sample it on a regular grid.
+
 Forces:
 - shape of _POT_ sampling grid to $2^k + 1 \times 2^k + 1 \times 2^k + 1$,
-- sampling area,
+- shape and location of the sampling area,
 - sampling nodes subset.
+
+| argument   | description                                                          |
+|------------|----------------------------------------------------------------------|
+| `--output` | path to the output _*.npz_ file                                      |
+| `--config` | path to the leadfield correction metadata                            |
+| `-k`       | the $k$ parameter of the sampling grid (defaults to 9)               |
+| `--fill`   | fill value for not sampled points of the grid (defaults to `np.nan`) |
+| `--quiet`  | supress control messages                                             |
+
+#### Slice specific
+
+The `--sampling-radius` parameter is the edge length \[ $m$ \] of the sampled
+cube.  It defaults to $0.3 mm$.
+
+The cube is based at the $Z = 0$ plane and centered at $X = Y = 0$ axis.
+
+
+#### Sphere specific
+
+The `--sampling-radius` parameter is the radius \[ $m$ \] of the sampled sphere
+centered at the beginning of the coordinate system.  It defaults to $79 mm$.
 
 
 ### Kernel calculation
