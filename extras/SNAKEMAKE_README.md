@@ -308,12 +308,40 @@ centered at the beginning of the coordinate system.  It defaults to $79 mm$.
 
 ### Kernel calculation
 
+_paper\_calculate\_kernels\_slice.py_
+and _paper\_calculate\_kernels\_four\_spheres.py_ from sampled leadfield
+corrections calculate kernels (and related matrices) for both kESI and kCSD
+(redundant - the same for different kESI configurations).
+
 Contains information about:
-- _POT_, _CSD_, _SRC_ grid,
+- _POT_, _CSD_, _SRC_ grid (subset of the sampling grid),
 - source size,
 - source profile,
 - base function distribution.
 
-Calculates redundant kCSD kernels.
+| argument     | description                                              |
+|--------------|----------------------------------------------------------|
+| `electrodes` | names of electrodes to be used                           |
+| `--input`    | path to the directory with sampled leadfield corrections |
+| `--output`   | path to the directory for output files                   |
+| `-k`         | the $k$ parameter of the Romberg integration method      |
+
+The $k$ parameter limits radius of the CSD base function to $2^{k - 1} dx$,
+where $dx$ is spacing of the X axis grid.  It is implicitly assumed that spacing
+of all axes is equal (or at least that grids of Y and Z axes have no smaller
+spacing than grid of the X axis).
+
+#### Slice specific
+
+Limits source centroids to $|y| <= h / 4$,
+where $h = 0.3 mm$ is the slice thickness,
+and adjusts grids appropriately.
+
+
+#### Four spheres specific
+
+Limits source centroids to $|x|, |y| < 2 cm$, $2.5 cm \leq z$ and
+$r \leq 7.9 cm - 2^{k-1} dx$, and adjusts grids appropriately.
+
 
 ### Forward modelling
