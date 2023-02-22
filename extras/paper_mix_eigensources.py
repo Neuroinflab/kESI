@@ -11,7 +11,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output',
                         metavar='<output.npz>',
                         dest='output',
-                        help='output prefix')
+                        help='path to the output file')
     parser.add_argument('input',
                         metavar='<source prefix>',
                         nargs=2,
