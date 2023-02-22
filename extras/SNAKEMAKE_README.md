@@ -345,3 +345,37 @@ $r \leq 7.9 cm - 2^{k-1} dx$, and adjusts grids appropriately.
 
 
 ### Forward modelling
+
+_paper\_forward\_model\_slice.py_ and _paper\_forward\_model\_four\_spheres.py_
+simulate a sequence of CSD profiles to predict potentials on the electrodes.
+
+
+| argument         | description                                                       |
+|------------------|-------------------------------------------------------------------|
+| `--output`       | path to the _CSV_ file where the potentials are to be stored      |
+| `--sources`      | path to the file with volumetric CSD tensor (4D array)            |
+| `--config`       | path to the model config file                                     |
+| `--electrodes`   | path to the electrode location file                               |
+| `--name`         | name of the electrode                                             |
+| `--mesh`         | path to the main _FEniCS_ mesh                                    |
+| `--degree`       | degree of the FEM element (defaults to 1)                         |
+| `--element-type` | type of the FEM element (defaults to `'CG'` (Continuous Galerkin) |
+| `--quiet`        | supress control messages                                          |
+| `--start-from`   | number of the first source to start from (defaults to 0)          |
+
+The `--start-from` argument is useful in case of a broken run, as the output
+file is the electrode location file with additional fields, and it is saved
+after simulating of each source.  Thus in case of a broken run it may be given
+as `--electrodes` with request to complete simulation of missing sources.
+
+
+#### Slice specific
+
+The `--ground-potential` parameter is the potantial \[ $V$ \] at the grounded
+slice-covering dome.  If not given a $0 V$ grounding is assumed at infinity.
+
+
+#### Sphere specific
+
+The `--grounded-plate-edge-z` parameter is the Z coordinate \[ $m$ \] of the
+edge of the grounded ($0 V$ potential) conductive plate.  Defaults to $-88 mm$.
