@@ -28,6 +28,7 @@ import collections
 import operator
 import warnings
 import configparser
+import json
 
 import numpy as np
 from scipy.special import erf, lpmv
@@ -54,6 +55,12 @@ class Gauss3D(object):
 
 
 class SourceBase(object):
+    @classmethod
+    def fromJSON(cls, _file, **kwargs):
+        _json = json.load(_file)
+        _json.update(kwargs)
+        return cls(**_json)
+
     def __init__(self, x, y, z):
         self.x = x
         self.y = y
@@ -720,3 +727,23 @@ if __name__ == '__main__':
             OBSERVED = gauss_function(*X.T)
             max_error = abs(EXPECTED - OBSERVED).max()
             assert max_error < 150 * np.finfo(float).eps
+
+
+    # TESTS fromJSON
+    from io import StringIO
+
+    class TestFromJSON(SourceBase):
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    kwargs = {'a': 42, 'b': 1337}
+    src = TestFromJSON.fromJSON(StringIO(json.dumps(kwargs)))
+    assert isinstance(src, TestFromJSON)
+    assert kwargs == src.kwargs
+
+    expected = kwargs.copy()
+    expected.update(a=0, c='a')
+    src = TestFromJSON.fromJSON(StringIO(json.dumps(kwargs)),
+                                a=0,
+                                c='a')
+    assert expected == src.kwargs
