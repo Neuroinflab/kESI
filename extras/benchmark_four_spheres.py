@@ -332,8 +332,9 @@ class ModelOld(object):
 
 
 
-K = np.arange(7)
+K = np.arange(9)
 N = 100 * 2 ** K
+N[-1] = 15_000  # 17_500 yields errors
 
 def getDipoles(n):
     return tuple(c.from_config(CONFIG, n)(DIPOLE_LOC, DIPOLE_P)
@@ -358,29 +359,30 @@ for k_ele in range(21):
 
     ELECTRODES_LOC = np.transpose([ELECTRODES[c] for c in 'XYZ'])
 
-    for k, (oldDipole, newDipole) in enumerate(dipoles):
-        n = 100 * 2 ** k
-
+    for k, n, (oldDipole, newDipole) in zip(K, N, dipoles):
         logger.info(f"{n_ele}\t{n}")
 
-        if 14 + k * 2 + k_ele >= 36:   # protection against too long calculations
-            logger.info("  skipping")  # assumed complexity O(n_Ele * n**2)
+        #if 14 + k * 2 + k_ele > 36:    # protection against too long calculations
+        #    logger.info("  skipping")  # assumed complexity O(n_Ele * n**2)
+        #    break
+
+        if np.log2(n) * 1.35 + np.log2(n_ele) - 19.3 > 12:   # protection against calculations longer
+            logger.info("  skipping")   # than 1h (fitted)
             break
 
-        if k > 6 and k_ele != 10:  # protection against too long calculations
-            logger.info("  skipping (n)")
-            break
+       # if k > 6 and k_ele != 10:  # protection against too long calculations
+       #     logger.info("  skipping (n)")
+       #     break
 
-        n = 100 * 2 ** k
         with oldSW:
-            oldDipole(*ELECTRODES_LOC.T)
+            oldRes = oldDipole(*ELECTRODES_LOC.T)
 
-        logger.info(f"{n_ele}\t{n}\t{float(oldSW):.1e}")
+        logger.info(f"{n_ele}\t{n}\t{float(oldSW):.1e}\tNaNs: {np.isnan(oldRes).sum()}\tInfs: {np.isinf(oldRes).sum()}")
 
         with newSW:
-            newDipole(*ELECTRODES_LOC.T)
+            newRes = newDipole(*ELECTRODES_LOC.T)
 
-        logger.info(f"{n_ele}\t{n}\t{float(oldSW):.1e}\t{float(newSW):.1e}")
+        logger.info(f"{n_ele}\t{n}\t{float(oldSW):.1e}\tNaNs: {np.isnan(oldRes).sum()}\tInfs: {np.isinf(oldRes).sum()}\t{float(newSW):.1e}\tNaNs: {np.isnan(newRes).sum()}\tInfs: {np.isinf(newRes).sum()}")
         #print(n_ele, n, oldSW.duration, newSW.duration)
 
         DF.append({'K': k,
@@ -389,6 +391,10 @@ for k_ele in range(21):
                    'N_ELE': n_ele,
                    'T_OLD': float(oldSW),
                    'T_NEW': float(newSW),
+                   'NANS_NEW': np.isnan(newRes).sum(),
+                   'INFS_NEW': np.isinf(newRes).sum(),
+                   'NANS_OLD': np.isnan(oldRes).sum(),
+                   'INFS_OLD': np.isinf(oldRes).sum(),
                    })
 
 DF = pd.DataFrame(DF)
@@ -409,8 +415,8 @@ plt.axhline(3600, ls=':', color='k')
 plt.title('1024 electrodes')
 
 
-for k in [0, 3, 6]:
-    n = 100 * 2**k
+for k in [0, 3, 6, 7, 8]:
+    n, = N[K == k]
     TMP = DF.loc[DF.K == k]
 
     plt.figure()
