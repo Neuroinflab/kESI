@@ -344,6 +344,20 @@ Limits source centroids to $|x|, |y| < 2 cm$, $2.5 cm \leq z$ and
 $r \leq 7.9 cm - 2^{k-1} dx$, and adjusts grids appropriately.
 
 
+### Eigensource mixing
+
+_paper\_mix\_eigensources.py_ loads two sets of volumetric CSD eigensources,
+matches them (by maximizing the absolute value of the dot product of their
+canonical rapresentation) and yields averaged volumetric sources.
+
+Note that both sets must share at least shape of the transfer matrix ($\Phi$).
+
+| argument   | description                            |
+|------------|----------------------------------------|
+| `input`    | two prefixes of the input eigensources |
+| `--output` | path to the output _*.npz_ file        |
+
+
 ### Forward modelling
 
 _paper\_forward\_model\_slice.py_ and _paper\_forward\_model\_four\_spheres.py_
