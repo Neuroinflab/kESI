@@ -1,4 +1,8 @@
 # snakemake .4SM_CSF_3_mm__uniform_coarser_1_comb -j 4 --resources mem_mb=100000 --restart-times 3
+MESH_SRC_DIR = "FEM/meshes/"
+MESH_DIR = f"{MESH_SRC_DIR}meshes/"
+
+
 rule all:
     input: ".4SM_composite_normal_2_stereotactic"
 
@@ -422,104 +426,142 @@ rule paper_slice_forward:
 #       """
 
 
-MESH_DIR = "FEM/meshes/"
-
 rule GEO:
-    input: f'{MESH_DIR}{{mesh_name}}.geo'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/mesh.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      cp {{input}} {{output}}
-      """
+    input:
+        f'{MESH_SRC_DIR}{{mesh_name}}.geo'
+    output:
+        f'{MESH_DIR}{{mesh_name}}/mesh.geo'
+    shell:
+        f"""
+        mkdir -p {MESH_DIR}{{wildcards.mesh_name}}
+        cp {{input}} {{output}}
+        """
 
 rule GEO_circular_slice_composite:
-    input: f'{MESH_DIR}circular_slice_composite.geo'
-    output: f'{MESH_DIR}meshes/circular_slice/composite.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/circular_slice
-      cp {{input}} {{output}}
-      """
+    input:
+        f'{MESH_SRC_DIR}circular_slice_composite.geo'
+    output:
+        f'{MESH_DIR}circular_slice/composite.geo'
+    shell:
+        f"""
+        mkdir -p {MESH_DIR}circular_slice
+        cp {{input}} {{output}}
+        """
 
 rule GEO_NORMAL:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/normal.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/1.0/g' < {{input}} > {{output}}
-      """
+    input:
+        f'{MESH_SRC_DIR}{{mesh_name}}.geo.template'
+    output:
+        f'{MESH_DIR}{{mesh_name}}/normal.geo'
+    shell:
+        f"""
+        mkdir -p {MESH_DIR}{{wildcards.mesh_name}}
+        sed 's/SED_RELATIVE_ELEMENT_SIZE/1.0/g' < {{input}} > {{output}}
+        """
 
 rule GEO_FINE:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/fine.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.5/g' < {{input}} > {{output}}
-      """
+    input:
+        f'{MESH_SRC_DIR}{{mesh_name}}.geo.template'
+    output:
+        f'{MESH_DIR}{{mesh_name}}/fine.geo'
+    shell:
+        f"""
+        mkdir -p {MESH_DIR}{{wildcards.mesh_name}}
+        sed 's/SED_RELATIVE_ELEMENT_SIZE/0.5/g' < {{input}} > {{output}}
+        """
 
 rule GEO_FINER:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/finer.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.25/g' < {{input}} > {{output}}
-      """
+    input:
+        f'{MESH_SRC_DIR}{{mesh_name}}.geo.template'
+    output:
+        f'{MESH_DIR}{{mesh_name}}/finer.geo'
+    shell:
+        f"""
+        mkdir -p {MESH_DIR}{{wildcards.mesh_name}}
+        sed 's/SED_RELATIVE_ELEMENT_SIZE/0.25/g' < {{input}} > {{output}}
+        """
 
 rule GEO_FINEST:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/finest.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.125/g' < {{input}} > {{output}}
-      """
+    input:
+        f'{MESH_SRC_DIR}{{mesh_name}}.geo.template'
+    output:
+        f'{MESH_DIR}{{mesh_name}}/finest.geo'
+    shell:
+        f"""
+        mkdir -p {MESH_DIR}{{wildcards.mesh_name}}
+        sed 's/SED_RELATIVE_ELEMENT_SIZE/0.125/g' < {{input}} > {{output}}
+        """
 
 rule GEO_SUPERFINE:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/superfine.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.0625/g' < {{input}} > {{output}}
-      """
+    input:
+        f'{MESH_SRC_DIR}{{mesh_name}}.geo.template'
+    output:
+        f'{MESH_DIR}{{mesh_name}}/superfine.geo'
+    shell:
+        f"""
+        mkdir -p {MESH_DIR}{{wildcards.mesh_name}}
+        sed 's/SED_RELATIVE_ELEMENT_SIZE/0.0625/g' < {{input}} > {{output}}
+        """
 
 rule GEO_SUPERFINER:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/superfiner.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.03125/g' < {{input}} > {{output}}
-      """
+    input:
+        f'{MESH_SRC_DIR}{{mesh_name}}.geo.template'
+    output:
+        f'{MESH_DIR}{{mesh_name}}/superfiner.geo'
+    shell:
+        f"""
+        mkdir -p {MESH_DIR}{{wildcards.mesh_name}}
+        sed 's/SED_RELATIVE_ELEMENT_SIZE/0.03125/g' < {{input}} > {{output}}
+        """
 
 rule GEO_COARSE:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/coarse.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/2.0/g' < {{input}} > {{output}}
-      """
+    input:
+        f'{MESH_SRC_DIR}{{mesh_name}}.geo.template'
+    output:
+        f'{MESH_DIR}{{mesh_name}}/coarse.geo'
+    shell:
+        f"""
+        mkdir -p {MESH_DIR}{{wildcards.mesh_name}}
+        sed 's/SED_RELATIVE_ELEMENT_SIZE/2.0/g' < {{input}} > {{output}}
+        """
 
 rule GEO_COARSER:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/coarser.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/4.0/g' < {{input}} > {{output}}
-      """
+    input:
+        f'{MESH_SRC_DIR}{{mesh_name}}.geo.template'
+    output:
+        f'{MESH_DIR}{{mesh_name}}/coarser.geo'
+    shell:
+        f"""
+        mkdir -p {MESH_DIR}{{wildcards.mesh_name}}
+        sed 's/SED_RELATIVE_ELEMENT_SIZE/4.0/g' < {{input}} > {{output}}
+        """
 
 rule GEO_COARSEST:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/coarsest.geo'
-    shell: f"""
-       mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-       sed 's/SED_RELATIVE_ELEMENT_SIZE/8.0/g' < {{input}} > {{output}}
-       """
+    input:
+        f'{MESH_SRC_DIR}{{mesh_name}}.geo.template'
+    output:
+        f'{MESH_DIR}{{mesh_name}}/coarsest.geo'
+    shell:
+        f"""
+        mkdir -p {MESH_DIR}{{wildcards.mesh_name}}
+        sed 's/SED_RELATIVE_ELEMENT_SIZE/8.0/g' < {{input}} > {{output}}
+        """
 
 rule MSH:
-    input: f'{MESH_DIR}{{mesh_name}}.geo'
-    output: f'{MESH_DIR}{{mesh_name}}.msh'
-    shell: 'gmsh -3 -optimize_netgen {input} || gmsh -3 -optimize {input} || gmsh -3 {input}'
+    input:
+        f'{MESH_DIR}{{mesh_path}}.geo'
+    output:
+        f'{MESH_DIR}{{mesh_path}}.msh'
+    shell:
+        'gmsh -3 -optimize_netgen {input} || gmsh -3 -optimize {input} || gmsh -3 {input}'
 
 rule XDMF:
-    input: f'{MESH_DIR}{{mesh_name}}.msh'
-    output: mesh=f'{MESH_DIR}{{mesh_name}}.xdmf', subdomains=f'{MESH_DIR}{{mesh_name}}_subdomains.xdmf',  boundaries=f'{MESH_DIR}{{mesh_name}}_boundaries.xdmf'
+    input:
+        f'{MESH_DIR}{{mesh_path}}.msh'
+    output:
+        mesh=f'{MESH_DIR}{{mesh_path}}.xdmf',
+        subdomains=f'{MESH_DIR}{{mesh_path}}_subdomains.xdmf',
+        boundaries=f'{MESH_DIR}{{mesh_path}}_boundaries.xdmf'
     run:
         import meshio
         # REQUIRES meshio v. 4.0.0
