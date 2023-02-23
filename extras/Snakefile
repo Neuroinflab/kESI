@@ -1,10 +1,10 @@
 # snakemake .4SM_CSF_3_mm__uniform_coarser_1_comb -j 4 --resources mem_mb=100000 --restart-times 3
-DATA_DIR = "FEM/solutions/"
+DATA_DIR = "data/"
 PROP_DIR = "FEM/model_properties/"
 ELE_DIR = "FEM/electrode_locations/"
 
 MESH_SRC_DIR = "FEM/meshes/"
-MESH_DIR = f"{MESH_SRC_DIR}meshes/"
+MESH_DIR = f"{DATA_DIR}meshes/"
 
 # rule all:
 #     input: ".4SM_composite_normal_2_stereotactic"
