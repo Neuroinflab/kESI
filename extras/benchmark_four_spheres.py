@@ -334,9 +334,9 @@ class ModelOld(object):
 
 
 
-K = np.arange(9)
-N = 100 * 2 ** K
-N[-1] = 15_000  # 17_500 yields errors
+K = np.arange(6, 15)
+N = 2 ** K
+N[-1] = 14_900  # 14_901+ yields errors
 
 def getDipoles(n):
     return tuple(c.from_config(CONFIG, n)(DIPOLE_LOC, DIPOLE_P)
