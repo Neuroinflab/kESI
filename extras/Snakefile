@@ -3,60 +3,60 @@ MESH_SRC_DIR = "FEM/meshes/"
 MESH_DIR = f"{MESH_SRC_DIR}meshes/"
 
 
-rule all:
-    input: ".4SM_composite_normal_2_stereotactic"
-
-rule epi_wroclaw_trigger:
-    input: ["FEM/solutions/paper/{{MODEL}}/{{FEM}}/epi_wroclaw_sampled/9/{}.npz".format(name) for name in ['TP_1', 'TP_2', 'TP_3', 'TP_4', 'TP_5', 'TP_6', 'TP_7', 'TP_8', 'AMG_1', 'AMG_2', 'AMG_3', 'AMG_4', 'AMG_5', 'AMG_6', 'AMG_7', 'AMG_8', 'HH_1', 'HH_2', 'HH_3', 'HH_4', 'HH_5', 'HH_6', 'HH_7', 'HH_8', 'HP_1', 'HP_2', 'HP_3', 'HP_4', 'HP_5', 'HP_6', 'HP_7', 'HP_8', 'STG_1', 'STG_2', 'STG_3', 'STG_4', 'STG_5', 'STG_6', 'STG_7', 'STG_8', 'PC_1', 'PC_2', 'PC_3', 'PC_4', 'PC_5', 'PC_6', 'PC_7', 'PC_8', 'PM_1', 'PM_2', 'PM_3', 'PM_4', 'PM_5', 'PM_6']]
-    output: ".{MODEL}__{FEM}_epi_wroclaw"
-    shell: "touch {output}"
-
-rule stereotactic_trigger:
-    input: ["FEM/solutions/paper/{{MODEL}}/{{FEM}}/stereotactic_sampled/9/{}.npz".format(name) for name in ['LZ_01', 'LZ_10', 'LAM_08', 'LAM_09', 'LPM_01', 'LPM_02', 'LPM_03', 'LPM_04', 'LPM_05', 'LZ_11', 'LK_01', 'LK_02', 'LK_03', 'LK_04', 'LK_05', 'LZ_12', 'LK_06', 'LK_07', 'LK_08', 'LK_09', 'LK_10', 'LK_11', 'RB_01', 'RB_02', 'LZ_13', 'LZ_14', 'LA_01', 'LA_02', 'LA_03', 'LZ_02', 'LA_04', 'LA_05', 'LA_06', 'LA_07', 'LA_08', 'LA_09', 'LA_10', 'LA_11', 'LA_12', 'LZ_03', 'LB_01', 'LB_02', 'LB_03', 'LB_04', 'LB_05', 'LB_06', 'LB_07', 'LB_08', 'LB_09', 'LZ_04', 'LB_10', 'LB_11', 'LB_12', 'LB_13', 'LB_14', 'LB_15', 'LC_01', 'LC_02', 'LC_03', 'LZ_05', 'LC_04', 'LC_05', 'LC_06', 'LC_07', 'LC_08', 'LC_09', 'LC_10', 'LC_11', 'LC_12', 'LZ_06', 'LP_01', 'LP_02', 'LP_03', 'LP_04', 'LP_05', 'LP_06', 'LP_07', 'LP_08', 'LP_09', 'LZ_07', 'LP_10', 'LP_11', 'LP_12', 'LP_13', 'LV_01', 'LV_02', 'LV_03', 'LZ_08', 'LV_04', 'LV_05', 'LV_06', 'LV_07', 'LV_08', 'LV_09', 'LV_10', 'LV_11', 'LV_12', 'LV_13', 'LZ_09', 'LV_14', 'LV_15', 'LV_16', 'LAM_01', 'LAM_02', 'LAM_03', 'LAM_04', 'LAM_05', 'LAM_06', 'LAM_07']]
-    output: ".{MODEL}__{FEM}_stereotactic"
-    shell: "touch {output}"
-
-rule comb_trigger:
-    input: ["FEM/solutions/paper/{{MODEL}}/{{FEM}}/comb_sampled/9/{}_{:02d}.npz".format(a, b) for a in 'ABCDE' for b in range(14)]
-    output: ".{MODEL}__{FEM}_comb"
-    shell: "touch {output}"
-
-rule slice_original_trigger:
-    input: ["FEM/solutions/paper/finite_slice/{{FEM}}/grid_3d_sampled/9/{x}_0_{z}.npz".format(x=x if x >= 0 else 'minus{}'.format(-x), z=z) for x in range(-24, 25, 12) for z in range(6, 66, 6)]
-    output: ".finite_slice__{FEM}_original"
-    shell: "touch {output}"
-
-
-rule PaperSliceOriginalINI:
-    input: ["FEM/fem_configs/paper/{PATH}/grid_3d.ini"] +  ["FEM/solutions/paper/{{PATH}}/grid_3d/{x}_0_{z}.ini".format(x=x if x >= 0 else 'minus{}'.format(-x), z=z) for x in range(-24, 25, 12) for z in range(6, 66, 6)]
-    output: "FEM/solutions/paper/{PATH}/grid_3d.ini"
-    run:
-        import configparser
-        metadata = configparser.ConfigParser()
-        metadata.read(input)
-        metadata.write(open(output[0], 'w'))
-
-
-rule PaperStereotacticINI:
-    input: ["FEM/fem_configs/paper/{CONFIG}/stereotactic.ini"] + ["FEM/solutions/paper/{{CONFIG}}/stereotactic/{}.ini".format(name) for name in ['LZ_01', 'LZ_10', 'LAM_08', 'LAM_09', 'LPM_01', 'LPM_02', 'LPM_03', 'LPM_04', 'LPM_05', 'LZ_11', 'LK_01', 'LK_02', 'LK_03', 'LK_04', 'LK_05', 'LZ_12', 'LK_06', 'LK_07', 'LK_08', 'LK_09', 'LK_10', 'LK_11', 'RB_01', 'RB_02', 'LZ_13', 'LZ_14', 'LA_01', 'LA_02', 'LA_03', 'LZ_02', 'LA_04', 'LA_05', 'LA_06', 'LA_07', 'LA_08', 'LA_09', 'LA_10', 'LA_11', 'LA_12', 'LZ_03', 'LB_01', 'LB_02', 'LB_03', 'LB_04', 'LB_05', 'LB_06', 'LB_07', 'LB_08', 'LB_09', 'LZ_04', 'LB_10', 'LB_11', 'LB_12', 'LB_13', 'LB_14', 'LB_15', 'LC_01', 'LC_02', 'LC_03', 'LZ_05', 'LC_04', 'LC_05', 'LC_06', 'LC_07', 'LC_08', 'LC_09', 'LC_10', 'LC_11', 'LC_12', 'LZ_06', 'LP_01', 'LP_02', 'LP_03', 'LP_04', 'LP_05', 'LP_06', 'LP_07', 'LP_08', 'LP_09', 'LZ_07', 'LP_10', 'LP_11', 'LP_12', 'LP_13', 'LV_01', 'LV_02', 'LV_03', 'LZ_08', 'LV_04', 'LV_05', 'LV_06', 'LV_07', 'LV_08', 'LV_09', 'LV_10', 'LV_11', 'LV_12', 'LV_13', 'LZ_09', 'LV_14', 'LV_15', 'LV_16', 'LAM_01', 'LAM_02', 'LAM_03', 'LAM_04', 'LAM_05', 'LAM_06', 'LAM_07']]
-    output:
-        "FEM/solutions/paper/{CONFIG}/stereotactic.ini"
-    run:
-        import configparser
-        metadata = configparser.ConfigParser()
-        metadata.read(input)
-        metadata.write(open(output[0], 'w'))
-
-
-rule epi_wroclaw_ini:
-    input: ["FEM/fem_configs/paper/{CONFIG}/epi_wroclaw.ini"] + ["FEM/solutions/paper/{{CONFIG}}/epi_wroclaw/{}.ini".format(name) for name in ['TP_1', 'TP_2', 'TP_3', 'TP_4', 'TP_5', 'TP_6', 'TP_7', 'TP_8', 'AMG_1', 'AMG_2', 'AMG_3', 'AMG_4', 'AMG_5', 'AMG_6', 'AMG_7', 'AMG_8', 'HH_1', 'HH_2', 'HH_3', 'HH_4', 'HH_5', 'HH_6', 'HH_7', 'HH_8', 'HP_1', 'HP_2', 'HP_3', 'HP_4', 'HP_5', 'HP_6', 'HP_7', 'HP_8', 'STG_1', 'STG_2', 'STG_3', 'STG_4', 'STG_5', 'STG_6', 'STG_7', 'STG_8', 'PC_1', 'PC_2', 'PC_3', 'PC_4', 'PC_5', 'PC_6', 'PC_7', 'PC_8', 'PM_1', 'PM_2', 'PM_3', 'PM_4', 'PM_5', 'PM_6']]
-    output:
-        "FEM/solutions/paper/{CONFIG}/epi_wroclaw.ini"
-    run:
-        import configparser
-        metadata = configparser.ConfigParser()
-        metadata.read(input)
-        metadata.write(open(output[0], 'w'))
+# rule all:
+#     input: ".4SM_composite_normal_2_stereotactic"
+#
+# rule epi_wroclaw_trigger:
+#     input: ["FEM/solutions/paper/{{MODEL}}/{{FEM}}/epi_wroclaw_sampled/9/{}.npz".format(name) for name in ['TP_1', 'TP_2', 'TP_3', 'TP_4', 'TP_5', 'TP_6', 'TP_7', 'TP_8', 'AMG_1', 'AMG_2', 'AMG_3', 'AMG_4', 'AMG_5', 'AMG_6', 'AMG_7', 'AMG_8', 'HH_1', 'HH_2', 'HH_3', 'HH_4', 'HH_5', 'HH_6', 'HH_7', 'HH_8', 'HP_1', 'HP_2', 'HP_3', 'HP_4', 'HP_5', 'HP_6', 'HP_7', 'HP_8', 'STG_1', 'STG_2', 'STG_3', 'STG_4', 'STG_5', 'STG_6', 'STG_7', 'STG_8', 'PC_1', 'PC_2', 'PC_3', 'PC_4', 'PC_5', 'PC_6', 'PC_7', 'PC_8', 'PM_1', 'PM_2', 'PM_3', 'PM_4', 'PM_5', 'PM_6']]
+#     output: ".{MODEL}__{FEM}_epi_wroclaw"
+#     shell: "touch {output}"
+#
+# rule stereotactic_trigger:
+#     input: ["FEM/solutions/paper/{{MODEL}}/{{FEM}}/stereotactic_sampled/9/{}.npz".format(name) for name in ['LZ_01', 'LZ_10', 'LAM_08', 'LAM_09', 'LPM_01', 'LPM_02', 'LPM_03', 'LPM_04', 'LPM_05', 'LZ_11', 'LK_01', 'LK_02', 'LK_03', 'LK_04', 'LK_05', 'LZ_12', 'LK_06', 'LK_07', 'LK_08', 'LK_09', 'LK_10', 'LK_11', 'RB_01', 'RB_02', 'LZ_13', 'LZ_14', 'LA_01', 'LA_02', 'LA_03', 'LZ_02', 'LA_04', 'LA_05', 'LA_06', 'LA_07', 'LA_08', 'LA_09', 'LA_10', 'LA_11', 'LA_12', 'LZ_03', 'LB_01', 'LB_02', 'LB_03', 'LB_04', 'LB_05', 'LB_06', 'LB_07', 'LB_08', 'LB_09', 'LZ_04', 'LB_10', 'LB_11', 'LB_12', 'LB_13', 'LB_14', 'LB_15', 'LC_01', 'LC_02', 'LC_03', 'LZ_05', 'LC_04', 'LC_05', 'LC_06', 'LC_07', 'LC_08', 'LC_09', 'LC_10', 'LC_11', 'LC_12', 'LZ_06', 'LP_01', 'LP_02', 'LP_03', 'LP_04', 'LP_05', 'LP_06', 'LP_07', 'LP_08', 'LP_09', 'LZ_07', 'LP_10', 'LP_11', 'LP_12', 'LP_13', 'LV_01', 'LV_02', 'LV_03', 'LZ_08', 'LV_04', 'LV_05', 'LV_06', 'LV_07', 'LV_08', 'LV_09', 'LV_10', 'LV_11', 'LV_12', 'LV_13', 'LZ_09', 'LV_14', 'LV_15', 'LV_16', 'LAM_01', 'LAM_02', 'LAM_03', 'LAM_04', 'LAM_05', 'LAM_06', 'LAM_07']]
+#     output: ".{MODEL}__{FEM}_stereotactic"
+#     shell: "touch {output}"
+#
+# rule comb_trigger:
+#     input: ["FEM/solutions/paper/{{MODEL}}/{{FEM}}/comb_sampled/9/{}_{:02d}.npz".format(a, b) for a in 'ABCDE' for b in range(14)]
+#     output: ".{MODEL}__{FEM}_comb"
+#     shell: "touch {output}"
+#
+# rule slice_original_trigger:
+#     input: ["FEM/solutions/paper/finite_slice/{{FEM}}/grid_3d_sampled/9/{x}_0_{z}.npz".format(x=x if x >= 0 else 'minus{}'.format(-x), z=z) for x in range(-24, 25, 12) for z in range(6, 66, 6)]
+#     output: ".finite_slice__{FEM}_original"
+#     shell: "touch {output}"
+#
+#
+# rule PaperSliceOriginalINI:
+#     input: ["FEM/fem_configs/paper/{PATH}/grid_3d.ini"] +  ["FEM/solutions/paper/{{PATH}}/grid_3d/{x}_0_{z}.ini".format(x=x if x >= 0 else 'minus{}'.format(-x), z=z) for x in range(-24, 25, 12) for z in range(6, 66, 6)]
+#     output: "FEM/solutions/paper/{PATH}/grid_3d.ini"
+#     run:
+#         import configparser
+#         metadata = configparser.ConfigParser()
+#         metadata.read(input)
+#         metadata.write(open(output[0], 'w'))
+#
+#
+# rule PaperStereotacticINI:
+#     input: ["FEM/fem_configs/paper/{CONFIG}/stereotactic.ini"] + ["FEM/solutions/paper/{{CONFIG}}/stereotactic/{}.ini".format(name) for name in ['LZ_01', 'LZ_10', 'LAM_08', 'LAM_09', 'LPM_01', 'LPM_02', 'LPM_03', 'LPM_04', 'LPM_05', 'LZ_11', 'LK_01', 'LK_02', 'LK_03', 'LK_04', 'LK_05', 'LZ_12', 'LK_06', 'LK_07', 'LK_08', 'LK_09', 'LK_10', 'LK_11', 'RB_01', 'RB_02', 'LZ_13', 'LZ_14', 'LA_01', 'LA_02', 'LA_03', 'LZ_02', 'LA_04', 'LA_05', 'LA_06', 'LA_07', 'LA_08', 'LA_09', 'LA_10', 'LA_11', 'LA_12', 'LZ_03', 'LB_01', 'LB_02', 'LB_03', 'LB_04', 'LB_05', 'LB_06', 'LB_07', 'LB_08', 'LB_09', 'LZ_04', 'LB_10', 'LB_11', 'LB_12', 'LB_13', 'LB_14', 'LB_15', 'LC_01', 'LC_02', 'LC_03', 'LZ_05', 'LC_04', 'LC_05', 'LC_06', 'LC_07', 'LC_08', 'LC_09', 'LC_10', 'LC_11', 'LC_12', 'LZ_06', 'LP_01', 'LP_02', 'LP_03', 'LP_04', 'LP_05', 'LP_06', 'LP_07', 'LP_08', 'LP_09', 'LZ_07', 'LP_10', 'LP_11', 'LP_12', 'LP_13', 'LV_01', 'LV_02', 'LV_03', 'LZ_08', 'LV_04', 'LV_05', 'LV_06', 'LV_07', 'LV_08', 'LV_09', 'LV_10', 'LV_11', 'LV_12', 'LV_13', 'LZ_09', 'LV_14', 'LV_15', 'LV_16', 'LAM_01', 'LAM_02', 'LAM_03', 'LAM_04', 'LAM_05', 'LAM_06', 'LAM_07']]
+#     output:
+#         "FEM/solutions/paper/{CONFIG}/stereotactic.ini"
+#     run:
+#         import configparser
+#         metadata = configparser.ConfigParser()
+#         metadata.read(input)
+#         metadata.write(open(output[0], 'w'))
+#
+#
+# rule epi_wroclaw_ini:
+#     input: ["FEM/fem_configs/paper/{CONFIG}/epi_wroclaw.ini"] + ["FEM/solutions/paper/{{CONFIG}}/epi_wroclaw/{}.ini".format(name) for name in ['TP_1', 'TP_2', 'TP_3', 'TP_4', 'TP_5', 'TP_6', 'TP_7', 'TP_8', 'AMG_1', 'AMG_2', 'AMG_3', 'AMG_4', 'AMG_5', 'AMG_6', 'AMG_7', 'AMG_8', 'HH_1', 'HH_2', 'HH_3', 'HH_4', 'HH_5', 'HH_6', 'HH_7', 'HH_8', 'HP_1', 'HP_2', 'HP_3', 'HP_4', 'HP_5', 'HP_6', 'HP_7', 'HP_8', 'STG_1', 'STG_2', 'STG_3', 'STG_4', 'STG_5', 'STG_6', 'STG_7', 'STG_8', 'PC_1', 'PC_2', 'PC_3', 'PC_4', 'PC_5', 'PC_6', 'PC_7', 'PC_8', 'PM_1', 'PM_2', 'PM_3', 'PM_4', 'PM_5', 'PM_6']]
+#     output:
+#         "FEM/solutions/paper/{CONFIG}/epi_wroclaw.ini"
+#     run:
+#         import configparser
+#         metadata = configparser.ConfigParser()
+#         metadata.read(input)
+#         metadata.write(open(output[0], 'w'))
 
 
 def get_mem_mb(wildcards, attempt):
@@ -68,88 +68,88 @@ def get_mem_mb_exponential(base_mem=12_500):
     return f
 
 
-rule PaperCombINI:
-    input: ["FEM/fem_configs/paper/{PATH}/comb.ini"] + ["FEM/solutions/paper/{{PATH}}/comb/{}_{:02d}.ini".format(a, b) for a in 'ABCDE' for b in range(14)]
-    output: "FEM/solutions/paper/{PATH}/comb.ini"
-    run:
-        import configparser
-        metadata = configparser.ConfigParser()
-        metadata.read(input)
-        metadata.write(open(output[0], 'w'))
-
-
-rule Paper_solve_finite_slice:
-    input:
-        "FEM/fem_configs/paper/finite_slice/{MESH}/{CONFIG}.ini"
-    output:
-        "FEM/solutions/paper/finite_slice/{MESH}/{CONFIG}/{NAME}.h5", METADATA="FEM/solutions/paper/finite_slice/{MESH}/{CONFIG}/{NAME}.ini"
-    resources:
-        mem_mb=get_mem_mb_exponential(25_000)
-    shell:
-        """
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_solve_slice_on_plate.py -o {output.METADATA} -c {input[0]} -n {wildcards.NAME}
-        """
-
-
-rule sample_finite_slice:
-    input:
-		    "FEM/solutions/paper/finite_slice/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/finite_slice/{CONFIG}.ini"
-    output:
-		    "FEM/solutions/paper/finite_slice/{CONFIG}_sampled/{K}/{NAME}.npz"
-    resources:
-        mem_mb=get_mem_mb_exponential()
-    shell:
-        """
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_sample_slice_solution.py -o {output} -c {input.CONFIG} -n {wildcards.NAME} -r 0.0003 -k {wildcards.K}
-        """
-
-
-rule Paper_solve_n_concentric_spheres:
-    input:
-        "FEM/fem_configs/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}.ini"
-    output:
-        "FEM/solutions/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}/{NAME}.h5", METADATA="FEM/solutions/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}/{NAME}.ini"
-    wildcard_constraints:
-        MODIFIER=".*"
-    resources:
-        mem_mb=get_mem_mb_exponential()
-    shell:
-        """
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_solve_sphere_on_plate.py -o {output.METADATA} -c {input[0]} -n {wildcards.NAME} -g -0.088
-        """
-
-
-rule sample_1SM:
-    input:
-		    "FEM/solutions/paper/1SM/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/1SM/{CONFIG}.ini"
-    output:
-		    "FEM/solutions/paper/1SM/{CONFIG}_sampled/{K}/{NAME}.npz"
-    resources:
-        mem_mb=get_mem_mb_exponential()
-    shell:
-        """
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_sample_spherical_solution.py -o {output} -c {input.CONFIG} -n {wildcards.NAME} -f 0 -r 0.090 -k {wildcards.K}
-        """
-
-
-rule sample_4SM:
-    input:
-		    "FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}.ini"
-    output:
-		    "FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}_sampled/{K}/{NAME}.npz"
-    wildcard_constraints:
-        MODIFIER=".*"
-    resources:
-        mem_mb=get_mem_mb_exponential()
-    shell:
-        """
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_sample_spherical_solution.py -o {output} -c {input.CONFIG} -n {wildcards.NAME} -f 0 -r 0.079 -k {wildcards.K}
-        """
+# rule PaperCombINI:
+#     input: ["FEM/fem_configs/paper/{PATH}/comb.ini"] + ["FEM/solutions/paper/{{PATH}}/comb/{}_{:02d}.ini".format(a, b) for a in 'ABCDE' for b in range(14)]
+#     output: "FEM/solutions/paper/{PATH}/comb.ini"
+#     run:
+#         import configparser
+#         metadata = configparser.ConfigParser()
+#         metadata.read(input)
+#         metadata.write(open(output[0], 'w'))
+#
+#
+# rule Paper_solve_finite_slice:
+#     input:
+#         "FEM/fem_configs/paper/finite_slice/{MESH}/{CONFIG}.ini"
+#     output:
+#         "FEM/solutions/paper/finite_slice/{MESH}/{CONFIG}/{NAME}.h5", METADATA="FEM/solutions/paper/finite_slice/{MESH}/{CONFIG}/{NAME}.ini"
+#     resources:
+#         mem_mb=get_mem_mb_exponential(25_000)
+#     shell:
+#         """
+#         ulimit -v $(({resources.mem_mb} * 1024))
+#         python paper_solve_slice_on_plate.py -o {output.METADATA} -c {input[0]} -n {wildcards.NAME}
+#         """
+#
+#
+# rule sample_finite_slice:
+#     input:
+# 		    "FEM/solutions/paper/finite_slice/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/finite_slice/{CONFIG}.ini"
+#     output:
+# 		    "FEM/solutions/paper/finite_slice/{CONFIG}_sampled/{K}/{NAME}.npz"
+#     resources:
+#         mem_mb=get_mem_mb_exponential()
+#     shell:
+#         """
+#         ulimit -v $(({resources.mem_mb} * 1024))
+#         python paper_sample_slice_solution.py -o {output} -c {input.CONFIG} -n {wildcards.NAME} -r 0.0003 -k {wildcards.K}
+#         """
+#
+#
+# rule Paper_solve_n_concentric_spheres:
+#     input:
+#         "FEM/fem_configs/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}.ini"
+#     output:
+#         "FEM/solutions/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}/{NAME}.h5", METADATA="FEM/solutions/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}/{NAME}.ini"
+#     wildcard_constraints:
+#         MODIFIER=".*"
+#     resources:
+#         mem_mb=get_mem_mb_exponential()
+#     shell:
+#         """
+#         ulimit -v $(({resources.mem_mb} * 1024))
+#         python paper_solve_sphere_on_plate.py -o {output.METADATA} -c {input[0]} -n {wildcards.NAME} -g -0.088
+#         """
+#
+#
+# rule sample_1SM:
+#     input:
+# 		    "FEM/solutions/paper/1SM/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/1SM/{CONFIG}.ini"
+#     output:
+# 		    "FEM/solutions/paper/1SM/{CONFIG}_sampled/{K}/{NAME}.npz"
+#     resources:
+#         mem_mb=get_mem_mb_exponential()
+#     shell:
+#         """
+#         ulimit -v $(({resources.mem_mb} * 1024))
+#         python paper_sample_spherical_solution.py -o {output} -c {input.CONFIG} -n {wildcards.NAME} -f 0 -r 0.090 -k {wildcards.K}
+#         """
+#
+#
+# rule sample_4SM:
+#     input:
+# 		    "FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}.ini"
+#     output:
+# 		    "FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}_sampled/{K}/{NAME}.npz"
+#     wildcard_constraints:
+#         MODIFIER=".*"
+#     resources:
+#         mem_mb=get_mem_mb_exponential()
+#     shell:
+#         """
+#         ulimit -v $(({resources.mem_mb} * 1024))
+#         python paper_sample_spherical_solution.py -o {output} -c {input.CONFIG} -n {wildcards.NAME} -f 0 -r 0.079 -k {wildcards.K}
+#         """
 
 
 rule tutorial_case_study_trigger:
@@ -426,16 +426,16 @@ rule paper_slice_forward:
 #       """
 
 
-rule GEO:
-    input:
-        f'{MESH_SRC_DIR}{{mesh_name}}.geo'
-    output:
-        f'{MESH_DIR}{{mesh_name}}/mesh.geo'
-    shell:
-        f"""
-        mkdir -p {MESH_DIR}{{wildcards.mesh_name}}
-        cp {{input}} {{output}}
-        """
+# rule GEO:
+#     input:
+#         f'{MESH_SRC_DIR}{{mesh_name}}.geo'
+#     output:
+#         f'{MESH_DIR}{{mesh_name}}/mesh.geo'
+#     shell:
+#         f"""
+#         mkdir -p {MESH_DIR}{{wildcards.mesh_name}}
+#         cp {{input}} {{output}}
+#         """
 
 rule GEO_circular_slice_composite:
     input:
