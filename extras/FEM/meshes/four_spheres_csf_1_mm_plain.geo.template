@@ -153,10 +153,10 @@ sphere_r[] = {0.079,
               0.08,
               0.085,
               0.09};
-sphere_element_length_factor[] = {0.001,
-                                  0.001,
-                                  0.001,
-                                  0.001};
+sphere_element_length_factor[] = {0.008,
+                                  0.008,
+                                  0.008,
+                                  0.008};
 
 x = 0.; y = 0.; z = 0.;
 

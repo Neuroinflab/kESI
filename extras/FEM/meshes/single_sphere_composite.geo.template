@@ -148,7 +148,7 @@ Return
 
 n_meridians = 6;
 
-h = 0.01;
+h = 0.0025;
 sphere_r[] = {0.06,
               0.09};
 
