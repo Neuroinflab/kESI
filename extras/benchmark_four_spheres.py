@@ -22,7 +22,7 @@ DIPOLE_R = 78e-3
 DIPOLE_LOC = [0., 0., DIPOLE_R]
 DIPOLE_P = [0.002, 0.003, 0.005]
 
-EXPECTED_TIME_LIMIT = 4096  # [s]
+EXPECTED_TIME_LIMIT = 4 * 3600  # [s]
 
 
 class ModelOld(object):
