@@ -94,9 +94,9 @@ def get_mem_mb_exponential(base_mem=12_500):
 #
 # rule sample_finite_slice:
 #     input:
-# 		    "FEM/solutions/paper/finite_slice/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/finite_slice/{CONFIG}.ini"
+#             "FEM/solutions/paper/finite_slice/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/finite_slice/{CONFIG}.ini"
 #     output:
-# 		    "FEM/solutions/paper/finite_slice/{CONFIG}_sampled/{K}/{NAME}.npz"
+#             "FEM/solutions/paper/finite_slice/{CONFIG}_sampled/{K}/{NAME}.npz"
 #     resources:
 #         mem_mb=get_mem_mb_exponential()
 #     shell:
@@ -124,9 +124,9 @@ def get_mem_mb_exponential(base_mem=12_500):
 #
 # rule sample_1SM:
 #     input:
-# 		    "FEM/solutions/paper/1SM/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/1SM/{CONFIG}.ini"
+#             "FEM/solutions/paper/1SM/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/1SM/{CONFIG}.ini"
 #     output:
-# 		    "FEM/solutions/paper/1SM/{CONFIG}_sampled/{K}/{NAME}.npz"
+#             "FEM/solutions/paper/1SM/{CONFIG}_sampled/{K}/{NAME}.npz"
 #     resources:
 #         mem_mb=get_mem_mb_exponential()
 #     shell:
@@ -138,9 +138,9 @@ def get_mem_mb_exponential(base_mem=12_500):
 #
 # rule sample_4SM:
 #     input:
-# 		    "FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}.ini"
+#             "FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}.ini"
 #     output:
-# 		    "FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}_sampled/{K}/{NAME}.npz"
+#             "FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}_sampled/{K}/{NAME}.npz"
 #     wildcard_constraints:
 #         MODIFIER=".*"
 #     resources:
@@ -153,16 +153,20 @@ def get_mem_mb_exponential(base_mem=12_500):
 
 
 rule tutorial_case_study_trigger:
-    input: ["FEM/solutions/tutorial/case_study/sampled/9/{}.npz".format(name) for name in ['LZ_01', 'LZ_10', 'LAM_08', 'LAM_09', 'LPM_01', 'LPM_02', 'LPM_03', 'LPM_04', 'LPM_05', 'LZ_11', 'LK_01', 'LK_02', 'LK_03', 'LK_04', 'LK_05', 'LZ_12', 'LK_06', 'LK_07', 'LK_08', 'LK_09', 'LK_10', 'LK_11', 'RB_01', 'RB_02', 'LZ_13', 'LZ_14', 'LA_01', 'LA_02', 'LA_03', 'LZ_02', 'LA_04', 'LA_05', 'LA_06', 'LA_07', 'LA_08', 'LA_09', 'LA_10', 'LA_11', 'LA_12', 'LZ_03', 'LB_01', 'LB_02', 'LB_03', 'LB_04', 'LB_05', 'LB_06', 'LB_07', 'LB_08', 'LB_09', 'LZ_04', 'LB_10', 'LB_11', 'LB_12', 'LB_13', 'LB_14', 'LB_15', 'LC_01', 'LC_02', 'LC_03', 'LZ_05', 'LC_04', 'LC_05', 'LC_06', 'LC_07', 'LC_08', 'LC_09', 'LC_10', 'LC_11', 'LC_12', 'LZ_06', 'LP_01', 'LP_02', 'LP_03', 'LP_04', 'LP_05', 'LP_06', 'LP_07', 'LP_08', 'LP_09', 'LZ_07', 'LP_10', 'LP_11', 'LP_12', 'LP_13', 'LV_01', 'LV_02', 'LV_03', 'LZ_08', 'LV_04', 'LV_05', 'LV_06', 'LV_07', 'LV_08', 'LV_09', 'LV_10', 'LV_11', 'LV_12', 'LV_13', 'LZ_09', 'LV_14', 'LV_15', 'LV_16', 'LAM_01', 'LAM_02', 'LAM_03', 'LAM_04', 'LAM_05', 'LAM_06', 'LAM_07']]
-    output: ".tutorial_case_study"
-    shell: "touch {output}"
+    input:
+        ["FEM/solutions/tutorial/case_study/sampled/9/{}.npz".format(name) for name in ['LZ_01', 'LZ_10', 'LAM_08', 'LAM_09', 'LPM_01', 'LPM_02', 'LPM_03', 'LPM_04', 'LPM_05', 'LZ_11', 'LK_01', 'LK_02', 'LK_03', 'LK_04', 'LK_05', 'LZ_12', 'LK_06', 'LK_07', 'LK_08', 'LK_09', 'LK_10', 'LK_11', 'RB_01', 'RB_02', 'LZ_13', 'LZ_14', 'LA_01', 'LA_02', 'LA_03', 'LZ_02', 'LA_04', 'LA_05', 'LA_06', 'LA_07', 'LA_08', 'LA_09', 'LA_10', 'LA_11', 'LA_12', 'LZ_03', 'LB_01', 'LB_02', 'LB_03', 'LB_04', 'LB_05', 'LB_06', 'LB_07', 'LB_08', 'LB_09', 'LZ_04', 'LB_10', 'LB_11', 'LB_12', 'LB_13', 'LB_14', 'LB_15', 'LC_01', 'LC_02', 'LC_03', 'LZ_05', 'LC_04', 'LC_05', 'LC_06', 'LC_07', 'LC_08', 'LC_09', 'LC_10', 'LC_11', 'LC_12', 'LZ_06', 'LP_01', 'LP_02', 'LP_03', 'LP_04', 'LP_05', 'LP_06', 'LP_07', 'LP_08', 'LP_09', 'LZ_07', 'LP_10', 'LP_11', 'LP_12', 'LP_13', 'LV_01', 'LV_02', 'LV_03', 'LZ_08', 'LV_04', 'LV_05', 'LV_06', 'LV_07', 'LV_08', 'LV_09', 'LV_10', 'LV_11', 'LV_12', 'LV_13', 'LZ_09', 'LV_14', 'LV_15', 'LV_16', 'LAM_01', 'LAM_02', 'LAM_03', 'LAM_04', 'LAM_05', 'LAM_06', 'LAM_07']]
+    output:
+        ".tutorial_case_study"
+    shell:
+        "touch {output}"
 
 
 rule tutorial_case_study_sample:
     input:
-		    "FEM/solutions/tutorial/case_study/{NAME}.h5", CONFIG="FEM/solutions/tutorial/case_study/{NAME}.ini"
+        "FEM/solutions/tutorial/case_study/{NAME}.h5",
+         CONFIG="FEM/solutions/tutorial/case_study/{NAME}.ini"
     output:
-		    "FEM/solutions/tutorial/case_study/sampled/{K}/{NAME}.npz"
+        "FEM/solutions/tutorial/case_study/sampled/{K}/{NAME}.npz"
     resources:
         mem_mb=get_mem_mb_exponential(7_500)
     shell:
@@ -173,9 +177,12 @@ rule tutorial_case_study_sample:
 
 rule tutorial_case_study_solve:
     input:
-        ELECTRODES="FEM/electrode_locations/tutorial/case_study.ini", MESH="FEM/meshes/meshes/four_spheres_csf_3_mm_plain/coarse.xdmf", CONFIG="FEM/model_properties/four_spheres_csf_3_mm.ini"
+        ELECTRODES="FEM/electrode_locations/tutorial/case_study.ini",
+        MESH="FEM/meshes/meshes/four_spheres_csf_3_mm_plain/coarse.xdmf",
+        CONFIG="FEM/model_properties/four_spheres_csf_3_mm.ini"
     output:
-        "FEM/solutions/tutorial/case_study/{NAME}.h5", METADATA="FEM/solutions/tutorial/case_study/{NAME}.ini"
+        "FEM/solutions/tutorial/case_study/{NAME}.h5",
+        METADATA="FEM/solutions/tutorial/case_study/{NAME}.ini"
     resources:
         mem_mb=get_mem_mb_exponential(15_000)
     shell:
@@ -193,16 +200,20 @@ rule tutorial_case_study_solve:
 
 
 rule paper_slice_trigger:
-    input: ["FEM/solutions/paper/circular_slice/{{MESH}}/{{DEGREE}}/sampled/9/{}_0_{}.npz".format(x, z) for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
-    output: ".paper_slice_{MESH}_{DEGREE,\d}"
-    shell: "touch {output}"
+    input:
+        ["FEM/solutions/paper/circular_slice/{{MESH}}/{{DEGREE}}/sampled/9/{}_0_{}.npz".format(x, z) for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
+    output:
+        ".paper_slice_{MESH}_{DEGREE,\d}"
+    shell:
+        "touch {output}"
 
 
 rule paper_slice_sample:
     input:
-		    "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/{NAME}.h5", CONFIG="FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/{NAME}.ini"
+        "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/{NAME}.h5",
+        CONFIG="FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/{NAME}.ini"
     output:
-		    "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE,\d}/sampled/{K,\d+}/{NAME}.npz"
+        "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE,\d}/sampled/{K,\d+}/{NAME}.npz"
     resources:
         mem_mb=get_mem_mb_exponential(7_500)
     shell:
@@ -214,9 +225,12 @@ rule paper_slice_sample:
 
 rule paper_slice_solve:
     input:
-        ELECTRODES="FEM/electrode_locations/paper/circular_slice/grid_3d.ini", MESH_PATH="FEM/meshes/meshes/circular_slice/{MESH}.xdmf", CONFIG="FEM/model_properties/circular_slice.ini"
+        ELECTRODES="FEM/electrode_locations/paper/circular_slice/grid_3d.ini",
+        MESH_PATH="FEM/meshes/meshes/circular_slice/{MESH}.xdmf",
+        CONFIG="FEM/model_properties/circular_slice.ini"
     output:
-        "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE,\d}/{NAME}.h5", METADATA="FEM/solutions/paper/circular_slice/{MESH}/{DEGREE,\d}/{NAME}.ini"
+        "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE,\d}/{NAME}.h5",
+        METADATA="FEM/solutions/paper/circular_slice/{MESH}/{DEGREE,\d}/{NAME}.ini"
     resources:
         mem_mb=get_mem_mb_exponential(15_000)
     shell:
@@ -256,16 +270,20 @@ rule paper_slice_solve:
 
 
 rule paper_4SM_trigger:
-    input: ["FEM/solutions/paper/four_spheres_{{GEOMETRY}}/{{MESH}}/{{DEGREE}}/sampled/9/{}_{:02d}.npz".format(x, z) for x in ['B', 'D'] for z in range(0, 12)]
-    output: ".paper_four_spheres_{GEOMETRY}_{MESH}_{DEGREE,\d}"
-    shell: "touch {output}"
+    input:
+        ["FEM/solutions/paper/four_spheres_{{GEOMETRY}}/{{MESH}}/{{DEGREE}}/sampled/9/{}_{:02d}.npz".format(x, z) for x in ['B', 'D'] for z in range(0, 12)]
+    output:
+        ".paper_four_spheres_{GEOMETRY}_{MESH}_{DEGREE,\d}"
+    shell:
+        "touch {output}"
 
 
 rule paper_4SM_sample:
     input:
-		    "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/{NAME}.h5", CONFIG="FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/{NAME}.ini"
+        "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/{NAME}.h5",
+         CONFIG="FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/{NAME}.ini"
     output:
-		    "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE,\d}/sampled/{K,\d+}/{NAME}.npz"
+        "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE,\d}/sampled/{K,\d+}/{NAME}.npz"
     resources:
         mem_mb=get_mem_mb_exponential(7_500)
     shell:
@@ -277,9 +295,12 @@ rule paper_4SM_sample:
 
 rule paper_4SM_solve:
     input:
-        ELECTRODES="FEM/electrode_locations/paper/four_spheres/comb.ini", MESH_PATH="FEM/meshes/meshes/four_spheres_{GEOMETRY}_plain/{MESH}.xdmf", CONFIG="FEM/model_properties/four_spheres_{GEOMETRY}.ini"
+        ELECTRODES="FEM/electrode_locations/paper/four_spheres/comb.ini",
+        MESH_PATH="FEM/meshes/meshes/four_spheres_{GEOMETRY}_plain/{MESH}.xdmf",
+        CONFIG="FEM/model_properties/four_spheres_{GEOMETRY}.ini"
     output:
-        "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE,\d}/{NAME}.h5", METADATA="FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE,\d}/{NAME}.ini"
+        "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE,\d}/{NAME}.h5",
+        METADATA="FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE,\d}/{NAME}.ini"
     resources:
         mem_mb=get_mem_mb_exponential(15_000)
     shell:
