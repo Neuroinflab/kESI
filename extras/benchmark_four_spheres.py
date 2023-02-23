@@ -22,6 +22,8 @@ DIPOLE_R = 78e-3
 DIPOLE_LOC = [0., 0., DIPOLE_R]
 DIPOLE_P = [0.002, 0.003, 0.005]
 
+EXPECTED_TIME_LIMIT = 4096  # [s]
+
 
 class ModelOld(object):
     """
@@ -362,40 +364,54 @@ for k_ele in range(21):
     for k, n, (oldDipole, newDipole) in zip(K, N, dipoles):
         logger.info(f"{n_ele}\t{n}")
 
-        #if 14 + k * 2 + k_ele > 36:    # protection against too long calculations
-        #    logger.info("  skipping")  # assumed complexity O(n_Ele * n**2)
-        #    break
+        row =   {'K': k,
+                 'N': n,
+                 'K_ELE': k_ele,
+                 'N_ELE': n_ele,
+                 }
+        DF.append(row)
 
-        if np.log2(n) * 1.35 + np.log2(n_ele) - 19.3 > 12:   # protection against calculations longer
-            logger.info("  skipping")   # than 1h (fitted)
-            break
+        oldRes = newRes = None
 
-       # if k > 6 and k_ele != 10:  # protection against too long calculations
-       #     logger.info("  skipping (n)")
-       #     break
+        if np.log2(n) * 1.5 + np.log2(n_ele) - 20.5 > np.log2(EXPECTED_TIME_LIMIT):
+            logger.info("  skipping old")  # protection against long calculations (fitted)
 
-        with oldSW:
-            oldRes = oldDipole(*ELECTRODES_LOC.T)
+        else:
+            with oldSW:
+                oldRes = oldDipole(*ELECTRODES_LOC.T)
 
-        logger.info(f"{n_ele}\t{n}\t{float(oldSW):.1e}\tNaNs: {np.isnan(oldRes).sum()}\tInfs: {np.isinf(oldRes).sum()}")
+            logger.info(f"{n_ele}\t{n}\tOLD: {float(oldSW):.1e}\tNaNs: {np.isnan(oldRes).sum()}\tInfs: {np.isinf(oldRes).sum()}")
+            row.update(T_OLD=float(oldSW),
+                       NANS_OLD=np.isnan(oldRes).sum(),
+                       INFS_OLD=np.isinf(oldRes).sum())
 
-        with newSW:
-            newRes = newDipole(*ELECTRODES_LOC.T)
+        if np.log2(n) * 2 + np.log2(n_ele) - 27 > np.log2(EXPECTED_TIME_LIMIT):
+            logger.info("  skipping new")  # protection against long calculations (fitted)
 
-        logger.info(f"{n_ele}\t{n}\t{float(oldSW):.1e}\tNaNs: {np.isnan(oldRes).sum()}\tInfs: {np.isinf(oldRes).sum()}\t{float(newSW):.1e}\tNaNs: {np.isnan(newRes).sum()}\tInfs: {np.isinf(newRes).sum()}")
-        #print(n_ele, n, oldSW.duration, newSW.duration)
+        else:
+            with newSW:
+                newRes = newDipole(*ELECTRODES_LOC.T)
 
-        DF.append({'K': k,
-                   'N': n,
-                   'K_ELE': k_ele,
-                   'N_ELE': n_ele,
-                   'T_OLD': float(oldSW),
-                   'T_NEW': float(newSW),
-                   'NANS_NEW': np.isnan(newRes).sum(),
-                   'INFS_NEW': np.isinf(newRes).sum(),
-                   'NANS_OLD': np.isnan(oldRes).sum(),
-                   'INFS_OLD': np.isinf(oldRes).sum(),
-                   })
+            logger.info(f"{n_ele}\t{n}\tNEW: {float(newSW):.1e}\tNaNs: {np.isnan(newRes).sum()}\tInfs: {np.isinf(newRes).sum()}")
+            row.update(T_NEW=float(newSW),
+                       NANS_NEW=np.isnan(newRes).sum(),
+                       INFS_NEW=np.isinf(newRes).sum())
+
+        if oldRes is not None and newRes is not None:
+            AVG = 0.5 * (oldRes + newRes)
+            DIFF = oldRes - newRes
+            DIFF_REL = DIFF / AVG
+
+            row.update(DIFF_L1=abs(DIFF).mean(),
+                       DIFF_L2=np.sqrt(np.square(DIFF).mean()),
+                       DIFF_Linf=abs(DIFF).max(),
+                       DIFF_REL_L1=abs(DIFF_REL).mean(),
+                       DIFF_REL_L2=np.sqrt(np.square(DIFF_REL).mean()),
+                       DIFF_REL_Linf=abs(DIFF_REL).max(),
+                       L1=abs(AVG).mean(),
+                       L2=np.sqrt(np.square(AVG).mean()),
+                       Linf=abs(AVG).max())
+
 
 DF = pd.DataFrame(DF)
 DF.to_csv('benchmark_four_spheres.csv', index=False)
