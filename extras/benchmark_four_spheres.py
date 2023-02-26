@@ -431,7 +431,7 @@ plt.axhline(3600, ls=':', color='k')
 plt.title('1024 electrodes')
 
 
-for k in [0, 3, 6, 7, 8]:
+for k in [6, 9, 12, 13, 14]:
     n, = N[K == k]
     TMP = DF.loc[DF.K == k]
 
