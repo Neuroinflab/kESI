@@ -494,11 +494,17 @@ rule LFCOR_SOLVE_paper_spheres:
         """
 
 
-rule LFCOR_ELE_paper:
+def setup_to_electrodes(wildcards):
+    prefix = os.path.join(ELE_DIR,
+                          *wildcards.setup.split('__'))
+    return f"{prefix}.ini"
+
+
+rule LFCOR_ELE_CSV:
     input:
-        f"{ELE_DIR}paper/{{GEOMETRY}}/{{SETUP}}.ini"
+        setup_to_electrodes
     output:
-        LFCOR_ELE_PATTERN.format(setup="paper__{GEOMETRY}__{SETUP}")
+        LFCOR_ELE_PATTERN
     run:
         import configparser
         import pandas as pd
