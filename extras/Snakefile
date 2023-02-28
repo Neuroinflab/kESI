@@ -479,7 +479,11 @@ LFCOR_SOLVE_DIR_paper_spheres = LFCOR_SOLVE_DIR_PATTERN.format(
 rule LFCOR_SOLVE_paper_spheres:
     input:
         ELECTRODES=LFCOR_SOLVE_ELE,
-        MESH_PATH=f"{MESH_DIR}{{GEOMETRY}}__{{SUFFIX}}/{{MESH}}.xdmf",
+        MESH_PATHS=[os.path.join(MESH_DIR,
+                                 "{GEOMETRY}__{SUFFIX}",
+                                 f"{{MESH}}{suffix}.{ext}")
+                    for suffix in ["", "_subdomains", "_boundaries"]
+                    for ext in ["xdmf", "h5"]],
         CONFIG=LFCOR_SOLVE_COND
     output:
         os.path.join(LFCOR_SOLVE_DIR_paper_spheres,
@@ -492,7 +496,7 @@ rule LFCOR_SOLVE_paper_spheres:
         """
         ulimit -v $(({resources.mem_mb} * 1024))
         python solve_sphere_on_plate.py \
-          --mesh {input.MESH_PATH} \
+          --mesh {input.MESH_PATHS[0]} \
           --degree {wildcards.DEGREE} \
           --config {input.CONFIG} \
           --grounded-plate-edge-z -0.088 \
@@ -615,8 +619,11 @@ rule XDMF:
         f'{MESH_DIR}{{mesh_path}}.msh'
     output:
         mesh=f'{MESH_DIR}{{mesh_path}}.xdmf',
+        mesh_h5=f'{MESH_DIR}{{mesh_path}}.h5',
         subdomains=f'{MESH_DIR}{{mesh_path}}_subdomains.xdmf',
-        boundaries=f'{MESH_DIR}{{mesh_path}}_boundaries.xdmf'
+        subdomains_h5=f'{MESH_DIR}{{mesh_path}}_subdomains.h5',
+        boundaries=f'{MESH_DIR}{{mesh_path}}_boundaries.xdmf',
+        boundaries_h5=f'{MESH_DIR}{{mesh_path}}_boundaries.h5'
     run:
         import meshio
         # REQUIRES meshio v. 4.0.0
