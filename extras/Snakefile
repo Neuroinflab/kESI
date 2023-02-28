@@ -467,39 +467,54 @@ rule paper_slice_forward:
 LFCOR_SOLVE_ELE = LFCOR_ELE_PATTERN.format(setup="{SETUP}")
 LFCOR_SOLVE_COND = LFCOR_COND_PATTERN.format(setup="{SETUP}",
                                              model="{GEOMETRY}__{CONDUCTIVITY}")
-LFCOR_SOLVE_DIR_PATTERN = LFCOR_DIR_PATTERN.format(setup="{{SETUP}}",
-                                                   model="{model}",
-                                                   mesh="{mesh}",
-                                                   degree="{{DEGREE}}")
-LFCOR_SOLVE_DIR_paper_spheres = LFCOR_SOLVE_DIR_PATTERN.format(
-                              model="{GEOMETRY,.+_sphere.*}__{CONDUCTIVITY}",
-                              mesh="{SUFFIX}__{MESH}")
+LFCOR_SOLVE_DIR = LFCOR_DIR_PATTERN.format(setup="{SETUP}",
+                                           model="{GEOMETRY}__{CONDUCTIVITY}",
+                                           mesh="{MESH}",
+                                           degree="{DEGREE}")
 
+def get_fenics_lfcor_solve_script(wildcards):
+    if "_slice" in wildcards.GEOMETRY:
+        return """solve_slice_on_plate.py \\
+          --ground-potential 0.0"""
 
-rule LFCOR_SOLVE_paper_spheres:
+    if "_sphere" in wildcards.GEOMETRY:
+        return """solve_sphere_on_plate.py \\
+          --grounded-plate-edge-z -0.088"""
+
+def get_fenics_lfcor_solve_mesh_paths(wildcards):
+    if '__' in wildcards.MESH:
+        type, granularity = wildcards.MESH.split('__')
+        mesh = f"{wildcards.GEOMETRY}__{type}"
+    else:
+        granularity = wildcards.MESH
+        mesh = wildcards.GEOMETRY
+    return [os.path.join(MESH_DIR,
+                         mesh,
+                         f"{granularity}{suffix}.{ext}")
+            for suffix in ["", "_subdomains", "_boundaries"]
+            for ext in ["xdmf", "h5"]]
+
+rule FENICS_LFCOR_SOLVE:
     input:
         ELECTRODES=LFCOR_SOLVE_ELE,
-        MESH_PATHS=[os.path.join(MESH_DIR,
-                                 "{GEOMETRY}__{SUFFIX}",
-                                 f"{{MESH}}{suffix}.{ext}")
-                    for suffix in ["", "_subdomains", "_boundaries"]
-                    for ext in ["xdmf", "h5"]],
+        MESH_PATHS=get_fenics_lfcor_solve_mesh_paths,
         CONFIG=LFCOR_SOLVE_COND
     output:
-        os.path.join(LFCOR_SOLVE_DIR_paper_spheres,
+        os.path.join(LFCOR_SOLVE_DIR,
                      '{NAME}.h5'),
-        METADATA=os.path.join(LFCOR_SOLVE_DIR_paper_spheres,
+        METADATA=os.path.join(LFCOR_SOLVE_DIR,
                               '{NAME}.ini')
     resources:
         mem_mb=get_mem_mb_exponential(15_000)
+    params:
+        command=get_fenics_lfcor_solve_script
     shell:
         """
         ulimit -v $(({resources.mem_mb} * 1024))
-        python solve_sphere_on_plate.py \
+        python {params.command} \
           --mesh {input.MESH_PATHS[0]} \
           --degree {wildcards.DEGREE} \
           --config {input.CONFIG} \
-          --grounded-plate-edge-z -0.088 \
           --electrodes {input.ELECTRODES} \
           --name {wildcards.NAME} \
           --output {output.METADATA}
@@ -547,7 +562,7 @@ rule LFCOR_COND_INI:
                                   model="{MODEL}")
     shell:
         f"""
-        mkdir -p {LFCOR_ROOT}{{wildcards.SETUP}}/{{wildcards.MODEL}}
+        mkdir -p {LFCOR_ROOT}/{{wildcards.SETUP}}/{{wildcards.MODEL}}
         cp {{input}} {{output}}
         """
 
