@@ -11,13 +11,13 @@ MESH_GEO_PATTERN = os.path.join(MESH_DIR,
                                 "{mesh_name}",
                                 "{granularity}.geo")
 
-LFCOR_ROOT = os.path.join(DATA_DIR,
+FENICS_LFCOR_ROOT = os.path.join(DATA_DIR,
                           "fenics_leadfield_corrections")
-LFCOR_ELE_PATTERN = os.path.join(LFCOR_ROOT,
+FENICS_LFCOR_ELE_PATTERN = os.path.join(FENICS_LFCOR_ROOT,
                                  "{setup}/electrodes.csv")
-LFCOR_COND_PATTERN = os.path.join(LFCOR_ROOT,
+FENICS_LFCOR_COND_PATTERN = os.path.join(FENICS_LFCOR_ROOT,
                                   "{setup}/{model}/conductivity.ini")
-LFCOR_DIR_PATTERN = os.path.join(LFCOR_ROOT,
+FENICS_LFCOR_DIR_PATTERN = os.path.join(FENICS_LFCOR_ROOT,
                                  "{setup}/{model}/{mesh}/{degree}/")
 
 
@@ -464,13 +464,13 @@ rule paper_slice_forward:
 #         --quiet
 #       """
 
-LFCOR_SOLVE_ELE = LFCOR_ELE_PATTERN.format(setup="{SETUP}")
-LFCOR_SOLVE_COND = LFCOR_COND_PATTERN.format(setup="{SETUP}",
+FENICS_LFCOR_SOLVE_ELE = FENICS_LFCOR_ELE_PATTERN.format(setup="{SETUP}")
+FENICS_LFCOR_SOLVE_COND = FENICS_LFCOR_COND_PATTERN.format(setup="{SETUP}",
                                              model="{GEOMETRY}__{CONDUCTIVITY}")
-LFCOR_SOLVE_DIR = LFCOR_DIR_PATTERN.format(setup="{SETUP}",
-                                           model="{GEOMETRY}__{CONDUCTIVITY}",
-                                           mesh="{MESH}",
-                                           degree="{DEGREE}")
+FENICS_LFCOR_SOLVE_DIR = FENICS_LFCOR_DIR_PATTERN.format(setup="{SETUP}",
+                                                         model="{GEOMETRY}__{CONDUCTIVITY}",
+                                                         mesh="{MESH}",
+                                                         degree="{DEGREE}")
 
 def get_fenics_lfcor_solve_script(wildcards):
     if "_slice" in wildcards.GEOMETRY:
@@ -496,13 +496,13 @@ def get_fenics_lfcor_solve_mesh_paths(wildcards):
 
 rule FENICS_LFCOR_SOLVE:
     input:
-        ELECTRODES=LFCOR_SOLVE_ELE,
+        ELECTRODES=FENICS_LFCOR_SOLVE_ELE,
         MESH_PATHS=get_fenics_lfcor_solve_mesh_paths,
-        CONFIG=LFCOR_SOLVE_COND
+        CONFIG=FENICS_LFCOR_SOLVE_COND
     output:
-        os.path.join(LFCOR_SOLVE_DIR,
+        os.path.join(FENICS_LFCOR_SOLVE_DIR,
                      '{NAME}.h5'),
-        METADATA=os.path.join(LFCOR_SOLVE_DIR,
+        METADATA=os.path.join(FENICS_LFCOR_SOLVE_DIR,
                               '{NAME}.ini')
     resources:
         mem_mb=get_mem_mb_exponential(15_000)
@@ -527,11 +527,11 @@ def setup_to_electrodes(wildcards):
     return f"{prefix}.ini"
 
 
-rule LFCOR_ELE_CSV:
+rule FENICS_LFCOR_ELE_CSV:
     input:
         setup_to_electrodes
     output:
-        LFCOR_ELE_PATTERN
+        FENICS_LFCOR_ELE_PATTERN
     run:
         import configparser
         import pandas as pd
@@ -554,15 +554,16 @@ rule LFCOR_ELE_CSV:
                                 index=False)
 
 
-rule LFCOR_COND_INI:
+
+rule FENICS_LFCOR_COND_INI:
     input:
         f"{PROP_DIR}{{MODEL}}.ini"
     output:
-        LFCOR_COND_PATTERN.format(setup="{SETUP}",
-                                  model="{MODEL}")
+        FENICS_LFCOR_COND_PATTERN.format(setup="{SETUP}",
+                                         model="{MODEL}")
     shell:
         f"""
-        mkdir -p {LFCOR_ROOT}/{{wildcards.SETUP}}/{{wildcards.MODEL}}
+        mkdir -p {FENICS_LFCOR_ROOT}/{{wildcards.SETUP}}/{{wildcards.MODEL}}
         cp {{input}} {{output}}
         """
 
