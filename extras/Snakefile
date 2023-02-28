@@ -543,16 +543,14 @@ rule FENICS_LFCOR_ELE_CSV:
         config = configparser.ConfigParser()
         config.read(str(input))
 
-        DF = []
-        for name in config.sections():
-            DF.append({'NAME': name,
-                       'X': config.getfloat(name, 'x'),
-                       'Y': config.getfloat(name, 'y'),
-                       'Z': config.getfloat(name, 'z'),
-                       })
-        pd.DataFrame(DF).to_csv(str(output),
-                                index=False)
+        DF = pd.DataFrame([[name,
+                            config.getfloat(name, 'x'),
+                            config.getfloat(name, 'y'),
+                            config.getfloat(name, 'z'),
+                            ] for name in config.sections()],
+                            columns=['NAME', 'X', 'Y', 'Z'])
 
+        DF.to_csv(str(output), index=False)
 
 
 rule FENICS_LFCOR_COND_INI:
