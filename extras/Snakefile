@@ -11,10 +11,14 @@ MESH_GEO_PATTERN = os.path.join(MESH_DIR,
                                 "{mesh_name}",
                                 "{granularity}.geo")
 
-LFCOR_ROOT = f"{DATA_DIR}leadfield_corrections/"
-LFCOR_ELE_PATTERN = f"{LFCOR_ROOT}{{setup}}/electrodes.csv"
-LFCOR_COND_PATTERN = f"{LFCOR_ROOT}{{setup}}/{{model}}/conductivity.ini"
-LFCOR_DIR_PATTERN = f"{LFCOR_ROOT}{{setup}}/{{model}}/{{mesh}}/{{degree}}/"
+LFCOR_ROOT = os.path.join(DATA_DIR,
+                          "fenics_leadfield_corrections")
+LFCOR_ELE_PATTERN = os.path.join(LFCOR_ROOT,
+                                 "{setup}/electrodes.csv")
+LFCOR_COND_PATTERN = os.path.join(LFCOR_ROOT,
+                                  "{setup}/{model}/conductivity.ini")
+LFCOR_DIR_PATTERN = os.path.join(LFCOR_ROOT,
+                                 "{setup}/{model}/{mesh}/{degree}/")
 
 
 # rule all:
