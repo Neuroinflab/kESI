@@ -39,9 +39,9 @@ MESH_GEO_PATTERN = os.path.join(MESH_DIR,
 FEM_PATH = "{model}/{mesh}/{degree}"
 
 FENICS_LFCOR_ROOT = os.path.join(DATA_DIR, "fenics_leadfield_corrections")
-FENICS_LFCOR_ELE_PATTERN = os.path.join(FENICS_LFCOR_ROOT, "{setup}/electrodes.csv")
-FENICS_LFCOR_COND_PATTERN = os.path.join(FENICS_LFCOR_ROOT,
-                                         "{setup}/{model}/conductivity.ini")
+FENICS_LFCOR_ELE = os.path.join(FENICS_LFCOR_ROOT, "{setup}/electrodes.csv")
+FENICS_LFCOR_COND_DIR = os.path.join(FENICS_LFCOR_ROOT, "{setup}/{model}")
+FENICS_LFCOR_COND = os.path.join(FENICS_LFCOR_COND_DIR, "conductivity.ini")
 FENICS_LFCOR_DIR_PATTERN = os.path.join(FENICS_LFCOR_ROOT,
                                         "{setup}",
                                         FEM_PATH)
@@ -538,12 +538,12 @@ rule SAMPLED_LFCOR_paper:
 
 
 def get_sampled_lfcor_grid_paper_volume(wildcards):
-    if 'slice' in wildcards.setup:
+    if "slice" in wildcards.setup:
         h = 300e-6
         start = [-h/2, -h/2, 0]
         end = [h/2, h/2, h]
-    elif 'sphere' in wildcards.setup:
-        if 'single_sphere' in wildcards.setup:
+    elif "sphere" in wildcards.setup:
+        if "single_sphere" in wildcards.setup:
             r = 90e-3
         else:
             r = 79e-3
@@ -572,32 +572,22 @@ rule SAMPLED_LFCOR_GRID_paper_romberg:
         """
 
 
-FENICS_LFCOR_SOLVE_ELE = FENICS_LFCOR_ELE_PATTERN.format(setup="{SETUP}")
-FENICS_LFCOR_SOLVE_COND = FENICS_LFCOR_COND_PATTERN.format(
-                                             setup="{SETUP}",
-                                             model="{GEOMETRY}__{CONDUCTIVITY}")
-FENICS_LFCOR_SOLVE_DIR = FENICS_LFCOR_DIR_PATTERN.format(
-                                             setup="{SETUP}",
-                                             model="{GEOMETRY}__{CONDUCTIVITY}",
-                                             mesh="{MESH}",
-                                             degree="{DEGREE}")
-
 def get_fenics_lfcor_solve_script(wildcards):
-    if "_slice" in wildcards.GEOMETRY:
+    if "_slice" in wildcards.geometry:
         return """solve_slice_on_plate.py \\
           --ground-potential 0.0"""
 
-    if "_sphere" in wildcards.GEOMETRY:
+    if "_sphere" in wildcards.geometry:
         return """solve_sphere_on_plate.py \\
           --grounded-plate-edge-z -0.088"""
 
 def get_fenics_lfcor_solve_mesh_paths(wildcards):
-    if '__' in wildcards.MESH:
-        type, granularity = wildcards.MESH.split('__')
-        mesh = f"{wildcards.GEOMETRY}__{type}"
+    if '__' in wildcards.mesh:
+        type, granularity = wildcards.mesh.split('__')
+        mesh = f"{wildcards.geometry}__{type}"
     else:
-        granularity = wildcards.MESH
-        mesh = wildcards.GEOMETRY
+        granularity = wildcards.mesh
+        mesh = wildcards.geometry
     return [os.path.join(MESH_DIR,
                          mesh,
                          f"{granularity}{suffix}.{ext}")
@@ -606,14 +596,15 @@ def get_fenics_lfcor_solve_mesh_paths(wildcards):
 
 rule FENICS_LFCOR_SOLVE:
     input:
-        ELECTRODES=FENICS_LFCOR_SOLVE_ELE,
-        MESH_PATHS=get_fenics_lfcor_solve_mesh_paths,
-        CONFIG=FENICS_LFCOR_SOLVE_COND
+        electrodes=FENICS_LFCOR_ELE,
+        mesh_paths=get_fenics_lfcor_solve_mesh_paths,
+        config=FENICS_LFCOR_COND.replace("{model}",
+                                         "{geometry}__{conductivity}")
     output:
-        os.path.join(FENICS_LFCOR_SOLVE_DIR,
-                     '{NAME}.h5'),
-        METADATA=os.path.join(FENICS_LFCOR_SOLVE_DIR,
-                              '{NAME}.ini')
+        FENICS_LFCOR_H5.replace("{model}",
+                                "{geometry}__{conductivity}")
+        metadata=FENICS_LFCOR_METADATA.replace("{model}",
+                                               "{geometry}__{conductivity}"),
     resources:
         mem_mb=get_mem_mb_exponential(15_000)
     params:
@@ -622,18 +613,18 @@ rule FENICS_LFCOR_SOLVE:
         """
         ulimit -v $(({resources.mem_mb} * 1024))
         python {params.command} \\
-          --mesh {input.MESH_PATHS[0]} \\
-          --degree {wildcards.DEGREE} \\
-          --config {input.CONFIG} \\
-          --electrodes {input.ELECTRODES} \\
-          --name {wildcards.NAME} \\
-          --output {output.METADATA}
+          --mesh {input.mesh_paths[0]} \\
+          --degree {wildcards.degree} \\
+          --config {input.config} \\
+          --electrodes {input.electrodes} \\
+          --name {wildcards.name} \\
+          --output {output.metadata}
         """
 
 
 def setup_to_electrodes(wildcards):
     prefix = os.path.join(ELE_DIR,
-                          *wildcards.setup.split('__'))
+                          *wildcards.setup.split("__"))
     return f"{prefix}.ini"
 
 
@@ -641,7 +632,7 @@ rule FENICS_LFCOR_ELE_CSV:
     input:
         setup_to_electrodes
     output:
-        FENICS_LFCOR_ELE_PATTERN
+        FENICS_LFCOR_ELE
     run:
         import configparser
         import pandas as pd
@@ -654,24 +645,23 @@ rule FENICS_LFCOR_ELE_CSV:
         config.read(str(input))
 
         DF = pd.DataFrame([[name,
-                            config.getfloat(name, 'x'),
-                            config.getfloat(name, 'y'),
-                            config.getfloat(name, 'z'),
+                            config.getfloat(name, "x"),
+                            config.getfloat(name, "y"),
+                            config.getfloat(name, "z"),
                             ] for name in config.sections()],
-                            columns=['NAME', 'X', 'Y', 'Z'])
+                            columns=["NAME", "X", "Y", "Z"])
 
         DF.to_csv(str(output), index=False)
 
 
 rule FENICS_LFCOR_COND_INI:
     input:
-        f"{PROP_DIR}{{MODEL}}.ini"
+        os.path.join(PROP_DIR, "{model}.ini")
     output:
-        FENICS_LFCOR_COND_PATTERN.format(setup="{SETUP}",
-                                         model="{MODEL}")
+        FENICS_LFCOR_COND
     shell:
         f"""
-        mkdir -p {FENICS_LFCOR_ROOT}/{{wildcards.SETUP}}/{{wildcards.MODEL}}
+        mkdir -p {FENICS_LFCOR_COND_DIR.replace("{", "{.wildcards")}
         cp {{input}} {{output}}
         """
 
@@ -704,15 +694,15 @@ rule GEO_circular_slice_composite:
 
 def granularity_to_relative_element_size(wildcards):
     sed_relative_element_size = {
-                                 'coarsest': 8.0,
-                                 'coarser': 4.0,
-                                 'coarse': 2.0,
-                                 'normal': 1.0,
-                                 'fine': 0.5,
-                                 'finer': 0.25,
-                                 'finest': 0.125,
-                                 'superfine': 0.0625,
-                                 'superfinest': 0.03125,
+                                 "coarsest": 8.0,
+                                 "coarser": 4.0,
+                                 "coarse": 2.0,
+                                 "normal": 1.0,
+                                 "fine": 0.5,
+                                 "finer": 0.25,
+                                 "finest": 0.125,
+                                 "superfine": 0.0625,
+                                 "superfinest": 0.03125,
                                  }
     return sed_relative_element_size[wildcards.granularity]
 
@@ -738,7 +728,7 @@ rule MSH:
     output:
         os.path.join(MESH_DIR, "{mesh_path}.msh")
     shell:
-        'gmsh -3 -optimize_netgen {input} || gmsh -3 -optimize {input} || gmsh -3 {input}'
+        "gmsh -3 -optimize_netgen {input} || gmsh -3 -optimize {input} || gmsh -3 {input}"
 
 
 rule XDMF:
