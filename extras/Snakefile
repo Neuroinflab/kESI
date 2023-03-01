@@ -43,6 +43,11 @@ FENICS_LFCOR_COND_PATTERN = os.path.join(FENICS_LFCOR_ROOT,
 FENICS_LFCOR_DIR_PATTERN = os.path.join(FENICS_LFCOR_ROOT,
                                         "{setup}/{model}/{mesh}/{degree}/")
 
+SAMPLED_LFCOR_ROOT = os.path.join(DATA_DIR, "sampled_leadfield_corrections")
+SAMPLED_LFCOR_GRID_ROOT = os.path.join(SAMPLED_LFCOR_ROOT,
+                                       "{setup}/{sampling}")
+SAMPLED_LFCOR_GRID = os.path.join(SAMPLED_LFCOR_GRID_ROOT, "grid.npz")
+
 
 # rule all:
 #     input: ".4SM_composite_normal_2_stereotactic"
@@ -486,6 +491,42 @@ rule paper_slice_forward:
 #         --output {output} \
 #         --quiet
 #       """
+
+
+def get_sampled_lfcor_grid_paper_volume(wildcards):
+    if 'slice' in wildcards.setup:
+        h = 300e-6
+        start = [-h/2, -h/2, 0]
+        end = [h/2, h/2, h]
+    elif 'sphere' in wildcards.setup:
+        if 'single_sphere' in wildcards.setup:
+            r = 90e-3
+        else:
+            r = 79e-3
+
+        start = [-r]
+        end = [r]
+
+    return f"""--start {" ".join(map("{:.20f}".format, start))} \
+          --end {" ".join(map("{:.20f}".format, end))}"""
+
+rule SAMPLED_LFCOR_GRID_paper_romberg:
+    output:
+        SAMPLED_LFCOR_GRID.format(setup="{setup,paper.+}",
+                                  sampling="romberg_{k,\\d+}")
+    params:
+        volume=get_sampled_lfcor_grid_paper_volume
+    shell:
+        f"""
+        mkdir -p {SAMPLED_LFCOR_GRID_ROOT.format(
+                                              setup="{wildcards.setup}",
+                                              sampling="romberg_{wildcards.k}")}
+        python create_grid.py {{output}} \
+          --coords XYZ \
+          {{params.volume}} \
+          -k {{wildcards.k}}
+        """
+
 
 FENICS_LFCOR_SOLVE_ELE = FENICS_LFCOR_ELE_PATTERN.format(setup="{SETUP}")
 FENICS_LFCOR_SOLVE_COND = FENICS_LFCOR_COND_PATTERN.format(
