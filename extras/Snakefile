@@ -518,9 +518,9 @@ def get_sampled_lfcor_paper_command(wildcards):
 
 rule SAMPLED_LFCOR_paper:
     input:
+        FENICS_LFCOR_H5,
         grid=SAMPLED_LFCOR_GRID,
-        correction=FENICS_LFCOR_METADATA,
-        FENICS_LFCOR_H5
+        correction=FENICS_LFCOR_METADATA
     output:
         SAMPLED_LFCOR.replace("{setup}", "{setup,paper_.+}")
     params:
@@ -602,9 +602,9 @@ rule FENICS_LFCOR_SOLVE:
                                          "{geometry}__{conductivity}")
     output:
         FENICS_LFCOR_H5.replace("{model}",
-                                "{geometry}__{conductivity}")
+                                "{geometry}__{conductivity}"),
         metadata=FENICS_LFCOR_METADATA.replace("{model}",
-                                               "{geometry}__{conductivity}"),
+                                               "{geometry}__{conductivity}")
     resources:
         mem_mb=get_mem_mb_exponential(15_000)
     params:
