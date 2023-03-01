@@ -551,7 +551,7 @@ def get_sampled_lfcor_grid_paper_volume(wildcards):
         start = [-r]
         end = [r]
 
-    return f"""--start {" ".join(map("{:.20f}".format, start))} \
+    return f"""--start {" ".join(map("{:.20f}".format, start))} \\
           --end {" ".join(map("{:.20f}".format, end))}"""
 
 rule SAMPLED_LFCOR_GRID_paper_romberg:
@@ -565,9 +565,9 @@ rule SAMPLED_LFCOR_GRID_paper_romberg:
         mkdir -p {SAMPLED_LFCOR_GRID_ROOT.format(
                                               setup="{wildcards.setup}",
                                               sampling="romberg_{wildcards.k}")}
-        python create_grid.py {{output}} \
-          --coords XYZ \
-          {{params.volume}} \
+        python create_grid.py {{output}} \\
+          --coords XYZ \\
+          {{params.volume}} \\
           -k {{wildcards.k}}
         """
 
@@ -621,12 +621,12 @@ rule FENICS_LFCOR_SOLVE:
     shell:
         """
         ulimit -v $(({resources.mem_mb} * 1024))
-        python {params.command} \
-          --mesh {input.MESH_PATHS[0]} \
-          --degree {wildcards.DEGREE} \
-          --config {input.CONFIG} \
-          --electrodes {input.ELECTRODES} \
-          --name {wildcards.NAME} \
+        python {params.command} \\
+          --mesh {input.MESH_PATHS[0]} \\
+          --degree {wildcards.DEGREE} \\
+          --config {input.CONFIG} \\
+          --electrodes {input.ELECTRODES} \\
+          --name {wildcards.NAME} \\
           --output {output.METADATA}
         """
 
