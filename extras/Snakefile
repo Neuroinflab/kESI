@@ -6,7 +6,7 @@ PROP_DIR = "FEM/model_properties/"
 ELE_DIR = "FEM/electrode_locations/"
 
 MESH_SRC_DIR = "FEM/meshes/"
-MESH_DIR = f"{DATA_DIR}meshes/"
+MESH_DIR = os.path.join(DATA_DIR, "meshes")
 MESH_GEO_PATTERN = os.path.join(MESH_DIR,
                                 "{mesh_name}",
                                 "{granularity}.geo")
@@ -577,14 +577,17 @@ rule FENICS_LFCOR_COND_INI:
 #         cp {{input}} {{output}}
 #         """
 
+GEO_circular_slice_composite_out = os.path.join(MESH_DIR,
+                                                "circular_slice/composite.geo")
+
 rule GEO_circular_slice_composite:
     input:
-        f'{MESH_SRC_DIR}circular_slice_composite.geo'
+        os.path.join(MESH_SRC_DIR, "circular_slice_composite.geo")
     output:
-        f'{MESH_DIR}circular_slice/composite.geo'
+        GEO_circular_slice_composite_out
     shell:
         f"""
-        mkdir -p {MESH_DIR}circular_slice
+        mkdir -p {os.path.dirname(GEO_circular_slice_composite_out)}
         cp {{input}} {{output}}
         """
 
@@ -614,47 +617,45 @@ rule GEO_TEMPLATE:
         sed_relative_element_size=granularity_to_relative_element_size
     shell:
         f"""
-        mkdir -p {MESH_DIR}{{wildcards.mesh_name}}
+        mkdir -p {os.path.dirname(MESH_GEO_PATTERN).format(mesh_name="{wildcards.mesh_name}")}
         sed 's/SED_RELATIVE_ELEMENT_SIZE/{{params.sed_relative_element_size}}/g' < {{input}} > {{output}}
         """
 
 
 rule MSH:
     input:
-        f'{MESH_DIR}{{mesh_path}}.geo'
+        os.path.join(MESH_DIR, "{mesh_path}.geo")
     output:
-        f'{MESH_DIR}{{mesh_path}}.msh'
+        os.path.join(MESH_DIR, "{mesh_path}.msh")
     shell:
         'gmsh -3 -optimize_netgen {input} || gmsh -3 -optimize {input} || gmsh -3 {input}'
 
 
 rule XDMF:
     input:
-        f'{MESH_DIR}{{mesh_path}}.msh'
+        os.path.join(MESH_DIR, "{mesh_path}.msh")
     output:
-        mesh=f'{MESH_DIR}{{mesh_path}}.xdmf',
-        mesh_h5=f'{MESH_DIR}{{mesh_path}}.h5',
-        subdomains=f'{MESH_DIR}{{mesh_path}}_subdomains.xdmf',
-        subdomains_h5=f'{MESH_DIR}{{mesh_path}}_subdomains.h5',
-        boundaries=f'{MESH_DIR}{{mesh_path}}_boundaries.xdmf',
-        boundaries_h5=f'{MESH_DIR}{{mesh_path}}_boundaries.h5'
+        [os.path.join(MESH_DIR, f"{{mesh_path}}{suffix}.{ext}")
+         for ext in ["xdmf", "h5"]
+         for suffix in ["", "_boundaries", "_subdomains"]]
     run:
         import meshio
         # REQUIRES meshio v. 4.0.0
         # see: https://github.com/nschloe/meshio/blob/master/CHANGELOG.md#v400-feb-18-2020
         msh = meshio.read(str(input))
 
-        meshio.write(output.mesh,
+        # mesh
+        meshio.write(output[0],
                      meshio.Mesh(points=msh.points,
-                                 cells=[("tetra", msh.cells_dict["tetra"]
-                                         )]))
-        meshio.write(str(output.boundaries),
+                                 cells=[("tetra", msh.cells_dict["tetra"])]))
+        # boundaries
+        meshio.write(str(output[1]),
                      meshio.Mesh(points=msh.points,
                                  cells=[("triangle", msh.cells_dict["triangle"])],
                                  cell_data={"boundaries":
                                             [msh.cell_data_dict["gmsh:physical"]["triangle"]]}))
-
-        meshio.write(str(output.subdomains),
+        # subdomains
+        meshio.write(str(output[2]),
                      meshio.Mesh(points=msh.points,
                                  cells=[("tetra", msh.cells_dict["tetra"])],
                                  cell_data={"subdomains":
