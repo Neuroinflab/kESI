@@ -36,17 +36,26 @@ MESH_GEO_PATTERN = os.path.join(MESH_DIR,
                                 "{mesh_name}",
                                 "{granularity}.geo")
 
+FEM_PATH = "{model}/{mesh}/{degree}"
+
 FENICS_LFCOR_ROOT = os.path.join(DATA_DIR, "fenics_leadfield_corrections")
 FENICS_LFCOR_ELE_PATTERN = os.path.join(FENICS_LFCOR_ROOT, "{setup}/electrodes.csv")
 FENICS_LFCOR_COND_PATTERN = os.path.join(FENICS_LFCOR_ROOT,
                                          "{setup}/{model}/conductivity.ini")
 FENICS_LFCOR_DIR_PATTERN = os.path.join(FENICS_LFCOR_ROOT,
-                                        "{setup}/{model}/{mesh}/{degree}/")
+                                        "{setup}",
+                                        FEM_PATH)
+FENICS_LFCOR_METADATA = os.path.join(FENICS_LFCOR_DIR_PATTERN, "{name}.ini")
+FENICS_LFCOR_H5 = os.path.join(FENICS_LFCOR_DIR_PATTERN, "{name}.h5")
 
 SAMPLED_LFCOR_ROOT = os.path.join(DATA_DIR, "sampled_leadfield_corrections")
 SAMPLED_LFCOR_GRID_ROOT = os.path.join(SAMPLED_LFCOR_ROOT,
                                        "{setup}/{sampling}")
 SAMPLED_LFCOR_GRID = os.path.join(SAMPLED_LFCOR_GRID_ROOT, "grid.npz")
+SAMPLED_LFCOR_DIR = os.path.join(SAMPLED_LFCOR_GRID_ROOT,
+                                 FEM_PATH)
+SAMPLED_LFCOR = os.path.join(SAMPLED_LFCOR_DIR, "{name}.npz")
+
 
 
 # rule all:
@@ -491,6 +500,41 @@ rule paper_slice_forward:
 #         --output {output} \
 #         --quiet
 #       """
+
+
+def get_sampled_lfcor_paper_command(wildcards):
+    if "slice" in wildcards.model:
+        return "sample_volumetric_solution.py"
+
+    if "single_sphere" in wildcards.model:
+        return """sample_spherical_solution.py \\
+          --center 0.0 0.0 0.0 \\
+          --radius 0.090"""
+
+    if "four_spheres" in wildcards.model:
+        return """sample_spherical_solution.py \\
+          --center 0.0 0.0 0.0 \\
+          --radius 0.079"""
+
+rule SAMPLED_LFCOR_paper:
+    input:
+        grid=SAMPLED_LFCOR_GRID,
+        correction=FENICS_LFCOR_METADATA,
+        FENICS_LFCOR_H5
+    output:
+        SAMPLED_LFCOR.replace("{setup}", "{setup,paper_.+}")
+    params:
+        command=get_sampled_lfcor_paper_command
+    shell:
+        f"""
+        mkdir -p {SAMPLED_LFCOR_DIR.replace("{", "{wildcards.")}
+        python {{params.command}} \\
+          --output {{output}} \\
+          --config {{input.correction}} \\
+          --grid {{input.grid}} \\
+          --fill 0 \\
+          --quiet
+        """
 
 
 def get_sampled_lfcor_grid_paper_volume(wildcards):
