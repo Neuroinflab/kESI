@@ -36,14 +36,12 @@ MESH_GEO_PATTERN = os.path.join(MESH_DIR,
                                 "{mesh_name}",
                                 "{granularity}.geo")
 
-FENICS_LFCOR_ROOT = os.path.join(DATA_DIR,
-                          "fenics_leadfield_corrections")
-FENICS_LFCOR_ELE_PATTERN = os.path.join(FENICS_LFCOR_ROOT,
-                                 "{setup}/electrodes.csv")
+FENICS_LFCOR_ROOT = os.path.join(DATA_DIR, "fenics_leadfield_corrections")
+FENICS_LFCOR_ELE_PATTERN = os.path.join(FENICS_LFCOR_ROOT, "{setup}/electrodes.csv")
 FENICS_LFCOR_COND_PATTERN = os.path.join(FENICS_LFCOR_ROOT,
-                                  "{setup}/{model}/conductivity.ini")
+                                         "{setup}/{model}/conductivity.ini")
 FENICS_LFCOR_DIR_PATTERN = os.path.join(FENICS_LFCOR_ROOT,
-                                 "{setup}/{model}/{mesh}/{degree}/")
+                                        "{setup}/{model}/{mesh}/{degree}/")
 
 
 # rule all:
@@ -490,12 +488,14 @@ rule paper_slice_forward:
 #       """
 
 FENICS_LFCOR_SOLVE_ELE = FENICS_LFCOR_ELE_PATTERN.format(setup="{SETUP}")
-FENICS_LFCOR_SOLVE_COND = FENICS_LFCOR_COND_PATTERN.format(setup="{SETUP}",
+FENICS_LFCOR_SOLVE_COND = FENICS_LFCOR_COND_PATTERN.format(
+                                             setup="{SETUP}",
                                              model="{GEOMETRY}__{CONDUCTIVITY}")
-FENICS_LFCOR_SOLVE_DIR = FENICS_LFCOR_DIR_PATTERN.format(setup="{SETUP}",
-                                                         model="{GEOMETRY}__{CONDUCTIVITY}",
-                                                         mesh="{MESH}",
-                                                         degree="{DEGREE}")
+FENICS_LFCOR_SOLVE_DIR = FENICS_LFCOR_DIR_PATTERN.format(
+                                             setup="{SETUP}",
+                                             model="{GEOMETRY}__{CONDUCTIVITY}",
+                                             mesh="{MESH}",
+                                             degree="{DEGREE}")
 
 def get_fenics_lfcor_solve_script(wildcards):
     if "_slice" in wildcards.GEOMETRY:
