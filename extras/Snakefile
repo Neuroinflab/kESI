@@ -661,7 +661,7 @@ rule FENICS_LFCOR_COND_INI:
         FENICS_LFCOR_COND
     shell:
         f"""
-        mkdir -p {FENICS_LFCOR_COND_DIR.replace("{", "{.wildcards")}
+        mkdir -p {FENICS_LFCOR_COND_DIR.replace("{", "{wildcards.")}
         cp {{input}} {{output}}
         """
 
