@@ -664,6 +664,10 @@ def altitude_azimuth_mesh(base, step, alternate=True):
             yield altitude, azimuth
 
 
+def one_hot_vector(length, hot_position, hot=1, cold=0):
+    return np.where(np.arange(length) == hot_position, hot, cold)
+
+
 if __name__ == '__main__':
     import common
     import pandas as pd
@@ -748,3 +752,11 @@ if __name__ == '__main__':
                                 a=0,
                                 c='a')
     assert expected == src.kwargs
+
+
+    # TESTS one_hot_vector()
+    assert np.all(one_hot_vector(1, 0) == [1])
+    assert np.all(one_hot_vector(2, 0) == [1, 0])
+    assert np.all(one_hot_vector(2, 1) == [0, 1])
+    assert np.all(one_hot_vector(2, 1, hot=-1) == [0, -1])
+    assert np.all(one_hot_vector(2, 1, hot=-1, cold=1) == [1, -1])
