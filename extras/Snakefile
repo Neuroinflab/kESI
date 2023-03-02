@@ -587,6 +587,24 @@ rule PBF_MODEL_SRC_kesi_bundle:
         """
 
 
+PFB_MODEL_SRC_kesi_sigmoid = PBF_MODEL_SRC.format(
+                   setup="{setup}__{geometry}__{electrodes}",
+                   basis_functions="{grid}__kESI_generated__sigmoid_r_{r_nm}nm")
+
+rule PBF_MODEL_SRC_kesi_generated_sigmoid:
+    output:
+        PFB_MODEL_SRC_kesi_sigmoid
+    params:
+        radius=lambda wildcards: float(f"{wildcards.r_nm}e-9")
+    shell:
+        f"""
+        mkdir -p {os.path.dirname(PFB_MODEL_SRC_kesi_sigmoid).replace(
+                                                             "{",
+                                                             "{wildcards.")}
+        python create_model_src.py {{output}} --radius {{params.radius}}
+        """
+
+
 def get_sampled_lfcor_paper_command(wildcards):
     if "slice" in wildcards.model:
         return "sample_volumetric_solution.py"
