@@ -62,6 +62,9 @@ PBF_DIR = os.path.join(PBF_ROOT, "{setup}", "{basis_functions}")
 PBF_CENTROIDS = os.path.join(PBF_DIR, "centroids.npz")
 PBF_MODEL_SRC = os.path.join(PBF_DIR, "model_src.json")
 
+PBF_KCSD_DIR = os.path.join(PBF_DIR, "kCSD_{conductivity}")
+PBF_KCSD = os.path.join(PBF_KCSD_DIR, "{name}.npz")
+
 
 
 # rule all:
@@ -506,6 +509,29 @@ rule paper_slice_forward:
 #         --output {output} \
 #         --quiet
 #       """
+
+
+rule PBF_KCSD:
+    input:
+        centroids=PBF_CENTROIDS,
+        source=PBF_MODEL_SRC,
+        electrodes=FENICS_LFCOR_ELE
+    output:
+        PBF_KCSD.replace("{conductivity}", "{conductivity,\d+}")
+    params:
+        directory=os.path.dirname(PBF_KCSD),
+        conductivity=lambda wildcards: float(f"{wildcards.conductivity}e-6")
+    shell:
+        """
+        mkdir -p {params.directory}
+        python calculate_kcsd_potential_basis_function.py {wildcards.name} \\
+          --output {params.directory} \\
+          --centroids {input.centroids} \\
+          --source {input.source} \\
+          --electrodes {input.electrodes} \\
+          --conductivity {params.conductivity}
+        """
+
 
 _PBF_CENTROIDS_FORMAT = {
              "setup": "paper__{geometry}__{electrodes}",
