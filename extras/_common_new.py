@@ -160,6 +160,15 @@ class SphericalSplineSourceBase(SourceBase):
     def radius(self):
         return self._nodes[-1]
 
+    def toJSON(self, file):
+        json.dump({"x": self.x,
+                   "y": self.y,
+                   "z": self.z,
+                   "nodes": self._nodes,
+                   "coefficients": self._coefficients},
+                  file,
+                  indent=2)
+
 
 class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
     def __init__(self, x, y, z, nodes,
@@ -756,6 +765,23 @@ if __name__ == '__main__':
                                 a=0,
                                 c='a')
     assert expected == src.kwargs
+
+    # TEST SphericalSplineSourceBase.toJSON()
+    _x, _y, _z = 1, 2, 3
+    _nodes = [1, 2]
+    expected = SphericalSplineSourceBase(x=_x, y=_y, z=_z,
+                                         nodes=_nodes,
+                                         coefficients=[[1], [2, -1]])
+    _file = StringIO()
+    expected.toJSON(_file)
+    _file.seek(0)
+    observed = SphericalSplineSourceBase.fromJSON(_file)
+    assert observed.x == _x
+    assert observed.y == _y
+    assert observed.z == _z
+    assert observed._nodes == _nodes
+    assert observed.csd(1, 2, 1.5) == expected.csd(1, 2, 1.5)
+
 
     # TEST SphericalSplineSourceBase.radius
     assert SphericalSplineSourceBase(0, 0, 0, [2], [[1]]).radius == 2
