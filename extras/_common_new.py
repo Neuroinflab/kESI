@@ -156,6 +156,10 @@ class SphericalSplineSourceBase(SourceBase):
 
         return ACC
 
+    @property
+    def radius(self):
+        return self._nodes[-1]
+
 
 class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
     def __init__(self, x, y, z, nodes,
@@ -752,6 +756,10 @@ if __name__ == '__main__':
                                 a=0,
                                 c='a')
     assert expected == src.kwargs
+
+    # TEST SphericalSplineSourceBase.radius
+    assert SphericalSplineSourceBase(0, 0, 0, [2], [[1]]).radius == 2
+    assert SphericalSplineSourceBase(0, 0, 0, [1, 2], [[1]] * 2).radius == 2
 
 
     # TESTS one_hot_vector()
