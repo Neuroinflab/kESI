@@ -563,27 +563,30 @@ rule PBF_CENTROIDS_paper_slice:
         if wildcards.geometry == "circular_slice":
             h = 0.3e-3
             h_y = h / 4
-            X = XX[(XX >= XX.min() + src_r)
-                   & (XX <= XX.max() - src_r)].reshape(-1, 1, 1)
+            X = XX[(XX > XX.min() + src_r)
+                   & (XX < XX.max() - src_r)].reshape(-1, 1, 1)
             Y = YY[(YY >= max(YY.min() + src_r, -h_y))
                    & (YY <= min(YY.max() - src_r, h_y))].reshape(1, -1, 1)
-            Z = ZZ[(ZZ >= max(ZZ.min(), 0) + src_r)
-                   & (ZZ <= min(ZZ.max(), h) - src_r)].reshape(1, 1, -1)
+            Z = ZZ[(ZZ > max(ZZ.min(), 0) + src_r)
+                   & (ZZ < min(ZZ.max(), h) - src_r)].reshape(1, 1, -1)
             MASK = np.ones((X.size, Y.size, Z.size),
                            dtype=bool)
 
         elif "sphere" in wildcards.geometry:
             brain_r = 0.09 if wildcards.geometry == "single_sphere" else 0.079
-            X = XX[(XX >= max(XX.min(), -brain_r) + src_r)
-                   & (XX <= min(XX.max(), brain_r) - src_r)].reshape(-1, 1, 1)
-            Y = YY[(YY >= max(YY.min(), -brain_r) + src_r)
-                   & (YY <= min(YY.max(), brain_r) - src_r)].reshape(1, -1, 1)
-            Z = ZZ[(ZZ >= max(ZZ.min(), -brain_r) + src_r)
+            h_x = 2e-2
+            h_y = 2e-2
+            h_z = 2.5e-2
+            X = XX[(XX >= max(XX.min() + src_r, -h_x))
+                   & (XX <= min(XX.max() - src_r, h_x))].reshape(-1, 1, 1)
+            Y = YY[(YY >= max(YY.min() + src_r, -h_y))
+                   & (YY <= min(YY.max() - src_r, h_y))].reshape(1, -1, 1)
+            Z = ZZ[(ZZ >= max(ZZ.min() + src_r, h_z))
                    & (ZZ <= min(ZZ.max(), brain_r) - src_r)].reshape(1, 1, -1)
             MASK = (np.square(X)
                     + np.square(Y)
                     + np.square(Z)
-                    <= np.square(brain_r - src_r))
+                    < np.square(brain_r - src_r))
 
         np.savez_compressed(grid_filename,
                             X=X,
