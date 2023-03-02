@@ -555,20 +555,17 @@ rule PBF_CENTROIDS_paper_slice:
         src_r = float(f"{wildcards.r_nm}e-9")
 
         with np.load(str(input)) as fh:
-            FLAT = [fh[c].flatten() for c in "XYZ"]
-
-        XX, YY, ZZ = FLAT
-        dx, dy, dz = [(A.max() - A.min()) / (A.size - 1) for A in FLAT]
+            XX, YY, ZZ = [fh[c].flatten() for c in "XYZ"]
 
         if wildcards.geometry == "circular_slice":
             h = 0.3e-3
             h_y = h / 4
-            X = XX[(XX > XX.min() + src_r)
-                   & (XX < XX.max() - src_r)].reshape(-1, 1, 1)
+            X = XX[(XX >= XX.min() + src_r)
+                   & (XX <= XX.max() - src_r)].reshape(-1, 1, 1)
             Y = YY[(YY >= max(YY.min() + src_r, -h_y))
                    & (YY <= min(YY.max() - src_r, h_y))].reshape(1, -1, 1)
-            Z = ZZ[(ZZ > max(ZZ.min(), 0) + src_r)
-                   & (ZZ < min(ZZ.max(), h) - src_r)].reshape(1, 1, -1)
+            Z = ZZ[(ZZ >= max(ZZ.min(), 0) + src_r)
+                   & (ZZ <= min(ZZ.max(), h) - src_r)].reshape(1, 1, -1)
             MASK = np.ones((X.size, Y.size, Z.size),
                            dtype=bool)
 
@@ -586,7 +583,7 @@ rule PBF_CENTROIDS_paper_slice:
             MASK = (np.square(X)
                     + np.square(Y)
                     + np.square(Z)
-                    < np.square(brain_r - src_r))
+                    <= np.square(brain_r - src_r))
 
         np.savez_compressed(grid_filename,
                             X=X,
