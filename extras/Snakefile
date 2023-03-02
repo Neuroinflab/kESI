@@ -732,30 +732,33 @@ rule MSH:
 
 
 rule XDMF:
+    # WARNING: Undocumented feature used!
+    # The rule may crash if Snakemake implementation changes.  In that case:
+    #  - change dict comprehension to list comprehension (dict values),
+    #  - change `output.mesh_xdmf` to `output[0]`,
+    #  - change `output.mesh_xdmf` to `output[1]`,
+    #  - change `output.mesh_xdmf` to `output[2]`.
     input:
         os.path.join(MESH_DIR, "{mesh_path}.msh")
     output:
-        [os.path.join(MESH_DIR, f"{{mesh_path}}{suffix}.{ext}")
-         for ext in ["xdmf", "h5"]
-         for suffix in ["", "_boundaries", "_subdomains"]]
+        **{f"mesh{suffix}_{ext}": os.path.join(MESH_DIR, f"{{mesh_path}}{suffix}.{ext}")
+           for ext in ["xdmf", "h5"]
+           for suffix in ["", "_boundaries", "_subdomains"]}
     run:
         import meshio
         # REQUIRES meshio v. 4.0.0
         # see: https://github.com/nschloe/meshio/blob/master/CHANGELOG.md#v400-feb-18-2020
         msh = meshio.read(str(input))
 
-        # mesh
-        meshio.write(output[0],
+        meshio.write(output.mesh_xdmf,
                      meshio.Mesh(points=msh.points,
                                  cells=[("tetra", msh.cells_dict["tetra"])]))
-        # boundaries
-        meshio.write(str(output[1]),
+        meshio.write(str(output.mesh_boundaries_xdmf),
                      meshio.Mesh(points=msh.points,
                                  cells=[("triangle", msh.cells_dict["triangle"])],
                                  cell_data={"boundaries":
                                             [msh.cell_data_dict["gmsh:physical"]["triangle"]]}))
-        # subdomains
-        meshio.write(str(output[2]),
+        meshio.write(str(output.mesh_subdomains_xdmf),
                      meshio.Mesh(points=msh.points,
                                  cells=[("tetra", msh.cells_dict["tetra"])],
                                  cell_data={"subdomains":
