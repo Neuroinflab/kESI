@@ -29,6 +29,7 @@ import os
 DATA_DIR = "data/"
 PROP_DIR = "FEM/model_properties/"
 ELE_DIR = "FEM/electrode_locations/"
+CSD_BASIS_DIR = "FEM/csd_basis_functions"
 
 MESH_SRC_DIR = "FEM/meshes/"
 MESH_DIR = os.path.join(DATA_DIR, "meshes")
@@ -55,6 +56,11 @@ SAMPLED_LFCOR_GRID = os.path.join(SAMPLED_LFCOR_GRID_ROOT, "grid.npz")
 SAMPLED_LFCOR_DIR = os.path.join(SAMPLED_LFCOR_GRID_ROOT,
                                  FEM_PATH)
 SAMPLED_LFCOR = os.path.join(SAMPLED_LFCOR_DIR, "{name}.npz")
+
+PBF_ROOT = os.path.join(DATA_DIR, "potential_basis_functions")
+PBF_DIR = os.path.join(PBF_ROOT, "{setup}", "{basis_functions}")
+PBF_CENTROIDS = os.path.join(PBF_DIR, "centroids.npz")
+PBF_MODEL_SRC = os.path.join(PBF_DIR, "model_src.json")
 
 
 
@@ -500,6 +506,85 @@ rule paper_slice_forward:
 #         --output {output} \
 #         --quiet
 #       """
+
+_PBF_CENTROIDS_FORMAT = {
+             "setup": "paper__{geometry}__{electrodes}",
+             "basis_functions": "{sampling}__{function_set}__{type}_r_{r_nm}nm",
+             }
+
+PBF_CENTROIDS_paper_slice = PBF_CENTROIDS.format(**_PBF_CENTROIDS_FORMAT)
+
+rule PBF_CENTROIDS_paper_slice:
+    input:
+        SAMPLED_LFCOR_GRID.replace("{setup}", "paper__{geometry}__{electrodes}")
+    output:
+        PBF_CENTROIDS_paper_slice.replace("{r_nm}", "{r_nm,\d+}")
+    run:
+        import numpy as np
+
+        grid_filename = str(output)
+        os.makedirs(os.path.dirname(grid_filename),
+                    exist_ok=True)
+
+        src_r = float(f"{wildcards.r_nm}e-9")
+
+        with np.load(str(input)) as fh:
+            FLAT = [fh[c].flatten() for c in "XYZ"]
+
+        XX, YY, ZZ = FLAT
+        dx, dy, dz = [(A.max() - A.min()) / (A.size - 1) for A in FLAT]
+
+        if wildcards.geometry == "circular_slice":
+            h = 0.3e-3
+            h_y = h / 4
+            X = XX[(XX >= XX.min() + src_r)
+                   & (XX <= XX.max() - src_r)].reshape(-1, 1, 1)
+            Y = YY[(YY >= max(YY.min() + src_r, -h_y))
+                   & (YY <= min(YY.max() - src_r, h_y))].reshape(1, -1, 1)
+            Z = ZZ[(ZZ >= max(ZZ.min(), 0) + src_r)
+                   & (ZZ <= min(ZZ.max(), h) - src_r)].reshape(1, 1, -1)
+            SRC_MASK = np.ones((X.size, Y.size, Z.size),
+                               dtype=bool)
+
+        elif "sphere" in wildcards.geometry:
+            brain_r = 0.09 if wildcards.geometry == "single_sphere" else 0.079
+            X = XX[(XX >= max(XX.min(), -brain_r) + src_r)
+                   & (XX <= min(XX.max(), brain_r) - src_r)].reshape(-1, 1, 1)
+            Y = YY[(YY >= max(YY.min(), -brain_r) + src_r)
+                   & (YY <= min(YY.max(), brain_r) - src_r)].reshape(1, -1, 1)
+            Z = ZZ[(ZZ >= max(ZZ.min(), -brain_r) + src_r)
+                   & (ZZ <= min(ZZ.max(), brain_r) - src_r)].reshape(1, 1, -1)
+            SRC_MASK = (np.square(X)
+                        + np.square(Y)
+                        + np.square(Z)
+                        <= np.square(brain_r - src_r))
+
+        np.savez_compressed(grid_filename,
+                            X=X,
+                            Y=Y,
+                            Z=Z,
+                            SRC_MASK=SRC_MASK)
+
+
+PFB_MODEL_SRC_kesi_bundle = PBF_MODEL_SRC.format(
+                   setup="{setup}__{geometry}__{electrodes}",
+                   basis_functions="{grid}__kESI_bundle__{basis_function}")
+
+rule PBF_MODEL_SRC_kesi_bundle:
+    input:
+        os.path.join(CSD_BASIS_DIR,
+                     "{setup}",
+                     "{geometry}",
+                     "{basis_function}.json")
+    output:
+        PFB_MODEL_SRC_kesi_bundle
+    shell:
+        f"""
+        mkdir -p {os.path.dirname(PFB_MODEL_SRC_kesi_bundle).replace(
+                                                             "{",
+                                                             "{wildcards.")}
+        cp {{input}} {{output}}
+        """
 
 
 def get_sampled_lfcor_paper_command(wildcards):
