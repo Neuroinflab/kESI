@@ -543,8 +543,8 @@ rule PBF_CENTROIDS_paper_slice:
                    & (YY <= min(YY.max() - src_r, h_y))].reshape(1, -1, 1)
             Z = ZZ[(ZZ >= max(ZZ.min(), 0) + src_r)
                    & (ZZ <= min(ZZ.max(), h) - src_r)].reshape(1, 1, -1)
-            SRC_MASK = np.ones((X.size, Y.size, Z.size),
-                               dtype=bool)
+            MASK = np.ones((X.size, Y.size, Z.size),
+                           dtype=bool)
 
         elif "sphere" in wildcards.geometry:
             brain_r = 0.09 if wildcards.geometry == "single_sphere" else 0.079
@@ -554,16 +554,16 @@ rule PBF_CENTROIDS_paper_slice:
                    & (YY <= min(YY.max(), brain_r) - src_r)].reshape(1, -1, 1)
             Z = ZZ[(ZZ >= max(ZZ.min(), -brain_r) + src_r)
                    & (ZZ <= min(ZZ.max(), brain_r) - src_r)].reshape(1, 1, -1)
-            SRC_MASK = (np.square(X)
-                        + np.square(Y)
-                        + np.square(Z)
-                        <= np.square(brain_r - src_r))
+            MASK = (np.square(X)
+                    + np.square(Y)
+                    + np.square(Z)
+                    <= np.square(brain_r - src_r))
 
         np.savez_compressed(grid_filename,
                             X=X,
                             Y=Y,
                             Z=Z,
-                            SRC_MASK=SRC_MASK)
+                            MASK=MASK)
 
 
 PFB_MODEL_SRC_kesi_bundle = PBF_MODEL_SRC.format(
