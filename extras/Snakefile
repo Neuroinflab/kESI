@@ -62,7 +62,7 @@ PBF_DIR = os.path.join(PBF_ROOT, "{setup}", "{basis_functions}")
 PBF_CENTROIDS = os.path.join(PBF_DIR, "centroids.npz")
 PBF_MODEL_SRC = os.path.join(PBF_DIR, "model_src.json")
 
-PBF_KCSD_DIR = os.path.join(PBF_DIR, "kCSD_{conductivity}")
+PBF_KCSD_DIR = os.path.join(PBF_DIR, "kCSD/{conductivity}")
 PBF_KCSD = os.path.join(PBF_KCSD_DIR, "{name}.npz")
 
 
@@ -517,10 +517,9 @@ rule PBF_KCSD:
         source=PBF_MODEL_SRC,
         electrodes=FENICS_LFCOR_ELE
     output:
-        PBF_KCSD.replace("{conductivity}", "{conductivity,\d+}")
+        PBF_KCSD.replace("{conductivity}", r"{conductivity,\d+(\.\d*)}")
     params:
-        directory=os.path.dirname(PBF_KCSD),
-        conductivity=lambda wildcards: float(f"{wildcards.conductivity}e-6")
+        directory=os.path.dirname(PBF_KCSD)
     shell:
         """
         mkdir -p {params.directory}
@@ -529,7 +528,7 @@ rule PBF_KCSD:
           --centroids {input.centroids} \\
           --source {input.source} \\
           --electrodes {input.electrodes} \\
-          --conductivity {params.conductivity}
+          --conductivity {wildcards.conductivity}
         """
 
 
