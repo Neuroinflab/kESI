@@ -537,13 +537,13 @@ _PBF_CENTROIDS_FORMAT = {
              "basis_functions": "{sampling}__{function_set}__{type}_r_{r_nm}nm",
              }
 
-PBF_CENTROIDS_paper_slice = PBF_CENTROIDS.format(**_PBF_CENTROIDS_FORMAT)
+PBF_CENTROIDS_paper = PBF_CENTROIDS.format(**_PBF_CENTROIDS_FORMAT)
 
-rule PBF_CENTROIDS_paper_slice:
+rule PBF_CENTROIDS_paper:
     input:
         SAMPLED_LFCOR_GRID.replace("{setup}", "paper__{geometry}__{electrodes}")
     output:
-        PBF_CENTROIDS_paper_slice.replace("{r_nm}", "{r_nm,\d+}")
+        PBF_CENTROIDS_paper.replace("{r_nm}", "{r_nm,\d+}")
     run:
         import numpy as np
 
