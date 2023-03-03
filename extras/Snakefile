@@ -534,7 +534,7 @@ rule PBF_KCSD:
 
 _PBF_CENTROIDS_FORMAT = {
              "setup": "paper__{geometry}__{electrodes}",
-             "basis_functions": "{sampling}__{function_set}__{type}_r_{r_nm}nm",
+             "basis_functions": "{sampling}__{function_set}__{type}_r_{radius}",
              }
 
 PBF_CENTROIDS_paper = PBF_CENTROIDS.format(**_PBF_CENTROIDS_FORMAT)
@@ -543,7 +543,7 @@ rule PBF_CENTROIDS_paper:
     input:
         SAMPLED_LFCOR_GRID.replace("{setup}", "paper__{geometry}__{electrodes}")
     output:
-        PBF_CENTROIDS_paper.replace("{r_nm}", "{r_nm,\d+}")
+        PBF_CENTROIDS_paper.replace("{radius}", r"{radius,\d+(\.\d*)?}")
     run:
         import numpy as np
 
@@ -551,7 +551,7 @@ rule PBF_CENTROIDS_paper:
         os.makedirs(os.path.dirname(grid_filename),
                     exist_ok=True)
 
-        src_r = float(f"{wildcards.r_nm}e-9")
+        src_r = float(wildcards.radius)
 
         with np.load(str(input)) as fh:
             XX, YY, ZZ = [fh[c].flatten() for c in "XYZ"]
@@ -614,19 +614,17 @@ rule PBF_MODEL_SRC_kesi_bundle:
 
 PFB_MODEL_SRC_kesi_sigmoid = PBF_MODEL_SRC.format(
                    setup="{setup}__{geometry}__{electrodes}",
-                   basis_functions="{grid}__kESI_generated__sigmoid_r_{r_nm}nm")
+                   basis_functions="{grid}__kESI_generated__sigmoid_r_{radius}")
 
 rule PBF_MODEL_SRC_kesi_generated_sigmoid:
     output:
         PFB_MODEL_SRC_kesi_sigmoid
-    params:
-        radius=lambda wildcards: float(f"{wildcards.r_nm}e-9")
     shell:
         f"""
         mkdir -p {os.path.dirname(PFB_MODEL_SRC_kesi_sigmoid).replace(
                                                              "{",
                                                              "{wildcards.")}
-        python create_model_src.py {{output}} --radius {{params.radius}}
+        python create_model_src.py {{output}} --radius {{wildcards.radius}}
         """
 
 
