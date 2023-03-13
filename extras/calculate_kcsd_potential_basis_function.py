@@ -16,10 +16,10 @@ Electrode = collections.namedtuple("Electrode", ['x', 'y', 'z'])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Calculate values of kCSD potential basis functions at electrode.")
-    parser.add_argument('-o', '--output',
-                        metavar='<output>',
-                        dest='output',
-                        help='output directory')
+    parser.add_argument("-o", "--output",
+                        metavar="<output>",
+                        dest="output",
+                        help="output directory")
     parser.add_argument("--centroids",
                         required=True,
                         metavar="<centroids.npz>",
@@ -37,10 +37,10 @@ if __name__ == "__main__":
                         default=0.33,
                         metavar="<conductivity [S/m]>",
                         help="medium conductivity")
-    parser.add_argument('names',
-                        metavar='<electrode name>',
-                        nargs='+',
-                        help='names of electrodes')
+    parser.add_argument("names",
+                        metavar="<electrode name>",
+                        nargs="+",
+                        help="names of electrodes")
 
     args = parser.parse_args()
 
