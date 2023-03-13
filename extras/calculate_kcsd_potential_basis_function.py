@@ -72,4 +72,8 @@ if __name__ == "__main__":
 
             np.savez_compressed(os.path.join(args.output,
                                              f"{name}.npz"),
-                                POTENTIALS=(pae(electrode)))
+                                POTENTIALS=(pae(electrode)),
+                                CONDUCTIVITY=args.conductivity,
+                                X=electrode.x,
+                                Y=electrode.y,
+                                Z=electrode.z)
