@@ -681,6 +681,10 @@ def one_hot_vector(length, hot_position, hot=1, cold=0):
     return np.where(np.arange(length) == hot_position, hot, cold)
 
 
+def shape(dimensions, axis):
+    return one_hot_vector(dimensions, axis, hot=-1, cold=1)
+
+
 if __name__ == '__main__':
     import common
     import pandas as pd

@@ -27,10 +27,7 @@ from itertools import cycle
 
 import numpy as np
 
-from _common_new import one_hot_vector
-
-def shape(dimensions, axis):
-    return one_hot_vector(dimensions, axis, hot=-1, cold=1)
+from _common_new import shape
 
 parser = argparse.ArgumentParser(description="Create sampling grid.")
 parser.add_argument("grid",
