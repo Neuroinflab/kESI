@@ -272,21 +272,26 @@ class ConvolverInterface_base(object):
     def __init__(self, convolver, csd, weights):
         self.convolver = convolver
         self.csd = csd
-        self.weights = weights
+        self._set_weights(weights)
+
+    def _set_weights(self, weights):
+        self.weights = (weights
+                        if isinstance(weights, tuple)
+                        else (weights,) * 3)
 
     @property
     def _src_diameter(self):
-        return len(self.weights)
+        return [len(w) for w in self.weights]
 
     @property
     def _src_radius(self):
-        return self._src_diameter // 2
+        return [r // 2 for r in self._src_diameter]
 
     def convolve_csd(self, leadfield):
         return self.convolver.leadfield_to_base_potentials(
             leadfield,
             self.csd,
-            [self.weights] * 3)
+            list(self.weights))
 
     def zeros(self, name):
         return np.zeros(self.convolver.shape(name))
@@ -296,8 +301,9 @@ class ConvolverInterface_base(object):
 
     def base_weights_to_csd(self, base_weights):
         csd_kernel_shape = [(1 if np.isnan(csd)
-                             else int(round(self._src_radius * pot / csd)) * 2 + 1)
-                            for pot, csd in zip(*map(self.convolver.steps,
+                             else int(round(r * pot / csd)) * 2 + 1)
+                            for r, pot, csd in zip(self._src_radius,
+                                                   *map(self.convolver.steps,
                                                      ['POT', 'CSD']))]
         return self.convolver.base_weights_to_csd(base_weights,
                                                   self.csd,
@@ -747,11 +753,12 @@ if __name__ == '__main__':
     test_electrode_kesi = TestElectrodeKESI()
     model_src = get_source()
     X = np.linspace(R, 9 * R, 2 ** (ROMBERG_K + 2) + 1)
-    Y = np.linspace(-1.5 * R, 2.5 * R, 2 ** (ROMBERG_K + 1) + 1)
-    Z = np.linspace(0, 4 * R, 2 ** (ROMBERG_K + 1) + 1)
+    Y = np.linspace(-1.5 * R, 2.5 * R, 2 * 2 ** (ROMBERG_K + 1) + 1)
+    Z = np.linspace(0, 4 * R, 4 * 2 ** (ROMBERG_K + 1) + 1)
 
     convolver = Convolver([X, Y, Z], [X, Y, Z])
-    romberg_weights = si.romb(np.identity(ROMBERG_N)) / (ROMBERG_N - 1)
+    romberg_weights = tuple(si.romb(np.identity(2 ** _k + 1)) / 2 ** _k
+                            for _k in range(ROMBERG_K, ROMBERG_K + 3))
 
     SRC_MASK = ((convolver.SRC_X >= 2 * R) & (convolver.SRC_X <= 8 * R)) & (
                 (convolver.SRC_Y >= -0.5 * R) & (
