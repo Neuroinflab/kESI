@@ -528,8 +528,8 @@ class PAE_AnalyticalMaskedAndCorrectedNumerically(
             self.LEADFIELD = self.convolver_interface.empty('POT')
 
 
-class _PAE_LeadfieldFromCorrectionPotential(_PAE_FromLeadfieldNotMasked,
-                                            _PAE_PotAttribute):
+class PAE_NumericalCorrection(_PAE_FromLeadfieldNotMasked,
+                              _PAE_PotAttribute):
     def _create_leadfield(self, electrode):
         super()._create_leadfield(electrode)
         LEADFIELD = electrode.correction_leadfield(*self.POT_XYZ)
@@ -539,7 +539,7 @@ class _PAE_LeadfieldFromCorrectionPotential(_PAE_FromLeadfieldNotMasked,
             self.LEADFIELD = LEADFIELD
 
 
-class PAE_AnalyticalCorrectedNumerically(_PAE_LeadfieldFromCorrectionPotential,
+class PAE_AnalyticalCorrectedNumerically(PAE_NumericalCorrection,
                                          PAE_Analytical):
     pass
 
@@ -822,9 +822,18 @@ if __name__ == '__main__':
                                        ECHO)
 
     # kESI
-    expected += reciprocal_src.potential(-convolver.SRC_X,
-                                         convolver.SRC_Y,
-                                         convolver.SRC_Z)[SRC_MASK]
+    correction = reciprocal_src.potential(-convolver.SRC_X,
+                                          convolver.SRC_Y,
+                                          convolver.SRC_Z)[SRC_MASK]
+
+    # kESI correction
+    tested = PAE_NumericalCorrection(convolver_interface)
+    with tested:
+        observed = tested(test_electrode_kesi)
+    assertRelativeErrorWithinTolerance(correction, observed, 2e-4, ECHO)
+
+
+    expected += correction
 
     # kESI analytical
     tested = PAE_AnalyticalCorrectedNumerically(convolver_interface,
