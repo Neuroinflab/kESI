@@ -20,7 +20,7 @@ if __name__ == "__main__":
                         metavar="<output>",
                         dest="output",
                         help="output directory")
-    parser.add_argument("--centroids",
+    parser.add_argument("-c", "--centroids",
                         required=True,
                         metavar="<centroids.npz>",
                         help="centroids grid with mask")
@@ -32,7 +32,7 @@ if __name__ == "__main__":
                         required=True,
                         metavar="<electrodes.csv>",
                         help="locations of electrodes")
-    parser.add_argument("-c", "--conductivity",
+    parser.add_argument("--conductivity",
                         type=float,
                         default=0.33,
                         metavar="<conductivity [S/m]>",

@@ -543,12 +543,12 @@ rule PBF_KCSD:
     output:
         PBF_KCSD.replace("{conductivity}", r"{conductivity,\d+(\.\d*)}")
     params:
-        directory=os.path.dirname(PBF_KCSD)
+        output_directory=os.path.dirname(PBF_KCSD)
     shell:
         """
-        mkdir -p {params.directory}
+        mkdir -p {params.output_directory}
         python calculate_kcsd_potential_basis_function.py {wildcards.name} \\
-          --output {params.directory} \\
+          --output {params.output_directory} \\
           --centroids {input.centroids} \\
           --source {input.source} \\
           --electrodes {input.electrodes} \\
