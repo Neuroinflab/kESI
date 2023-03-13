@@ -65,6 +65,9 @@ PBF_MODEL_SRC = os.path.join(PBF_DIR, "model_src.json")
 PBF_KCSD_DIR = os.path.join(PBF_DIR, "kCSD/{conductivity}")
 PBF_KCSD = os.path.join(PBF_KCSD_DIR, "{name}.npz")
 
+PBF_KESI_DIR = os.path.join(PBF_DIR, "kESI/{sampling}", FEM_PATH)
+PBF_KESI = os.path.join(PBF_KESI_DIR, "{name}.npz")
+
 
 
 # rule all:
@@ -509,6 +512,27 @@ rule paper_slice_forward:
 #         --output {output} \
 #         --quiet
 #       """
+
+
+rule PBF_KESI:
+    input:
+        SAMPLED_LFCOR,
+        centroids=PBF_CENTROIDS,
+        source=PBF_MODEL_SRC
+    output:
+        PBF_KESI
+    params:
+        output_directory=os.path.dirname(PBF_KESI),
+        input_directory=SAMPLED_LFCOR_DIR
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        python calculate_kesi_potential_basis_function.py {wildcards.name} \\
+          --output {params.output_directory} \\
+          --input {params.input_directory} \\
+          --centroids {input.centroids} \\
+          --source {input.source}
+        """
 
 
 rule PBF_KCSD:
