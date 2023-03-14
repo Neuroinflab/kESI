@@ -63,15 +63,28 @@ PBF_DIR = os.path.join(PBF_ROOT, "{setup}", "{basis_functions}")
 PBF_CENTROIDS = os.path.join(PBF_DIR, "centroids.npz")
 PBF_MODEL_SRC = os.path.join(PBF_DIR, "model_src.json")
 
-PBF_KCSD_DIR = os.path.join(PBF_DIR, "kCSD/{conductivity}")
+PBF_DIR_PATTERN = os.path.join(PBF_DIR, "{path}")
+
+PBF_KCSD_DIR = PBF_DIR_PATTERN.replace("{path}", "kCSD/{conductivity}")
 PBF_KCSD = os.path.join(PBF_KCSD_DIR, "{name}.npz")
 
-PBF_KESI_DIR = os.path.join(PBF_DIR, "kESI/{sampling}", FEM_PATH)
+PBF_KESI_DIR = PBF_DIR_PATTERN.replace("{path}",
+                                       os.path.join("kESI/{sampling}",
+                                                    FEM_PATH))
 PBF_KESI = os.path.join(PBF_KESI_DIR, "{name}.npz")
 
-KERNEL_DIR = os.path.join(DATA_DIR, "kernels")
-KERNEL_SUBSETUP_DIR = os.path.join(KERNEL_DIR, "{setup}", "{subsetup}")
+KERNEL_ROOT = os.path.join(DATA_DIR, "kernels")
+KERNEL_SUBSETUP_DIR = os.path.join(KERNEL_ROOT, "{setup}", "{subsetup}")
 KERNEL_SUBSETUP_ELECTRODES = os.path.join(KERNEL_SUBSETUP_DIR, "electrodes.csv")
+KERNEL_DIR = os.path.join(KERNEL_SUBSETUP_DIR, "{basis_functions}", "{path}")
+KERNEL_FILES = [os.path.join(KERNEL_DIR, f"{name}.npz")
+                for name in ["phi", "kernel", "analysis"]]
+KERNEL_FILES_INPUT = [path.replace(
+                               "setup}",
+                               "setup,[^/]*}").replace(
+                                   "basis_functions}",
+                                   "basis_functions,[^/]*}")
+                      for path in KERNEL_FILES]
 
 PAPER_SLICE_ELECTRODES = [f"{x}_0_{z}" for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
 PAPER_4SM_ELECTRODES = [f"{x}_{i:02d}" for i in range(0, 12) for x in ['B', 'D']]
@@ -526,6 +539,30 @@ def get_kernel_electrodes(wildcards):
         elif wildcards.setup == "paper__four_spheres__comb":
             return PAPER_4SM_ELECTRODES
 
+def get_kernel_electrodes_paths(wildcards):
+    pattern = os.path.join(PBF_DIR_PATTERN.replace("{", "{w.").format(
+                                                                   w=wildcards),
+                           "{}.npz")
+    return list(map(pattern.format, get_kernel_electrodes(wildcards)))
+
+
+rule KERNEL:
+    input:
+        get_kernel_electrodes_paths,
+        electrodes=KERNEL_SUBSETUP_ELECTRODES
+    output:
+        KERNEL_FILES_INPUT
+    params:
+        output_directory=KERNEL_DIR,
+        input_directory=PBF_DIR_PATTERN
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        python calculate_kernel.py \\
+          --output {params.output_directory} \\
+          --input {params.input_directory} \\
+          --electrodes {input.electrodes}
+        """
 
 rule KERNEL_ELECTRODES:
     input:
