@@ -623,6 +623,27 @@ rule PBF_KCSD:
         """
 
 
+rule SAMPLED_LFCOR_GRID_CROPPED:
+    input:
+        centroids=PBF_CENTROIDS,
+        source=PBF_MODEL_SRC,
+        grid=SAMPLED_LFCOR_GRID
+    output:
+        SAMPLED_LFCOR_GRID.replace("{sampling}",
+                                   "cropped___{sampling}___{basis_functions}")
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        python crop_grid_to_sources.py \\
+          --input {input.grid} \\
+          --output {output} \\
+          --centroids {input.centroids} \\
+          --source {input.source}
+        """
+
+
 _PBF_CENTROIDS_FORMAT = {
              "setup": "paper__{geometry}__{electrodes}",
              "basis_functions": "{sampling}__{function_set}__{type}_r_{radius}",
