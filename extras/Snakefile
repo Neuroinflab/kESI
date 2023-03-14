@@ -72,12 +72,6 @@ PBF_KESI = os.path.join(PBF_KESI_DIR, "{name}.npz")
 KERNEL_DIR = os.path.join(DATA_DIR, "kernels")
 KERNEL_SUBSETUP_DIR = os.path.join(KERNEL_DIR, "{setup}", "{subsetup}")
 KERNEL_SUBSETUP_ELECTRODES = os.path.join(KERNEL_SUBSETUP_DIR, "electrodes.csv")
-KERNEL_SUBSETUP_ELECTRODES_paper_slice = KERNEL_SUBSETUP_ELECTRODES.replace(
-                                              "{setup}",
-                                              "{setup,paper__circular_slice.*}")
-KERNEL_SUBSETUP_ELECTRODES_paper_4SM = KERNEL_SUBSETUP_ELECTRODES.replace(
-                                              "{setup}",
-                                              "{setup,paper__four_spheres.*}")
 
 PAPER_SLICE_ELECTRODES = [f"{x}_0_{z}" for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
 PAPER_4SM_ELECTRODES = [f"{x}_{i:02d}" for i in range(0, 12) for x in ['B', 'D']]
