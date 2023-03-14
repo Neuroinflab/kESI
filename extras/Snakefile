@@ -39,8 +39,9 @@ MESH_GEO_PATTERN = os.path.join(MESH_DIR,
 
 FEM_PATH = "{model}/{mesh}/{degree}"
 
+SETUP_ELECTRODES = os.path.join(DATA_DIR, "setups", "{setup}", "electrodes.csv")
+
 FENICS_LFCOR_ROOT = os.path.join(DATA_DIR, "fenics_leadfield_corrections")
-FENICS_LFCOR_ELE = os.path.join(FENICS_LFCOR_ROOT, "{setup}/electrodes.csv")
 FENICS_LFCOR_COND_DIR = os.path.join(FENICS_LFCOR_ROOT, "{setup}/{model}")
 FENICS_LFCOR_COND = os.path.join(FENICS_LFCOR_COND_DIR, "conductivity.ini")
 FENICS_LFCOR_DIR_PATTERN = os.path.join(FENICS_LFCOR_ROOT,
@@ -534,7 +535,7 @@ def get_kernel_electrodes(wildcards):
 
 rule KERNEL_ELECTRODES:
     input:
-        FENICS_LFCOR_ELE
+        SETUP_ELECTRODES
     output:
         KERNEL_SUBSETUP_ELECTRODES
     run:
@@ -574,7 +575,7 @@ rule PBF_KCSD:
     input:
         centroids=PBF_CENTROIDS,
         source=PBF_MODEL_SRC,
-        electrodes=FENICS_LFCOR_ELE
+        electrodes=SETUP_ELECTRODES
     output:
         PBF_KCSD.replace("{conductivity}", r"{conductivity,\d+(\.\d*)}")
     params:
@@ -781,7 +782,7 @@ def get_fenics_lfcor_solve_mesh_paths(wildcards):
 
 rule FENICS_LFCOR_SOLVE:
     input:
-        electrodes=FENICS_LFCOR_ELE,
+        electrodes=SETUP_ELECTRODES,
         mesh_paths=get_fenics_lfcor_solve_mesh_paths,
         config=FENICS_LFCOR_COND.replace("{model}",
                                          "{geometry}__{conductivity}")
@@ -813,11 +814,11 @@ def setup_to_electrodes(wildcards):
     return f"{prefix}.ini"
 
 
-rule FENICS_LFCOR_ELE_CSV:
+rule SETUP_ELECTRODES_CSV:
     input:
         setup_to_electrodes
     output:
-        FENICS_LFCOR_ELE
+        SETUP_ELECTRODES
     run:
         import configparser
         import pandas as pd
