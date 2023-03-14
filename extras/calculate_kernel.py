@@ -8,16 +8,18 @@ import numpy as np
 import pandas as pd
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Create kernel.')
-    parser.add_argument('-o', '--output',
-                        metavar='<output>',
-                        dest='output',
-                        help='output directory')
-    parser.add_argument('-i', '--input',
-                        metavar='<input>',
-                        dest='input',
-                        help='input directory')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Create kernel.")
+    parser.add_argument("-o", "--output",
+                        required=True,
+                        metavar="<output>",
+                        dest="output",
+                        help="output directory")
+    parser.add_argument("-i", "--input",
+                        required=True,
+                        metavar="<input>",
+                        dest="input",
+                        help="input directory")
     parser.add_argument("-e", "--electrodes",
                         required=True,
                         metavar="<electrodes.csv>",
@@ -29,7 +31,7 @@ if __name__ == '__main__':
                              index_col="NAME",
                              usecols=["NAME", "X", "Y", "Z"])
 
-    for i, name in enumerate(ELECTRODES.NAME):
+    for i, name in enumerate(ELECTRODES.index):
         with np.load(os.path.join(args.input, f"{name}.npz")) as fh:
             COL = fh["POTENTIALS"]
             if i == 0:

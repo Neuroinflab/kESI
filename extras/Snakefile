@@ -79,7 +79,7 @@ KERNEL_SUBSETUP_ELECTRODES = os.path.join(KERNEL_SUBSETUP_DIR, "electrodes.csv")
 KERNEL_DIR = os.path.join(KERNEL_SUBSETUP_DIR, "{basis_functions}", "{path}")
 KERNEL_FILES = [os.path.join(KERNEL_DIR, f"{name}.npz")
                 for name in ["phi", "kernel", "analysis"]]
-KERNEL_FILES_INPUT = [path.replace(
+KERNEL_FILES_OUTPUT = [path.replace(
                                "setup}",
                                "setup,[^/]*}").replace(
                                    "basis_functions}",
@@ -551,7 +551,7 @@ rule KERNEL:
         get_kernel_electrodes_paths,
         electrodes=KERNEL_SUBSETUP_ELECTRODES
     output:
-        KERNEL_FILES_INPUT
+        KERNEL_FILES_OUTPUT
     params:
         output_directory=KERNEL_DIR,
         input_directory=PBF_DIR_PATTERN
