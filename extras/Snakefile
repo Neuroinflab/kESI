@@ -26,6 +26,12 @@
 
 import os
 
+def replace(string, replacements={}):
+    for k, v in replacements.items():
+        string = string.replace(k, v)
+
+    return string
+
 DATA_DIR = "data/"
 PROP_DIR = "FEM/model_properties/"
 ELE_DIR = "FEM/electrode_locations/"
@@ -79,12 +85,10 @@ KERNEL_SUBSETUP_ELECTRODES = os.path.join(KERNEL_SUBSETUP_DIR, "electrodes.csv")
 KERNEL_DIR = os.path.join(KERNEL_SUBSETUP_DIR, "{basis_functions}", "{path}")
 KERNEL_FILES = [os.path.join(KERNEL_DIR, f"{name}.npz")
                 for name in ["phi", "kernel", "analysis"]]
-KERNEL_FILES_OUTPUT = [path.replace(
-                               "setup}",
-                               "setup,[^/]*}").replace(
-                                   "basis_functions}",
-                                   "basis_functions,[^/]*}")
-                      for path in KERNEL_FILES]
+KERNEL_FILES_OUTPUT = [replace(path,
+                               {"setup}": "setup,[^/]*}",
+                                "basis_functions}": "basis_functions,[^/]*}"})
+                       for path in KERNEL_FILES]
 
 PAPER_SLICE_ELECTRODES = [f"{x}_0_{z}" for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
 PAPER_4SM_ELECTRODES = [f"{x}_{i:02d}" for i in range(0, 12) for x in ['B', 'D']]
@@ -539,11 +543,9 @@ rule KERNEL_CSD_GRID_as_LF:
     input:
         SAMPLED_LFCOR_GRID
     output:
-        KERNEL_CSD_GRID.replace(
-                           "setup}",
-                           "setup,[^/]*}").replace(
-                               "{csd_grid}",
-                               "as_sampled_leadfield_correction__{sampling}")
+        replace(KERNEL_CSD_GRID,
+                {"setup}": "setup,[^/]*}",
+                 "{csd_grid}": "as_sampled_leadfield_correction__{sampling}"})
     params:
         output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
