@@ -559,6 +559,30 @@ rule paper_slice_forward:
 #         --quiet
 #       """
 
+
+rule CSD_EIGENSOURCES_mixed:
+    input:
+        **{f"{method}_{file}": path.replace("{path}", PATH.path(method))
+           for method in PATH
+           for file, path in [("analysis", KERNEL_FILES["analysis"]),
+                              ("eigensources", CSD_EIGENSOURCES)]}
+    output:
+        CSD_EIGENSOURCES.replace("{path}",
+                                 os.path.join("mixed",
+                                              PATH["kCSD"],
+                                              PATH["kESI"]))
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        python mix_eigensources.py \\
+          --output {output} \\
+          --analysis {input.kCSD_analysis} {input.kESI_analysis} \\
+          --eigensources {input.kCSD_eigensources} {input.kESI_eigensources}
+        """
+
+
 rule CSD_EIGENSOURCES:
     input:
         analysis=KERNEL_FILES["analysis"],
