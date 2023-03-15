@@ -38,6 +38,11 @@ def protect_transfer_matrix(path):
                     "basis_functions}": "basis_functions,[^/]*}"})
 
 
+class Path(dict):
+    def path(self, k):
+        return os.path.join(k, self[k])
+
+
 DATA_DIR = "data/"
 PROP_DIR = "FEM/model_properties/"
 ELE_DIR = "FEM/electrode_locations/"
@@ -49,12 +54,14 @@ MESH_GEO_PATTERN = os.path.join(MESH_DIR,
                                 "{mesh_name}",
                                 "{granularity}.geo")
 
-FEM_PATH = "{model}/{mesh}/{degree}"
+FEM_PATH = os.path.join("{model}", "{mesh}", "{degree}")
+PATH = Path(kESI=os.path.join("{sampling}", FEM_PATH),
+            kCSD="{conductivity}")
 
 SETUP_ELECTRODES = os.path.join(DATA_DIR, "setups", "{setup}", "electrodes.csv")
 
 FENICS_LFCOR_ROOT = os.path.join(DATA_DIR, "fenics_leadfield_corrections")
-FENICS_LFCOR_COND_DIR = os.path.join(FENICS_LFCOR_ROOT, "{setup}/{model}")
+FENICS_LFCOR_COND_DIR = os.path.join(FENICS_LFCOR_ROOT, "{setup}", "{model}")
 FENICS_LFCOR_COND = os.path.join(FENICS_LFCOR_COND_DIR, "conductivity.ini")
 FENICS_LFCOR_DIR_PATTERN = os.path.join(FENICS_LFCOR_ROOT,
                                         "{setup}",
@@ -64,7 +71,8 @@ FENICS_LFCOR_H5 = os.path.join(FENICS_LFCOR_DIR_PATTERN, "{name}.h5")
 
 SAMPLED_LFCOR_ROOT = os.path.join(DATA_DIR, "sampled_leadfield_corrections")
 SAMPLED_LFCOR_GRID_ROOT = os.path.join(SAMPLED_LFCOR_ROOT,
-                                       "{setup}/{sampling}")
+                                       "{setup}",
+                                       "{sampling}")
 SAMPLED_LFCOR_GRID = os.path.join(SAMPLED_LFCOR_GRID_ROOT, "grid.npz")
 SAMPLED_LFCOR_DIR = os.path.join(SAMPLED_LFCOR_GRID_ROOT,
                                  FEM_PATH)
@@ -77,12 +85,10 @@ PBF_MODEL_SRC = os.path.join(PBF_DIR, "model_src.json")
 
 PBF_DIR_PATTERN = os.path.join(PBF_DIR, "{path}")
 
-PBF_KCSD_DIR = PBF_DIR_PATTERN.replace("{path}", "kCSD/{conductivity}")
+PBF_KCSD_DIR = PBF_DIR_PATTERN.replace("{path}", PATH.path("kCSD"))
 PBF_KCSD = os.path.join(PBF_KCSD_DIR, "{name}.npz")
 
-PBF_KESI_DIR = PBF_DIR_PATTERN.replace("{path}",
-                                       os.path.join("kESI/{sampling}",
-                                                    FEM_PATH))
+PBF_KESI_DIR = PBF_DIR_PATTERN.replace("{path}", PATH.path("kESI"))
 PBF_KESI = os.path.join(PBF_KESI_DIR, "{name}.npz")
 
 KERNEL_ROOT = os.path.join(DATA_DIR, "kernels")
@@ -109,6 +115,7 @@ CSD_SOURCES_DIR = os.path.join(CSD_ROOT,
                                "{path}",
                                "{csd_grid}")
 CSD_SOURCES = os.path.join(CSD_SOURCES_DIR, "{sources}.npz")
+CSD_EIGENSOURCES = CSD_SOURCES.replace("{sources}", "eigensources")
 
 
 # rule all:
@@ -559,8 +566,7 @@ rule CSD_EIGENSOURCES:
         source=PBF_MODEL_SRC,
         grid_csd=KERNEL_CSD_GRID
     output:
-        protect_transfer_matrix(CSD_SOURCES.replace("{sources}",
-                                                    "eigensources"))
+        protect_transfer_matrix(CSD_EIGENSOURCES)
     params:
         output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
