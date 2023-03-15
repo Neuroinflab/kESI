@@ -15,10 +15,12 @@ if __name__ == "__main__":
                         help="mixed eigensources")
     parser.add_argument("-a", "--analysis",
                         required=True,
+                        nargs=2,
                         metavar="<analysis.npz>",
                         help="auxilary kernel analysis matrices")
     parser.add_argument("-e", "--eigensources",
                         required=True,
+                        nargs=2,
                         metavar="<eigensources.npz>",
                         help="matching eigensource CSD profiles")
 
