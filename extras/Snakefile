@@ -89,6 +89,9 @@ KERNEL_FILES_OUTPUT = [path.replace(
 PAPER_SLICE_ELECTRODES = [f"{x}_0_{z}" for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
 PAPER_4SM_ELECTRODES = [f"{x}_{i:02d}" for i in range(0, 12) for x in ['B', 'D']]
 
+KERNEL_CSD_GRID_DIR = os.path.join(KERNEL_DIR, "{csd_grid}")
+KERNEL_CSD_GRID = os.path.join(KERNEL_CSD_GRID_DIR, "grid_csd.npz")
+
 
 # rule all:
 #     input: ".4SM_composite_normal_2_stereotactic"
@@ -530,6 +533,25 @@ rule paper_slice_forward:
 #         --output {output} \
 #         --quiet
 #       """
+
+
+rule KERNEL_CSD_GRID_as_LF:
+    input:
+        SAMPLED_LFCOR_GRID
+    output:
+        KERNEL_CSD_GRID.replace(
+                           "setup}",
+                           "setup,[^/]*}").replace(
+                               "{csd_grid}",
+                               "as_sampled_leadfield_correction__{sampling}")
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        cp {input} {output}
+        """
+
 
 def get_kernel_electrodes(wildcards):
     if wildcards.subsetup == "paper":
