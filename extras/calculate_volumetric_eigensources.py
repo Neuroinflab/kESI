@@ -55,7 +55,7 @@ if __name__ == "__main__":
     src_diameters = [int(2 * np.floor(model_src.radius / _d)) + 1
                      for _d in convolver.steps("CSD")]
 
-    with np.load(os.path.join(args.kernel, "analysis.npz")) as fh:
+    with np.load(args.input) as fh:
         CANONICAL_ES = fh["EIGENSOURCES"]
 
     EIGENSOURCES = np.full(convolver.shape('CSD') + CANONICAL_ES.shape[1:],
