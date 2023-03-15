@@ -52,7 +52,7 @@ if __name__ == "__main__":
     convolver = frr.Convolver(centroids, csd_grid)
 
     src_diameters = [int(2 * np.floor(model_src.radius / _d)) + 1
-                     for _d in convolver.steps()]
+                     for _d in convolver.steps("CSD")]
     fake_weights = [[None] * n for n in src_diameters]
 
     convolver_interface = frr.ConvolverInterfaceIndexed(convolver,
