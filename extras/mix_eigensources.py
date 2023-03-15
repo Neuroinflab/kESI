@@ -50,10 +50,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     with np.load(args.analysis[0]) as fh:
-        ES_1T = fh['EIGENSOURCES'].T
+        ES_1T = fh["EIGENSOURCES"].T
 
     with np.load(args.analysis[1]) as fh:
-        PROJECTION = np.matmul(ES_1T, fh['EIGENSOURCES'])
+        PROJECTION = np.matmul(ES_1T, fh["EIGENSOURCES"])
         del ES_1T
 
     BEST_MATCH = np.argmax(abs(PROJECTION), axis=1)
@@ -61,11 +61,11 @@ if __name__ == "__main__":
                               BEST_MATCH]).reshape(1, 1, 1, -1)
 
     with np.load(args.eigensources[1]) as fh:
-        CSD = 0.5 * SIGN * fh['CSD'].take(BEST_MATCH, axis=-1)
+        CSD = 0.5 * SIGN * fh["CSD"].take(BEST_MATCH, axis=-1)
 
     with np.load(args.eigensources[0]) as fh:
-        kwargs = {k: fh[k] for k in 'XYZ'}
-        CSD += 0.5 * fh['CSD']
+        kwargs = {k: fh[k] for k in "XYZ"}
+        CSD += 0.5 * fh["CSD"]
 
     np.savez_compressed(args.output,
                         CSD=CSD,

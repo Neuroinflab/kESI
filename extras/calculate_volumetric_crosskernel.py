@@ -85,14 +85,14 @@ if __name__ == "__main__":
 
     crosskernel_constructor = frr.CrossKernelConstructor(
                                                  convolver_interface,
-                                                 np.ones(convolver.shape('CSD'),
+                                                 np.ones(convolver.shape("CSD"),
                                                          dtype=bool))
 
     with np.load(args.input) as fh:
         PHI = fh["PHI"]
 
     CROSSKERNEL = crosskernel_constructor(PHI)
-    crosskernel_shape = convolver.shape('CSD') + (-1,)
+    crosskernel_shape = convolver.shape("CSD") + (-1,)
     np.savez_compressed(os.path.join(args.output),
                         CROSSKERNEL=CROSSKERNEL.reshape(crosskernel_shape),
                         X=convolver.CSD_X,

@@ -31,7 +31,7 @@ from _common_new import shape
 
 parser = argparse.ArgumentParser(description="Create sampling grid.")
 parser.add_argument("grid",
-                    nargs='+',
+                    nargs="+",
                     metavar="<grid.npz>",
                     help="the output file")
 parser.add_argument("-c", "--coords",
@@ -56,8 +56,8 @@ group = parser.add_mutually_exclusive_group()
 group.add_argument("-n",
                    nargs="+",
                    type=int,
-                   dest='ns',
-                   metavar='<n>',
+                   dest="ns",
+                   metavar="<n>",
                    help="number of grid nodes along each axis (cycles if not enough values given)")
 group.add_argument("-k",
                    nargs="+",

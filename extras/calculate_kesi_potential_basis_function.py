@@ -109,7 +109,7 @@ if __name__ == "__main__":
 
     for name in args.names:
         electrode = Electrode(os.path.join(args.input,
-                              f'{name}.npz'))
+                              f"{name}.npz"))
 
         model_src = common.SphericalSplineSourceKCSD.fromJSON(
                                        open(args.source),
@@ -141,7 +141,7 @@ if __name__ == "__main__":
         SRC_IN_CENTROIDS = [np.isin(S.flatten(), C)
                             for S, C in zip(convolver.SRC_GRID, CENTROID_XYZ)]
 
-        SRC_MASK = np.zeros(convolver.shape('SRC'),
+        SRC_MASK = np.zeros(convolver.shape("SRC"),
                             dtype=bool)
         SRC_MASK[np.ix_(*SRC_IN_CENTROIDS)] = CENTROID_MASK[
                                                       np.ix_(*CENTROIDS_IN_SRC)]

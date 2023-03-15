@@ -81,9 +81,9 @@ if __name__ == "__main__":
     with np.load(args.input) as fh:
         CANONICAL_ES = fh["EIGENSOURCES"]
 
-    EIGENSOURCES = np.full(convolver.shape('CSD') + CANONICAL_ES.shape[1:],
+    EIGENSOURCES = np.full(convolver.shape("CSD") + CANONICAL_ES.shape[1:],
                            np.nan)
-    _SRC = np.zeros(convolver.shape('SRC'))
+    _SRC = np.zeros(convolver.shape("SRC"))
     for i, _SRC[SRC_MASK] in enumerate(CANONICAL_ES.T):
         EIGENSOURCES[:, :, :, i] = convolver.base_weights_to_csd(_SRC,
                                                                  model_src.csd,
