@@ -101,6 +101,15 @@ KERNEL_CSD_GRID_DIR = os.path.join(KERNEL_DIR, "{csd_grid}")
 KERNEL_CSD_GRID = os.path.join(KERNEL_CSD_GRID_DIR, "grid_csd.npz")
 KERNEL_CROSSKERNEL = os.path.join(KERNEL_CSD_GRID_DIR, "crosskernel.npz")
 
+CSD_ROOT = os.path.join(DATA_DIR, "csd_profiles")
+CSD_SOURCES_DIR = os.path.join(CSD_ROOT,
+                               "{setup}",
+                               "{subsetup}",
+                               "{basis_functions}",
+                               "{path}",
+                               "{csd_grid}")
+CSD_SOURCES = os.path.join(CSD_SOURCES_DIR, "{sources}.npz")
+
 
 # rule all:
 #     input: ".4SM_composite_normal_2_stereotactic"
@@ -542,6 +551,28 @@ rule paper_slice_forward:
 #         --output {output} \
 #         --quiet
 #       """
+
+rule CSD_EIGENSOURCES:
+    input:
+        analysis=KERNEL_FILES["analysis"],
+        centroids=PBF_CENTROIDS,
+        source=PBF_MODEL_SRC,
+        grid_csd=KERNEL_CSD_GRID
+    output:
+        protect_transfer_matrix(CSD_SOURCES.replace("{sources}",
+                                                    "eigensources"))
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        python calculate_volumetric_eigensources.py \\
+          --output {output} \\
+          --input {input.analysis} \\
+          --centroids {input.centroids} \\
+          --source {input.source} \\
+          --grid {input.grid_csd}
+        """
 
 
 rule KERNEL_CROSSKERNEL:
