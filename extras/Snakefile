@@ -32,6 +32,12 @@ def replace(string, replacements={}):
 
     return string
 
+def protect_transfer_matrix(path):
+    return replace(path,
+                   {"setup}": "setup,[^/]*}",
+                    "basis_functions}": "basis_functions,[^/]*}"})
+
+
 DATA_DIR = "data/"
 PROP_DIR = "FEM/model_properties/"
 ELE_DIR = "FEM/electrode_locations/"
@@ -85,9 +91,7 @@ KERNEL_SUBSETUP_ELECTRODES = os.path.join(KERNEL_SUBSETUP_DIR, "electrodes.csv")
 KERNEL_DIR = os.path.join(KERNEL_SUBSETUP_DIR, "{basis_functions}", "{path}")
 KERNEL_FILES = {name: os.path.join(KERNEL_DIR, f"{name}.npz")
                 for name in ["phi", "kernel", "analysis"]}
-KERNEL_FILES_OUTPUT = [replace(path,
-                               {"setup}": "setup,[^/]*}",
-                                "basis_functions}": "basis_functions,[^/]*}"})
+KERNEL_FILES_OUTPUT = [protect_transfer_matrix(path)
                        for path in KERNEL_FILES.values()]
 
 PAPER_SLICE_ELECTRODES = [f"{x}_0_{z}" for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
@@ -547,9 +551,7 @@ rule KERNEL_CROSSKERNEL:
         source=PBF_MODEL_SRC,
         grid_csd=KERNEL_CSD_GRID
     output:
-        replace(KERNEL_CROSSKERNEL,
-                {"setup}": "setup,[^/]*}",
-                 "basis_functions}": "basis_functions,[^/]*}"})
+        protect_transfer_matrix(KERNEL_CROSSKERNEL)
     params:
         output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
