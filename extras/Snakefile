@@ -43,16 +43,14 @@ class Path(dict):
         return os.path.join(k, self[k])
 
 
-DATA_DIR = "data/"
 PROP_DIR = "FEM/model_properties/"
 ELE_DIR = "FEM/electrode_locations/"
 CSD_BASIS_DIR = "FEM/csd_basis_functions"
-
 MESH_SRC_DIR = "FEM/meshes/"
+
+DATA_DIR = "data/"
+
 MESH_DIR = os.path.join(DATA_DIR, "meshes")
-MESH_GEO_PATTERN = os.path.join(MESH_DIR,
-                                "{mesh_name}",
-                                "{granularity}.geo")
 
 FEM_PATH = os.path.join("{model}", "{mesh}", "{degree}")
 PATH = Path(kESI=os.path.join("{sampling}", FEM_PATH),
@@ -62,16 +60,18 @@ FWD_FEM_PATH = FEM_PATH.replace("{", "{fwd_")
 SETUP_ELECTRODES = os.path.join(DATA_DIR, "setups", "{setup}", "electrodes.csv")
 
 FENICS_LFCOR_ROOT = os.path.join(DATA_DIR, "fenics_leadfield_corrections")
-FENICS_LFCOR_COND_DIR = os.path.join(FENICS_LFCOR_ROOT, "{setup}", "{model}")
-FENICS_LFCOR_COND = os.path.join(FENICS_LFCOR_COND_DIR, "conductivity.ini")
+FENICS_LFCOR_COND = os.path.join(FENICS_LFCOR_ROOT,
+                                 "{setup}",
+                                 "{model}",
+                                 "conductivity.ini")
 FENICS_LFCOR_DIR_PATTERN = os.path.join(FENICS_LFCOR_ROOT,
                                         "{setup}",
                                         FEM_PATH)
 FENICS_LFCOR_METADATA = os.path.join(FENICS_LFCOR_DIR_PATTERN, "{name}.ini")
 FENICS_LFCOR_H5 = os.path.join(FENICS_LFCOR_DIR_PATTERN, "{name}.h5")
 
-SAMPLED_LFCOR_ROOT = os.path.join(DATA_DIR, "sampled_leadfield_corrections")
-SAMPLED_LFCOR_GRID_ROOT = os.path.join(SAMPLED_LFCOR_ROOT,
+SAMPLED_LFCOR_GRID_ROOT = os.path.join(DATA_DIR,
+                                       "sampled_leadfield_corrections",
                                        "{setup}",
                                        "{sampling}")
 SAMPLED_LFCOR_GRID = os.path.join(SAMPLED_LFCOR_GRID_ROOT, "grid.npz")
@@ -79,27 +79,28 @@ SAMPLED_LFCOR_DIR = os.path.join(SAMPLED_LFCOR_GRID_ROOT,
                                  FEM_PATH)
 SAMPLED_LFCOR = os.path.join(SAMPLED_LFCOR_DIR, "{name}.npz")
 
-PBF_ROOT = os.path.join(DATA_DIR, "potential_basis_functions")
-PBF_DIR = os.path.join(PBF_ROOT, "{setup}", "{basis_functions}")
+PBF_DIR = os.path.join(DATA_DIR,
+                       "potential_basis_functions",
+                       "{setup}",
+                       "{basis_functions}")
 PBF_CENTROIDS = os.path.join(PBF_DIR, "centroids.npz")
 PBF_MODEL_SRC = os.path.join(PBF_DIR, "model_src.json")
 
 PBF_DIR_PATTERN = os.path.join(PBF_DIR, "{path}")
 
-PBF_KCSD_DIR = PBF_DIR_PATTERN.replace("{path}", PATH.path("kCSD"))
-PBF_KCSD = os.path.join(PBF_KCSD_DIR, "{name}.npz")
+PBF_KCSD = os.path.join(PBF_DIR_PATTERN.replace("{path}",
+                                                PATH.path("kCSD")),
+                        "{name}.npz")
 
-PBF_KESI_DIR = PBF_DIR_PATTERN.replace("{path}", PATH.path("kESI"))
-PBF_KESI = os.path.join(PBF_KESI_DIR, "{name}.npz")
+PBF_KESI = os.path.join(PBF_DIR_PATTERN.replace("{path}",
+                                                PATH.path("kESI")),
+                        "{name}.npz")
 
-KERNEL_ROOT = os.path.join(DATA_DIR, "kernels")
-KERNEL_SUBSETUP_DIR = os.path.join(KERNEL_ROOT, "{setup}", "{subsetup}")
+KERNEL_SUBSETUP_DIR = os.path.join(DATA_DIR, "kernels", "{setup}", "{subsetup}")
 KERNEL_SUBSETUP_ELECTRODES = os.path.join(KERNEL_SUBSETUP_DIR, "electrodes.csv")
 KERNEL_DIR = os.path.join(KERNEL_SUBSETUP_DIR, "{basis_functions}", "{path}")
 KERNEL_FILES = {name: os.path.join(KERNEL_DIR, f"{name}.npz")
                 for name in ["phi", "kernel", "analysis"]}
-KERNEL_FILES_OUTPUT = [protect_transfer_matrix(path)
-                       for path in KERNEL_FILES.values()]
 
 PAPER_SLICE_ELECTRODES = [f"{x}_0_{z}" for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
 PAPER_4SM_ELECTRODES = [f"{x}_{i:02d}" for i in range(0, 12) for x in ['B', 'D']]
@@ -108,8 +109,8 @@ KERNEL_CSD_GRID_DIR = os.path.join(KERNEL_DIR, "{csd_grid}")
 KERNEL_CSD_GRID = os.path.join(KERNEL_CSD_GRID_DIR, "grid_csd.npz")
 KERNEL_CROSSKERNEL = os.path.join(KERNEL_CSD_GRID_DIR, "crosskernel.npz")
 
-CSD_ROOT = os.path.join(DATA_DIR, "csd_profiles")
-CSD_SOURCES_DIR = os.path.join(CSD_ROOT,
+CSD_SOURCES_DIR = os.path.join(DATA_DIR,
+                               "csd_profiles",
                                "{setup}",
                                "{subsetup}",
                                "{basis_functions}",
@@ -730,7 +731,7 @@ rule KERNEL:
         get_kernel_electrodes_paths,
         electrodes=KERNEL_SUBSETUP_ELECTRODES
     output:
-        KERNEL_FILES_OUTPUT
+        list(map(protect_transfer_matrix, KERNEL_FILES.values()))
     params:
         output_directory=KERNEL_DIR,
         input_directory=PBF_DIR_PATTERN
@@ -1113,7 +1114,7 @@ rule GEO_TEMPLATE:
         os.path.join(MESH_SRC_DIR,
                      "{mesh_name}.geo.template")
     output:
-        MESH_GEO_PATTERN
+        os.path.join(MESH_DIR, "{mesh_name}", "{granularity}.geo")
     params:
         sed_relative_element_size=granularity_to_relative_element_size,
         output_directory=lambda wildcards, output: os.path.dirname(str(output))
