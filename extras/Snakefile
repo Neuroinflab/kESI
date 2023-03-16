@@ -601,9 +601,11 @@ rule CSD_FORWARD:
        protect_transfer_matrix(
               CSD_FORWARD.replace("{fwd_model}",  "{geometry}__{conductivity}"))
    params:
-       command=get_solver_script_getter("forward_")
+       command=get_solver_script_getter("forward_"),
+       output_directory=lambda wildcards, output: os.path.dirname(str(output))
    shell:
        """
+       mkdir -p {params.output_directory}
        python {params.command} \\
          --mesh {input.mesh_paths[0]} \\
          --degree {wildcards.fwd_degree} \\
@@ -991,9 +993,11 @@ rule FENICS_LFCOR_SOLVE:
     resources:
         mem_mb=get_mem_mb_exponential(15_000)
     params:
-        command=get_solver_script_getter()
+        command=get_solver_script_getter(),
+        output_directory=lambda wildcards, output: os.path.dirname(str(output.metadata))
     shell:
         """
+        mkdir -p {params.output_directory}
         ulimit -v $(({resources.mem_mb} * 1024))
         python {params.command} \\
           --mesh {input.mesh_paths[0]} \\
