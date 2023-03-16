@@ -57,6 +57,7 @@ MESH_GEO_PATTERN = os.path.join(MESH_DIR,
 FEM_PATH = os.path.join("{model}", "{mesh}", "{degree}")
 PATH = Path(kESI=os.path.join("{sampling}", FEM_PATH),
             kCSD="{conductivity}")
+FWD_FEM_PATH = FEM_PATH.replace("{", "{fwd_")
 
 SETUP_ELECTRODES = os.path.join(DATA_DIR, "setups", "{setup}", "electrodes.csv")
 
@@ -116,6 +117,7 @@ CSD_SOURCES_DIR = os.path.join(CSD_ROOT,
                                "{csd_grid}")
 CSD_SOURCES = os.path.join(CSD_SOURCES_DIR, "{sources}.npz")
 CSD_EIGENSOURCES = CSD_SOURCES.replace("{sources}", "eigensources")
+CSD_FORWARD = os.path.join(CSD_SOURCES_DIR, FWD_FEM_PATH, "{sources}.csv")
 
 
 # rule all:
@@ -559,6 +561,59 @@ rule paper_slice_forward:
 #         --quiet
 #       """
 
+def get_mesh_getter(mesh_attr="mesh"):
+    def solver(wildcards):
+        wildcard_mesh = getattr(wildcards, mesh_attr)
+        if '__' in wildcard_mesh:
+            type, granularity = wildcard_mesh.split('__')
+            mesh = f"{wildcards.geometry}__{type}"
+        else:
+            granularity = wildcard_mesh
+            mesh = wildcards.geometry
+        return [os.path.join(MESH_DIR,
+                             mesh,
+                             f"{granularity}{suffix}.{ext}")
+                for suffix in ["", "_subdomains", "_boundaries"]
+                for ext in ["xdmf", "h5"]]
+
+    return solver
+
+def get_solver_script_getter(prefix="solve_"):
+    def getter(wildcards):
+        if "_slice" in wildcards.geometry:
+            return f"""{prefix}slice_on_plate.py \\
+              --ground-potential 0.0"""
+
+        if "_sphere" in wildcards.geometry:
+            return f"""{prefix}sphere_on_plate.py \\
+              --grounded-plate-edge-z -0.088"""
+
+    return getter
+
+
+rule CSD_FORWARD:
+   input:
+       electrodes=KERNEL_SUBSETUP_ELECTRODES,
+       sources=CSD_SOURCES,
+       mesh_paths=get_mesh_getter("fwd_mesh"),
+       config=os.path.join(PROP_DIR, "{geometry}__{conductivity}.ini")
+   output:
+       protect_transfer_matrix(
+              CSD_FORWARD.replace("{fwd_model}",  "{geometry}__{conductivity}"))
+   params:
+       command=get_solver_script_getter("forward_")
+   shell:
+       """
+       python {params.command} \\
+         --mesh {input.mesh_paths[0]} \\
+         --degree {wildcards.fwd_degree} \\
+         --config {input.config} \\
+         --electrodes {input.electrodes} \\
+         --sources {input.sources} \\
+         --output {output} \\
+         --quiet
+       """
+
 
 rule CSD_EIGENSOURCES_mixed:
     input:
@@ -922,32 +977,10 @@ rule SAMPLED_LFCOR_GRID_paper_romberg:
         """
 
 
-def get_fenics_lfcor_solve_script(wildcards):
-    if "_slice" in wildcards.geometry:
-        return """solve_slice_on_plate.py \\
-          --ground-potential 0.0"""
-
-    if "_sphere" in wildcards.geometry:
-        return """solve_sphere_on_plate.py \\
-          --grounded-plate-edge-z -0.088"""
-
-def get_fenics_lfcor_solve_mesh_paths(wildcards):
-    if '__' in wildcards.mesh:
-        type, granularity = wildcards.mesh.split('__')
-        mesh = f"{wildcards.geometry}__{type}"
-    else:
-        granularity = wildcards.mesh
-        mesh = wildcards.geometry
-    return [os.path.join(MESH_DIR,
-                         mesh,
-                         f"{granularity}{suffix}.{ext}")
-            for suffix in ["", "_subdomains", "_boundaries"]
-            for ext in ["xdmf", "h5"]]
-
 rule FENICS_LFCOR_SOLVE:
     input:
         electrodes=SETUP_ELECTRODES,
-        mesh_paths=get_fenics_lfcor_solve_mesh_paths,
+        mesh_paths=get_mesh_getter(),
         config=FENICS_LFCOR_COND.replace("{model}",
                                          "{geometry}__{conductivity}")
     output:
@@ -958,7 +991,7 @@ rule FENICS_LFCOR_SOLVE:
     resources:
         mem_mb=get_mem_mb_exponential(15_000)
     params:
-        command=get_fenics_lfcor_solve_script
+        command=get_solver_script_getter()
     shell:
         """
         ulimit -v $(({resources.mem_mb} * 1024))
