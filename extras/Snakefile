@@ -1128,8 +1128,8 @@ rule XDMF:
     # The rule may crash if Snakemake implementation changes.  In that case:
     #  - change dict comprehension to list comprehension (dict values),
     #  - change `output.mesh_xdmf` to `output[0]`,
-    #  - change `output.mesh_xdmf` to `output[1]`,
-    #  - change `output.mesh_xdmf` to `output[2]`.
+    #  - change `output.mesh_boundaries_xdmf` to `output[1]`,
+    #  - change `output.mesh_subdomains_xdmf` to `output[2]`.
     input:
         os.path.join(MESH_DIR, "{mesh_path}.msh")
     output:
