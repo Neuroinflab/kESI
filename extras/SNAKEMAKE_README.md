@@ -3,14 +3,42 @@
 ## Paths
 
 Unless stated otherwise, all paths in this section are relative to the readme
-directory, that is the _extras/_ directory of the working copy.
+directory, that is the `extras/` directory of the working copy.
+
+### Bundled data
+
+Unless stated otherwise, all paths in this section are relative to the _FEM/_
+directory, that is the `extras/FEM/` directory of the working copy.
+
+#### CSD basis functions
+
+`csd_basis_functions/`
 
 
-### Meshes
+#### Position of electrodes
 
-All meshes are stored in the _FEM/meshes_ directory containing a _Snakefile_
-with mesh compilation workflows, _gmsh_ geometry files (_*.geo_) and their
-templates (_*.geo.template_).
+`electrode_locations/`
+
+
+#### Meshes
+
+All bundled mesh source files are in the `meshes/` directory.
+They are either _gmsh_ geometry files (`*.geo`) or their
+templates (`*.geo.template`).
+
+
+#### Model properties
+
+`model_properties/`
+
+
+### Generated data
+
+#### Meshes
+
+# OLD BELOW
+
+All meshes are stored in the _FEM/meshes_ directory.
 
 Most of compiled meshes are stored in the _FEM/meshes/meshes_ directory
 which does not contain any tracked files, thus it may be softlinked or mounted
