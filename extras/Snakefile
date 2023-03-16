@@ -870,7 +870,7 @@ rule PBF_CENTROIDS_paper:
                             MASK=MASK)
 
 
-PFB_MODEL_SRC_kesi_bundle = PBF_MODEL_SRC.format(
+PBF_MODEL_SRC_kesi_bundle = PBF_MODEL_SRC.format(
                    setup="{setup}__{geometry}__{electrodes}",
                    basis_functions="{grid}__kESI_bundle__{basis_function}")
 
@@ -881,28 +881,28 @@ rule PBF_MODEL_SRC_kesi_bundle:
                      "{geometry}",
                      "{basis_function}.json")
     output:
-        PFB_MODEL_SRC_kesi_bundle
+        PBF_MODEL_SRC_kesi_bundle
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
-        f"""
-        mkdir -p {os.path.dirname(PFB_MODEL_SRC_kesi_bundle).replace(
-                                                             "{",
-                                                             "{wildcards.")}
-        cp {{input}} {{output}}
+        """
+        mkdir -p {params.output_directory}
+        cp {input} {output}
         """
 
 
-PFB_MODEL_SRC_kesi_sigmoid = PBF_MODEL_SRC.format(
+PBF_MODEL_SRC_kesi_sigmoid = PBF_MODEL_SRC.format(
                    setup="{setup}__{geometry}__{electrodes}",
                    basis_functions="{grid}__kESI_generated__sigmoid_r_{radius}")
 
 rule PBF_MODEL_SRC_kesi_generated_sigmoid:
     output:
-        PFB_MODEL_SRC_kesi_sigmoid
+        PBF_MODEL_SRC_kesi_sigmoid
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
-        f"""
-        mkdir -p {os.path.dirname(PFB_MODEL_SRC_kesi_sigmoid).replace(
-                                                             "{",
-                                                             "{wildcards.")}
+        """
+        mkdir -p {params.output_directory}
         python create_model_src.py {{output}} --radius {{wildcards.radius}}
         """
 
@@ -929,14 +929,15 @@ rule SAMPLED_LFCOR_paper:
     output:
         SAMPLED_LFCOR.replace("{setup}", "{setup,paper_.+}")
     params:
-        command=get_sampled_lfcor_paper_command
+        command=get_sampled_lfcor_paper_command,
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
-        f"""
-        mkdir -p {SAMPLED_LFCOR_DIR.replace("{", "{wildcards.")}
-        python {{params.command}} \\
-          --output {{output}} \\
-          --config {{input.correction}} \\
-          --grid {{input.grid}} \\
+        """
+        mkdir -p {params.output_directory}
+        python {params.command} \\
+          --output {output} \\
+          --config {input.correction} \\
+          --grid {input.grid} \\
           --fill 0 \\
           --quiet
         """
@@ -964,16 +965,15 @@ rule SAMPLED_LFCOR_GRID_paper_romberg:
         SAMPLED_LFCOR_GRID.format(setup="{setup,paper.+}",
                                   sampling="romberg_{k,\\d+}")
     params:
-        volume=get_sampled_lfcor_grid_paper_volume
+        volume=get_sampled_lfcor_grid_paper_volume,
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
-        f"""
-        mkdir -p {SAMPLED_LFCOR_GRID_ROOT.format(
-                                              setup="{wildcards.setup}",
-                                              sampling="romberg_{wildcards.k}")}
-        python create_grid.py {{output}} \\
+        """
+        mkdir -p {params.output_directory}
+        python create_grid.py {output} \\
           --coords XYZ \\
-          {{params.volume}} \\
-          -k {{wildcards.k}}
+          {params.volume} \\
+          -k {wildcards.k}
         """
 
 
@@ -1042,10 +1042,12 @@ rule FENICS_LFCOR_COND_INI:
         os.path.join(PROP_DIR, "{model}.ini")
     output:
         FENICS_LFCOR_COND
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
-        f"""
-        mkdir -p {FENICS_LFCOR_COND_DIR.replace("{", "{wildcards.")}
-        cp {{input}} {{output}}
+        """
+        mkdir -p {params.output_directory}
+        cp {input} {output}
         """
 
 
@@ -1068,10 +1070,12 @@ rule GEO_circular_slice_composite:
         os.path.join(MESH_SRC_DIR, "circular_slice_composite.geo")
     output:
         GEO_circular_slice_composite_out
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
-        f"""
-        mkdir -p {os.path.dirname(GEO_circular_slice_composite_out)}
-        cp {{input}} {{output}}
+        """
+        mkdir -p {params.output_directory}
+        cp {input} {output}
         """
 
 
@@ -1097,11 +1101,12 @@ rule GEO_TEMPLATE:
     output:
         MESH_GEO_PATTERN
     params:
-        sed_relative_element_size=granularity_to_relative_element_size
+        sed_relative_element_size=granularity_to_relative_element_size,
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
-        f"""
-        mkdir -p {os.path.dirname(MESH_GEO_PATTERN).format(mesh_name="{wildcards.mesh_name}")}
-        sed 's/SED_RELATIVE_ELEMENT_SIZE/{{params.sed_relative_element_size}}/g' < {{input}} > {{output}}
+        """
+        mkdir -p {params.output_directory}
+        sed 's/SED_RELATIVE_ELEMENT_SIZE/{params.sed_relative_element_size}/g' < {input} > {output}
         """
 
 
