@@ -618,6 +618,16 @@ rule CSD_FORWARD:
 
 
 rule CSD_EIGENSOURCES_mixed:
+    # WARNING: Undocumented feature used!
+    # The rule may crash if Snakemake implementation changes.  In that case:
+    #  - change dict comprehension to list comprehension (dict values),
+    #  - change `input.kESI_analysis` to `input[0]`,
+    #  - change `input.kESI_eigensources` to `input[1]`,
+    #  - change `input.kCSD_analysis` to `input[2]`,
+    #  - change `input.kCSD_eigensources` to `input[3]`.
+    # Note that the order of kESI/kCSD may change safely as long as the change
+    # is consistent.
+    # Try `--analysis {input[::2]} --eigensources {input[1::2]}`
     input:
         **{f"{method}_{file}": path.replace("{path}", PATH.path(method))
            for method in PATH
