@@ -916,7 +916,7 @@ rule PBF_MODEL_SRC_kesi_generated_sigmoid:
     shell:
         """
         mkdir -p {params.output_directory}
-        python create_model_src.py {{output}} --radius {{wildcards.radius}}
+        python create_model_src.py {output} --radius {wildcards.radius}
         """
 
 
