@@ -43,12 +43,12 @@ class Path(dict):
         return os.path.join(k, self[k])
 
 
-PROP_DIR = "FEM/model_properties/"
-ELE_DIR = "FEM/electrode_locations/"
-CSD_BASIS_DIR = "FEM/csd_basis_functions"
-MESH_SRC_DIR = "FEM/meshes/"
+PROP_DIR = "data/bundled/model_properties/"
+ELE_DIR = "data/bundled/electrode_locations/"
+CSD_BASIS_DIR = "data/bundled/csd_basis_functions/"
+MESH_SRC_DIR = "data/bundled/meshes/"
 
-DATA_DIR = "data/"
+DATA_DIR = "data/generated/"
 
 MESH_DIR = os.path.join(DATA_DIR, "meshes")
 
