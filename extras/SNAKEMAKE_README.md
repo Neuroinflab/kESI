@@ -1,16 +1,21 @@
 # Snakefile Documentation
 
-## Paths
-
-Unless stated otherwise, all paths in this section are relative to the readme
+Unless stated otherwise, all paths in this document are relative to the readme
 directory, that is the `extras/` directory of the working copy.
 
-### Bundled data
 
-Unless stated otherwise, all paths in this section are relative to the _FEM/_
-directory, that is the `extras/FEM/` directory of the working copy.
+## Data
+
+Unless stated otherwise, all paths in this section are relative to the `data/`
+directory, that is the `extras/data` directory of the working copy.
+
+### Bundled
+
+Unless stated otherwise, all paths in this section are relative to the `bundled/`
+directory, that is the `extras/data/bundled/` directory of the working copy.
 
 #### CSD basis functions
+Define component part of cross kernel, number of basis, their location in the space and the shape of CSD profiles.
 
 `csd_basis_functions/`
 
@@ -20,11 +25,20 @@ directory, that is the `extras/FEM/` directory of the working copy.
 `electrode_locations/`
 
 
-#### Meshes
+#### Mesh geometry files
 
-All bundled mesh source files are in the `meshes/` directory.
-They are either _gmsh_ geometry files (`*.geo`) or their
-templates (`*.geo.template`).
+All bundled _gmsh_ geometry files (`*.geo`) are in the `meshes/` directory.
+
+At the moment there is only one bundled file: `circular_slice_composite.geo`
+
+
+#### Mesh geometry templates <a name="data-bundled-mesh_geometry_templates"></a>
+
+All bundled templates of _gmsh_ geometry files are in the `meshes/` directory.
+Filenames of templates follow the `<stem>.geo.template`
+pattern, where `<stem>` determines most of mesh properties but
+size of its particular elements (which is controlled by the
+`SED_RELATIVE_ELEMENT_SIZE` template marker).
 
 
 #### Model properties
@@ -32,9 +46,104 @@ templates (`*.geo.template`).
 `model_properties/`
 
 
-### Generated data
+### Generated
+
+Unless stated otherwise, all paths in this section are relative to the `generated/`
+directory, that is the `extras/data/generated/` directory of the working copy.
+As no bundled files are provided therein, the directory subtree may
+be not only a regular directory tree, but also either a mounted filesystem
+or a soft link.
 
 #### Meshes
+
+All meshes are stored in the `meshes/` directory.  The filesystem subtree
+follows the pattern:
+```
+meshes/
+  <geometry>/
+    <version>/
+      <granularity>.geo
+      <granularity>.msh
+      <granularity>.xdmf
+      <granularity>.h5
+      <granularity>_subdomains.xdmf
+      <granularity>_subdomains.h5
+      <granularity>_boundaries.xdmf
+      <granularity>_boundaries.h5
+```
+where:
+- `<geometry>` is the stem of the
+  [mesh geometry template file](#data-bundled-mesh_geometry_templates),
+- `<granularity>` is either of _coarsest_, _coarser_, _coarse_, _normal_,
+  _fine_, _finer_, _finest_, _superfine_, _superfiner_ (in descending order
+  of mesh granularity; other names are allowed for meshes of the same geometry
+  but not derived from the geometry template)
+
+The `<granularity>` name determines 
+
+| `<granularity>` | `SED_RELATIVE_ELEMENT_SIZE` |
+|-----------------|-----------------------------|
+| `coarsest`      | 8.0                         |
+                                 "coarser": 4.0,
+                                 "coarse": 2.0,
+                                 "normal": 1.0,
+                                 "fine": 0.5,
+                                 "finer": 0.25,
+                                 "finest": 0.125,
+                                 "superfine": 0.0625,
+                                 "superfinest": 0.03125,
+#### Setups
+
+`setups/`
+
+
+#### Fenics leadfield corrections
+
+`fenics_leadfield_corrections/`
+
+
+#### Sampled leadfield corrections
+
+`sampled_leadfield_corrections/`
+
+
+#### Potential basis functions
+
+Transition from basis function in the CSD space to basis function in potentials space.
+
+`potential_basis_functions/`
+
+
+#### Kernels
+
+`kernels/`
+
+
+#### CSD profiles
+
+`csd_profiles/`
+
+`<setup>/` - set of possible electrodes locations for a given coordinate system
+
+`<subsetup>/` - subset of electrodes locations, useful for optimization purposes
+
+`<csd_basis_functions>/` - Define component part of cross kernel, number of basis, their location in the space and the shape of CSD profiles.
+
+`<path>==kCSD/<conductivity [S/m]>/ |  kESI/<sampling>/<model>/<mesh path>/<degree>/ | mixed/<conductivity [S/m]>/<sampling>/<model>/<mesh path>/<degree>/` -
+path different for kCSD, kESI and mixed source models
+
+_\<sampling\>_ - regular, rectangular grid on which kESI leadfield correction was obtained
+
+_\<model\>_ - defines geometrical and physical properties of the forward model
+
+_\<mesh path\>_ - defines mesh in the space of the model, depends on geometrical properties
+
+_\<degree\>_ - informs elements of what degree are span on the grid, it's independent of the model
+
+_\<model\>\/\<mesh path>\/<degree\>\/_ - completely defines FEM model
+
+_mixed_ model - mixed in 1:1 ratio kCSD and kESI eigensources for the same basis function in CSD space
+
 
 # OLD BELOW
 
