@@ -84,14 +84,15 @@ The `<granularity>` name determines
 | `<granularity>` | `SED_RELATIVE_ELEMENT_SIZE` |
 |-----------------|-----------------------------|
 | `coarsest`      | 8.0                         |
-                                 "coarser": 4.0,
-                                 "coarse": 2.0,
-                                 "normal": 1.0,
-                                 "fine": 0.5,
-                                 "finer": 0.25,
-                                 "finest": 0.125,
-                                 "superfine": 0.0625,
-                                 "superfinest": 0.03125,
+| `coarser`       | 4.0                         |
+| `coarse`        | 2.0                         |
+| `normal`        | 1.0                         |
+| `fine`          | 0.5                         |
+| `finer`         | 0.25                        |
+| `fines`         | 0.125                       |
+| `superfine`     | 0.0625                      |
+| `superfinest`   | 0.03125                     |
+
 #### Setups
 
 `setups/`
@@ -120,29 +121,44 @@ Transition from basis function in the CSD space to basis function in potentials 
 
 
 #### CSD profiles
+```
+csd_profiles/
+  <setup>/ - set of possible electrodes locations for a given coordinate system
+    <subsetup>/ - subset of electrodes locations, useful for optimization purposes
+      <csd_basis_functions>/ - define component part of cross kernel, number of basis,
+                               their location in the space and the shape of CSD profiles
+        <path>==kCSD/<conductivity [S/m]>/ |
+                kESI/<sampling>/<model>/<mesh path>/<degree>/ |
+                mixed/<conductivity [S/m]>/<sampling>/<model>/<mesh path>/<degree>/ - path
+                different for kCSD, kESI and mixed source models
+          <csd_grid>
+            <sources>.npz==eigensources.npz
+            <fwd path>==<fwd model>/<fwd mesh path>/<fwd degree>/
+              <sources>.csv
+```
+where:
 
-`csd_profiles/`
+| wildcard                | meaning                                                                                                                                          |
+|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| `<setup>`               | set of possible electrodes locations for a given coordinate system                                                                               |
+| `<subsetup>`            | subset of electrodes locations, useful for optimization purposes                                                                                 |
+| `<csd_basis_functions>` | defines component part of cross kernel, number of basis, their location in the space and the shape of CSD profiles                               |
+| `<path>`                | path is different for kCSD, kESI and mixed (mixed in 1:1 ratio kCSD and kESI eigensources for the same basis function in CSD space) source model |
+| `<sampling>`            | regular, rectangular grid on which kESI leadfield correction was obtained                                                                        |
+| `<model>`               | defines geometrical and physical properties of the forward model                                                                                 |
+| `<mesh path>`           | defines mesh in the space of the model, depends on geometrical properties                                                                        |
+| `<degree>`              | informs elements of what degree are span on the grid, it's independent of the model                                                              |
+| `<csd_grid>`            |                                                                                                                                                  |
+| `<sources>.npz`         |                                                                                                                                                  |
+| `<fwd path>`            |                                                                                                                                                  |
+| `<fwd model>`           |                                                                                                                                                  |
+| `<fwd mesh path>`       |                                                                                                                                                  |
+| `<fwd degree>`          |                                                                                                                                                  |
+| `<sources>.csv`         |                                                                                                                                                  |
 
-`<setup>/` - set of possible electrodes locations for a given coordinate system
 
-`<subsetup>/` - subset of electrodes locations, useful for optimization purposes
+`<model>/<mesh path>/<degree>/` - completely defines FEM model
 
-`<csd_basis_functions>/` - Define component part of cross kernel, number of basis, their location in the space and the shape of CSD profiles.
-
-`<path>==kCSD/<conductivity [S/m]>/ |  kESI/<sampling>/<model>/<mesh path>/<degree>/ | mixed/<conductivity [S/m]>/<sampling>/<model>/<mesh path>/<degree>/` -
-path different for kCSD, kESI and mixed source models
-
-_\<sampling\>_ - regular, rectangular grid on which kESI leadfield correction was obtained
-
-_\<model\>_ - defines geometrical and physical properties of the forward model
-
-_\<mesh path\>_ - defines mesh in the space of the model, depends on geometrical properties
-
-_\<degree\>_ - informs elements of what degree are span on the grid, it's independent of the model
-
-_\<model\>\/\<mesh path>\/<degree\>\/_ - completely defines FEM model
-
-_mixed_ model - mixed in 1:1 ratio kCSD and kESI eigensources for the same basis function in CSD space
 
 
 # OLD BELOW
