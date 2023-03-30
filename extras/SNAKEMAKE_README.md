@@ -11,39 +11,61 @@ directory, that is the `extras/data` directory of the working copy.
 
 ### Bundled
 
-Unless stated otherwise, all paths in this section are relative to the `bundled/`
-directory, that is the `extras/data/bundled/` directory of the working copy.
+<!--Unless stated otherwise, all paths in this section are relative to the `bundled/`
+directory, that is the `extras/data/bundled/` directory of the working copy.-->
 
-#### CSD basis functions
-Define component part of cross kernel, number of basis, their location in the space and the shape of CSD profiles.
+kESI comes with exemplary data which are not the part of the method itself.
+The subtree contains four directories:
+```
+bundled/
+  csd_basis_functions/
+  electrode_locations/
+  meshes/
+  model_properties/  
+```
+where:
 
-`csd_basis_functions/`
+| subdirectory          | described in                                                                                                                  |
+|-----------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| `csd_basis_functions` | [CSD basis functions](#data-bundled-csd_basis_functions)                                                                                                      |
+| `electrode_locations` | [Position of electrodes](#data-bundled-position_of_electrodes)                                                                |
+| `meshes`              | [Mesh geometry files](#data-bundled-mesh_geometry_files) and [Mesh geometry templates](#data-bundled-mesh_geometry_templates) |
+| `model_properties`    | [Model properties](#data-bundled-model_properties)                                                                            |
+
+#### CSD basis functions <a name="data-bundled-csd_basis_functions"></a>
+
+Shape definitions of CSD profiles (including size)
+for `SphericalSplineSourceBase` class (and its descendant
+`SphericalSplineSourceKCSD`).  The profiles are centered 
+at `(0, 0, 0)`, which make them so-called _model sources_.
 
 
-#### Position of electrodes
+#### Position of electrodes <a name="data-bundled-position_of_electrodes"></a>
 
-`electrode_locations/`
+Locations of electrodes are stored in `*.ini` files, 
+where section names are names of the respective point electrodes 
+and fields of a section (_'x'_, _'y'_, _'z'_) are coordinates of the electrode.
 
 
-#### Mesh geometry files
+#### Mesh geometry files <a name="data-bundled-mesh_geometry_files"></a>
 
-All bundled _gmsh_ geometry files (`*.geo`) are in the `meshes/` directory.
-
-At the moment there is only one bundled file: `circular_slice_composite.geo`
+At the moment there is only one bundled file (`circular_slice_composite.geo`)
+in the _gmsh_ geometry format.
 
 
 #### Mesh geometry templates <a name="data-bundled-mesh_geometry_templates"></a>
 
-All bundled templates of _gmsh_ geometry files are in the `meshes/` directory.
-Filenames of templates follow the `<stem>.geo.template`
-pattern, where `<stem>` determines most of mesh properties but
+Filenames of templates of _gmsh_ geometry files follow the `<stem>.geo.template`
+pattern, where `<stem>` determines most mesh properties but
 size of its particular elements (which is controlled by the
 `SED_RELATIVE_ELEMENT_SIZE` template marker).
 
 
-#### Model properties
+#### Model properties <a name="data-bundled-model_properties"></a>
 
-`model_properties/`
+Physical properties of the model (i.e. medium conductivity) and
+its geometrical properties (e.g. sphere radius) are stored in the
+`*ini` files.
 
 
 ### Generated
@@ -123,10 +145,9 @@ Transition from basis function in the CSD space to basis function in potentials 
 #### CSD profiles
 ```
 csd_profiles/
-  <setup>/ - set of possible electrodes locations for a given coordinate system
-    <subsetup>/ - subset of electrodes locations, useful for optimization purposes
-      <csd_basis_functions>/ - define component part of cross kernel, number of basis,
-                               their location in the space and the shape of CSD profiles
+  <setup>/
+    <subsetup>/
+      <csd_basis_functions>/
         <path>==kCSD/<conductivity [S/m]>/ |
                 kESI/<sampling>/<model>/<mesh path>/<degree>/ |
                 mixed/<conductivity [S/m]>/<sampling>/<model>/<mesh path>/<degree>/ - path
