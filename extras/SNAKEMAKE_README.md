@@ -76,7 +76,78 @@ As no bundled files are provided therein, the directory subtree may
 be not only a regular directory tree, but also either a mounted filesystem
 or a soft link.
 
-#### Meshes
+The subtree looks as follows:
+```
+generated/
+  csd_profiles/
+  fenics_leadfield_corrections/
+  kernel/
+  meshes/
+  potential_basis_functions/
+  sampled_leadfield_corrections
+  setups/
+```
+
+where:
+
+| subdirectory                    | described in                                                                   |
+|---------------------------------|--------------------------------------------------------------------------------|
+| `csd_profiles`                  | [CSD profiles](#data-generated_csd_profiles)                                   |
+| `fenics_leadfield_corrections`  | [Fenics leadfield corrections](#data-generated-fenics_leadfield_corrections)   |
+| `kernel`                        | [Kernel](#data-generated-kernel)                                               |
+| `meshes`                        | [Meshes](#data-generated-meshes)                                               |
+| `potential_basis_functions`     | [Potential basis functions](#data-generated-potential_basis_functions)         |
+| `sampled_leadfield_corrections` | [Sampled leadfield corrections](#data-generated-sampled_leadfield_corrections) |
+| `setups`                        | [Setups](#data-generated-setups)                                               |
+
+
+#### CSD profiles <a name="data-generated-csd_profiles"></a>
+```
+csd_profiles/
+  <setup>/
+    <subsetup>/
+      <csd_basis_functions>/
+        <path>==kCSD/<conductivity [S/m]>/ |
+                kESI/<sampling>/<model>/<mesh path>/<degree>/ |
+                mixed/<conductivity [S/m]>/<sampling>/<model>/<mesh path>/<degree>/ - path
+                different for kCSD, kESI and mixed source models
+          <csd_grid>
+            <sources>.npz==eigensources.npz
+            <fwd path>==<fwd model>/<fwd mesh path>/<fwd degree>/
+              <sources>.csv
+```
+where:
+
+| wildcard                | meaning                                                                                                                                          |
+|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| `<setup>`               | set of possible electrodes locations for a given coordinate system                                                                               |
+| `<subsetup>`            | subset of electrodes locations, useful for optimization purposes                                                                                 |
+| `<csd_basis_functions>` | defines component part of cross kernel, number of basis, their location in the space and the shape of CSD profiles                               |
+| `<path>`                | path is different for kCSD, kESI and mixed (mixed in 1:1 ratio kCSD and kESI eigensources for the same basis function in CSD space) source model |
+| `<sampling>`            | regular, rectangular grid on which kESI leadfield correction was obtained                                                                        |
+| `<model>`               | defines geometrical and physical properties of the forward model                                                                                 |
+| `<mesh path>`           | defines mesh in the space of the model, depends on geometrical properties                                                                        |
+| `<degree>`              | informs elements of what degree are span on the grid, it's independent of the model                                                              |
+| `<csd_grid>`            |                                                                                                                                                  |
+| `<sources>.npz`         |                                                                                                                                                  |
+| `<fwd path>`            |                                                                                                                                                  |
+| `<fwd model>`           |                                                                                                                                                  |
+| `<fwd mesh path>`       |                                                                                                                                                  |
+| `<fwd degree>`          |                                                                                                                                                  |
+| `<sources>.csv`         |                                                                                                                                                  |
+
+
+`<model>/<mesh path>/<degree>/` - completely defines FEM model
+
+#### Fenics leadfield corrections <a name="data-generated-fenics_leadfield_corrections"></a>
+
+`fenics_leadfield_corrections/`
+
+#### Kernels <a name="data-generated-kernels"></a>
+
+`kernels/`
+
+#### Meshes <a name="data-generated-meshes"></a>
 
 All meshes are stored in the `meshes/` directory.  The filesystem subtree
 follows the pattern:
@@ -115,70 +186,22 @@ The `<granularity>` name determines
 | `superfine`     | 0.0625                      |
 | `superfinest`   | 0.03125                     |
 
-#### Setups
 
-`setups/`
-
-
-#### Fenics leadfield corrections
-
-`fenics_leadfield_corrections/`
-
-
-#### Sampled leadfield corrections
-
-`sampled_leadfield_corrections/`
-
-
-#### Potential basis functions
+#### Potential basis functions <a name="data-generated-potential_basis_functions"></a>
 
 Transition from basis function in the CSD space to basis function in potentials space.
 
 `potential_basis_functions/`
 
 
-#### Kernels
+#### Sampled leadfield corrections <a name="data-generated-sampled_leadfield_corrections"></a>
 
-`kernels/`
+`sampled_leadfield_corrections/`
 
+#### Setups <a name="data-generated-setups"></a>
 
-#### CSD profiles
-```
-csd_profiles/
-  <setup>/
-    <subsetup>/
-      <csd_basis_functions>/
-        <path>==kCSD/<conductivity [S/m]>/ |
-                kESI/<sampling>/<model>/<mesh path>/<degree>/ |
-                mixed/<conductivity [S/m]>/<sampling>/<model>/<mesh path>/<degree>/ - path
-                different for kCSD, kESI and mixed source models
-          <csd_grid>
-            <sources>.npz==eigensources.npz
-            <fwd path>==<fwd model>/<fwd mesh path>/<fwd degree>/
-              <sources>.csv
-```
-where:
+`setups/`
 
-| wildcard                | meaning                                                                                                                                          |
-|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
-| `<setup>`               | set of possible electrodes locations for a given coordinate system                                                                               |
-| `<subsetup>`            | subset of electrodes locations, useful for optimization purposes                                                                                 |
-| `<csd_basis_functions>` | defines component part of cross kernel, number of basis, their location in the space and the shape of CSD profiles                               |
-| `<path>`                | path is different for kCSD, kESI and mixed (mixed in 1:1 ratio kCSD and kESI eigensources for the same basis function in CSD space) source model |
-| `<sampling>`            | regular, rectangular grid on which kESI leadfield correction was obtained                                                                        |
-| `<model>`               | defines geometrical and physical properties of the forward model                                                                                 |
-| `<mesh path>`           | defines mesh in the space of the model, depends on geometrical properties                                                                        |
-| `<degree>`              | informs elements of what degree are span on the grid, it's independent of the model                                                              |
-| `<csd_grid>`            |                                                                                                                                                  |
-| `<sources>.npz`         |                                                                                                                                                  |
-| `<fwd path>`            |                                                                                                                                                  |
-| `<fwd model>`           |                                                                                                                                                  |
-| `<fwd mesh path>`       |                                                                                                                                                  |
-| `<fwd degree>`          |                                                                                                                                                  |
-| `<sources>.csv`         |                                                                                                                                                  |
-
-
-`<model>/<mesh path>/<degree>/` - completely defines FEM model
 
 
 
