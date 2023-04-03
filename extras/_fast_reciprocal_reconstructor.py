@@ -4,8 +4,10 @@
 #                                                                             #
 #    kESI                                                                     #
 #                                                                             #
-#    Copyright (C) 2021 Jakub M. Dzik (Laboratory of Neuroinformatics;        #
+#    Copyright (C) 2021-2023 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
 #    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
+#    Copyright (C) 2021-2023 Jakub M. Dzik (Institute of Applied Psychology;  #
+#    Faculty of Management and Social Communication; Jagiellonian University) #
 #                                                                             #
 #    This software is free software: you can redistribute it and/or modify    #
 #    it under the terms of the GNU General Public License as published by     #
