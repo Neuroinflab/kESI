@@ -28,25 +28,20 @@ import numpy as np
 import scipy.interpolate as si
 
 
-class ElectrodeTutorialFourSpheres(object):
-    def __init__(self, filename, dx=0):
+class _ElectrodeLeadfieldCorrectionBase(object):
+    def __init__(self, filename):
         """
         Parameters
         ----------
 
         filename : str
             Path to the sampled correction potential.
-
-        dx : float
-            Integration step used to calculate a regularization
-            parameter of the `.leadfield()` method.
         """
         self.filename = filename
-        self.dx = dx
         with np.load(filename) as fh:
-            self.SAMPLING_GRID = [fh[c] for c in 'XYZ']
-            self.x, self.y, self.z = fh['LOCATION']
-            self.conductivity = fh['BASE_CONDUCTIVITY']
+            self.SAMPLING_GRID = [fh[c].flatten() for c in "XYZ"]
+            self.x, self.y, self.z = fh["LOCATION"]
+            self.conductivity = fh["BASE_CONDUCTIVITY"]
 
     def correction_leadfield(self, X, Y, Z):
         """
@@ -59,29 +54,38 @@ class ElectrodeTutorialFourSpheres(object):
             Coordinate matrices of the same shape.
         """
         with np.load(self.filename) as fh:
-            return self._correction_leadfield(fh['CORRECTION_POTENTIAL'],
+            return self._correction_leadfield(fh["CORRECTION_POTENTIAL"],
                                               [X, Y, Z])
 
-    def _correction_leadfield(self, SAMPLES, XYZ):
-        return self._interpolate(SAMPLES, XYZ)
-        # # if XYZ points are in nodes of the sampling grid,
-        # # no time-consuming interpolation is necessary
-        # return SAMPLES[self._sampling_grid_indices(XYZ)]
 
-    # def _sampling_grid_indices(self, XYZ):
-    #     return tuple(np.searchsorted(GRID, COORD)
-    #                  for GRID, COORD in zip(self.SAMPLING_GRID, XYZ))
+class _ElectrodeInterpolatedLeadfieldCorrection(
+                                             _ElectrodeLeadfieldCorrectionBase):
+    def __init__(self, filename, dx=0):
+        """
+        Parameters
+        ----------
+
+        filename : str
+            Path to the sampled correction potential.
+
+        dx : float
+            Integration step used to calculate a regularization
+            parameter of the `.leadfield()` method.
+        """
+        self.dx = dx
+        super().__init__(filename)
 
     def _interpolate(self, SAMPLES, XYZ):
-        # The interpolation can be speeded up at the cost
-        # of precision by changing the method to 'nearest'
         interpolator = si.RegularGridInterpolator(
             self.SAMPLING_GRID,
             SAMPLES,
             bounds_error=False,
             fill_value=0,
-            method='linear')
+            method=self.interpolation_method)
         return interpolator(np.stack(XYZ, axis=-1))
+
+    def _correction_leadfield(self, SAMPLES, XYZ):
+        return self._interpolate(SAMPLES, XYZ)
 
     @property
     def _epsilon(self):
@@ -125,34 +129,18 @@ class ElectrodeTutorialFourSpheres(object):
     #     return self.base_leadfield(X, Y, Z) + self.correction_leadfield(X, Y, Z)
 
 
-class ElectrodeCorr(object):
-    def __init__(self, filename):
-        """
-        Parameters
-        ----------
+class ElectrodeLinearlyInterpolatedLeadfieldCorrection(
+                                     _ElectrodeInterpolatedLeadfieldCorrection):
+    interpolation_method = 'linear'
 
-        filename : str
-            Path to the sampled correction potential.
-        """
-        self.filename = filename
-        with np.load(filename) as fh:
-            self.SAMPLING_GRID = [fh[c].flatten() for c in "XYZ"]
-            self.x, self.y, self.z = fh["LOCATION"]
-            self.conductivity = fh["BASE_CONDUCTIVITY"]
 
-    def correction_leadfield(self, X, Y, Z):
-        """
-        Correction of the leadfield of the electrode
-        for violation of kCSD assumptions
+class ElectrodeNearestNeighbourInterpolatedLeadfieldCorrection(
+                                     _ElectrodeInterpolatedLeadfieldCorrection):
+    interpolation_method = 'nearest'
 
-        Parameters
-        ----------
-        X, Y, Z : np.array
-            Coordinate matrices of the same shape.
-        """
-        with np.load(self.filename) as fh:
-            return self._correction_leadfield(fh["CORRECTION_POTENTIAL"],
-                                              [X, Y, Z])
+
+class ElectrodeIntegrationNodesAtSamplingGrid(
+                                             _ElectrodeLeadfieldCorrectionBase):
 
     def _correction_leadfield(self, SAMPLES, XYZ):
         # if XYZ points are in nodes of the sampling grid,

@@ -36,7 +36,7 @@ import scipy.integrate as si
 
 import _fast_reciprocal_reconstructor as frr
 import _common_new as common
-from electrodes import ElectrodeCorr
+from electrodes import ElectrodeIntegrationNodesAtSamplingGrid as Electrode
 
 
 if __name__ == "__main__":
@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
     for name in args.names:
         model_src = common.SphericalSplineSourceKCSD.fromJSON(open(args.source))
-        electrode = ElectrodeCorr(os.path.join(args.input, f"{name}.npz"))
+        electrode = Electrode(os.path.join(args.input, f"{name}.npz"))
 
         d_xyz = np.array([(A[-1] - A[0]) / (len(A) - 1)
                           for A in electrode.SAMPLING_GRID])
