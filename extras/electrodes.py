@@ -123,3 +123,42 @@ class ElectrodeTutorialFourSpheres(object):
     # def leadfield(self, X, Y, Z):
     #     # For numerical kESI.
     #     return self.base_leadfield(X, Y, Z) + self.correction_leadfield(X, Y, Z)
+
+
+class ElectrodeCorr(object):
+    def __init__(self, filename):
+        """
+        Parameters
+        ----------
+
+        filename : str
+            Path to the sampled correction potential.
+        """
+        self.filename = filename
+        with np.load(filename) as fh:
+            self.SAMPLING_GRID = [fh[c].flatten() for c in "XYZ"]
+            self.x, self.y, self.z = fh["LOCATION"]
+            self.conductivity = fh["BASE_CONDUCTIVITY"]
+
+    def correction_leadfield(self, X, Y, Z):
+        """
+        Correction of the leadfield of the electrode
+        for violation of kCSD assumptions
+
+        Parameters
+        ----------
+        X, Y, Z : np.array
+            Coordinate matrices of the same shape.
+        """
+        with np.load(self.filename) as fh:
+            return self._correction_leadfield(fh["CORRECTION_POTENTIAL"],
+                                              [X, Y, Z])
+
+    def _correction_leadfield(self, SAMPLES, XYZ):
+        # if XYZ points are in nodes of the sampling grid,
+        # no time-consuming interpolation is necessary
+        return SAMPLES[self._sampling_grid_indices(XYZ)]
+
+    def _sampling_grid_indices(self, XYZ):
+        return tuple(np.searchsorted(GRID, COORD)
+                     for GRID, COORD in zip(self.SAMPLING_GRID, XYZ))
