@@ -150,6 +150,10 @@ class SphericalSplineSourceBase(SourceBase):
 
     @staticmethod
     def _evaluate_polynomial(X, coefficients):
+        # NOTE: benchmark before reimplementation with dedicated NumPy solution
+        # For NumPy v. 1.21.6 Python v. 3.7.12 the method is twice as fast
+        # as either `np.polyval()` function or object
+        # of `np.polynomial.Polynomial` class.
         ACC = 0
         for c in reversed(coefficients):
             ACC *= X
