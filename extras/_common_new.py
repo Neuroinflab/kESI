@@ -178,42 +178,46 @@ class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
                  conductivity=1):
         super(SphericalSplineSourceKCSD,
               self).__init__(x, y, z, nodes, coefficients)
+
+        self._calculate_potential_coefficients()
         self.conductivity = conductivity
+
+    def _calculate_potential_coefficients(self):
+        self._coefficients_inside = []
+        self._coefficients_outside = []
+        for coeffs in self._coefficients:
+            self._coefficients_inside.append(
+                [0, 0] + [c / i for i, c in enumerate(coeffs, start=2)])
+            self._coefficients_outside.append(
+                [0, 0, 0] + [c / i for i, c in enumerate(coeffs, start=3)])
 
     def potential(self, X, Y, Z):
         R = self._distance(X, Y, Z)
         r0 = 0
         V = np.zeros_like(R)
-        coefs_inside = [0, 0]
-        coefs_outside = [0, 0, 0]
-        for r, coefficients in zip(self._nodes,
-                                   self._coefficients):
-            coefs_inside[2:] = [c / i
-                                for i, c in enumerate(coefficients,
-                                                      start=2)]
 
-            coefs_outside[3:] = [c / i
-                                 for i, c in enumerate(coefficients,
-                                                       start=3)]
+        for r, coeffs_inside, coeffs_outside in zip(self._nodes,
+                                                    self._coefficients_inside,
+                                                    self._coefficients_outside):
             IDX = R <= r0  # inside both polynomial limits
             if IDX.any():
-                V[IDX] += (self._evaluate_polynomial(r, coefs_inside)
-                           - self._evaluate_polynomial(r0, coefs_inside))
+                V[IDX] += (self._evaluate_polynomial(r, coeffs_inside)
+                           - self._evaluate_polynomial(r0, coeffs_inside))
 
             IDX = ~IDX & (R < r)  # within polynomial limits
             if IDX.any():
                 # here is the bug
                 _R = R[IDX]
-                V[IDX] += (self._evaluate_polynomial(r, coefs_inside)
-                           - self._evaluate_polynomial(_R, coefs_inside)
-                           + (self._evaluate_polynomial(_R, coefs_outside)
-                              - self._evaluate_polynomial(r0, coefs_outside)) / _R)
+                V[IDX] += (self._evaluate_polynomial(r, coeffs_inside)
+                           - self._evaluate_polynomial(_R, coeffs_inside)
+                           + (self._evaluate_polynomial(_R, coeffs_outside)
+                              - self._evaluate_polynomial(r0, coeffs_outside)) / _R)
 
             IDX = R >= r  # outside both polynomial limits
             if IDX.any():
                 _R = R[IDX]
-                V[IDX] += (self._evaluate_polynomial(r, coefs_outside)
-                           - self._evaluate_polynomial(r0, coefs_outside)) / _R
+                V[IDX] += (self._evaluate_polynomial(r, coeffs_outside)
+                           - self._evaluate_polynomial(r0, coeffs_outside)) / _R
 
             r0 = r
 
