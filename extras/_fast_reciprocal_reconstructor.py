@@ -496,10 +496,28 @@ class PAE_Analytical(_PAE_Base):
 
     @_sum_of_not_none
     def __call__(self, electrode):
-        return (self.potential(electrode.x - self.SRC_X,
-                               electrode.y - self.SRC_Y,
-                               electrode.z - self.SRC_Z),
+        return (self._potential_divided_by_relative_conductivity_if_available(
+                                                                     electrode),
                 super().__call__(electrode))
+
+    def _potential_divided_by_relative_conductivity_if_available(self,
+                                                                 electrode):
+        return self._divide_by_relative_conductivity_if_available(
+                                       self.potential(electrode.x - self.SRC_X,
+                                                      electrode.y - self.SRC_Y,
+                                                      electrode.z - self.SRC_Z),
+                                       electrode)
+
+    def _divide_by_relative_conductivity_if_available(self,
+                                                      potential,
+                                                      electrode):
+        try:
+            factor = 1.0 / electrode.conductivity
+
+        except AttributeError:
+            return potential
+
+        return factor * potential
 
 
 class PAE_Numerical(_PAE_LeadfieldFromElectrode,
