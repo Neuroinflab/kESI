@@ -148,7 +148,8 @@ class SphericalSplineSourceBase(SourceBase):
                        + np.square(Y - self.y)
                        + np.square(Z - self.z))
 
-    def _evaluate_polynomial(self, X, coefficients):
+    @staticmethod
+    def _evaluate_polynomial(X, coefficients):
         ACC = 0
         for c in reversed(coefficients):
             ACC *= X
