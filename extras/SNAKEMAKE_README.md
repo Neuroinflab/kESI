@@ -14,7 +14,7 @@ directory, that is the `extras/data` directory of the working copy.
 <!--Unless stated otherwise, all paths in this section are relative to the `bundled/`
 directory, that is the `extras/data/bundled/` directory of the working copy.-->
 
-kESI comes with exemplary data which are not the part of the method itself.
+kESI comes with exemplary source data which are not the part of the method itself.  
 The subtree contains four directories:
 ```
 bundled/
@@ -32,6 +32,9 @@ where:
 | `meshes`              | [Mesh geometry files](#data-bundled-mesh_geometry_files) and [Mesh geometry templates](#data-bundled-mesh_geometry_templates) |
 | `model_properties`    | [Model properties](#data-bundled-model_properties)                                                                            |
 
+If you want to provide Snakefile with custom source files, the subtree is a proper place
+to store them.  
+
 #### CSD basis functions <a name="data-bundled-csd_basis_functions"></a>
 
 Shape definitions of CSD profiles (including size)
@@ -45,6 +48,9 @@ at `(0, 0, 0)`, which make them so-called _model sources_.
 Locations of electrodes are stored in `*.ini` files, 
 where section names are names of the respective point electrodes 
 and fields of a section (_'x'_, _'y'_, _'z'_) are coordinates of the electrode.
+
+In case you want to provide your own files mind that double underscores (`__`)
+are allowed neither in names of files nor directories in that directory subtree.
 
 
 #### Mesh geometry files <a name="data-bundled-mesh_geometry_files"></a>
@@ -79,29 +85,128 @@ or a soft link.
 The subtree looks as follows:
 ```
 generated/
-  csd_profiles/
-  fenics_leadfield_corrections/
-  kernel/
   meshes/
-  potential_basis_functions/
-  sampled_leadfield_corrections
   setups/
+  fenics_leadfield_corrections/
+  sampled_leadfield_corrections
+  potential_basis_functions/
+  kernel/
+  csd_profiles/
 ```
 
-where:
+where
 
-| subdirectory                    | described in                                                                   |
+| subdirectory                    | is described in                                                                |
 |---------------------------------|--------------------------------------------------------------------------------|
-| `csd_profiles`                  | [CSD profiles](#data-generated_csd_profiles)                                   |
-| `fenics_leadfield_corrections`  | [Fenics leadfield corrections](#data-generated-fenics_leadfield_corrections)   |
-| `kernel`                        | [Kernel](#data-generated-kernel)                                               |
 | `meshes`                        | [Meshes](#data-generated-meshes)                                               |
-| `potential_basis_functions`     | [Potential basis functions](#data-generated-potential_basis_functions)         |
-| `sampled_leadfield_corrections` | [Sampled leadfield corrections](#data-generated-sampled_leadfield_corrections) |
 | `setups`                        | [Setups](#data-generated-setups)                                               |
+| `fenics_leadfield_corrections`  | [Fenics leadfield corrections](#data-generated-fenics_leadfield_corrections)   |
+| `sampled_leadfield_corrections` | [Sampled leadfield corrections](#data-generated-sampled_leadfield_corrections) |
+| `potential_basis_functions`     | [Potential basis functions](#data-generated-potential_basis_functions)         |
+| `kernel`                        | [Kernel](#data-generated-kernel)                                               |
+| `csd_profiles`                  | [CSD profiles](#data-generated_csd_profiles)                                   |
+
+
+#### Meshes <a name="data-generated-meshes"></a>
+
+All meshes are stored in the `meshes/` directory.  The filesystem subtree
+follows the pattern:
+```
+meshes/
+  <geometry>__<version>/
+    <granularity>.geo
+    <granularity>.msh
+    <granularity>.xdmf
+    <granularity>.h5
+    <granularity>_subdomains.xdmf
+    <granularity>_subdomains.h5
+    <granularity>_boundaries.xdmf
+    <granularity>_boundaries.h5
+```
+where:
+- `<geometry>` is the stem of the
+  [mesh geometry template file](#data-bundled-mesh_geometry_templates),
+- `<granularity>` determines mesh granularity (size of mesh elements) 
+  if mesh is derived from a geometry template.  Relative element sizes
+  are listed in the table below.  Other values of `<granularity>` are
+  also allowed (e.g. for meshes not derived from templates).
+
+| `<granularity>` | `SED_RELATIVE_ELEMENT_SIZE` |
+|-----------------|-----------------------------|
+| `coarsest`      | 8.0                         |
+| `coarser`       | 4.0                         |
+| `coarse`        | 2.0                         |
+| `normal`        | 1.0                         |
+| `fine`          | 0.5                         |
+| `finer`         | 0.25                        |
+| `fines`         | 0.125                       |
+| `superfine`     | 0.0625                      |
+| `superfinest`   | 0.03125                     |
+
+Content of a file depends on suffix of the filename:
+
+| filename                                  | content               |
+|-------------------------------------------|-----------------------|
+| `*.geo`                                   | _gmsh_ geometry       |
+| `*.msh`                                   | _gmsh_ mesh           |
+| `*.xdmf` and `*.h5`                       | _FEniCS_ mesh         |
+| `*_subdomains.xdmf` and `*_subdomains.h5` | _FEniCS_ mesh domains |
+| `*_boundaries.xdmf` and `*_boundaries.h5` | _FEniCS_ boundaries   |
+
+
+#### Setups <a name="data-generated-setups"></a>
+
+Setups are stored in `setups/` directory.  The `*.csv` files contain a table
+with location of the electrodes, with columns named intuitively:
+_NAME_ (name of the electrode), _X_, _Y_ and _Z_ (its location coordinates
+in meters).  An examplary file may look like:
+```
+NAME,X,Y,Z
+A_00,-0.006,0.0,0.046
+A_01,-0.006,0.0,0.0485
+```
+
+Filenames follow the `[<aaa>__[<bbb>__[...]]]<zzz>.csv` pattern
+(part in `[]` is optional and `...` is used instead of further recursion),
+encoding path to [the bundled file](#data-bundled-position_of_electrodes)
+the locations of electrodes were copied from, that is to:
+```
+<root of the working directory>/
+  extras/
+    data/
+      bundled/
+        electrode_positions/
+          [aaa/
+            [bbb/
+              [...]]]
+                zzz.ini
+```
+
+
+#### Fenics leadfield corrections <a name="data-generated-fenics_leadfield_corrections"></a>
+
+`fenics_leadfield_corrections/`
+
+
+#### Sampled leadfield corrections <a name="data-generated-sampled_leadfield_corrections"></a>
+
+`sampled_leadfield_corrections/`
+
+
+#### Potential basis functions <a name="data-generated-potential_basis_functions"></a>
+
+Transition from basis function in the CSD space to basis function in potentials space.
+
+`potential_basis_functions/`
+
+
+#### Kernels <a name="data-generated-kernels"></a>
+
+`kernels/`
 
 
 #### CSD profiles <a name="data-generated-csd_profiles"></a>
+
 ```
 csd_profiles/
   <setup>/
@@ -139,97 +244,10 @@ where:
 
 `<model>/<mesh path>/<degree>/` - completely defines FEM model
 
-#### Fenics leadfield corrections <a name="data-generated-fenics_leadfield_corrections"></a>
-
-`fenics_leadfield_corrections/`
-
-#### Kernels <a name="data-generated-kernels"></a>
-
-`kernels/`
-
-#### Meshes <a name="data-generated-meshes"></a>
-
-All meshes are stored in the `meshes/` directory.  The filesystem subtree
-follows the pattern:
-```
-meshes/
-  <geometry>/
-    <version>/
-      <granularity>.geo
-      <granularity>.msh
-      <granularity>.xdmf
-      <granularity>.h5
-      <granularity>_subdomains.xdmf
-      <granularity>_subdomains.h5
-      <granularity>_boundaries.xdmf
-      <granularity>_boundaries.h5
-```
-where:
-- `<geometry>` is the stem of the
-  [mesh geometry template file](#data-bundled-mesh_geometry_templates),
-- `<granularity>` is either of _coarsest_, _coarser_, _coarse_, _normal_,
-  _fine_, _finer_, _finest_, _superfine_, _superfiner_ (in descending order
-  of mesh granularity; other names are allowed for meshes of the same geometry
-  but not derived from the geometry template)
-
-The `<granularity>` name determines 
-
-| `<granularity>` | `SED_RELATIVE_ELEMENT_SIZE` |
-|-----------------|-----------------------------|
-| `coarsest`      | 8.0                         |
-| `coarser`       | 4.0                         |
-| `coarse`        | 2.0                         |
-| `normal`        | 1.0                         |
-| `fine`          | 0.5                         |
-| `finer`         | 0.25                        |
-| `fines`         | 0.125                       |
-| `superfine`     | 0.0625                      |
-| `superfinest`   | 0.03125                     |
-
-
-#### Potential basis functions <a name="data-generated-potential_basis_functions"></a>
-
-Transition from basis function in the CSD space to basis function in potentials space.
-
-`potential_basis_functions/`
-
-
-#### Sampled leadfield corrections <a name="data-generated-sampled_leadfield_corrections"></a>
-
-`sampled_leadfield_corrections/`
-
-#### Setups <a name="data-generated-setups"></a>
-
-`setups/`
-
 
 
 
 # OLD BELOW
-
-All meshes are stored in the _FEM/meshes_ directory.
-
-Most of compiled meshes are stored in the _FEM/meshes/meshes_ directory
-which does not contain any tracked files, thus it may be softlinked or mounted
-as a dedicated filesystem.  Paths to files in the directory follow pattern
-_FEM/meshes/meshes/\<geometry\>/\<granularity\>\<suffix\>_
-where:
-- _\<geometry\>_ is the stem of the geometry template file
-(_FEM/meshes/\<stem\>.geo.template_),
-- _\<granularity\>_ is either of _coarsest_, _coarser_, _coarse_, _normal_,
-  _fine_, _finer_, _finest_, _superfine_, _superfiner_ (in descending order
-  of mesh granularity; other names are allowed for meshes of the same geometry
-  but not derived from the geometry template),
-- _suffix_ determines content of the file(files).
-
-| suffix                                    | content               |
-|-------------------------------------------|-----------------------|
-| _.geo_                                    | _gmsh_ geometry       |
-| _.msh_                                    | _gmsh_ mesh           |
-| _.xdmf_ and _.h5_                         | _FEniCS_ mesh         |
-| _\_subdomains.xdmf_ and _\_subdomains.h5_ | _FEniCS_ mesh domains |
-| _\_boundaries.xdmf_ and _\_boundaries.h5_ | _FEniCS_ boundaries   |
-
 
 ### Solutions
 
