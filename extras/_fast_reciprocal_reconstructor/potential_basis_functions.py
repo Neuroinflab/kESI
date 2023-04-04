@@ -45,7 +45,7 @@ class _Base(object):
         return None
 
     def __enter__(self):
-        pass
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
@@ -53,8 +53,8 @@ class _Base(object):
 
 class _PotAttribute(_Base):
     def __enter__(self):
-        super().__enter__()
         self.POT_XYZ = self.convolver_interface.meshgrid('POT')
+        return super().__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         del self.POT_XYZ
@@ -115,9 +115,10 @@ class _LeadfieldCroppingAnalyticalBasesNumerically(_MaskedLeadfield):
     `.POT_XYZ` attribute/property required
     """
     def __enter__(self):
-        super().__enter__()
+        cm = super().__enter__()
         self.csd_forbidden_mask = ~self.leadfield_allowed_mask
         self.POT_XYZ_CROPPED = [A[self.csd_forbidden_mask] for A in self.POT_XYZ]
+        return cm
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         del self.POT_XYZ_CROPPED
@@ -139,8 +140,9 @@ class _PotMaskedAttribute(_MaskedLeadfield,
     `.POT_XYZ` attribute/property required
     """
     def __enter__(self):
-        super().__enter__()
+        cm = super().__enter__()
         self.POT_XYZ_MASKED = [A[self.leadfield_allowed_mask] for A in self.POT_XYZ]
+        return cm
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         del self.POT_XYZ_MASKED
@@ -178,8 +180,8 @@ class Analytical(_Base):
         self.potential = potential
 
     def __enter__(self):
-        super().__enter__()
         self.SRC_X, self.SRC_Y, self.SRC_Z = self.convolver_interface.src_coords()
+        return super().__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         del self.SRC_X, self.SRC_Y, self.SRC_Z

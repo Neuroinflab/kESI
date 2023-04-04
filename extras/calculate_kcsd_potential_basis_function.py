@@ -84,10 +84,8 @@ if __name__ == "__main__":
                                                         [],
                                                         MASK)
 
-    pbf = frr.pbf.Analytical(convolver_interface,
-                             potential=model_src.potential)
-
-    with pbf:
+    with frr.pbf.Analytical(convolver_interface,
+                            potential=model_src.potential) as pbf:
         for name, (x, y, z) in ELECTRODES.iterrows():
             electrode = Electrode(x, y, z, args.conductivity)
 

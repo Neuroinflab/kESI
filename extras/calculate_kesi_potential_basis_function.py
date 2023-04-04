@@ -108,11 +108,9 @@ if __name__ == "__main__":
                                                             romberg_weights,
                                                             SRC_MASK)
 
-        pbf = frr.pbf.AnalyticalCorrectedNumerically(
-                                                  convolver_interface,
-                                                  potential=model_src.potential)
-
-        with pbf:
+        with frr.pbf.AnalyticalCorrectedNumerically(
+                                          convolver_interface,
+                                          potential=model_src.potential) as pbf:
             np.savez_compressed(os.path.join(args.output,
                                              f"{name}.npz"),
                                 POTENTIALS=pbf(electrode),
