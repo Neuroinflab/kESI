@@ -27,7 +27,7 @@ where:
 
 | subdirectory          | described in                                                                                                                  |
 |-----------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| `csd_basis_functions` | [CSD basis functions](#data-bundled-csd_basis_functions)                                                                                                      |
+| `csd_basis_functions` | [CSD basis functions](#data-bundled-csd_basis_functions)                                                                      |
 | `electrode_locations` | [Position of electrodes](#data-bundled-position_of_electrodes)                                                                |
 | `meshes`              | [Mesh geometry files](#data-bundled-mesh_geometry_files) and [Mesh geometry templates](#data-bundled-mesh_geometry_templates) |
 | `model_properties`    | [Model properties](#data-bundled-model_properties)                                                                            |
@@ -217,7 +217,7 @@ where:
 - `<electrode>` is the name of the electrode in the setup.
 
 The `<electrode>.h5` file contains correction of the leadfield of the electrode
-`<electrode>` saved as a 3D _FEniCS_ scaler function \[ $V/A$ \],
+`<electrode>` saved as a 3D _FEniCS_ scaler function $[V/A]$,
 and file `<electrode>.ini` contains its metadata:
 
 | section    | field                     | value                                                       |
@@ -226,15 +226,15 @@ and file `<electrode>.ini` contains its metadata:
 |            | degree                    | degree of the element                                       |
 |            | element_type              | type of the element                                         |
 | model      | config                    | path to model properties (conductivity etc.)                |
-| electrode  | x                         | X coordinate of the point electrode \[ $m$ \]               |
-|            | y                         | Y coordinate of the point electrode \[ $m$ \]               |
-|            | z                         | Z coordinate of the point electrode \[ $m$ \]               |
-| correction | global_preprocessing_time | location-independent preprocessing time \[ $s$ \]           |
-|            | setup_time                | total function manager and FEM initiation time \[ $s$ \]    |
-|            | total_solving_time        | total time of location-dependent processing \[ $s$ \]       |
-|            | local_preprocessing_time  | location-dependent preprocessing time \[ $s$ \]             |
-|            | solving_time              | time of FEM equation solving \[ $s$ \]                      |
-|            | base_conductivity         | base conductivity used by renormalization \[ $S/m$ \]       |
+| electrode  | x                         | X coordinate of the point electrode $[m]$                   |
+|            | y                         | Y coordinate of the point electrode $[m]$                   |
+|            | z                         | Z coordinate of the point electrode $[m]$                   |
+| correction | global_preprocessing_time | location-independent preprocessing time $[s]$               |
+|            | setup_time                | total function manager and FEM initiation time $[s]$        |
+|            | total_solving_time        | total time of location-dependent processing $[s]$           |
+|            | local_preprocessing_time  | location-dependent preprocessing time $[s]$                 |
+|            | solving_time              | time of FEM equation solving $[s]$                          |
+|            | base_conductivity         | base conductivity used by renormalization $[S/m]$           |
 |            | filename                  | relative path to the correction function (`<electrode>.h5`) |
 
 The `conductivity.ini` file is a copied [Model properties](#data-bundled-model_properties)
@@ -346,42 +346,42 @@ for the _\<geometry\>/\<granularity\>/\<degree\>_ subpath.
 
 A compressed NumPy file (_*.npz_).
 
-| array name              | shape                                         | type              | content                                                           |
-|-------------------------|-----------------------------------------------|-------------------|-------------------------------------------------------------------|
-| _CORRECTION\_POTENTIAL_ | $n^{POT}_x \times n^{POT}_y \times n^{POT}_z$ | float \[ $V/A$ \] | sampled leadfield correction                                      |
-| _X_                     | $n^{POT}_x \times 1 \times 1$                 | float \[ $m$ \]   | X nodes of the sampling grid                                      |
-| _Y_                     | $1 \times n^{POT}_y \times 1$                 | float \[ $m$ \]   | Y nodes of the sampling grid                                      |
-| _Z_                     | $1 \times 1 \times n^{POT}_z$                 | float \[ $m$ \]   | Z nodes of the sampling grid                                      |
-| _LOCATION_              | $3$                                           | float \[ $m$ \]   | X, Y, Z coordinates of the electrode                              |
-| _BASE\_CONDUCTIVITY_    | scalar                                        | float \[ $S/m$ \] | base conductivity used by renormalization                         |
-| _\_PREPROCESSING\_TIME_ | scalar                                        | float \[ $s$ \]   | construction time of the `FunctionManager` object                 |
-| _\_LOADING\_TIME_       | scalar                                        | float \[ $s$ \]   | loading time of the leadfield correction function                 |
-| _\_PROCESSING\_TIME_    | scalar                                        | float \[ $s$ \]   | leadfield correction sampling time                                |
-| _\_R\_LIMIT_            | $2$                                           | float \[ $m$ \]   | in case of spherical sampling inclusive limits of sampling radius |
+| array name              | shape                                         | type          | content                                                            |
+|-------------------------|-----------------------------------------------|---------------|--------------------------------------------------------------------|
+| _CORRECTION\_POTENTIAL_ | $n^{POT}_x \times n^{POT}_y \times n^{POT}_z$ | float $[V/A]$ | sampled leadfield correction                                       |
+| _X_                     | $n^{POT}_x \times 1 \times 1$                 | float $[m]$   | X nodes of the sampling grid                                       |
+| _Y_                     | $1 \times n^{POT}_y \times 1$                 | float $[m]$   | Y nodes of the sampling grid                                       |
+| _Z_                     | $1 \times 1 \times n^{POT}_z$                 | float $[m]$   | Z nodes of the sampling grid                                       |
+| _LOCATION_              | $3$                                           | float $[m]$   | X, Y, Z coordinates of the electrode                               |
+| _BASE\_CONDUCTIVITY_    | scalar                                        | float $[S/m]$ | base conductivity used by renormalization                          |
+| _\_PREPROCESSING\_TIME_ | scalar                                        | float $[s]$   | construction time of the `FunctionManager` object                  |
+| _\_LOADING\_TIME_       | scalar                                        | float $[s]$   | loading time of the leadfield correction function                  |
+| _\_PROCESSING\_TIME_    | scalar                                        | float $[s]$   | leadfield correction sampling time                                 |
+| _\_R\_LIMIT_            | $2$                                           | float $[m]$   | in case of spherical sampling inclusive limits of sampling radius  |
 
 
 ### Position of electrodes
 
 A CSV file.
 
-| field  | type            | content                     |
-|--------|-----------------|-----------------------------|
-| _NAME_ | str             | name of the electrode       |
-| _X_    | float \[ $m$ \] | X position of the electrode |
-| _Y_    | float \[ $m$ \] | Y position of the electrode |
-| _Z_    | float \[ $m$ \] | Z position of the electrode |
+| field  | type        | content                     |
+|--------|-------------|-----------------------------|
+| _NAME_ | str         | name of the electrode       |
+| _X_    | float $[m]$ | X position of the electrode |
+| _Y_    | float $[m]$ | Y position of the electrode |
+| _Z_    | float $[m]$ | Z position of the electrode |
 
 
 ### Positions of source centroids
 
 A compressed NumPy file (_*.npz_).
 
-| array  | shape                                         | type            | content                      |
-|--------|-----------------------------------------------|-----------------|------------------------------|
-| _MASK_ | $n^{SRC}_x \times n^{SRC}_y \times n^{SRC}_z$ | bool            | mask of nodes with centroids |
-| _X_    | $n^{SRC}_x \times 1 \times 1$                 | float \[ $m$ \] | X nodes of the centroid grid |
-| _Y_    | $1 \times n^{SRC}_y \times 1$                 | float \[ $m$ \] | Y nodes of the centroid grid |
-| _Z_    | $1 \times 1 \times n^{SRC}_z$                 | float \[ $m$ \] | Z nodes of the centroid grid |
+| array  | shape                                         | type        | content                      |
+|--------|-----------------------------------------------|-------------|------------------------------|
+| _MASK_ | $n^{SRC}_x \times n^{SRC}_y \times n^{SRC}_z$ | bool        | mask of nodes with centroids |
+| _X_    | $n^{SRC}_x \times 1 \times 1$                 | float $[m]$ | X nodes of the centroid grid |
+| _Y_    | $1 \times n^{SRC}_y \times 1$                 | float $[m]$ | Y nodes of the centroid grid |
+| _Z_    | $1 \times 1 \times n^{SRC}_z$                 | float $[m]$ | Z nodes of the centroid grid |
 
 `MASK.sum() == m` where `m` is the number of base functions.
 
@@ -392,18 +392,18 @@ A compressed NumPy file (_*.npz_).
 
 A compressed NumPy file (_*.npz_).
 
-| array | shape        | type            | content                                                         |
-|-------|--------------|-----------------|-----------------------------------------------------------------|
-| _PHI_ | $m \times n$ | float \[ $V$ \] | `PHI[i, j]` is value of `i`th base function at `j`-th electrode |
+| array | shape        | type        | content                                                         |
+|-------|--------------|-------------|-----------------------------------------------------------------|
+| _PHI_ | $m \times n$ | float $[V]$ | `PHI[i, j]` is value of `i`th base function at `j`-th electrode |
 
 
 ### Kernel matrix
 
 A compressed NumPy file (_*.npz_).
 
-| array    | shape        | type              | content               |
-|----------|--------------|-------------------|-----------------------|
-| _KERNEL_ | $n \times n$ | float \[ $V^2$ \] | the kernel matrix $K$ |
+| array    | shape        | type          | content               |
+|----------|--------------|---------------|-----------------------|
+| _KERNEL_ | $n \times n$ | float $[V^2]$ | the kernel matrix $K$ |
 
 $$
 K = \Phi^T \Phi
@@ -414,12 +414,12 @@ $$
 
 A compressed NumPy file (_*.npz_).
 
-| array          | shape        | type            | content                                   |
-|----------------|--------------|-----------------|-------------------------------------------|
-| _EIGENVALUES_  | $n$          | float \[ $V$ \] | Kernel eigenvalues ($\lambda = \Sigma^2$) |
-| _EIGENSOURCES_ | $m \times n$ | float           | Eigensources in the cananical form $U$    |
-| _LAMBDAS_      | $n$          | float           | $\Phi$ singular values ($\Sigma$)         |
-| _EIGENVECTORS_ | $n \times n$ | float           | Kernel eigenvalues $V$                    |
+| array          | shape        | type        | content                                   |
+|----------------|--------------|-------------|-------------------------------------------|
+| _EIGENVALUES_  | $n$          | float $[V]$ | Kernel eigenvalues ($\lambda = \Sigma^2$) |
+| _EIGENSOURCES_ | $m \times n$ | float       | Eigensources in the cananical form $U$    |
+| _LAMBDAS_      | $n$          | float       | $\Phi$ singular values ($\Sigma$)         |
+| _EIGENVECTORS_ | $n \times n$ | float       | Kernel eigenvalues $V$                    |
 
 $$
 \Phi = U \Sigma V^T
@@ -434,12 +434,12 @@ $$
 
 A compressed NumPy file (_*.npz_).
 
-| array         | shape                                                  | type                  | content                                 |
-|---------------|--------------------------------------------------------|-----------------------|-----------------------------------------|
-| _CROSSKERNEL_ | $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times n$ | float \[ $W / m^3$ \] | The crosskernel tensor ($\overline{K}$) |
-| _X_           | $n^{CSD}_x \times 1 \times 1$                          | float \[ $m$ \]       | X nodes of the CSD sampling grid        |
-| _Y_           | $1 \times n^{CSD}_y \times 1$                          | float \[ $m$ \]       | Y nodes of the CSD sampling grid        |
-| _Z_           | $1 \times 1 \times n^{CSD}_z$                          | float \[ $m$ \]       | Z nodes of the CSD sampling grid        |
+| array         | shape                                                  | type              | content                                 |
+|---------------|--------------------------------------------------------|-------------------|-----------------------------------------|
+| _CROSSKERNEL_ | $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times n$ | float $[W / m^3]$ | The crosskernel tensor ($\overline{K}$) |
+| _X_           | $n^{CSD}_x \times 1 \times 1$                          | float $[m]$       | X nodes of the CSD sampling grid        |
+| _Y_           | $1 \times n^{CSD}_y \times 1$                          | float $[m]$       | Y nodes of the CSD sampling grid        |
+| _Z_           | $1 \times 1 \times n^{CSD}_z$                          | float $[m]$       | Z nodes of the CSD sampling grid        |
 
 The tensor yields volumetric CSD reconstruction $C = \overline{K} K^{-1} V$,
 where $V$ is a vector (matrix in case of timepoints) of measured potentials and
@@ -450,25 +450,25 @@ $C$ is an $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z$ array.
 
 A compressed NumPy file (_*.npz_).
 
-| array   | shape                                                  | type                  | content                          |
-|---------|--------------------------------------------------------|-----------------------|----------------------------------|
-| _CSD_   | $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times n$ | float \[ $A / m^3$ \] | sampled CSDs of n eigensources   |
-| _X_     | $n^{CSD}_x \times 1 \times 1$                          | float \[ $m$ \]       | X nodes of the CSD sampling grid |
-| _Y_     | $1 \times n^{CSD}_y \times 1$                          | float \[ $m$ \]       | Y nodes of the CSD sampling grid |
-| _Z_     | $1 \times 1 \times n^{CSD}_z$                          | float \[ $m$ \]       | Z nodes of the CSD sampling grid |
+| array   | shape                                                  | type              | content                          |
+|---------|--------------------------------------------------------|-------------------|----------------------------------|
+| _CSD_   | $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times n$ | float $[A / m^3]$ | sampled CSDs of n eigensources   |
+| _X_     | $n^{CSD}_x \times 1 \times 1$                          | float $[m]$       | X nodes of the CSD sampling grid |
+| _Y_     | $1 \times n^{CSD}_y \times 1$                          | float $[m]$       | Y nodes of the CSD sampling grid |
+| _Z_     | $1 \times 1 \times n^{CSD}_z$                          | float $[m]$       | Z nodes of the CSD sampling grid |
 
 
 ### Potentials at electrodes generated by CSD profiles
 
 A CSV file.
 
-| field           | type            | content                                                   |
-|-----------------|-----------------|-----------------------------------------------------------|
-| _NAME_          | str             | name of the electrode                                     |
-| _X_             | float \[ $m$ \] | X position of the electrode                               |
-| _Y_             | float \[ $m$ \] | Y position of the electrode                               |
-| _Z_             | float \[ $m$ \] | Z position of the electrode                               |
-| _SOURCE\_\<i\>_ | float \[ $V$ \] | potential generated by the _i_-th source at the electrode |
+| field           | type        | content                                                   |
+|-----------------|-------------|-----------------------------------------------------------|
+| _NAME_          | str         | name of the electrode                                     |
+| _X_             | float $[m]$ | X position of the electrode                               |
+| _Y_             | float $[m]$ | Y position of the electrode                               |
+| _Z_             | float $[m]$ | Z position of the electrode                               |
+| _SOURCE\_\<i\>_ | float $[V]$ | potential generated by the _i_-th source at the electrode |
 
 
 ## Tools
@@ -492,13 +492,13 @@ the leadfield correction _FEniCS_ function.
 
 #### Slice specific
 
-The `--ground-potential` parameter is the potantial \[ $V$ \] at the grounded
+The `--ground-potential` parameter is the potantial $[V]$ at the grounded
 slice-covering dome.  If not given a $0 V$ grounding is assumed at infinity.
 
 
 #### Sphere specific
 
-The `--grounded-plate-edge-z` parameter is the Z coordinate \[ $m$ \] of the
+The `--grounded-plate-edge-z` parameter is the Z coordinate $[m]$ of the
 edge of the grounded ($0 V$ potential) conductive plate.  Defaults to $-88 mm$.
 
 
@@ -522,7 +522,7 @@ Forces:
 
 #### Slice specific
 
-The `--sampling-radius` parameter is the edge length \[ $m$ \] of the sampled
+The `--sampling-radius` parameter is the edge length $[m]$ of the sampled
 cube.  It defaults to $0.3 mm$.
 
 The cube is based at the $Z = 0$ plane and centered at $X = Y = 0$ axis.
@@ -530,7 +530,7 @@ The cube is based at the $Z = 0$ plane and centered at $X = Y = 0$ axis.
 
 #### Sphere specific
 
-The `--sampling-radius` parameter is the radius \[ $m$ \] of the sampled sphere
+The `--sampling-radius` parameter is the radius $[m]$ of the sampled sphere
 centered at the beginning of the coordinate system.  It defaults to $79 mm$.
 
 
@@ -613,11 +613,11 @@ as `--electrodes` with request to complete simulation of missing sources.
 
 #### Slice specific
 
-The `--ground-potential` parameter is the potantial \[ $V$ \] at the grounded
+The `--ground-potential` parameter is the potantial $[V]$ at the grounded
 slice-covering dome.  If not given a $0 V$ grounding is assumed at infinity.
 
 
 #### Sphere specific
 
-The `--grounded-plate-edge-z` parameter is the Z coordinate \[ $m$ \] of the
+The `--grounded-plate-edge-z` parameter is the Z coordinate $[m]$ of the
 edge of the grounded ($0 V$ potential) conductive plate.  Defaults to $-88 mm$.
