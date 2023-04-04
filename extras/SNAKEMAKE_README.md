@@ -56,13 +56,15 @@ are allowed neither in names of files nor directories in that directory subtree.
 #### Mesh geometry files <a name="data-bundled-mesh_geometry_files"></a>
 
 At the moment there is only one bundled file (`circular_slice_composite.geo`)
-in the _gmsh_ geometry format.
+in the _gmsh_ geometry format.  Here, `circular_slice` is the `<geometry>`
+wildcard, and `composite` is the `<granularity>`
+(see [section regarding generated meshes](#data-generated-meshes) for details).
 
 
 #### Mesh geometry templates <a name="data-bundled-mesh_geometry_templates"></a>
 
-Filenames of templates of _gmsh_ geometry files follow the `<stem>.geo.template`
-pattern, where `<stem>` determines most mesh properties but
+Filenames of templates of _gmsh_ geometry files follow the `<mesh stem>.geo.template`
+pattern, where `<mesh stem>` determines most mesh properties but
 size of its particular elements (which is controlled by the
 `SED_RELATIVE_ELEMENT_SIZE` template marker).
 
@@ -71,7 +73,10 @@ size of its particular elements (which is controlled by the
 
 Physical properties of the model (i.e. medium conductivity) and
 its geometrical properties (e.g. sphere radius) are stored in the
-`*ini` files.
+`<model>.ini` files, where `<model>` follows `<geometry>__<conductivity>`
+pattern.  `<geometry>` itself may be also `four_spheres_csf_1_mm__separate_cortex`,
+where `four_spheres_csf_1_mm` refers the proper geometry and `separate_cortex`
+to its particular subpartitioning in _gmsh_ mesh.
 
 
 ### Generated
@@ -113,7 +118,7 @@ All meshes are stored in the `meshes/` directory.  The filesystem subtree
 follows the pattern:
 ```
 meshes/
-  <geometry>__<version>/
+  <mesh stem>/
     <granularity>.geo
     <granularity>.msh
     <granularity>.xdmf
@@ -124,9 +129,11 @@ meshes/
     <granularity>_boundaries.h5
 ```
 where:
-- `<geometry>` is the stem of the
-  [mesh geometry template file](#data-bundled-mesh_geometry_templates),
-- `<granularity>` determines mesh granularity (size of mesh elements) 
+- `<mesh stem>` is the stem of the
+  [mesh geometry template file](#data-bundled-mesh_geometry_templates)
+  and follows the `<geometry>[__<version>]` pattern (part in the
+  `[]` is optional),
+- `<granularity>` determines mesh granularity (size of mesh elements)
   if mesh is derived from a geometry template.  Relative element sizes
   are listed in the table below.  Other values of `<granularity>` are
   also allowed (e.g. for meshes not derived from templates).
@@ -156,19 +163,23 @@ Content of a file depends on suffix of the filename:
 
 #### Setups <a name="data-generated-setups"></a>
 
-Setups are stored in `setups/` directory.  The `*.csv` files contain a table
-with location of the electrodes, with columns named intuitively:
-_NAME_ (name of the electrode), _X_, _Y_ and _Z_ (its location coordinates
-in meters).  An examplary file may look like:
+The `electrodes.csv` files contain a table  with location of the electrodes,
+with columns named intuitively: _NAME_ (name of the electrode), _X_, _Y_ and _Z_
+(its location coordinates in meters).  An examplary file may look like:
 ```
 NAME,X,Y,Z
 A_00,-0.006,0.0,0.046
 A_01,-0.006,0.0,0.0485
 ```
 
-Filenames follow the `[<aaa>__[<bbb>__[...]]]<zzz>.csv` pattern
+The filesystem subtree follows the pattern:
+```
+setups/
+  [<aaa>__[<bbb>__[...]]]<zzz>/
+    electrodes.csv
+```
 (part in `[]` is optional and `...` is used instead of further recursion),
-encoding path to [the bundled file](#data-bundled-position_of_electrodes)
+where directory name encodes path to [the bundled file](#data-bundled-position_of_electrodes)
 the locations of electrodes were copied from, that is to:
 ```
 <root of the working directory>/
@@ -185,7 +196,17 @@ the locations of electrodes were copied from, that is to:
 
 #### Fenics leadfield corrections <a name="data-generated-fenics_leadfield_corrections"></a>
 
-`fenics_leadfield_corrections/`
+The filesystem subtree follows the pattern:
+```
+fenics_leadfield_corrections/
+  <setup>/
+    <model>==<conductivity>,<geometry>/
+      conductivity.csv
+      <mesh path>==<version>,<granularity>/
+        <degree>/
+          <electrode>.h5
+          <electrode>.ini
+```
 
 
 #### Sampled leadfield corrections <a name="data-generated-sampled_leadfield_corrections"></a>
