@@ -346,17 +346,18 @@ for the _\<geometry\>/\<granularity\>/\<degree\>_ subpath.
 
 A compressed NumPy file (_*.npz_).
 
-| array                   | shape                                         | type              | content                                           |
-|-------------------------|-----------------------------------------------|-------------------|---------------------------------------------------|
-| _CORRECTION\_POTENTIAL_ | $n^{POT}_x \times n^{POT}_y \times n^{POT}_z$ | float \[ $V/A$ \] | sampled leadfield correction                      |
-| _X_                     | $n^{POT}_x$                                   | float \[ $m$ \]   | X nodes of the sampling grid                      |
-| _Y_                     | $n^{POT}_y$                                   | float \[ $m$ \]   | Y nodes of the sampling grid                      |
-| _Z_                     | $n^{POT}_z$                                   | float \[ $m$ \]   | Z nodes of the sampling grid                      |
-| _LOCATION_              | $3$                                           | float \[ $m$ \]   | X, Y, Z coordinates of the electrode              |
-| _BASE\_CONDUCTIVITY_    | scalar                                        | float \[ $S/m$ \] | base conductivity used by renormalization         |
-| _\_PREPROCESSING\_TIME_ | scalar                                        | float \[ $s$ \]   | construction time of the `FunctionManager` object |
-| _\_LOADING\_TIME_       | scalar                                        | float \[ $s$ \]   | loading time of the leadfield correction function |
-| _\_PROCESSING\_TIME_    | scalar                                        | float \[ $s$ \]   | leadfield correction sampling time                |
+| array name              | shape                                         | type              | content                                                           |
+|-------------------------|-----------------------------------------------|-------------------|-------------------------------------------------------------------|
+| _CORRECTION\_POTENTIAL_ | $n^{POT}_x \times n^{POT}_y \times n^{POT}_z$ | float \[ $V/A$ \] | sampled leadfield correction                                      |
+| _X_                     | $n^{POT}_x \times 1 \times 1$                 | float \[ $m$ \]   | X nodes of the sampling grid                                      |
+| _Y_                     | $1 \times n^{POT}_y \times 1$                 | float \[ $m$ \]   | Y nodes of the sampling grid                                      |
+| _Z_                     | $1 \times 1 \times n^{POT}_z$                 | float \[ $m$ \]   | Z nodes of the sampling grid                                      |
+| _LOCATION_              | $3$                                           | float \[ $m$ \]   | X, Y, Z coordinates of the electrode                              |
+| _BASE\_CONDUCTIVITY_    | scalar                                        | float \[ $S/m$ \] | base conductivity used by renormalization                         |
+| _\_PREPROCESSING\_TIME_ | scalar                                        | float \[ $s$ \]   | construction time of the `FunctionManager` object                 |
+| _\_LOADING\_TIME_       | scalar                                        | float \[ $s$ \]   | loading time of the leadfield correction function                 |
+| _\_PROCESSING\_TIME_    | scalar                                        | float \[ $s$ \]   | leadfield correction sampling time                                |
+| _\_R\_LIMIT_            | $2$                                           | float \[ $m$ \]   | in case of spherical sampling inclusive limits of sampling radius |
 
 
 ### Position of electrodes
