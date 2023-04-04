@@ -156,10 +156,10 @@ if __name__ == '__main__':
 
     del CSD_MASK
 
-    paes = {'kCSD': frr.PAE_Analytical(
+    paes = {'kCSD': frr.pbf.Analytical(
                             convolver_interface,
                             potential=model_src.potential),
-            'kESI': frr.PAE_AnalyticalCorrectedNumerically(
+            'kESI': frr.pbf.AnalyticalCorrectedNumerically(
                             convolver_interface,
                             potential=model_src.potential),
             }

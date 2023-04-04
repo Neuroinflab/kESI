@@ -86,16 +86,16 @@ if __name__ == "__main__":
                                                         [],
                                                         MASK)
 
-    pae = frr.PAE_Analytical(convolver_interface,
+    pbf = frr.pbf.Analytical(convolver_interface,
                              potential=model_src.potential)
 
-    with pae:
+    with pbf:
         for name, loc in ELECTRODES.iterrows():
             electrode = Electrode(*loc)
 
             np.savez_compressed(os.path.join(args.output,
                                              f"{name}.npz"),
-                                POTENTIALS=(pae(electrode)),
+                                POTENTIALS=pbf(electrode),
                                 CONDUCTIVITY=args.conductivity,
                                 X=electrode.x,
                                 Y=electrode.y,
