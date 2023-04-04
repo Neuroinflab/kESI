@@ -85,9 +85,9 @@ if __name__ == "__main__":
                            np.nan)
     _SRC = np.zeros(convolver.shape("SRC"))
     for i, _SRC[SRC_MASK] in enumerate(CANONICAL_ES.T):
-        EIGENSOURCES[:, :, :, i] = convolver.base_weights_to_csd(_SRC,
-                                                                 model_src.csd,
-                                                                 src_diameters)
+        EIGENSOURCES[:, :, :, i] = convolver.basis_functions_weights_to_csd(_SRC,
+                                                                            model_src.csd,
+                                                                            src_diameters)
     del CANONICAL_ES, _SRC
 
     np.savez_compressed(os.path.join(args.output),

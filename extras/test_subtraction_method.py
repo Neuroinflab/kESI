@@ -264,9 +264,9 @@ class LeadfieldIntegrator(object):
                     LEADFIELD[i, j, k] = leadfield(x, y, z)
 
         weights = si.romb(np.identity(n), dx=r / (n // 2))
-        POT_CORR = convolver.leadfield_to_base_potentials(LEADFIELD,
-                                                          model_src.csd,
-                                                          (weights,) * 3)
+        POT_CORR = convolver.leadfield_to_potential_basis_functions(LEADFIELD,
+                                                                    model_src.csd,
+                                                                    (weights,) * 3)
         return POT_CORR[n // 2, n // 2, n // 2]
 
 

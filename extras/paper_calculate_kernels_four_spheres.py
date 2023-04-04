@@ -165,14 +165,14 @@ if __name__ == '__main__':
             }
 
     for method, pae in paes.items():
-        PHI = kernel_constructor.create_base_images_at_electrodes(electrodes,
-                                                                  pae)
+        PHI = kernel_constructor.potential_basis_functions_at_electrodes(electrodes,
+                                                                         pae)
 
         np.savez_compressed(os.path.join(args.output,
                                          f'{method}_phi.npz'),
                             PHI=PHI)
 
-        KERNEL = kernel_constructor.create_kernel(PHI)
+        KERNEL = kernel_constructor.kernel(PHI)
 
         np.savez_compressed(os.path.join(args.output,
                                          f'{method}_kernel.npz'),
@@ -205,7 +205,7 @@ if __name__ == '__main__':
                                np.nan)
         _SRC = np.zeros(convolver.shape('SRC'))
         for i, _SRC[SRC_MASK] in enumerate(_U.T):
-            EIGENSOURCES[:, :, :, i] = convolver.base_weights_to_csd(
+            EIGENSOURCES[:, :, :, i] = convolver.basis_functions_weights_to_csd(
                                             _SRC,
                                             model_src.csd,
                                             (ROMBERG_N,) * 3)

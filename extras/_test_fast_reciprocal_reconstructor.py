@@ -69,7 +69,7 @@ if __name__ == '__main__':
                 SRC = np.zeros(
                     [S.shape[i] for i, S in enumerate(conv.SRC_GRID)])
                 SRC[i_x, i_y, i_z] = 2
-                CSD = conv.base_weights_to_csd(SRC, csd, [3, 3, 5])
+                CSD = conv.basis_functions_weights_to_csd(SRC, csd, [3, 3, 5])
                 EXP = 2 * csd(conv.CSD_X - conv.SRC_X[i_x, 0, 0],
                               conv.CSD_Y - conv.SRC_Y[0, i_y, 0],
                               conv.CSD_Z - conv.SRC_Z[0, 0, i_z])
@@ -82,9 +82,9 @@ if __name__ == '__main__':
     for d in conv.steps('POT'):
         acc *= d
 
-    POT = conv.leadfield_to_base_potentials(LEADFIELD,
-                                            lambda x, y, z: 1 / acc,
-                                            [[0.5, 0, 0.5]] * 3)
+    POT = conv.leadfield_to_potential_basis_functions(LEADFIELD,
+                                                      lambda x, y, z: 1 / acc,
+                                                      [[0.5, 0, 0.5]] * 3)
 
     for (wx, idx_x), (wy, idx_y), (wz, idx_z) in itertools.product([(0.5, 0),
                                                                     (1, slice(1,
@@ -113,8 +113,8 @@ if __name__ == '__main__':
                                                  conductivity)
 
     POT_GT = model_src.potential(*conv.SRC_GRID)
-    POT = conv.leadfield_to_base_potentials(LEADFIELD, model_src.csd,
-                                            [WEIGHTS] * 3)
+    POT = conv.leadfield_to_potential_basis_functions(LEADFIELD, model_src.csd,
+                                                      [WEIGHTS] * 3)
     IDX = (slice(32, 100 - 32),) * 3
 
     assert abs(POT / POT_GT - 1)[IDX].max() < 1e-5

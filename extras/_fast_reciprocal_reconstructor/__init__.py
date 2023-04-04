@@ -85,10 +85,10 @@ class Convolver(object):
             setattr(self, f'_SRC_CSD_IDX_{c}', CSD_IDX)
             setattr(self, f'_SRC_POT_IDX_{c}', POT_IDX)
 
-    def leadfield_to_base_potentials(self,
-                                     LEADFIELD,
-                                     csd,
-                                     weights):
+    def leadfield_to_potential_basis_functions(self,
+                                               LEADFIELD,
+                                               csd,
+                                               weights):
 
         steps = self.steps('POT')
 
@@ -105,7 +105,7 @@ class Convolver(object):
                                CSD * WEIGHTS,
                                mode='same')[self.src_idx('POT')]
 
-    def base_weights_to_csd(self, BASE_WEIGHTS, csd, csd_ns):
+    def basis_functions_weights_to_csd(self, BASE_WEIGHTS, csd, csd_ns):
         if np.shape(BASE_WEIGHTS) != self.csd_shape:
             BW = np.zeros(self.csd_shape)
             BW[self.src_idx('CSD')] = BASE_WEIGHTS
@@ -168,37 +168,43 @@ class ckESI_convolver(Convolver):
 
 class KernelConstructor(object):
     @staticmethod
-    def create_kernel(base_images_at_electrodes):
-        return np.matmul(base_images_at_electrodes.T,
-                         base_images_at_electrodes)
+    def kernel(potential_basis_functions_at_electrodes):
+        return np.matmul(potential_basis_functions_at_electrodes.T,
+                         potential_basis_functions_at_electrodes)
 
     def __enter__(self):
         pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        del self._base_images
+        del self._potential_basis_functions
 
-    def create_base_images_at_electrodes(self,
-                                         electrodes,
-                                         potential_at_electrode):
+    def potential_basis_functions_at_electrodes(self,
+                                                electrodes,
+                                                potential_basis_functions):
         with self:
-            with potential_at_electrode:
-                self._create_base_images_at_electrodes(electrodes,
-                                                       potential_at_electrode)
+            with potential_basis_functions:
+                self._potential_basis_functions_at_electrodes(
+                                                      electrodes,
+                                                      potential_basis_functions)
 
-            return self._base_images
+            return self._potential_basis_functions
 
-    def _create_base_images_at_electrodes(self, electrodes, potential_at_electrode):
+    def _potential_basis_functions_at_electrodes(self,
+                                                 electrodes,
+                                                 potential_basis_functions):
         for i, electrode in enumerate(electrodes):
-            POT = potential_at_electrode(electrode)
+            POT = potential_basis_functions(electrode)
 
-            self._alloc_base_images_if_necessary(POT.size, len(electrodes))
-            self._base_images[:, i] = POT
+            self._alloc_potential_basis_functions_if_necessary(POT.size,
+                                                               len(electrodes))
+            self._potential_basis_functions[:, i] = POT
 
-    def _alloc_base_images_if_necessary(self, n_bases, n_electrodes):
-        if not hasattr(self, '_base_images'):
-            self._base_images = np.full((n_bases, n_electrodes),
-                                        np.nan)
+    def _alloc_potential_basis_functions_if_necessary(self,
+                                                      n_bases,
+                                                      n_electrodes):
+        if not hasattr(self, '_potential_basis_functions'):
+            self._potential_basis_functions = np.full((n_bases, n_electrodes),
+                                                      np.nan)
 
 
 class ckESI_kernel_constructor(KernelConstructor):
@@ -217,24 +223,25 @@ class CrossKernelConstructor(object):
         self.csd_allowed_mask = csd_allowed_mask
 
     def __enter__(self):
-        self._base_weights = self.ci.zeros('SRC')
+        self._basis_functions_weights = self.ci.zeros('SRC')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        del self._base_weights
+        del self._basis_functions_weights
         for attr in ['_n_electrodes', '_cross_kernel']:
             if hasattr(self, attr):
                 delattr(self, attr)
 
-    def __call__(self, base_images_at_electrodes):
+    def __call__(self, potential_basis_functions_at_electrodes):
         with self:
-            self._create_crosskernel(base_images_at_electrodes)
+            self._create_crosskernel(potential_basis_functions_at_electrodes)
             return self._cross_kernel
 
-    def _create_crosskernel(self, base_images_at_electrodes):
-        self._n_electrodes = base_images_at_electrodes.shape[1]
-        for i, base_images in enumerate(base_images_at_electrodes.T):
-            self.ci.update_src(self._base_weights, base_images)
-            self._set_crosskernel_column(i, self._bases_to_csd())
+    def _create_crosskernel(self, potential_basis_functions_at_electrodes):
+        self._n_electrodes = potential_basis_functions_at_electrodes.shape[1]
+        for i, potential_basis_functions in enumerate(
+                                     potential_basis_functions_at_electrodes.T):
+            self.ci.update_src(self._basis_functions_weights, potential_basis_functions)
+            self._set_crosskernel_column(i, self._basis_functions_to_csd())
 
         self._zero_crosskernel_where_csd_not_allowed()
 
@@ -244,8 +251,9 @@ class CrossKernelConstructor(object):
 
         self._cross_kernel[:, i] = column
 
-    def _bases_to_csd(self):
-        return self._crop_csd(self.ci.base_weights_to_csd(self._base_weights))
+    def _basis_functions_to_csd(self):
+        return self._crop_csd(self.ci.basis_functions_weights_to_csd(
+                                                 self._basis_functions_weights))
 
     def _crop_csd(self, csd):
         return csd[self.csd_mask]
@@ -291,7 +299,7 @@ class ConvolverInterface_base(object):
         return [r // 2 for r in self._src_diameter]
 
     def convolve_csd(self, leadfield):
-        return self.convolver.leadfield_to_base_potentials(
+        return self.convolver.leadfield_to_potential_basis_functions(
             leadfield,
             self.csd,
             list(self.weights))
@@ -302,15 +310,16 @@ class ConvolverInterface_base(object):
     def empty(self, name):
         return np.empty(self.convolver.shape(name))
 
-    def base_weights_to_csd(self, base_weights):
+    def basis_functions_weights_to_csd(self, basis_functions_weights):
         csd_kernel_shape = [(1 if np.isnan(csd)
                              else int(round(r * pot / csd)) * 2 + 1)
                             for r, pot, csd in zip(self._src_radius,
                                                    *map(self.convolver.steps,
                                                      ['POT', 'CSD']))]
-        return self.convolver.base_weights_to_csd(base_weights,
-                                                  self.csd,
-                                                  csd_kernel_shape)
+        return self.convolver.basis_functions_weights_to_csd(
+                                                        basis_functions_weights,
+                                                        self.csd,
+                                                        csd_kernel_shape)
 
     def meshgrid(self, name):
         return np.meshgrid(*getattr(self.convolver,
