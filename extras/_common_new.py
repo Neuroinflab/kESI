@@ -166,13 +166,16 @@ class SphericalSplineSourceBase(SourceBase):
         return self._nodes[-1]
 
     def toJSON(self, file):
-        json.dump({"x": self.x,
-                   "y": self.y,
-                   "z": self.z,
-                   "nodes": self._nodes,
-                   "coefficients": self._coefficients},
+        json.dump(self._constructor_args(),
                   file,
                   indent=2)
+
+    def _constructor_args(self):
+        return {"x": self.x,
+                "y": self.y,
+                "z": self.z,
+                "nodes": self._nodes,
+                "coefficients": self._coefficients}
 
 
 class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
@@ -227,6 +230,11 @@ class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
             r0 = r
 
         return V * self._a / self.conductivity
+
+    def _constructor_args(self):
+        d = super()._constructor_args()
+        d['conductivity'] = self.conductivity
+        return d
 
 
 class PointSource(SourceBase):
