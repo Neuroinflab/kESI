@@ -69,8 +69,9 @@ if __name__ == "__main__":
         CENTROID_XYZ = [fh[c] for c in ["X", "Y", "Z"]]
         CENTROID_MASK = fh["MASK"]
 
+    model_src = common.SphericalSplineSourceKCSD.fromJSON(open(args.source))
+
     for name in args.names:
-        model_src = common.SphericalSplineSourceKCSD.fromJSON(open(args.source))
         electrode = Electrode(os.path.join(args.input, f"{name}.npz"))
 
         d_xyz = np.array([(A[-1] - A[0]) / (len(A) - 1)

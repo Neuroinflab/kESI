@@ -35,7 +35,7 @@ import _fast_reciprocal_reconstructor as frr
 import _common_new as common
 
 
-Electrode = collections.namedtuple("Electrode", ['x', 'y', 'z'])
+Electrode = collections.namedtuple("Electrode", ['x', 'y', 'z', 'conductivity'])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Calculate values of kCSD potential basis functions at electrode.")
@@ -74,12 +74,10 @@ if __name__ == "__main__":
     with np.load(args.centroids) as fh:
         X, Y, Z, MASK = [fh[c] for c in ["X", "Y", "Z", "MASK"]]
 
+    model_src = common.SphericalSplineSourceKCSD.fromJSON(open(args.source))
+
     convolver = frr.Convolver([X, Y, Z],
                               [X, Y, Z])
-
-    model_src = common.SphericalSplineSourceKCSD.fromJSON(
-                                                open(args.source),
-                                                conductivity=args.conductivity)
 
     convolver_interface = frr.ConvolverInterfaceIndexed(convolver,
                                                         model_src.csd,
@@ -90,8 +88,8 @@ if __name__ == "__main__":
                              potential=model_src.potential)
 
     with pbf:
-        for name, loc in ELECTRODES.iterrows():
-            electrode = Electrode(*loc)
+        for name, (x, y, z) in ELECTRODES.iterrows():
+            electrode = Electrode(x, y, z, args.conductivity)
 
             np.savez_compressed(os.path.join(args.output,
                                              f"{name}.npz"),
