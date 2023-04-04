@@ -200,13 +200,46 @@ The filesystem subtree follows the pattern:
 ```
 fenics_leadfield_corrections/
   <setup>/
-    <model>==<conductivity>,<geometry>/
-      conductivity.csv
-      <mesh path>==<version>,<granularity>/
+    <model>/
+      conductivity.ini
+      <mesh path>/
         <degree>/
           <electrode>.h5
           <electrode>.ini
 ```
+where:
+- `<setup>` wildcard was defined in the [Setups](#data-generated-setups) subsection,
+- `<model>` was defined in [Model properties](#data-bundled-model_properties),
+- `<mesh path>` is either `<granularity>` or `<version>__<granularity>`
+  (see the [Meshes](#data-generated-meshes) subsection for details),
+- `<degree>` is the degree of elements used by the finite element method (FEM)
+  to calculate the correction,
+- `<electrode>` is the name of the electrode in the setup.
+
+The `<electrode>.h5` file contains correction of the leadfield of the electrode
+`<electrode>` saved as a 3D _FEniCS_ scaler function \[ $V/A$ \],
+and file `<electrode>.ini` contains its metadata:
+
+| section    | field                     | value                                                       |
+|------------|---------------------------|-------------------------------------------------------------|
+| fem        | mesh                      | path to the main mesh file                                  |
+|            | degree                    | degree of the element                                       |
+|            | element_type              | type of the element                                         |
+| model      | config                    | path to model properties (conductivity etc.)                |
+| electrode  | x                         | X coordinate of the point electrode \[ $m$ \]               |
+|            | y                         | Y coordinate of the point electrode \[ $m$ \]               |
+|            | z                         | Z coordinate of the point electrode \[ $m$ \]               |
+| correction | global_preprocessing_time | location-independent preprocessing time \[ $s$ \]           |
+|            | setup_time                | total function manager and FEM initiation time \[ $s$ \]    |
+|            | total_solving_time        | total time of location-dependent processing \[ $s$ \]       |
+|            | local_preprocessing_time  | location-dependent preprocessing time \[ $s$ \]             |
+|            | solving_time              | time of FEM equation solving \[ $s$ \]                      |
+|            | base_conductivity         | base conductivity used by renormalization \[ $S/m$ \]       |
+|            | filename                  | relative path to the correction function (`<electrode>.h5`) |
+
+The `conductivity.ini` file is a copied [Model properties](#data-bundled-model_properties)
+file appropriate for the `<model>`.  Note that the file **may contain also geometrical
+data**.
 
 
 #### Sampled leadfield corrections <a name="data-generated-sampled_leadfield_corrections"></a>
@@ -272,24 +305,8 @@ where:
 
 ### Solutions
 
-Most of kESI data is stored in the _FEM/solutions_ directory.
-It does not  contain any tracked files, thus it may be softlinked
-or mounted as a dedicated filesystem.
-
-The _FEM/solutions/tutorial_ directory contains tutorial-related data,
-thus its content is discussed therein.
-
-The _FEM/solutions/paper_ directory contains publication-related data.
-For the sake of readability the **_FEM/solutions/paper_ path is omitted
-in the further text**, that is all paths are relative to the root
-of the _FEM/solutions/paper_ subtree unless stated otherwise.
-
 Directories following pattern _\<geometry\>/\<granularity\>/\<degree\>/_
 contain corrections of leadfields of electrodes, which are crucial for kESI.
-File _\<geometry\>/\<granularity\>/\<degree\>/\<electrode\>.h5_ contains
-correction of the leadfield of the electrode _\<electrode\>_ saved as a _FEniCS_
-function and file _\<geometry\>/\<granularity\>/\<degree\>/\<electrode\>.ini_
-contains its metadata.
 File _\<geometry\>/\<granularity\>/\<degree\>/sampled/\<k\>/\<electrode\>.npz_
 contains the **sampled leadfield correction** of the electrode saved in _NumPy_
 format.  The correction is sampled on a regular, $(2^k + 1)^3$ grid.
@@ -324,32 +341,6 @@ for the _\<geometry\>/\<granularity\>/\<degree\>_ subpath.
 
 
 ## Files
-
-### Leadfield correction function
-
-A _FEniCS_ 3D scalar function \[ $V/A$ \].
-
-### Leadfield correction metadata
-
-An _*.ini_ file.
-
-| section    | field                     | value                                                    |
-|------------|---------------------------|----------------------------------------------------------|
-| fem        | mesh                      | path to the main mesh file                               |
-|            | degree                    | degree of the element                                    |
-|            | element_type              | type of the element                                      |
-| model      | config                    | path to model properties (conductivity etc.)             |
-| electrode  | x                         | X coordinate of the point electrode \[ $m$ \]            |
-|            | y                         | Y coordinate of the point electrode \[ $m$ \]            |
-|            | z                         | Z coordinate of the point electrode \[ $m$ \]            |
-| correction | global_preprocessing_time | location-independent preprocessing time \[ $s$ \]        |
-|            | setup_time                | total function manager and FEM initiation time \[ $s$ \] |
-|            | total_solving_time        | total time of location-dependent processing \[ $s$ \]    |
-|            | local_preprocessing_time  | location-dependent preprocessing time \[ $s$ \]          |
-|            | solving_time              | time of FEM equation solving \[ $s$ \]                   |
-|            | base_conductivity         | base conductivity used by renormalization \[ $S/m$ \]    |
-|            | filename                  | relative path to the correction function                 |
-
 
 ### Sampled leadfield correction
 
