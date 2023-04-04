@@ -88,7 +88,7 @@ class GaussianSourceKCSD3D(GaussianSourceBase):
         _x *= _half
         _err = _fraction_of_erf_to_x_limit_in_0 - erf(_x) / _x
 
-    def __init__(self, x, y, z, standard_deviation, conductivity):
+    def __init__(self, x, y, z, standard_deviation, conductivity=1.0):
         super(GaussianSourceKCSD3D, self).__init__(x, y, z, standard_deviation)
         self.conductivity = conductivity
         self._b = 0.25 / (np.pi * conductivity)
@@ -180,7 +180,7 @@ class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
                  coefficients=((1,),
                                (-4, 12, -9, 2),
                                ),
-                 conductivity=1):
+                 conductivity=1.0):
         super(SphericalSplineSourceKCSD,
               self).__init__(x, y, z, nodes, coefficients)
 
