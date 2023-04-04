@@ -1,4 +1,4 @@
-# snakemake .4SM_CSF_3_mm__uniform_coarser_1_comb -j 4 --resources mem_mb=100000 --restart-times 3
+# snakemake -j 4 --resources mem_mb=100000 --restart-times 3 ...
 
 ###############################################################################
 #                                                                             #
