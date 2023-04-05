@@ -131,12 +131,12 @@ class _ElectrodeInterpolatedLeadfieldCorrection(
 
 class ElectrodeLinearlyInterpolatedLeadfieldCorrection(
                                      _ElectrodeInterpolatedLeadfieldCorrection):
-    interpolation_method = 'linear'
+    interpolation_method = "linear"
 
 
 class ElectrodeNearestNeighbourInterpolatedLeadfieldCorrection(
                                      _ElectrodeInterpolatedLeadfieldCorrection):
-    interpolation_method = 'nearest'
+    interpolation_method = "nearest"
 
 
 class ElectrodeIntegrationNodesAtSamplingGrid(
