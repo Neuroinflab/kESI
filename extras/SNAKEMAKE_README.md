@@ -621,3 +621,10 @@ slice-covering dome.  If not given a $0 V$ grounding is assumed at infinity.
 
 The `--grounded-plate-edge-z` parameter is the Z coordinate $[m]$ of the
 edge of the grounded ($0 V$ potential) conductive plate.  Defaults to $-88 mm$.
+
+
+## Bibliography
+
+1. <a name="bibliography-zahn1989"></a>Markus Zahn, **Pole elektromagnetyczne**,
+   1989 Warszawa, Państwowe Wydawnictwo Naukowe, ISBN: 83-01-07693-3
+   (original title: Electromagnetic Field Theory: a problem solving approach)
