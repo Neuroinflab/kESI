@@ -283,7 +283,7 @@ class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
 
             IDX = ~IDX & (R < r)  # within polynomial limits
             if IDX.any():
-                # here is the bug
+                # here is the bug  # 2023-04-10: the comment seems to be rotten
                 _R = R[IDX]
                 V[IDX] += (self._external_shell_potential(p_ext, _R, r)
                            + self._internal_shell_potential(p_int, _R, r0, _R))
