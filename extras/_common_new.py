@@ -179,6 +179,24 @@ class SphericalSplineSourceBase(SourceBase):
 
 
 class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
+    """
+    Notes
+    -----
+
+    Potentials in a medium of constant, scalar conductivity are calculated by
+    integrating :math:`\int V(R)` [1]_, where the surface charge density
+    :math:`\sigma_0` is substituted by surface CSD :math:`CSD(R) dR`,
+    and the vacuum permittivity :math:`\vareps_0`, by medium conductivity
+    :math:`\sigma`, thus transforming the electrostatic problem into electric.
+
+    References
+    ----------
+
+    .. [1] Markus Zahn, **Pole elektromagnetyczne**,
+       1989 Warszawa, Państwowe Wydawnictwo Naukowe, ISBN: 83-01-07693-3,
+       p. 101, eq. 21
+       (original title: Electromagnetic Field Theory: a problem solving approach)
+    """
     def __init__(self, x, y, z, nodes,
                  coefficients=((1,),
                                (-4, 12, -9, 2),
