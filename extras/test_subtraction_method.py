@@ -253,7 +253,7 @@ class LeadfieldIntegrator(object):
 
         model_src = common.SphericalSplineSourceKCSD(0, 0, 0,
                                                      src._nodes,
-                                                     src._coefficients,
+                                                     src._csd_polynomials,
                                                      src.conductivity)
 
         LEADFIELD = np.full([n, n, n], np.nan)
