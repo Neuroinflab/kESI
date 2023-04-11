@@ -30,10 +30,10 @@ import numpy as np
 from _common_new import shape
 
 parser = argparse.ArgumentParser(description="Create sampling grid.")
-parser.add_argument("grid",
-                    nargs="+",
+parser.add_argument("-g", "--grid",
+                    required=True,
                     metavar="<grid.npz>",
-                    help="the output file")
+                    help="output file")
 parser.add_argument("-c", "--coords",
                     default="XYZ",
                     metavar="<coordinate system>",
@@ -71,15 +71,14 @@ args = parser.parse_args()
 ns = args.ns if args.ns is not None else [2**k + 1 for k in args.ks]
 dimensionality = len(args.coords)
 
-for grid in args.grid:
-    np.savez_compressed(
-        grid,
-        **{coord: np.linspace(start, end, n_nodes).reshape(shape(dimensionality,
-                                                                 dimension))
-           for dimension, (coord, n_nodes, start, end)
-           in enumerate(zip(args.coords,
-                            cycle(ns),
-                            cycle(args.starts),
-                            cycle(args.ends)))
+np.savez_compressed(
+    args.grid,
+    **{coord: np.linspace(start, end, n_nodes).reshape(shape(dimensionality,
+                                                             dimension))
+       for dimension, (coord, n_nodes, start, end)
+       in enumerate(zip(args.coords,
+                        cycle(ns),
+                        cycle(args.starts),
+                        cycle(args.ends)))
 
-           })
+       })

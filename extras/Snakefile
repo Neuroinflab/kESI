@@ -191,7 +191,8 @@ rule TUTORIAL_CASE_STUDY_SAMPLING_GRID:
     shell:
         """
         mkdir -p {params.output_directory}
-        python create_grid.py {output} \\
+        python create_grid.py \\
+          --grid {output} \\
           --coords XYZ \\
           --start -0.079 \\
           --end 0.079 \\
@@ -619,7 +620,8 @@ rule SAMPLED_LFCOR_GRID_paper_romberg:
     shell:
         """
         mkdir -p {params.output_directory}
-        python create_grid.py {output} \\
+        python create_grid.py \\
+          --grid {output} \\
           --coords XYZ \\
           {params.volume} \\
           -k {wildcards.k}
