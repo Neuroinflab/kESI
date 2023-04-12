@@ -244,23 +244,73 @@ data**.
 
 #### Sampled leadfield corrections <a name="data-generated-sampled_leadfield_corrections"></a>
 
-`sampled_leadfield_corrections/`
+The filesystem subtree follows the pattern:
+```
+sampled_leadfield_corrections/
+  <setup>/
+    <sampling>/
+      grid.npz
+      <model>/
+        <mesh path>/
+          <degree>/
+            <electrode>.npz
+```
+where `<sampling>` defines the regular grid the leadfield correction
+function is sampled on and other wildcards were discussed in
+[the previous section](#data-generated-fenics_leadfield_corrections).
+
+The `grid.npz` is a compressed NumPy file containing the $n^{POT}_x \times n^{POT}_y \times n^{POT}_z$
+regular grid description:
+
+| array name | shape                         | type        | content                            |
+|------------|-------------------------------|-------------|------------------------------------|
+| `X`        | $n^{POT}_x \times 1 \times 1$ | float $[m]$ | grid nodes projected on the X axis |
+| `Y`        | $1 \times n^{POT}_y \times 1$ | float $[m]$ | grid nodes projected on the Y axis |
+| `Z`        | $1 \times 1 \times n^{POT}_z$ | float $[m]$ | grid nodes projected on the Z axis |
+
+The grid is a cartesian product of `X`, `Y` and `Z` arrays, which may be obtained with a call
+to `numpy.meshgrid(X, Y, Z, indexing='ij')`.
+
+The compressed NumPy file `<electrode>.npz` contains the sampled leadfield correction
+with additional (meta)data:
+
+| array name             | shape                                         | type          | content                                                             |
+|------------------------|-----------------------------------------------|---------------|---------------------------------------------------------------------|
+| `CORRECTION_POTENTIAL` | $n^{POT}_x \times n^{POT}_y \times n^{POT}_z$ | float $[V/A]$ | sampled leadfield correction                                        |
+| `X`                    | $n^{POT}_x \times 1 \times 1$                 | float $[m]$   | grid nodes projected on the X axis                                  |
+| `Y`                    | $1 \times n^{POT}_y \times 1$                 | float $[m]$   | grid nodes projected on the Y axis                                  |
+| `Z`                    | $1 \times 1 \times n^{POT}_z$                 | float $[m]$   | grid nodes projected on the Z axis                                  |
+| `LOCATION`             | $3$                                           | float $[m]$   | X, Y, Z coordinates of the electrode                                |
+| `BASE_CONDUCTIVITY`    | scalar                                        | float $[S/m]$ | medium conductivity for which the corrected potential is calculated |
+| `_PREPROCESSING_TIME`  | scalar                                        | float $[s]$   | construction time of the `FunctionManager` object                   |
+| `_LOADING_TIME`        | scalar                                        | float $[s]$   | loading time of the leadfield correction function                   |
+| `_PROCESSING_TIME`     | scalar                                        | float $[s]$   | leadfield correction sampling time                                  |
+| `_R_LIMIT`             | $2$                                           | float $[m]$   | inclusive limits of sampling radius (spherical sampling only)       |
+
+[//]: # (TODO: explain samplings: romberg_k; cropped_*)
 
 
 #### Potential basis functions <a name="data-generated-potential_basis_functions"></a>
 
 Transition from basis function in the CSD space to basis function in potentials space.
 
-`potential_basis_functions/`
+The filesystem subtree follows the pattern:
+```
+potential_basis_functions/
+```
 
 
 #### Kernels <a name="data-generated-kernels"></a>
 
-`kernels/`
+The filesystem subtree follows the pattern:
+```
+kernels/
+```
 
 
 #### CSD profiles <a name="data-generated-csd_profiles"></a>
 
+The filesystem subtree follows the pattern:
 ```
 csd_profiles/
   <setup>/
@@ -305,12 +355,6 @@ where:
 
 ### Solutions
 
-Directories following pattern _\<geometry\>/\<granularity\>/\<degree\>/_
-contain corrections of leadfields of electrodes, which are crucial for kESI.
-File _\<geometry\>/\<granularity\>/\<degree\>/sampled/\<k\>/\<electrode\>.npz_
-contains the **sampled leadfield correction** of the electrode saved in _NumPy_
-format.  The correction is sampled on a regular, $(2^k + 1)^3$ grid.
-
 Directories following pattern
 _images/\<geometry\>/\<granularity\>/\<degree\>/kernels/\<k\>/_
 contain kESI/kCSD kernel-related files derived from
@@ -341,24 +385,6 @@ for the _\<geometry\>/\<granularity\>/\<degree\>_ subpath.
 
 
 ## Files
-
-### Sampled leadfield correction
-
-A compressed NumPy file (_*.npz_).
-
-| array name              | shape                                         | type          | content                                                            |
-|-------------------------|-----------------------------------------------|---------------|--------------------------------------------------------------------|
-| _CORRECTION\_POTENTIAL_ | $n^{POT}_x \times n^{POT}_y \times n^{POT}_z$ | float $[V/A]$ | sampled leadfield correction                                       |
-| _X_                     | $n^{POT}_x \times 1 \times 1$                 | float $[m]$   | X nodes of the sampling grid                                       |
-| _Y_                     | $1 \times n^{POT}_y \times 1$                 | float $[m]$   | Y nodes of the sampling grid                                       |
-| _Z_                     | $1 \times 1 \times n^{POT}_z$                 | float $[m]$   | Z nodes of the sampling grid                                       |
-| _LOCATION_              | $3$                                           | float $[m]$   | X, Y, Z coordinates of the electrode                               |
-| _BASE\_CONDUCTIVITY_    | scalar                                        | float $[S/m]$ | base conductivity used by renormalization                          |
-| _\_PREPROCESSING\_TIME_ | scalar                                        | float $[s]$   | construction time of the `FunctionManager` object                  |
-| _\_LOADING\_TIME_       | scalar                                        | float $[s]$   | loading time of the leadfield correction function                  |
-| _\_PROCESSING\_TIME_    | scalar                                        | float $[s]$   | leadfield correction sampling time                                 |
-| _\_R\_LIMIT_            | $2$                                           | float $[m]$   | in case of spherical sampling inclusive limits of sampling radius  |
-
 
 ### Position of electrodes
 
