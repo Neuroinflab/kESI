@@ -61,7 +61,7 @@ class _ForwardModelBase(object):
 
         dirichlet_bc_gt = dolfin.DirichletBC(self.V,
                                              dolfin.Constant(0),
-                                             self._at_zero_potential_boundary)
+                                             self._grounded_boundary_tester)
         test = self.fm.test_function()
         trial = self.fm.trial_function()
         potential = self.fm.function()
@@ -97,10 +97,12 @@ class _ForwardModelBase(object):
 class SphericalForwardModel(_ForwardModelBase):
     GROUNDED_PLATE_AT = -0.088
 
-    def _at_zero_potential_boundary(self, x, on_boundary):
-        return on_boundary and x[2] <= self.GROUNDED_PLATE_AT
+    @property
+    def _grounded_boundary_tester(self):
+        return lambda x, on_boundary: on_boundary and x[2] <= self.GROUNDED_PLATE_AT
 
 
 class SliceForwardModel(_ForwardModelBase):
-    def _at_zero_potential_boundary(self, x, on_boundary):
-        return on_boundary and x[2] > 0
+    @property
+    def _grounded_boundary_tester(self):
+        return lambda x, on_boundary: on_boundary and x[2] > 0
