@@ -651,6 +651,12 @@ edge of the grounded ($0 V$ potential) conductive plate.  Defaults to $-88 mm$.
 
 ## Bibliography
 
-1. <a name="bibliography-zahn1989"></a>Markus Zahn, **Pole elektromagnetyczne**,
+1. <a name="bibliography-chintaluri2021"></a>Chaitanya Chintaluri, Marta Bejtka,
+   Władysław Średniawa, Michał Czerwiński, Jakub M. Dzik, Joanna Jędrzejewska-Szmek,
+   Kacper Kondrakiewicz, Ewa Kublik, Daniel K. Wójcik,
+   **What we can and what we cannot see with extracellular multielectrodes**,
+   2021, _PLoS Computational Biology_ 17(5): e1008615,
+   DOI: [10.1371/journal.pcbi.1008615](https://doi.org/10.1371/journal.pcbi.1008615)
+2. <a name="bibliography-zahn1989"></a>Markus Zahn, **Pole elektromagnetyczne**,
    1989 Warszawa, Państwowe Wydawnictwo Naukowe, ISBN: 83-01-07693-3
    (original title: Electromagnetic Field Theory: a problem solving approach)
