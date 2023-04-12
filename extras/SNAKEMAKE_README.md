@@ -268,7 +268,7 @@ regular grid description:
 | `Y`        | $1 \times n^{POT}_y \times 1$ | float $[m]$ | grid nodes projected on the Y axis |
 | `Z`        | $1 \times 1 \times n^{POT}_z$ | float $[m]$ | grid nodes projected on the Z axis |
 
-The grid is a cartesian product of `X`, `Y` and `Z` arrays, which may be obtained with a call
+The grid is a Cartesian product of `X`, `Y` and `Z` arrays, which may be obtained with a call
 to `numpy.meshgrid(X, Y, Z, indexing='ij')`.
 
 The compressed NumPy file `<electrode>.npz` contains the sampled leadfield correction
