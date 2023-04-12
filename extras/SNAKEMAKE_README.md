@@ -290,14 +290,67 @@ with additional (meta)data:
 [//]: # (TODO: explain samplings: romberg_k; cropped_*)
 
 
-#### Potential basis functions <a name="data-generated-potential_basis_functions"></a>
-
-Transition from basis function in the CSD space to basis function in potentials space.
+#### Potential basis functions at electrodes <a name="data-generated-potential_basis_functions_at_electrodes"></a>
 
 The filesystem subtree follows the pattern:
 ```
 potential_basis_functions/
+  <setup>/
+    <csd basis functions>/
+      centroids.npz
+      model_src.json
+      <inverse model path>/
+        <electrode>.npz
 ```
+where `<csd basis functions>` defines shape and location of basis functions
+in the CSD codomain and `<inverse model path>` defines model (computational
+as well as physical) used to couple them with their counterparts in the potential
+codomain.  The `<setup>` wildcard was defined in the [Setups](#data-generated-setups)
+subsection; and `<electrode>`, in the [Fenics leadfield corrections](#data-generated-fenics_leadfield_corrections).
+
+The shape of the basis functions radially spline-defined in the CSD codomain
+is defined in the `model_src.json` function:
+
+```python
+model_src = SphericalSplineSourceBase.fromJSON(open('model_src.json'))
+```
+
+Locations of their centroids (coordinate system origins) are defined
+in the compressed NumPy file `centroids.npz`:
+
+| array name | shape                                         | type        | content                            |
+|------------|-----------------------------------------------|-------------|------------------------------------|
+| `X`        | $n^{SRC}_x \times 1 \times 1$                 | float $[m]$ | grid nodes projected on the X axis |
+| `Y`        | $1 \times n^{SRC}_y \times 1$                 | float $[m]$ | grid nodes projected on the Y axis |
+| `Z`        | $1 \times 1 \times n^{SRC}_z$                 | float $[m]$ | grid nodes projected on the Z axis |
+| `MASK`     | $n^{SRC}_x \times n^{SRC}_y \times n^{SRC}_z$ | bool        | subset of grid nodes               |
+
+The Cartesian product of `X`, `Y` and `Z` defines regular grid on which the centroids may
+be located, while `MASK` defines its ordered subset (the locations of centroids):
+
+```python
+GRID = numpy.meshgrid(X, Y, Z, indexing='ij')
+CENTROIDS = [A[MASK] for A in GRID]
+```
+
+For kCSD `<inverse model path>` is `kCSD/<conductivity [S/m]>`,
+where `<conductivity [S/m]>` is the assumed (scalar) medium conductivity
+in an appropriate SI unit.
+For kESI `<inverse model path>` is `kESI/<sampling>/<model>/<mesh path>/<degree>/`,
+where `<sampling>` wildcard was defined in [the previous section](#data-generated-sampled_leadfield_corrections);
+and other wildcards, in [Fenics leadfield corrections](#data-generated-fenics_leadfield_corrections).
+
+The `<electrode>.npz` contains values of basis functions at the location
+of the electrode in the potential codomain ($\Phi$ function - see
+[Chintaluri 2021](#bibliography-chintaluri2021) for details):
+
+| array name     | shape  | type          | content                                 |
+|----------------|--------|---------------|-----------------------------------------|
+| `POTENTIALS`   | $m$    | float $[V]$   | subset of grid nodes                    |
+| `X`            | scalar | float $[m]$   | X coordinate of the electrode           |
+| `Y`            | scalar | float $[m]$   | Y coordinate of the electrode           |
+| `Z`            | scalar | float $[m]$   | Z coordinate of the electrode           |
+| `CONDUCTIVITY` | scalar | float $[S/m]$ | assumed medium conductivity (kCSD only) |
 
 
 #### Kernels <a name="data-generated-kernels"></a>
@@ -396,20 +449,6 @@ A CSV file.
 | _X_    | float $[m]$ | X position of the electrode |
 | _Y_    | float $[m]$ | Y position of the electrode |
 | _Z_    | float $[m]$ | Z position of the electrode |
-
-
-### Positions of source centroids
-
-A compressed NumPy file (_*.npz_).
-
-| array  | shape                                         | type        | content                      |
-|--------|-----------------------------------------------|-------------|------------------------------|
-| _MASK_ | $n^{SRC}_x \times n^{SRC}_y \times n^{SRC}_z$ | bool        | mask of nodes with centroids |
-| _X_    | $n^{SRC}_x \times 1 \times 1$                 | float $[m]$ | X nodes of the centroid grid |
-| _Y_    | $1 \times n^{SRC}_y \times 1$                 | float $[m]$ | Y nodes of the centroid grid |
-| _Z_    | $1 \times 1 \times n^{SRC}_z$                 | float $[m]$ | Z nodes of the centroid grid |
-
-`MASK.sum() == m` where `m` is the number of base functions.
 
 
 ### Transfer matrix
