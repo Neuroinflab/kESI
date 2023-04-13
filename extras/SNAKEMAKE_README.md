@@ -340,6 +340,7 @@ For kESI `<inverse model path>` is `kESI/<sampling>/<model>/<mesh path>/<degree>
 where `<sampling>` wildcard was defined in [the previous section](#data-generated-sampled_leadfield_corrections);
 and other wildcards, in [Fenics leadfield corrections](#data-generated-fenics_leadfield_corrections).
 
+<a name="data-generated-potential_basis_functions_at_electrodes-electrodes_npz"></a>
 The `<electrode>.npz` contains values of basis functions at the location
 of the electrode in the potential codomain ($\phi$ function - $\Phi$ in
 [Chintaluri 2021](#bibliography-chintaluri2021)):
@@ -385,6 +386,27 @@ electrode location as well as its name.
 | `X`    | `float` $[m]$ | X coordinate of ...   |
 | `Y`    | `float` $[m]$ | Y coordinate of ...   |
 | `Z`    | `float` $[m]$ | Z coordinate of ...   |
+
+The compressed NumPy file `phi.npz` contains a single array `PHI`
+of shape $M \times N$ and type `float` $[V]$, which columns are
+locations of electrodes mapped according to the $\phi$ function
+($\Phi$ in [Chintaluri 2021](#bibliography-chintaluri2021)):
+
+$$
+\Phi = \left[ \phi(e_1), \phi(e_2), \ldot, \phi(e_{M-1}), \phi(e_M) \right]
+$$
+
+The columns of the $\Phi$ matrix are `POTENTIALS` vectors from the
+[`<electrode>.npy` files described in the previous section](#data-generated-potential_basis_functions_at_electrodes-electrodes_npz)
+for details).
+
+The compressed NumPy file `kernel.npz` contains a single array `KERNEL`
+of shape $N \times N$ and type `float` $[V^2]$, which is _kCSD_/_kESI_
+kernel matrix:
+
+$$
+\mathbf{K} = \Phi^T \Phi
+$$
 
 
 #### CSD profiles <a name="data-generated-csd_profiles"></a>
