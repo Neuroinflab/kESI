@@ -262,11 +262,11 @@ function is sampled on and other wildcards were discussed in
 The `grid.npz` is a compressed NumPy file containing the $n^{POT}_x \times n^{POT}_y \times n^{POT}_z$
 regular grid description:
 
-| array name | shape                         | type        | content                            |
-|------------|-------------------------------|-------------|------------------------------------|
-| `X`        | $n^{POT}_x \times 1 \times 1$ | float $[m]$ | grid nodes projected on the X axis |
-| `Y`        | $1 \times n^{POT}_y \times 1$ | float $[m]$ | grid nodes projected on the Y axis |
-| `Z`        | $1 \times 1 \times n^{POT}_z$ | float $[m]$ | grid nodes projected on the Z axis |
+| array name | shape                         | type          | content                            |
+|------------|-------------------------------|---------------|------------------------------------|
+| `X`        | $n^{POT}_x \times 1 \times 1$ | `float` $[m]$ | grid nodes projected on the X axis |
+| `Y`        | $1 \times n^{POT}_y \times 1$ | `float` $[m]$ | grid nodes projected on the Y axis |
+| `Z`        | $1 \times 1 \times n^{POT}_z$ | `float` $[m]$ | grid nodes projected on the Z axis |
 
 The grid is a Cartesian product of `X`, `Y` and `Z` arrays, which may be obtained with a call
 to `numpy.meshgrid(X, Y, Z, indexing='ij')`.
@@ -274,18 +274,18 @@ to `numpy.meshgrid(X, Y, Z, indexing='ij')`.
 The compressed NumPy file `<electrode>.npz` contains the sampled leadfield correction
 with additional (meta)data:
 
-| array name             | shape                                         | type          | content                                                             |
-|------------------------|-----------------------------------------------|---------------|---------------------------------------------------------------------|
-| `CORRECTION_POTENTIAL` | $n^{POT}_x \times n^{POT}_y \times n^{POT}_z$ | float $[V/A]$ | sampled leadfield correction                                        |
-| `X`                    | $n^{POT}_x \times 1 \times 1$                 | float $[m]$   | grid nodes projected on the X axis                                  |
-| `Y`                    | $1 \times n^{POT}_y \times 1$                 | float $[m]$   | grid nodes projected on the Y axis                                  |
-| `Z`                    | $1 \times 1 \times n^{POT}_z$                 | float $[m]$   | grid nodes projected on the Z axis                                  |
-| `LOCATION`             | $3$                                           | float $[m]$   | X, Y, Z coordinates of the electrode                                |
-| `BASE_CONDUCTIVITY`    | scalar                                        | float $[S/m]$ | medium conductivity for which the corrected potential is calculated |
-| `_PREPROCESSING_TIME`  | scalar                                        | float $[s]$   | construction time of the `FunctionManager` object                   |
-| `_LOADING_TIME`        | scalar                                        | float $[s]$   | loading time of the leadfield correction function                   |
-| `_PROCESSING_TIME`     | scalar                                        | float $[s]$   | leadfield correction sampling time                                  |
-| `_R_LIMIT`             | $2$                                           | float $[m]$   | inclusive limits of sampling radius (spherical sampling only)       |
+| array name             | shape                                         | type            | content                                                             |
+|------------------------|-----------------------------------------------|-----------------|---------------------------------------------------------------------|
+| `CORRECTION_POTENTIAL` | $n^{POT}_x \times n^{POT}_y \times n^{POT}_z$ | `float` $[V/A]$ | sampled leadfield correction                                        |
+| `X`                    | $n^{POT}_x \times 1 \times 1$                 | `float` $[m]$   | grid nodes projected on the X axis                                  |
+| `Y`                    | $1 \times n^{POT}_y \times 1$                 | `float` $[m]$   | grid nodes projected on the Y axis                                  |
+| `Z`                    | $1 \times 1 \times n^{POT}_z$                 | `float` $[m]$   | grid nodes projected on the Z axis                                  |
+| `LOCATION`             | $3$                                           | `float` $[m]$   | X, Y, Z coordinates of the electrode                                |
+| `BASE_CONDUCTIVITY`    | scalar                                        | `float` $[S/m]$ | medium conductivity for which the corrected potential is calculated |
+| `_PREPROCESSING_TIME`  | scalar                                        | `float` $[s]$   | construction time of the `FunctionManager` object                   |
+| `_LOADING_TIME`        | scalar                                        | `float` $[s]$   | loading time of the leadfield correction function                   |
+| `_PROCESSING_TIME`     | scalar                                        | `float` $[s]$   | leadfield correction sampling time                                  |
+| `_R_LIMIT`             | $2$                                           | `float` $[m]$   | inclusive limits of sampling radius (spherical sampling only)       |
 
 [//]: # (TODO: explain samplings: romberg_k; cropped_*)
 
@@ -318,12 +318,12 @@ model_src = SphericalSplineSourceBase.fromJSON(open('model_src.json'))
 Locations of their centroids (coordinate system origins) are defined
 in the compressed NumPy file `centroids.npz`:
 
-| array name | shape                                         | type        | content                            |
-|------------|-----------------------------------------------|-------------|------------------------------------|
-| `X`        | $n^{SRC}_x \times 1 \times 1$                 | float $[m]$ | grid nodes projected on the X axis |
-| `Y`        | $1 \times n^{SRC}_y \times 1$                 | float $[m]$ | grid nodes projected on the Y axis |
-| `Z`        | $1 \times 1 \times n^{SRC}_z$                 | float $[m]$ | grid nodes projected on the Z axis |
-| `MASK`     | $n^{SRC}_x \times n^{SRC}_y \times n^{SRC}_z$ | bool        | subset of grid nodes               |
+| array name | shape                                         | type          | content                            |
+|------------|-----------------------------------------------|---------------|------------------------------------|
+| `X`        | $n^{SRC}_x \times 1 \times 1$                 | `float` $[m]$ | grid nodes projected on the X axis |
+| `Y`        | $1 \times n^{SRC}_y \times 1$                 | `float` $[m]$ | grid nodes projected on the Y axis |
+| `Z`        | $1 \times 1 \times n^{SRC}_z$                 | `float` $[m]$ | grid nodes projected on the Z axis |
+| `MASK`     | $n^{SRC}_x \times n^{SRC}_y \times n^{SRC}_z$ | `bool`        | subset of grid nodes               |
 
 The Cartesian product of `X`, `Y` and `Z` defines regular grid on which the centroids may
 be located, while `MASK` defines its ordered subset (the locations of centroids):
@@ -344,13 +344,13 @@ The `<electrode>.npz` contains values of basis functions at the location
 of the electrode in the potential codomain ($\Phi$ function - see
 [Chintaluri 2021](#bibliography-chintaluri2021) for details):
 
-| array name     | shape  | type          | content                                 |
-|----------------|--------|---------------|-----------------------------------------|
-| `POTENTIALS`   | $m$    | float $[V]$   | subset of grid nodes                    |
-| `X`            | scalar | float $[m]$   | X coordinate of the electrode           |
-| `Y`            | scalar | float $[m]$   | Y coordinate of the electrode           |
-| `Z`            | scalar | float $[m]$   | Z coordinate of the electrode           |
-| `CONDUCTIVITY` | scalar | float $[S/m]$ | assumed medium conductivity (kCSD only) |
+| array name     | shape  | type            | content                                 |
+|----------------|--------|-----------------|-----------------------------------------|
+| `POTENTIALS`   | $m$    | `float` $[V]$   | subset of grid nodes                    |
+| `X`            | scalar | `float` $[m]$   | X coordinate of the electrode           |
+| `Y`            | scalar | `float` $[m]$   | Y coordinate of the electrode           |
+| `Z`            | scalar | `float` $[m]$   | Z coordinate of the electrode           |
+| `CONDUCTIVITY` | scalar | `float` $[S/m]$ | assumed medium conductivity (kCSD only) |
 
 
 #### Kernels <a name="data-generated-kernels"></a>
@@ -378,12 +378,12 @@ extensively in previous sections.
 File `electrodes.csv` defines order of electrodes in the `<subsetup>`
 (the row order), as well as contains (redundant) their location.
 
-| field  | type        | content               |
-|--------|-------------|-----------------------|
-| `NAME` | str         | name of the electrode |
-| `X`    | float $[m]$ | X coordinate of ...   |
-| `Y`    | float $[m]$ | Y coordinate of ...   |
-| `Z`    | float $[m]$ | Z coordinate of ...   |
+| field  | type          | content               |
+|--------|---------------|-----------------------|
+| `NAME` | `str`         | name of the electrode |
+| `X`    | `float` $[m]$ | X coordinate of ...   |
+| `Y`    | `float` $[m]$ | Y coordinate of ...   |
+| `Z`    | `float` $[m]$ | Z coordinate of ...   |
 
 
 #### CSD profiles <a name="data-generated-csd_profiles"></a>
@@ -468,12 +468,12 @@ for the _\<geometry\>/\<granularity\>/\<degree\>_ subpath.
 
 A CSV file.
 
-| field  | type        | content                     |
-|--------|-------------|-----------------------------|
-| _NAME_ | str         | name of the electrode       |
-| _X_    | float $[m]$ | X position of the electrode |
-| _Y_    | float $[m]$ | Y position of the electrode |
-| _Z_    | float $[m]$ | Z position of the electrode |
+| field  | type          | content                     |
+|--------|---------------|-----------------------------|
+| `NAME` | `str`         | name of the electrode       |
+| `X`    | `float` $[m]$ | X position of the electrode |
+| `Y`    | `float` $[m]$ | Y position of the electrode |
+| `Z`    | `float` $[m]$ | Z position of the electrode |
 
 
 ### Transfer matrix
@@ -482,18 +482,18 @@ A CSV file.
 
 A compressed NumPy file (_*.npz_).
 
-| array | shape        | type        | content                                                         |
-|-------|--------------|-------------|-----------------------------------------------------------------|
-| _PHI_ | $m \times n$ | float $[V]$ | `PHI[i, j]` is value of `i`th base function at `j`-th electrode |
+| array  | shape        | type          | content                                                         |
+|--------|--------------|---------------|-----------------------------------------------------------------|
+| `PHI`  | $m \times n$ | `float` $[V]$ | `PHI[i, j]` is value of `i`th base function at `j`-th electrode |
 
 
 ### Kernel matrix
 
 A compressed NumPy file (_*.npz_).
 
-| array    | shape        | type          | content               |
-|----------|--------------|---------------|-----------------------|
-| _KERNEL_ | $n \times n$ | float $[V^2]$ | the kernel matrix $K$ |
+| array    | shape        | type            | content               |
+|----------|--------------|-----------------|-----------------------|
+| `KERNEL` | $n \times n$ | `float` $[V^2]$ | the kernel matrix $K$ |
 
 $$
 K = \Phi^T \Phi
@@ -502,14 +502,14 @@ $$
 
 ### Auxilary analytical data
 
-A compressed NumPy file (_*.npz_).
+A compressed NumPy file (`*.npz`).
 
-| array          | shape        | type        | content                                   |
-|----------------|--------------|-------------|-------------------------------------------|
-| _EIGENVALUES_  | $n$          | float $[V]$ | Kernel eigenvalues ($\lambda = \Sigma^2$) |
-| _EIGENSOURCES_ | $m \times n$ | float       | Eigensources in the cananical form $U$    |
-| _LAMBDAS_      | $n$          | float       | $\Phi$ singular values ($\Sigma$)         |
-| _EIGENVECTORS_ | $n \times n$ | float       | Kernel eigenvalues $V$                    |
+| array          | shape        | type          | content                                   |
+|----------------|--------------|---------------|-------------------------------------------|
+| `EIGENVALUES`  | $n$          | `float` $[V]$ | Kernel eigenvalues ($\lambda = \Sigma^2$) |
+| `EIGENSOURCES` | $m \times n$ | `float`       | Eigensources in the cananical form $U$    |
+| `LAMBDAS`      | $n$          | `float`       | $\Phi$ singular values ($\Sigma$)         |
+| `EIGENVECTORS` | $n \times n$ | `float`       | Kernel eigenvalues $V$                    |
 
 $$
 \Phi = U \Sigma V^T
@@ -522,14 +522,14 @@ $$
 
 ### Volumetric cross-kernel tensor
 
-A compressed NumPy file (_*.npz_).
+A compressed NumPy file (`*.npz`).
 
-| array         | shape                                                  | type              | content                                 |
-|---------------|--------------------------------------------------------|-------------------|-----------------------------------------|
-| _CROSSKERNEL_ | $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times n$ | float $[W / m^3]$ | The crosskernel tensor ($\overline{K}$) |
-| _X_           | $n^{CSD}_x \times 1 \times 1$                          | float $[m]$       | X nodes of the CSD sampling grid        |
-| _Y_           | $1 \times n^{CSD}_y \times 1$                          | float $[m]$       | Y nodes of the CSD sampling grid        |
-| _Z_           | $1 \times 1 \times n^{CSD}_z$                          | float $[m]$       | Z nodes of the CSD sampling grid        |
+| array         | shape                                                  | type                | content                                 |
+|---------------|--------------------------------------------------------|---------------------|-----------------------------------------|
+| `CROSSKERNEL` | $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times n$ | `float` $[W / m^3]$ | The crosskernel tensor ($\overline{K}$) |
+| `X`           | $n^{CSD}_x \times 1 \times 1$                          | `float` $[m]$       | X nodes of the CSD sampling grid        |
+| `Y`           | $1 \times n^{CSD}_y \times 1$                          | `float` $[m]$       | Y nodes of the CSD sampling grid        |
+| `Z`           | $1 \times 1 \times n^{CSD}_z$                          | `float` $[m]$       | Z nodes of the CSD sampling grid        |
 
 The tensor yields volumetric CSD reconstruction $C = \overline{K} K^{-1} V$,
 where $V$ is a vector (matrix in case of timepoints) of measured potentials and
@@ -538,27 +538,27 @@ $C$ is an $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z$ array.
 
 ### Volumetric eigensource tensor
 
-A compressed NumPy file (_*.npz_).
+A compressed NumPy file (`*.npz`).
 
-| array   | shape                                                  | type              | content                          |
-|---------|--------------------------------------------------------|-------------------|----------------------------------|
-| _CSD_   | $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times n$ | float $[A / m^3]$ | sampled CSDs of n eigensources   |
-| _X_     | $n^{CSD}_x \times 1 \times 1$                          | float $[m]$       | X nodes of the CSD sampling grid |
-| _Y_     | $1 \times n^{CSD}_y \times 1$                          | float $[m]$       | Y nodes of the CSD sampling grid |
-| _Z_     | $1 \times 1 \times n^{CSD}_z$                          | float $[m]$       | Z nodes of the CSD sampling grid |
+| array | shape                                                  | type                | content                          |
+|-------|--------------------------------------------------------|---------------------|----------------------------------|
+| `CSD` | $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times n$ | `float` $[A / m^3]$ | sampled CSDs of n eigensources   |
+| `X`   | $n^{CSD}_x \times 1 \times 1$                          | `float` $[m]$       | X nodes of the CSD sampling grid |
+| `Y`   | $1 \times n^{CSD}_y \times 1$                          | `float` $[m]$       | Y nodes of the CSD sampling grid |
+| `Z`   | $1 \times 1 \times n^{CSD}_z$                          | `float` $[m]$       | Z nodes of the CSD sampling grid |
 
 
 ### Potentials at electrodes generated by CSD profiles
 
 A CSV file.
 
-| field           | type        | content                                                   |
-|-----------------|-------------|-----------------------------------------------------------|
-| _NAME_          | str         | name of the electrode                                     |
-| _X_             | float $[m]$ | X position of the electrode                               |
-| _Y_             | float $[m]$ | Y position of the electrode                               |
-| _Z_             | float $[m]$ | Z position of the electrode                               |
-| _SOURCE\_\<i\>_ | float $[V]$ | potential generated by the _i_-th source at the electrode |
+| field        | type          | content                                                   |
+|--------------|---------------|-----------------------------------------------------------|
+| `NAME`       | `str`         | name of the electrode                                     |
+| `X`          | `float` $[m]$ | X position of the electrode                               |
+| `Y`          | `float` $[m]$ | Y position of the electrode                               |
+| `Z`          | `float` $[m]$ | Z position of the electrode                               |
+| `SOURCE_<i>` | `float` $[V]$ | potential generated by the `i`-th source at the electrode |
 
 
 ## Tools
