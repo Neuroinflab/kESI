@@ -341,8 +341,8 @@ where `<sampling>` wildcard was defined in [the previous section](#data-generate
 and other wildcards, in [Fenics leadfield corrections](#data-generated-fenics_leadfield_corrections).
 
 The `<electrode>.npz` contains values of basis functions at the location
-of the electrode in the potential codomain ($\Phi$ function - see
-[Chintaluri 2021](#bibliography-chintaluri2021) for details):
+of the electrode in the potential codomain ($\phi$ function - $\Phi$ in
+[Chintaluri 2021](#bibliography-chintaluri2021)):
 
 | array name     | shape  | type            | content                                 |
 |----------------|--------|-----------------|-----------------------------------------|
