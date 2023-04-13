@@ -346,7 +346,7 @@ of the electrode in the potential codomain ($\Phi$ function - see
 
 | array name     | shape  | type            | content                                 |
 |----------------|--------|-----------------|-----------------------------------------|
-| `POTENTIALS`   | $m$    | `float` $[V]$   | subset of grid nodes                    |
+| `POTENTIALS`   | $M$    | `float` $[V]$   | subset of grid nodes                    |
 | `X`            | scalar | `float` $[m]$   | X coordinate of the electrode           |
 | `Y`            | scalar | `float` $[m]$   | Y coordinate of the electrode           |
 | `Z`            | scalar | `float` $[m]$   | Z coordinate of the electrode           |
@@ -375,8 +375,9 @@ for which the kernel is calculated, and `<csd grid>` defines
 the grid of CSD estimation points.  The other wildcards were discussed
 extensively in previous sections.
 
-File `electrodes.csv` defines order of electrodes in the `<subsetup>`
-(the row order), as well as contains (redundant) their location.
+File `electrodes.csv` contains a header and $N$ rows (which order defines
+order of electrodes in the `<subsetup>`).  Every row contains (redundant)
+electrode location as well as its name.
 
 | field  | type          | content               |
 |--------|---------------|-----------------------|
