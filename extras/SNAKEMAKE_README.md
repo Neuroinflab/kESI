@@ -409,6 +409,53 @@ $$
 $$
 
 
+The compressed NumPy file `analysis.npz` contains auxiliary analytical
+data.
+
+| array            | shape        | type            | content                                                  |
+|------------------|--------------|-----------------|----------------------------------------------------------|
+| `EIGENVALUES`    | $N$          | `float` $[V^2]$ | Kernel eigenvalues (diagonal of the $\Lambda$ matrix)    |
+| `EIGENSOURCES`   | $M \times N$ | `float` $[1]$   | Eigensources in the canonical form ($\mathbf{U})$        |
+| `SINGULARVALUES` | $N$          | `float` $[V]$   | $\Phi$ singular values (diagonal of the $\Sigma$ matrix) |
+| `EIGENVECTORS`   | $N \times N$ | `float` $[1]$   | Kernel eigenvalues ($\mathbf{W}$)                        |
+
+where $\mathbf{U}$, $\Sigma$, $\mathbf{W}$ are singular value decomposition of $\Phi$:
+
+$$
+\Phi = \mathbf{U} \Sigma \mathbf{W}^T
+\text{,}
+$$
+
+$\mathbf{W}$ and $\Lambda = \Sigma^2$ are eigendecomposition of $\mathbf{K}$:
+
+$$
+\mathbf{K} = \mathbf{W} \Lambda \mathbf{W}^T
+\text{.}
+$$
+
+Note that according to notation from [Chintaluri 2021](#bibliography-chintaluri2021)
+
+$$
+\mathbf{W} = \left[ \mathbf{w}_1, \mathbf{w}_2, \dots, \mathbf{w}_{N-1}, \mathbf{w}_N \right]
+\text{,}
+$$
+
+and
+
+$$
+\Lambda_{i, j} = \begin{cases}
+  \mu_i & \text{if } i = j \text{,} \\
+  0 & \text{otherwise.}
+\end{cases}
+$$
+
+[//]: # (TODO)
+
+[//]: # (            grid_csd.npz)
+
+[//]: # (            crosskernel.npz)
+
+
 #### CSD profiles <a name="data-generated-csd_profiles"></a>
 
 The filesystem subtree follows the pattern:
@@ -486,61 +533,6 @@ for the `<geometry>/<granularity>/<degree>` subpath.
 
 
 ## Files
-
-### Position of electrodes
-
-A CSV file.
-
-| field  | type          | content                     |
-|--------|---------------|-----------------------------|
-| `NAME` | `str`         | name of the electrode       |
-| `X`    | `float` $[m]$ | X position of the electrode |
-| `Y`    | `float` $[m]$ | Y position of the electrode |
-| `Z`    | `float` $[m]$ | Z position of the electrode |
-
-
-### Transfer matrix
-
-($\Phi$ matrix)
-
-A compressed NumPy file (`*.npz`).
-
-| array  | shape        | type          | content                                                         |
-|--------|--------------|---------------|-----------------------------------------------------------------|
-| `PHI`  | $m \times n$ | `float` $[V]$ | `PHI[i, j]` is value of `i`th base function at `j`-th electrode |
-
-
-### Kernel matrix
-
-A compressed NumPy file (`*.npz`).
-
-| array    | shape        | type            | content               |
-|----------|--------------|-----------------|-----------------------|
-| `KERNEL` | $n \times n$ | `float` $[V^2]$ | the kernel matrix $K$ |
-
-$$
-K = \Phi^T \Phi
-$$
-
-
-### Auxilary analytical data
-
-A compressed NumPy file (`*.npz`).
-
-| array          | shape        | type          | content                                   |
-|----------------|--------------|---------------|-------------------------------------------|
-| `EIGENVALUES`  | $n$          | `float` $[V]$ | Kernel eigenvalues ($\lambda = \Sigma^2$) |
-| `EIGENSOURCES` | $m \times n$ | `float`       | Eigensources in the cananical form $U$    |
-| `LAMBDAS`      | $n$          | `float`       | $\Phi$ singular values ($\Sigma$)         |
-| `EIGENVECTORS` | $n \times n$ | `float`       | Kernel eigenvalues $V$                    |
-
-$$
-\Phi = U \Sigma V^T
-$$
-
-$$
-K = V \lambda V^T
-$$
 
 
 ### Volumetric cross-kernel tensor
