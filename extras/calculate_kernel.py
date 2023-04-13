@@ -79,5 +79,5 @@ if __name__ == "__main__":
                                      "analysis.npz"),
                         EIGENVALUES=np.square(_S),
                         EIGENSOURCES=_U,
-                        LAMBDAS=_S,
+                        SINGULARVALUES=_S,
                         EIGENVECTORS=_V.T)
