@@ -393,7 +393,7 @@ locations of electrodes mapped according to the $\phi$ function
 ($\Phi$ in [Chintaluri 2021](#bibliography-chintaluri2021)):
 
 $$
-\Phi = \left[ \phi(e_1), \phi(e_2), \ldot, \phi(e_{M-1}), \phi(e_M) \right]
+\Phi = \left[ \phi(e_1), \phi(e_2), \dots, \phi(e_{M-1}), \phi(e_M) \right]
 $$
 
 The columns of the $\Phi$ matrix are `POTENTIALS` vectors from the
