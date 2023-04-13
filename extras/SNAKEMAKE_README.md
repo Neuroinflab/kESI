@@ -358,7 +358,32 @@ of the electrode in the potential codomain ($\Phi$ function - see
 The filesystem subtree follows the pattern:
 ```
 kernels/
+  <setup>/
+    <subsetup>/
+      electrodes.csv
+      <csd basis functions>/
+        <inverse model path>/
+          phi.npz
+          kernel.npz
+          analysis.npz
+          <csd grid>/
+            grid_csd.npz
+            crosskernel.npz
 ```
+where `<subsetup>` defines an ordered subset of electrodes from `<setup>`,
+for which the kernel is calculated, and `<csd grid>` defines
+the grid of CSD estimation points.  The other wildcards were discussed
+extensively in previous sections.
+
+File `electrodes.csv` defines order of electrodes in the `<subsetup>`
+(the row order), as well as contains (redundant) their location.
+
+| field  | type        | content               |
+|--------|-------------|-----------------------|
+| `NAME` | str         | name of the electrode |
+| `X`    | float $[m]$ | X coordinate of ...   |
+| `Y`    | float $[m]$ | Y coordinate of ...   |
+| `Z`    | float $[m]$ | Z coordinate of ...   |
 
 
 #### CSD profiles <a name="data-generated-csd_profiles"></a>
