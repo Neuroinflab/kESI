@@ -718,7 +718,7 @@ $r \leq 7.9 cm - 2^{k-1} dx$, and adjusts grids appropriately.
 
 _paper\_mix\_eigensources.py_ loads two sets of volumetric CSD eigensources,
 matches them (by maximizing the absolute value of the dot product of their
-canonical rapresentation) and yields averaged volumetric sources.
+canonical representation) and yields averaged volumetric sources.
 
 Note that both sets must share at least shape of the transfer matrix ($\Phi$).
 
@@ -755,7 +755,7 @@ as `--electrodes` with request to complete simulation of missing sources.
 
 #### Slice specific
 
-The `--ground-potential` parameter is the potantial $[V]$ at the grounded
+The `--ground-potential` parameter is the potential $[V]$ at the grounded
 slice-covering dome.  If not given a $0 V$ grounding is assumed at infinity.
 
 
