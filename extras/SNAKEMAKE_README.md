@@ -184,7 +184,7 @@ the locations of electrodes were copied from, that is to:
                 zzz.ini
 ```
 
-##### File `electrodes.csv`
+##### File `electrodes.csv` <a name="data-generated-setups-electrodes_csv"></a>
 
 The `electrodes.csv` files contain a table  with location of the electrodes,
 with columns named intuitively: _NAME_ (name of the electrode), _X_, _Y_ and _Z_
@@ -194,6 +194,13 @@ NAME,X,Y,Z
 A_00,-0.006,0.0,0.046
 A_01,-0.006,0.0,0.0485
 ```
+
+| field  | type          | content               |
+|--------|---------------|-----------------------|
+| `NAME` | `str`         | name of the electrode |
+| `X`    | `float` $[m]$ | X coordinate of ...   |
+| `Y`    | `float` $[m]$ | Y coordinate of ...   |
+| `Z`    | `float` $[m]$ | Z coordinate of ...   |
 
 
 #### Fenics leadfield corrections <a name="data-generated-fenics_leadfield_corrections"></a>
@@ -400,7 +407,9 @@ extensively in previous sections.
 ##### File `electrodes.csv`
 
 File `electrodes.csv` contains a header and $N$ rows (which order defines
-order of electrodes in the `<subsetup>`).  Every row contains (redundant)
+order of electrodes in the `<subsetup>`).  Every row contains (redundant -
+see information in
+[the `electrodes.csv` in the Setups section](#data-generated-setups-electrodes_csv))
 electrode location as well as its name.
 
 | field  | type          | content               |
