@@ -350,19 +350,20 @@ in the compressed NumPy file `centroids.npz`:
 | `Z`        | $1 \times 1 \times n^{SRC}_z$                 | `float` $[m]$ | grid nodes projected on the Z axis |
 | `MASK`     | $n^{SRC}_x \times n^{SRC}_y \times n^{SRC}_z$ | `bool`        | subset of grid nodes               |
 
-The Cartesian product of `X`, `Y` and `Z` defines regular grid on which the centroids may
-be located, while `MASK` defines its ordered subset (the locations of centroids):
+The Cartesian product of `X`, `Y` and `Z` defines regular grid on which
+the centroids may be located, while `MASK` defines its ordered subset
+(the locations of centroids):
 
 ```python
 GRID = numpy.meshgrid(X, Y, Z, indexing='ij')
 CENTROIDS = [A[MASK] for A in GRID]
 ```
 
-For kCSD `<inverse model path>` is `kCSD/<conductivity>`,
-where `<conductivity>` is the assumed (scalar) medium conductivity
-in an appropriate SI unit ($S/m$).
+For kCSD `<inverse model path>` is `kCSD/<conductivity>`, where `<conductivity>`
+is the assumed (scalar) medium conductivity in an appropriate SI unit ($S/m$).
 For kESI `<inverse model path>` is `kESI/<sampling>/<model>/<mesh path>/<degree>/`,
-where `<sampling>` wildcard was defined in [the previous section](#data-generated-sampled_leadfield_corrections);
+where `<sampling>` wildcard was defined in
+[the previous section](#data-generated-sampled_leadfield_corrections);
 and other wildcards, in [Fenics leadfield corrections](#data-generated-fenics_leadfield_corrections).
 
 
