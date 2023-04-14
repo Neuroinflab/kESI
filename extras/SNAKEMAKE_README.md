@@ -309,8 +309,8 @@ The filesystem subtree follows the pattern:
 potential_basis_functions/
   <setup>/
     <csd basis functions>/
-      centroids.npz
       model_src.json
+      centroids.npz
       <inverse model path>/
         <electrode>.npz
 ```
