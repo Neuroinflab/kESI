@@ -25,92 +25,12 @@
 ###############################################################################
 
 import argparse
-import configparser
 
 import numpy as np
 import pandas as pd
 import scipy.interpolate as si
-import dolfin
 
-import FEM.fem_common as fc
-
-
-class ForwardModel(object):
-    # XXX: duplicated code with FEM classes
-    def __init__(self, mesh, degree, config,
-                 grounded_plate_at=-0.088,
-                 quiet=True,
-                 element_type="CG"):
-        self.grounded_plate_at = grounded_plate_at
-        self.quiet=quiet
-        self.fm = fc.FunctionManager(mesh, degree, element_type)
-        self.config = configparser.ConfigParser()
-        self.config.read(config)
-
-        mesh_filename = mesh[:-5]
-
-        self.V = self.fm.function_space
-        mesh = self.fm.mesh
-
-        n = self.V.dim()
-        d = mesh.geometry().dim()
-
-        self.dof_coords = self.V.tabulate_dof_coordinates()
-        self.dof_coords.resize((n, d))
-
-        self.csd_f = self.fm.function()
-
-        with dolfin.XDMFFile(mesh_filename + "_subdomains.xdmf") as fh:
-            mvc = dolfin.MeshValueCollection("size_t", mesh, 3)
-            fh.read(mvc, "subdomains")
-            self.subdomains = dolfin.cpp.mesh.MeshFunctionSizet(mesh, mvc)
-            self.dx = dolfin.Measure("dx")(subdomain_data=self.subdomains)
-
-    @property
-    def CONDUCTIVITY(self):
-        for section in self.config.sections():
-            if self._is_conductive_volume(section):
-                yield (self.config.getint(section, "volume"),
-                       self.config.getfloat(section, "conductivity"))
-
-    def _is_conductive_volume(self, section):
-        return (self.config.has_option(section, "volume")
-                and self.config.has_option(section, "conductivity"))
-
-    def __call__(self, csd_interpolator):
-        self.csd_f.vector()[:] = csd_interpolator(self.dof_coords)
-
-        dirichlet_bc_gt = dolfin.DirichletBC(self.V,
-                                             dolfin.Constant(0),
-                                             (lambda x, on_boundary:
-                                              on_boundary and x[
-                                                  2] < self.grounded_plate_at))
-        test = self.fm.test_function()
-        trial = self.fm.trial_function()
-        potential = self.fm.function()
-
-        dx = self.dx
-        a = sum(dolfin.Constant(c)
-                * dolfin.inner(dolfin.grad(trial),
-                               dolfin.grad(test))
-                * dx(i)
-                for i, c
-                in self.CONDUCTIVITY)
-        L = self.csd_f * test * dx
-
-        b = dolfin.assemble(L)
-        A = dolfin.assemble(a)
-        dirichlet_bc_gt.apply(A, b)
-
-        solver = dolfin.KrylovSolver("cg", "ilu")
-        solver.parameters["maximum_iterations"] = 10000
-        solver.parameters["absolute_tolerance"] = 1E-8
-        if not self.quiet:
-            solver.parameters["monitor_convergence"] = True
-
-        solver.solve(A, potential.vector(), b)
-
-        return potential
+from forward_model import Spherical as ForwardModel
 
 
 if __name__ == "__main__":
