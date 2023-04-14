@@ -108,6 +108,6 @@ if __name__ == "__main__":
                                              bounds_error=False,
                                              fill_value=0)
             potential = fem(csd)
-            DF[f"SOURCE_{i}"] = [potential(*xyz) for xyz in ELECTRODE_LOCATION]
+            DF[f"POTENTIAL_{i}"] = [potential(*xyz) for xyz in ELECTRODE_LOCATION]
             DF.to_csv(args.output,
                       index=False)
