@@ -541,95 +541,77 @@ The filesystem subtree follows the pattern:
 csd_profiles/
   <setup>/
     <subsetup>/
-      <csd_basis_functions>/
-        <path>==kCSD/<conductivity [S/m]>/ |
-                kESI/<sampling>/<model>/<mesh path>/<degree>/ |
-                mixed/<conductivity [S/m]>/<sampling>/<model>/<mesh path>/<degree>/ - path
-                different for kCSD, kESI and mixed source models
+      <csd basis functions>/
+        <csd path>
           <csd_grid>
-            <sources>.npz==eigensources.npz
-            <fwd path>==<fwd model>/<fwd mesh path>/<fwd degree>/
-              <sources>.csv
+            <profiles>.npz
+            <fwd path>/
+              <profiles>.csv
 ```
-where:
+where `<profiles>` defines CSD profiles; and `<csd path>`, their provenance.
+The `<csd path>` may be either `<inverse model path>`
+or `mixed/<conductivity [S/m]>/<kESI path>`, where `<kESI path>` stands for
+`<sampling>/<model>/<mesh path>/<degree>`.
 
-| wildcard                | meaning                                                                                                                                          |
-|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
-| `<setup>`               | set of possible electrodes locations for a given coordinate system                                                                               |
-| `<subsetup>`            | subset of electrodes locations, useful for optimization purposes                                                                                 |
-| `<csd_basis_functions>` | defines component part of cross kernel, number of basis, their location in the space and the shape of CSD profiles                               |
-| `<path>`                | path is different for kCSD, kESI and mixed (mixed in 1:1 ratio kCSD and kESI eigensources for the same basis function in CSD space) source model |
-| `<sampling>`            | regular, rectangular grid on which kESI leadfield correction was obtained                                                                        |
-| `<model>`               | defines geometrical and physical properties of the forward model                                                                                 |
-| `<mesh path>`           | defines mesh in the space of the model, depends on geometrical properties                                                                        |
-| `<degree>`              | informs elements of what degree are span on the grid, it's independent of the model                                                              |
-| `<csd_grid>`            |                                                                                                                                                  |
-| `<sources>.npz`         |                                                                                                                                                  |
-| `<fwd path>`            |                                                                                                                                                  |
-| `<fwd model>`           |                                                                                                                                                  |
-| `<fwd mesh path>`       |                                                                                                                                                  |
-| `<fwd degree>`          |                                                                                                                                                  |
-| `<sources>.csv`         |                                                                                                                                                  |
+If `<profiles>` are `eigensources` and `<csd path>` is:
+- `<inverse model path>` then CSD profiles are eigensources of either
+  appropriate inverse model (with regard to the `<inverse model path>`),
+- `mixed/<conductivity [S/m]>/<kESI path>`, then CSD profiles are averaged
+  (matching) eigensources for `kCSD/<conductivity [S/m]>`
+  and `kESI/<kESI path>`.
+
+The `<fwd path>` is `<fwd model>/<fwd mesh path>/<fwd degree>`. It determines
+the FEM (_FEniCS_) forward model used to simulate the potential generated
+by a CSD profiles in a way similar to described in the
+[Fenics leadfield corrections](#data-generated-fenics_leadfield_corrections)
+section, that is:
+- `<fwd model>` was defined in [Model properties](#data-bundled-model_properties),
+- `<fwd mesh path>` is either `<granularity>` or `<version>__<granularity>`
+  (see the [Meshes](#data-generated-meshes) subsection for details),
+- `<fwd degree>` is the degree of elements used by the finite element method (FEM).
+
+All other wildcards were discussed in previous sections.
+
+##### File `<profiles>.npz`
+
+The `<profiles>.npz` is a compressed NumPy file, which contains
+(possibly redundant - see
+[the `grid_csd.npz` file](#data-generated-kernels-grid_csd_npz)
+for details) the grid on which the CSD is estimated, as well as
+$n_{CSD}$ volumetric CSD profiles (3D arrays of
+$n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z$ shape stacked
+along the last axis).
+
+| array | shape                                                        | type                | content                          |
+|-------|--------------------------------------------------------------|---------------------|----------------------------------|
+| `CSD` | $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times n_{CSD}$ | `float` $[A / m^3]$ | CSD profiles                     |
+| `X`   | $n^{CSD}_x \times 1 \times 1$                                | `float` $[m]$       | X nodes of the CSD sampling grid |
+| `Y`   | $1 \times n^{CSD}_y \times 1$                                | `float` $[m]$       | Y nodes of the CSD sampling grid |
+| `Z`   | $1 \times 1 \times n^{CSD}_z$                                | `float` $[m]$       | Z nodes of the CSD sampling grid |
+
+If `<profiles>` are `eigensources` then $n_{CSD} = N$.
 
 
-`<model>/<mesh path>/<degree>/` - completely defines FEM model
+##### File `<profiles>.csv`
+
+File `<profiles>.csv` contains a header and $N$ rows.
+Every row contains (redundant - see information in
+[the `electrodes.csv` in the Setups section](#data-generated-setups-electrodes_csv))
+electrode location as well as its name and simulated
+potential values for $n_{CSD}$ CSD profiles.
+
+| field           | type          | content                          |
+|-----------------|---------------|----------------------------------|
+| `NAME`          | `str`         | name of the electrode            |
+| `X`             | `float` $[m]$ | X coordinate of ...              |
+| `Y`             | `float` $[m]$ | Y coordinate of ...              |
+| `Z`             | `float` $[m]$ | Z coordinate of ...              |
+| `POTENTIAL_<i>` | `float` $[V]$ | potential for $i$-th CSD profile |
 
 
 
 
 # OLD BELOW
-
-### Solutions
-
-Directories following pattern
-_images/\<geometry\>/\<granularity\>/\<degree\>/kernels/\<k\>/_
-contain kESI/kCSD kernel-related files derived from
-_\<geometry\>/\<granularity\>/\<degree\>/sampled/\<k\>/*.npz_
-sampled leadfields.
-
-| file                        | content                                                        |
-|-----------------------------|----------------------------------------------------------------|
-| `<method>_eigensources.npz` | the volumetric eigensource tensor of `<method>`                |
-| `fair_sources.npz`          | average of appropriate volumetric eigensources of both methods |
-
-`<method>` may be either `kCSD` or `kESI`.  Note that
-`images/<geometry>/<granularity>/<degree>/kernels/<k>/kCSD_*.npz`
-files are redundant.
-
-In the `images/<geometry>/<granularity>/<degree>/kernels/<k>/images`
-subtree (`<inverse model>`) results of the forward modelling are stored.  File
-`<inverse model>/<geometry>/<granularity>/<degree>/<sources>.csv`
-contains potentials at the electrodes generated by CSD profiles from
-`<inverse model>/../<sources>.npz` with a FEM forward model appropriate
-for the `<geometry>/<granularity>/<degree>` subpath.
-
-
-## Files
-
-### Volumetric eigensource tensor
-
-A compressed NumPy file (`*.npz`).
-
-| array | shape                                                  | type                | content                          |
-|-------|--------------------------------------------------------|---------------------|----------------------------------|
-| `CSD` | $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times n$ | `float` $[A / m^3]$ | sampled CSDs of n eigensources   |
-| `X`   | $n^{CSD}_x \times 1 \times 1$                          | `float` $[m]$       | X nodes of the CSD sampling grid |
-| `Y`   | $1 \times n^{CSD}_y \times 1$                          | `float` $[m]$       | Y nodes of the CSD sampling grid |
-| `Z`   | $1 \times 1 \times n^{CSD}_z$                          | `float` $[m]$       | Z nodes of the CSD sampling grid |
-
-
-### Potentials at electrodes generated by CSD profiles
-
-A CSV file.
-
-| field        | type          | content                                                   |
-|--------------|---------------|-----------------------------------------------------------|
-| `NAME`       | `str`         | name of the electrode                                     |
-| `X`          | `float` $[m]$ | X position of the electrode                               |
-| `Y`          | `float` $[m]$ | Y position of the electrode                               |
-| `Z`          | `float` $[m]$ | Z position of the electrode                               |
-| `SOURCE_<i>` | `float` $[V]$ | potential generated by the `i`-th source at the electrode |
-
 
 ## Tools
 
