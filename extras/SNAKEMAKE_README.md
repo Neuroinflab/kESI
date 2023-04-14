@@ -296,9 +296,9 @@ with additional (meta)data:
 | array name             | shape                                         | type            | content                                                             |
 |------------------------|-----------------------------------------------|-----------------|---------------------------------------------------------------------|
 | `CORRECTION_POTENTIAL` | $n^{POT}_x \times n^{POT}_y \times n^{POT}_z$ | `float` $[V/A]$ | sampled leadfield correction                                        |
-| `X`                    | $n^{POT}_x \times 1 \times 1$                 | `float` $[m]$   | grid nodes projected on the X axis                                  |
-| `Y`                    | $1 \times n^{POT}_y \times 1$                 | `float` $[m]$   | grid nodes projected on the Y axis                                  |
-| `Z`                    | $1 \times 1 \times n^{POT}_z$                 | `float` $[m]$   | grid nodes projected on the Z axis                                  |
+| `X`                    | $n^{POT}_x \times 1 \times 1$                 | `float` $[m]$   | grid nodes projected on the X axis (redundant with `grid.npz` file) |
+| `Y`                    | $1 \times n^{POT}_y \times 1$                 | `float` $[m]$   | grid nodes projected on the Y axis (redundant with `grid.npz` file) |
+| `Z`                    | $1 \times 1 \times n^{POT}_z$                 | `float` $[m]$   | grid nodes projected on the Z axis (redundant with `grid.npz` file) |
 | `LOCATION`             | $3$                                           | `float` $[m]$   | X, Y, Z coordinates of the electrode                                |
 | `BASE_CONDUCTIVITY`    | scalar                                        | `float` $[S/m]$ | medium conductivity for which the corrected potential is calculated |
 | `_PREPROCESSING_TIME`  | scalar                                        | `float` $[s]$   | construction time of the `FunctionManager` object                   |
