@@ -163,6 +163,8 @@ Content of a file depends on suffix of the filename:
 
 #### Setups <a name="data-generated-setups"></a>
 
+##### File `electrodes.csv`
+
 The `electrodes.csv` files contain a table  with location of the electrodes,
 with columns named intuitively: _NAME_ (name of the electrode), _X_, _Y_ and _Z_
 (its location coordinates in meters).  An examplary file may look like:
@@ -216,6 +218,8 @@ where:
   to calculate the correction,
 - `<electrode>` is the name of the electrode in the setup.
 
+##### Files `<electrode>.h5` and `<electrode>.ini`
+
 The `<electrode>.h5` file contains correction of the leadfield of the electrode
 `<electrode>` saved as a 3D _FEniCS_ scaler function $[V/A]$,
 and file `<electrode>.ini` contains its metadata:
@@ -236,6 +240,9 @@ and file `<electrode>.ini` contains its metadata:
 |            | solving_time              | time of FEM equation solving $[s]$                          |
 |            | base_conductivity         | base conductivity used by renormalization $[S/m]$           |
 |            | filename                  | relative path to the correction function (`<electrode>.h5`) |
+
+
+##### File `conductivity.ini`
 
 The `conductivity.ini` file is a copied [Model properties](#data-bundled-model_properties)
 file appropriate for the `<model>`.  Note that the file **may contain also geometrical
@@ -259,7 +266,8 @@ where `<sampling>` defines the regular grid the leadfield correction
 function is sampled on and other wildcards were discussed in
 [the previous section](#data-generated-fenics_leadfield_corrections).
 
-<a name="data-generated-sampled_leadfield_corrections-grid_npz"></a>
+##### File `grid.npz` <a name="data-generated-sampled_leadfield_corrections-grid_npz"></a>
+
 The `grid.npz` is a compressed NumPy file containing the $n^{POT}_x \times n^{POT}_y \times n^{POT}_z$
 regular grid description:
 
@@ -271,6 +279,9 @@ regular grid description:
 
 The grid is a Cartesian product of `X`, `Y` and `Z` arrays, which may be obtained with a call
 to `numpy.meshgrid(X, Y, Z, indexing='ij')`.
+
+
+##### File `<electrode>.npz`
 
 The compressed NumPy file `<electrode>.npz` contains the sampled leadfield correction
 with additional (meta)data:
@@ -309,12 +320,18 @@ as well as physical) used to couple them with their counterparts in the potentia
 codomain.  The `<setup>` wildcard was defined in the [Setups](#data-generated-setups)
 subsection; and `<electrode>`, in the [Fenics leadfield corrections](#data-generated-fenics_leadfield_corrections).
 
+
+##### File `model_src.json`
+
 The shape of the basis functions radially spline-defined in the CSD codomain
 is defined in the `model_src.json` function:
 
 ```python
 model_src = SphericalSplineSourceBase.fromJSON(open('model_src.json'))
 ```
+
+
+##### File `centroids.npz`
 
 Locations of their centroids (coordinate system origins) are defined
 in the compressed NumPy file `centroids.npz`:
@@ -340,6 +357,9 @@ in an appropriate SI unit.
 For kESI `<inverse model path>` is `kESI/<sampling>/<model>/<mesh path>/<degree>/`,
 where `<sampling>` wildcard was defined in [the previous section](#data-generated-sampled_leadfield_corrections);
 and other wildcards, in [Fenics leadfield corrections](#data-generated-fenics_leadfield_corrections).
+
+
+##### File `<electrode>.npz`
 
 <a name="data-generated-potential_basis_functions_at_electrodes-electrodes_npz"></a>
 The `<electrode>.npz` contains values of basis functions at the location
@@ -377,6 +397,8 @@ for which the kernel is calculated, and `<csd grid>` defines
 the grid of CSD estimation points.  The other wildcards were discussed
 extensively in previous sections.
 
+##### File `electrodes.csv`
+
 File `electrodes.csv` contains a header and $N$ rows (which order defines
 order of electrodes in the `<subsetup>`).  Every row contains (redundant)
 electrode location as well as its name.
@@ -387,6 +409,9 @@ electrode location as well as its name.
 | `X`    | `float` $[m]$ | X coordinate of ...   |
 | `Y`    | `float` $[m]$ | Y coordinate of ...   |
 | `Z`    | `float` $[m]$ | Z coordinate of ...   |
+
+
+##### File `phi.npz`
 
 The compressed NumPy file `phi.npz` contains a single array `PHI`
 of shape $M \times N$ and type `float` $[V]$, which columns are
@@ -401,6 +426,9 @@ The columns of the $\Phi$ matrix are `POTENTIALS` vectors from the
 [`<electrode>.npy` files described in the previous section](#data-generated-potential_basis_functions_at_electrodes-electrodes_npz)
 for details).
 
+
+##### File `kernel.npz`
+
 The compressed NumPy file `kernel.npz` contains a single array `KERNEL`
 of shape $N \times N$ and type `float` $[V^2]$, which is _kCSD_/_kESI_
 kernel matrix:
@@ -409,6 +437,8 @@ $$
 \mathbf{K} = \Phi^T \Phi
 $$
 
+
+##### File `analysis.npz`
 
 The compressed NumPy file `analysis.npz` contains auxiliary analytical
 data.
@@ -450,6 +480,8 @@ $$
 \end{cases}
 $$
 
+
+##### File `grid_csd.npz`
 
 The `grid_csd.npz` file defines the grid on which the CSD is estimated.
 It is similar to
