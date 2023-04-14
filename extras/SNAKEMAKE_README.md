@@ -163,17 +163,6 @@ Content of a file depends on suffix of the filename:
 
 #### Setups <a name="data-generated-setups"></a>
 
-##### File `electrodes.csv`
-
-The `electrodes.csv` files contain a table  with location of the electrodes,
-with columns named intuitively: _NAME_ (name of the electrode), _X_, _Y_ and _Z_
-(its location coordinates in meters).  An examplary file may look like:
-```
-NAME,X,Y,Z
-A_00,-0.006,0.0,0.046
-A_01,-0.006,0.0,0.0485
-```
-
 The filesystem subtree follows the pattern:
 ```
 setups/
@@ -193,6 +182,17 @@ the locations of electrodes were copied from, that is to:
             [bbb/
               [...]]]
                 zzz.ini
+```
+
+##### File `electrodes.csv`
+
+The `electrodes.csv` files contain a table  with location of the electrodes,
+with columns named intuitively: _NAME_ (name of the electrode), _X_, _Y_ and _Z_
+(its location coordinates in meters).  An exemplary file may look like:
+```
+NAME,X,Y,Z
+A_00,-0.006,0.0,0.046
+A_01,-0.006,0.0,0.0485
 ```
 
 
