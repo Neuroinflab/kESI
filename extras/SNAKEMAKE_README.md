@@ -358,9 +358,9 @@ GRID = numpy.meshgrid(X, Y, Z, indexing='ij')
 CENTROIDS = [A[MASK] for A in GRID]
 ```
 
-For kCSD `<inverse model path>` is `kCSD/<conductivity [S/m]>`,
-where `<conductivity [S/m]>` is the assumed (scalar) medium conductivity
-in an appropriate SI unit.
+For kCSD `<inverse model path>` is `kCSD/<conductivity>`,
+where `<conductivity>` is the assumed (scalar) medium conductivity
+in an appropriate SI unit ($S/m$).
 For kESI `<inverse model path>` is `kESI/<sampling>/<model>/<mesh path>/<degree>/`,
 where `<sampling>` wildcard was defined in [the previous section](#data-generated-sampled_leadfield_corrections);
 and other wildcards, in [Fenics leadfield corrections](#data-generated-fenics_leadfield_corrections).
@@ -550,14 +550,14 @@ csd_profiles/
 ```
 where `<profiles>` defines CSD profiles; and `<csd path>`, their provenance.
 The `<csd path>` may be either `<inverse model path>`
-or `mixed/<conductivity [S/m]>/<kESI path>`, where `<kESI path>` stands for
+or `mixed/<conductivity>/<kESI path>`, where `<kESI path>` stands for
 `<sampling>/<model>/<mesh path>/<degree>`.
 
 If `<profiles>` are `eigensources` and `<csd path>` is:
 - `<inverse model path>` then CSD profiles are eigensources of either
   appropriate inverse model (with regard to the `<inverse model path>`),
-- `mixed/<conductivity [S/m]>/<kESI path>`, then CSD profiles are averaged
-  (matching) eigensources for `kCSD/<conductivity [S/m]>`
+- `mixed/<conductivity>/<kESI path>`, then CSD profiles are averaged
+  (matching) eigensources for `kCSD/<conductivity>`
   and `kESI/<kESI path>`.
 
 The `<fwd path>` is `<fwd model>/<fwd mesh path>/<fwd degree>`. It determines
