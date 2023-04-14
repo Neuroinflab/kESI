@@ -36,7 +36,7 @@ class SliceForwardModel(forward_model.Slice):
                  quiet=True,
                  ground_potential=0.0,
                  element_type="CG"):
-        super().__init__(self, mesh, degree, config,
+        super().__init__(mesh, degree, config,
                          quiet=quiet,
                          ground_potential=ground_potential,
                          element_type=element_type)

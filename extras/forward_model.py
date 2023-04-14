@@ -108,7 +108,7 @@ class Spherical(_Base):
                  ground_potential=0.0,
                  element_type="CG",
                  grounded_plate_at=-0.088):
-        super().__init__(self, mesh, degree, config,
+        super().__init__(mesh, degree, config,
                          quiet=quiet,
                          ground_potential=ground_potential,
                          element_type=element_type)
