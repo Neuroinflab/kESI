@@ -81,7 +81,14 @@ SETUP_PARAMETERS = {
     #                             ]},
 }
 
-INSTALL_REQUIRES = ['numpy']
+INSTALL_REQUIRES = ['numpy',
+                    # 'scipy',
+                    # 'dolfin',
+                    # 'meshio',
+                    # 'snakemake',
+                    # 'pandas',
+                    # # 'matplotlib',
+                    ]
 
 WARNINGS = []
 
