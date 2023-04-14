@@ -490,16 +490,46 @@ $$
 $$
 
 
-##### File `grid_csd.npz`
+##### File `grid_csd.npz` <a name="data-generated-kernels-grid_csd_npz"></a>
 
 The `grid_csd.npz` file defines the grid on which the CSD is estimated.
 It is similar to
 [the previously described `grid.npz` file](#data-generated-sampled_leadfield_corrections-grid_npz).
 The only difference is $CSD$ substituting the $POT$ as a $n$ superscript index.
 
-[//]: # (TODO)
 
-[//]: # (            crosskernel.npz)
+##### File `crosskernel.npz`
+
+The `crosskernel.npz` is a compressed NumPy file, which contains
+(redundant - see
+[the `grid_csd.npz` file](#data-generated-kernels-grid_csd_npz)
+for details) the grid on which the CSD is estimated, as well as
+the crosskernel tensor $\mathbf{\tilde{K}}$.  The tensor yields
+volumetric CSD reconstruction
+
+$$
+\mathbf{C}^* = \mathbf{\tilde{K}} \mathbf{K}^{-1} \mathbf{V}
+\text{,}
+$$
+
+where $\mathbf{V}$ is either an $N$-element vector or $N \times n_t$
+matrix (with $n_t$ timepoints) of measured potentials, and $\mathbf{C}^*$
+is either an $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z$
+or $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times n_t$ array,
+respectively.
+
+| array         | shape                                                  | type                | content                              |
+|---------------|--------------------------------------------------------|---------------------|--------------------------------------|
+| `CROSSKERNEL` | $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times N$ | `float` $[W / m^3]$ | The crosskernel tensor ($\tilde{K}$) |
+| `X`           | $n^{CSD}_x \times 1 \times 1$                          | `float` $[m]$       | X nodes of the CSD sampling grid     |
+| `Y`           | $1 \times n^{CSD}_y \times 1$                          | `float` $[m]$       | Y nodes of the CSD sampling grid     |
+| `Z`           | $1 \times 1 \times n^{CSD}_z$                          | `float` $[m]$       | Z nodes of the CSD sampling grid     |
+
+Note that crosskernel $\mathbf{\tilde{K}} ~ [W / m^3]$
+is multiplied by $\beta = \mathbf{K}^{-1}\mathbf{V} ~ [V^{-1}]$,
+thus the unit of $\mathbf{C}^* = \mathbf{\tilde{K}} \beta$ is $[A / m^3]$.
+
+[//]: # (TODO: relation between CSD, POT and SRC - centroid - grids)
 
 
 
@@ -559,12 +589,6 @@ sampled leadfields.
 
 | file                        | content                                                        |
 |-----------------------------|----------------------------------------------------------------|
-| `electrodes.csv`            | positions of electrodes                                        |
-| `src_mask.npz`              | positions of source centroids                                  |
-| `<method>_phi.npz`          | the transfer matrix ($\Phi$) of `<method>`                     |
-| `<method>_kernel.npz`       | the kernel matrix of `<method>`                                |
-| `<method>_crosskernel.npz`  | the volumetric crosskernel tensor of `<method>`                |
-| `<method>_analysis.npz`     | auxilary analytical data of `<method>`                         |
 | `<method>_eigensources.npz` | the volumetric eigensource tensor of `<method>`                |
 | `fair_sources.npz`          | average of appropriate volumetric eigensources of both methods |
 
@@ -581,23 +605,6 @@ for the `<geometry>/<granularity>/<degree>` subpath.
 
 
 ## Files
-
-
-### Volumetric cross-kernel tensor
-
-A compressed NumPy file (`*.npz`).
-
-| array         | shape                                                  | type                | content                                 |
-|---------------|--------------------------------------------------------|---------------------|-----------------------------------------|
-| `CROSSKERNEL` | $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times n$ | `float` $[W / m^3]$ | The crosskernel tensor ($\overline{K}$) |
-| `X`           | $n^{CSD}_x \times 1 \times 1$                          | `float` $[m]$       | X nodes of the CSD sampling grid        |
-| `Y`           | $1 \times n^{CSD}_y \times 1$                          | `float` $[m]$       | Y nodes of the CSD sampling grid        |
-| `Z`           | $1 \times 1 \times n^{CSD}_z$                          | `float` $[m]$       | Z nodes of the CSD sampling grid        |
-
-The tensor yields volumetric CSD reconstruction $C = \overline{K} K^{-1} V$,
-where $V$ is a vector (matrix in case of timepoints) of measured potentials and
-$C$ is an $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z$ array.
-
 
 ### Volumetric eigensource tensor
 
