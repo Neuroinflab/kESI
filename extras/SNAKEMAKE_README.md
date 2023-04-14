@@ -259,6 +259,7 @@ where `<sampling>` defines the regular grid the leadfield correction
 function is sampled on and other wildcards were discussed in
 [the previous section](#data-generated-fenics_leadfield_corrections).
 
+<a name="data-generated-sampled_leadfield_corrections-grid_npz"></a>
 The `grid.npz` is a compressed NumPy file containing the $n^{POT}_x \times n^{POT}_y \times n^{POT}_z$
 regular grid description:
 
@@ -449,11 +450,17 @@ $$
 \end{cases}
 $$
 
+
+The `grid_csd.npz` file defines the grid on which the CSD is estimated.
+It is similar to
+[the previously described `grid.npz` file](#data-generated-sampled_leadfield_corrections-grid_npz).
+The only difference is $CSD$ substituting the $POT$ as a $n$ superscript index.
+
 [//]: # (TODO)
 
-[//]: # (            grid_csd.npz)
-
 [//]: # (            crosskernel.npz)
+
+
 
 
 #### CSD profiles <a name="data-generated-csd_profiles"></a>
