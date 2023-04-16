@@ -192,43 +192,18 @@ class SphericalSplineSourceBase(SourceBase):
                 "coefficients": self._csd_polynomials}
 
 
-class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
-    """
-    Notes
-    -----
+class _SphericalSplinePotentialKCSD(object):
+    def __init__(self, nodes, csd_polynomials):
+        self._nodes = nodes
+        self._calculate_potential_coefficients(csd_polynomials)
 
-    Potentials in a medium of constant, scalar conductivity are calculated by
-    integrating :math:`\int V(R)` [1]_, where the surface charge density
-    :math:`\sigma_0` is substituted by surface CSD :math:`CSD(R) dR`,
-    and the vacuum permittivity :math:`\vareps_0`, by medium conductivity
-    :math:`\sigma`, thus transforming the electrostatic problem into electric.
-
-    References
-    ----------
-
-    .. [1] Markus Zahn, **Pole elektromagnetyczne**,
-       1989 Warszawa, Państwowe Wydawnictwo Naukowe, ISBN: 83-01-07693-3,
-       p. 101, eq. 21
-       (original title: Electromagnetic Field Theory: a problem solving approach)
-    """
-    def __init__(self, x, y, z, nodes,
-                 coefficients=((1,),
-                               (-4, 12, -9, 2),
-                               ),
-                 conductivity=1.0):
-        super(SphericalSplineSourceKCSD,
-              self).__init__(x, y, z, nodes, coefficients)
-
-        self._calculate_potential_coefficients()
-        self.conductivity = conductivity
-
-    def _calculate_potential_coefficients(self):
+    def _calculate_potential_coefficients(self, csd_polynomials):
         self._offsetted_external_shell_potential_polynomials = list(map(
                                        self._offsetted_external_shell_potential,
-                                       self._csd_polynomials))
+                                       csd_polynomials))
         self._internal_sphere_potential_dividend_polynomials = list(map(
                                        self._internal_sphere_potential_dividend,
-                                       self._csd_polynomials))
+                                       csd_polynomials))
 
     @staticmethod
     def _offsetted_external_shell_potential(csd):
@@ -282,15 +257,13 @@ class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
         """
         return [0.0] * 3 + [a / i for i, a in enumerate(csd, start=3)]
 
-    def potential(self, X, Y, Z):
-        R = self._distance(X, Y, Z)
+    def __call__(self, R):
         r0 = 0
         V = np.zeros_like(R)
-
         for r, p_ext, p_int in zip(
-                          self._nodes,
-                          self._offsetted_external_shell_potential_polynomials,
-                          self._internal_sphere_potential_dividend_polynomials):
+                self._nodes,
+                self._offsetted_external_shell_potential_polynomials,
+                self._internal_sphere_potential_dividend_polynomials):
             IDX = R <= r0  # inside both polynomial limits
             if IDX.any():
                 V[IDX] += self._external_shell_potential(p_ext, r0, r)
@@ -308,8 +281,7 @@ class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
                 V[IDX] += self._internal_shell_potential(p_int, r, r0, _R)
 
             r0 = r
-
-        return V * self._a / self.conductivity
+        return V
 
     def _internal_shell_potential(self,
                                   p_internal,
@@ -321,6 +293,40 @@ class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
 
     def _external_shell_potential(self, p_csd, r_internal, r_external):
         return polynomial(p_csd, r_external) - polynomial(p_csd, r_internal)
+
+
+class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
+    """
+    Notes
+    -----
+
+    Potentials in a medium of constant, scalar conductivity are calculated by
+    integrating :math:`\int V(R)` [1]_, where the surface charge density
+    :math:`\sigma_0` is substituted by surface CSD :math:`CSD(R) dR`,
+    and the vacuum permittivity :math:`\vareps_0`, by medium conductivity
+    :math:`\sigma`, thus transforming the electrostatic problem into electric.
+
+    References
+    ----------
+
+    .. [1] Markus Zahn, **Pole elektromagnetyczne**,
+       1989 Warszawa, Państwowe Wydawnictwo Naukowe, ISBN: 83-01-07693-3,
+       p. 101, eq. 21
+       (original title: Electromagnetic Field Theory: a problem solving approach)
+    """
+    def __init__(self, x, y, z, nodes,
+                 coefficients=((1,),
+                               (-4, 12, -9, 2),
+                               ),
+                 conductivity=1.0):
+        super().__init__(x, y, z, nodes, coefficients)
+        self.conductivity = conductivity
+        self._model_potential = _SphericalSplinePotentialKCSD(nodes,
+                                                              coefficients)
+
+    def potential(self, X, Y, Z):
+        return (self._model_potential(self._distance(X, Y, Z))
+                * (self._a / self.conductivity))
 
     def _constructor_args(self):
         d = super()._constructor_args()
