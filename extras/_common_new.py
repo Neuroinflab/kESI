@@ -105,6 +105,35 @@ class GaussianSourceKCSD3D(GaussianSourceBase):
                                   self._c * self._fraction_of_erf_to_x_limit_in_0)
 
 
+def polynomial(coefficients, X):
+    """
+    Parameters
+    ----------
+    X : float or int or np.array
+        argument of the polynomial
+
+    coefficients : [float or int, ...]
+        coefficients of polynomial terms in increasing order
+
+    Returns
+    -------
+    float or int or np.array
+        values of the polynomial for `X`
+
+    Notes
+    -----
+        For NumPy v. 1.21.6 Python v. 3.7.12 the function is twice as fast as
+        either `np.polyval()` function or object of `np.polynomial.Polynomial`
+        class.
+    """
+    ACC = 0
+    for c in reversed(coefficients):
+        ACC *= X
+        ACC += c
+
+    return ACC
+
+
 class SphericalSplineSourceBase(SourceBase):
     def __init__(self, x, y, z, nodes,
                  coefficients=((1,),
@@ -125,8 +154,7 @@ class SphericalSplineSourceBase(SourceBase):
             coeffs[3:] = [c / i
                           for i, c in enumerate(coefficients,
                                                 start=3)]
-            acc += (self._evaluate_polynomial(r, coeffs)
-                    - self._evaluate_polynomial(r0, coeffs))
+            acc += polynomial(coeffs, r) - polynomial(coeffs, r0)
             r0 = r
         return 4 * np.pi * acc
 
@@ -137,8 +165,7 @@ class SphericalSplineSourceBase(SourceBase):
         for r, coefficients in zip(self._nodes,
                                    self._csd_polynomials):
             IDX = (r0 <= R) & (R < r)
-            CSD[IDX] = self._evaluate_polynomial(R[IDX],
-                                                 coefficients)
+            CSD[IDX] = polynomial(coefficients, R[IDX])
             r0 = r
 
         return self._a * CSD
@@ -147,19 +174,6 @@ class SphericalSplineSourceBase(SourceBase):
         return np.sqrt(np.square(X - self.x)
                        + np.square(Y - self.y)
                        + np.square(Z - self.z))
-
-    @staticmethod
-    def _evaluate_polynomial(X, coefficients):
-        # NOTE: benchmark before reimplementation with dedicated NumPy solution
-        # For NumPy v. 1.21.6 Python v. 3.7.12 the method is twice as fast
-        # as either `np.polyval()` function or object
-        # of `np.polynomial.Polynomial` class.
-        ACC = 0
-        for c in reversed(coefficients):
-            ACC *= X
-            ACC += c
-
-        return ACC
 
     @property
     def radius(self):
@@ -302,12 +316,11 @@ class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
                                   r_external,
                                   r_internal,
                                   r_electrode):
-        return (self._evaluate_polynomial(r_external, p_internal)
-                - self._evaluate_polynomial(r_internal, p_internal)) / r_electrode
+        return (polynomial(p_internal, r_external)
+                - polynomial(p_internal, r_internal)) / r_electrode
 
     def _external_shell_potential(self, p_csd, r_internal, r_external):
-        return (self._evaluate_polynomial(r_external, p_csd)
-                - self._evaluate_polynomial(r_internal, p_csd))
+        return polynomial(p_csd, r_external) - polynomial(p_csd, r_internal)
 
     def _constructor_args(self):
         d = super()._constructor_args()
