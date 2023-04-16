@@ -27,6 +27,7 @@
 import logging
 import collections
 import operator
+import itertools
 import warnings
 import configparser
 import json
@@ -55,22 +56,31 @@ class Gauss3D(object):
                                         + np.square(Z - self.z)) / self._variance)
 
 
-class SourceBase(object):
+class _Base(object):
+    def __init__(self):
+        pass
+
+
+class SourceBase(_Base):
     @classmethod
     def fromJSON(cls, _file, **kwargs):
         _json = json.load(_file)
         _json.update(kwargs)
         return cls(**_json)
 
-    def __init__(self, x, y, z):
+    def __init__(self, x, y, z, **kwargs):
+        super().__init__(**kwargs)
         self.x = x
         self.y = y
         self.z = z
 
 
 class GaussianSourceBase(SourceBase):
-    def __init__(self, x, y, z, standard_deviation):
-        super(GaussianSourceBase, self).__init__(x, y, z)
+    def __init__(self, x, y, z, standard_deviation, **kwargs):
+        super().__init__(x=x,
+                         y=y,
+                         z=z,
+                         **kwargs)
         self._variance = standard_deviation ** 2
         self._a = (2 * np.pi * self._variance) ** -1.5
 
@@ -88,8 +98,12 @@ class GaussianSourceKCSD3D(GaussianSourceBase):
         _x *= _half
         _err = _fraction_of_erf_to_x_limit_in_0 - erf(_x) / _x
 
-    def __init__(self, x, y, z, standard_deviation, conductivity=1.0):
-        super(GaussianSourceKCSD3D, self).__init__(x, y, z, standard_deviation)
+    def __init__(self, x, y, z, standard_deviation, conductivity=1.0, **kwargs):
+        super().__init__(x=x,
+                         y=y,
+                         z=z,
+                         standard_deviation=standard_deviation,
+                         **kwargs)
         self.conductivity = conductivity
         self._b = 0.25 / (np.pi * conductivity)
         self._c = np.sqrt(0.5) / standard_deviation
@@ -134,41 +148,51 @@ def polynomial(coefficients, X):
     return ACC
 
 
-class SphericalSplineSourceBase(SourceBase):
+class _ShellDefined(_Base):
+    def __init__(self, nodes, **kwargs):
+        super().__init__(**kwargs)
+        self._nodes = nodes
+
+    def _iterate_shells(self, *items):
+        return zip(itertools.chain([0], self._nodes),
+                   self._nodes,
+                   *items)
+
+
+class SphericalSplineSourceBase(SourceBase, _ShellDefined):
     def __init__(self, x, y, z, nodes,
                  coefficients=((1,),
                                (-4, 12, -9, 2),
-                               )):
-        super(SphericalSplineSourceBase,
-              self).__init__(x, y, z)
-        self._nodes = nodes
+                               ),
+                 **kwargs):
+        super().__init__(x=x, y=y, z=z, nodes=nodes, **kwargs)
         self._csd_polynomials = coefficients
-        self._a = 1.0 / self._integrate_spherically()
+        self._normalization_factor = 1.0 / self._get_unnormalized_current()
 
-    def _integrate_spherically(self):
-        acc = 0.0
-        coeffs = [0, 0, 0]
-        r0 = 0
-        for r, coefficients in zip(self._nodes,
-                                   self._csd_polynomials):
-            coeffs[3:] = [c / i
-                          for i, c in enumerate(coefficients,
-                                                start=3)]
-            acc += polynomial(coeffs, r) - polynomial(coeffs, r0)
-            r0 = r
-        return 4 * np.pi * acc
+    def _get_unnormalized_current(self):
+        return sum(self._get_shell_current(csd_p, r_in, r_out)
+                   for r_in, r_out, csd_p in
+                   self._iterate_shells(self._csd_polynomials))
+
+    def _get_shell_current(self, csd_p, r_in, r_out):
+        sphere_current_p = self._integrate_polynomial_spherically(csd_p)
+        return (polynomial(sphere_current_p, r_out)
+                - polynomial(sphere_current_p, r_in))
+
+    @staticmethod
+    def _integrate_polynomial_spherically(polynomial):
+        return [0.0] * 3 + [4 * np.pi * a / i for i, a in enumerate(polynomial,
+                                                                    start=3)]
 
     def csd(self, X, Y, Z):
         R = self._distance(X, Y, Z)
         CSD = np.zeros_like(R)
-        r0 = 0
-        for r, coefficients in zip(self._nodes,
-                                   self._csd_polynomials):
-            IDX = (r0 <= R) & (R < r)
-            CSD[IDX] = polynomial(coefficients, R[IDX])
-            r0 = r
 
-        return self._a * CSD
+        for r_in, r_out, csd_p in self._iterate_shells(self._csd_polynomials):
+            IDX = (r_in <= R) & (R < r_out)
+            CSD[IDX] = polynomial(csd_p, R[IDX])
+
+        return self._normalization_factor * CSD
 
     def _distance(self, X, Y, Z):
         return np.sqrt(np.square(X - self.x)
@@ -192,9 +216,9 @@ class SphericalSplineSourceBase(SourceBase):
                 "coefficients": self._csd_polynomials}
 
 
-class _SphericalSplinePotentialKCSD(object):
-    def __init__(self, nodes, csd_polynomials):
-        self._nodes = nodes
+class _SphericalSplinePotentialKCSD(_ShellDefined):
+    def __init__(self, nodes, csd_polynomials, **kwargs):
+        super().__init__(nodes=nodes, **kwargs)
         self._calculate_potential_coefficients(csd_polynomials)
 
     def _calculate_potential_coefficients(self, csd_polynomials):
@@ -258,41 +282,53 @@ class _SphericalSplinePotentialKCSD(object):
         return [0.0] * 3 + [a / i for i, a in enumerate(csd, start=3)]
 
     def __call__(self, R):
-        r0 = 0
-        V = np.zeros_like(R)
-        for r, p_ext, p_int in zip(
-                self._nodes,
-                self._offsetted_external_shell_potential_polynomials,
-                self._internal_sphere_potential_dividend_polynomials):
-            IDX = R <= r0  # inside both polynomial limits
-            if IDX.any():
-                V[IDX] += self._external_shell_potential(p_ext, r0, r)
+        try:
+            self._R = R
+            self._V = np.zeros_like(R)
+            self._accumulate_potential_shell_by_shell()
+            return self._V
 
-            IDX = ~IDX & (R < r)  # within polynomial limits
-            if IDX.any():
-                # here is the bug  # 2023-04-10: the comment seems to be rotten
-                _R = R[IDX]
-                V[IDX] += (self._external_shell_potential(p_ext, _R, r)
-                           + self._internal_shell_potential(p_int, _R, r0, _R))
+        finally:
+            del self._V, self._R
 
-            IDX = R >= r  # outside both polynomial limits
-            if IDX.any():
-                _R = R[IDX]
-                V[IDX] += self._internal_shell_potential(p_int, r, r0, _R)
+    def _accumulate_potential_shell_by_shell(self):
+        for r_in, r_out, p_int, p_ext in self._iterate_shells(
+                          self._internal_sphere_potential_dividend_polynomials,
+                          self._offsetted_external_shell_potential_polynomials):
+            self._add_pot_to_electrodes_inside_shell(r_in, r_out, p_ext)
+            self._add_pot_to_electrodes_within_shell(r_in, r_out, p_int, p_ext)
+            self._add_pot_to_electrodes_outside_shell(r_in, r_out, p_int)
 
-            r0 = r
-        return V
+    def _add_pot_to_electrodes_outside_shell(self, r_in, r_out,
+                                             pot):
+        IDX = self._R >= r_out
+        if IDX.any():
+            self._V[IDX] += self._internal_shell_potential(self._R[IDX],
+                                                           r_in, r_out, pot)
 
-    def _internal_shell_potential(self,
-                                  p_internal,
-                                  r_external,
-                                  r_internal,
-                                  r_electrode):
-        return (polynomial(p_internal, r_external)
-                - polynomial(p_internal, r_internal)) / r_electrode
+    def _add_pot_to_electrodes_within_shell(self, r_in, r_out, pot_int, pot_ext):
+        IDX = (self._R > r_in) & (self._R < r_out)
+        if IDX.any():
+            self._V[IDX] += self._potential_within_shell(self._R[IDX],
+                                                         r_in, r_out,
+                                                         pot_int, pot_ext)
 
-    def _external_shell_potential(self, p_csd, r_internal, r_external):
-        return polynomial(p_csd, r_external) - polynomial(p_csd, r_internal)
+    def _potential_within_shell(self, R, r_in, r_out, p_int, p_ext):
+        return (self._external_shell_potential(R, r_out, p_ext)
+                + self._internal_shell_potential(R, r_in, R, p_int))
+
+    def _add_pot_to_electrodes_inside_shell(self, r_in, r_out, pot):
+        IDX = self._R <= r_in
+        if IDX.any():
+            self._V[IDX] += self._external_shell_potential(r_in, r_out, pot)
+
+    def _internal_shell_potential(self, r_electrode, r_internal, r_external,
+                                  potential):
+        return (polynomial(potential, r_external)
+                - polynomial(potential, r_internal)) / r_electrode
+
+    def _external_shell_potential(self, r_internal, r_external, pot):
+        return polynomial(pot, r_external) - polynomial(pot, r_internal)
 
 
 class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
@@ -318,15 +354,17 @@ class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
                  coefficients=((1,),
                                (-4, 12, -9, 2),
                                ),
-                 conductivity=1.0):
-        super().__init__(x, y, z, nodes, coefficients)
+                 conductivity=1.0,
+                 **kwargs):
+        super().__init__(x=x, y=y, z=z, nodes=nodes, coefficients=coefficients,
+                         **kwargs)
         self.conductivity = conductivity
         self._model_potential = _SphericalSplinePotentialKCSD(nodes,
                                                               coefficients)
 
     def potential(self, X, Y, Z):
         return (self._model_potential(self._distance(X, Y, Z))
-                * (self._a / self.conductivity))
+                * (self._normalization_factor / self.conductivity))
 
     def _constructor_args(self):
         d = super()._constructor_args()
@@ -800,6 +838,98 @@ def shape(dimensions, axis):
 
 
 if __name__ == '__main__':
+    class OldSphericalSplineSourceKCSD(SphericalSplineSourceBase):
+        def __init__(self, x, y, z, nodes,
+                     coefficients=((1,),
+                                   (-4, 12, -9, 2),
+                                   ),
+                     conductivity=1.0):
+            super(OldSphericalSplineSourceKCSD,
+                  self).__init__(x, y, z, nodes, coefficients)
+
+            self._calculate_potential_coefficients()
+            self.conductivity = conductivity
+
+        def _calculate_potential_coefficients(self):
+            self._offsetted_external_shell_potential_polynomials = list(map(
+                self._offsetted_external_shell_potential,
+                self._csd_polynomials))
+            self._internal_sphere_potential_dividend_polynomials = list(map(
+                self._internal_sphere_potential_dividend,
+                self._csd_polynomials))
+
+        @staticmethod
+        def _offsetted_external_shell_potential(csd):
+            return [0.0] * 2 + [a / i for i, a in enumerate(csd, start=2)]
+
+        @staticmethod
+        def _internal_sphere_potential_dividend(csd):
+            return [0.0] * 3 + [a / i for i, a in enumerate(csd, start=3)]
+
+        def potential(self, X, Y, Z):
+            R = self._distance(X, Y, Z)
+            r0 = 0
+            V = np.zeros_like(R)
+
+            for r, p_ext, p_int in zip(
+                    self._nodes,
+                    self._offsetted_external_shell_potential_polynomials,
+                    self._internal_sphere_potential_dividend_polynomials):
+                IDX = R <= r0  # inside both polynomial limits
+                if IDX.any():
+                    V[IDX] += self._external_shell_potential(p_ext, r0, r)
+
+                IDX = ~IDX & (R < r)  # within polynomial limits
+                if IDX.any():
+                    # here is the bug  # 2023-04-10: the comment seems to be rotten
+                    _R = R[IDX]
+                    V[IDX] += (self._external_shell_potential(p_ext, _R, r)
+                               + self._internal_shell_potential(p_int, _R, r0,
+                                                                _R))
+
+                IDX = R >= r  # outside both polynomial limits
+                if IDX.any():
+                    _R = R[IDX]
+                    V[IDX] += self._internal_shell_potential(p_int, r, r0, _R)
+
+                r0 = r
+
+            return V * self._normalization_factor / self.conductivity
+
+        def _internal_shell_potential(self,
+                                      p_internal,
+                                      r_external,
+                                      r_internal,
+                                      r_electrode):
+            return (polynomial(p_internal, r_external)
+                    - polynomial(p_internal, r_internal)) / r_electrode
+
+        def _external_shell_potential(self, p_csd, r_internal, r_external):
+            return polynomial(p_csd, r_external) - polynomial(p_csd, r_internal)
+
+        def _constructor_args(self):
+            d = super()._constructor_args()
+            d['conductivity'] = self.conductivity
+            return d
+
+
+    R_MAX = 8
+    N = 2**10 + 1
+    R = np.linspace(0, R_MAX, N)
+    nodes = [1, 2, 3]
+    coefficients = [[1], [2, 3], [4.5, 6.7, 8.9, 10]]
+    conductivity = 1.5
+    old = OldSphericalSplineSourceKCSD(0, 0, 0, nodes, coefficients, conductivity)
+    new = SphericalSplineSourceKCSD(0, 0, 0, nodes, coefficients, conductivity)
+
+    V_new = new.potential(R, 0, 0)
+    V_old = old.potential(R, 0, 0)
+    err_abs = abs(V_new - V_old).max()
+    err_rel = abs(V_new / V_old - 1).max()
+    assert err_abs <= 3.5e-18, f"ABS_ERR: {err_abs:g}"
+    assert err_rel <= 2.5e-16, f"REL_ERR: {err_rel:g}"
+
+
     import common
     import pandas as pd
 
