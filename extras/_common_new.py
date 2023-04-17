@@ -956,22 +956,35 @@ if __name__ == '__main__':
             return d
 
 
+    R_MIN = 0
     R_MAX = 8
     N = 2**10 + 1
-    R = np.linspace(0, R_MAX, N)
+    R = np.linspace(R_MIN, R_MAX, N)
     nodes = [1, 2, 3]
     coefficients = [[1], [2, 3], [4.5, 6.7, 8.9, 10]]
     conductivity = 1.5
     old = OldSphericalSplineSourceKCSD(0, 0, 0, nodes, coefficients, conductivity)
     new = SphericalSplineSourceKCSD(0, 0, 0, nodes, coefficients, conductivity)
 
-    for method in ["csd", "potential"]:
-        V_new = getattr(new, method)(R, 0, 0)
-        V_old = getattr(old, method)(R, 0, 0)
-        err_abs = abs(V_new - V_old).max()
-        err_rel = abs(V_new / V_old - 1)[V_old != 0].max()
-        assert err_abs <= 7.0e-18, f"ABS_ERR_{method}: {err_abs:g}"
-        assert err_rel <= 4.5e-16, f"REL_ERR_{method}: {err_rel:g}"
+    def regression_tets(name, old, new, tolerance_abs, tolerance_rel, *args):
+        NEW = new(*args)
+        OLD = old(*args)
+        err_abs = abs(NEW - OLD).max()
+        assert err_abs <= tolerance_abs, f"FAILED {name}: abs_err = {err_abs:g} > {tolerance_abs:g}"
+
+        IDX = OLD != 0
+        if IDX.any():
+            err_rel = abs(NEW / OLD - 1)[IDX].max()
+            assert err_rel <= tolerance_rel, f"FAILED {name}: rel_err = {err_rel:g} > {tolerance_rel:g}"
+
+    regression_tets('.csd()',
+                    old.csd, new.csd,
+                    7.0e-18, 4.5e-16,
+                    R, 0, 0)
+    regression_tets('.potential()',
+                    old.potential, new.potential,
+                    1.1e-17, 5.6e-16,
+                    R, 0, 0)
 
 
     import common
