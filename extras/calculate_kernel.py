@@ -58,22 +58,22 @@ if __name__ == "__main__":
         with np.load(os.path.join(args.input, f"{name}.npz")) as fh:
             COL = fh["POTENTIALS"]
             if i == 0:
-                PHI = np.full((len(COL), len(ELECTRODES)), np.nan)
+                B = np.full((len(COL), len(ELECTRODES)), np.nan)
 
-            PHI[:, i] = COL
+            B[:, i] = COL
 
     np.savez_compressed(os.path.join(args.output,
-                                     "phi.npz"),
-                        PHI=PHI)
+                                     "potential_basis_functions.npz"),
+                        B=B)
 
     np.savez_compressed(os.path.join(args.output,
                                      "kernel.npz"),
-                        KERNEL=np.matmul(PHI.T, PHI))
+                        KERNEL=np.matmul(B.T, B))
 
-    _U, _S, _V = np.linalg.svd(PHI,
+    _U, _S, _V = np.linalg.svd(B,
                                full_matrices=False,
                                compute_uv=True)
-    del PHI
+    del B
 
     np.savez_compressed(os.path.join(args.output,
                                      "analysis.npz"),

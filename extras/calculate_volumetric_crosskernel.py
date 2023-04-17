@@ -41,9 +41,9 @@ if __name__ == "__main__":
                         dest="output",
                         help="volumetric crosskernel")
     parser.add_argument("-i", "--input",
-                        metavar="<phi.npz>",
+                        metavar="<potential basis functions.npz>",
                         dest="input",
-                        help="source transfer matrix")
+                        help="matrix of values of potential basis functions")
     parser.add_argument("-c", "--centroids",
                         required=True,
                         metavar="<centroids.npz>",

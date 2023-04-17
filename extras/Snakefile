@@ -100,7 +100,7 @@ KERNEL_SUBSETUP_DIR = os.path.join(DATA_DIR, "kernels", "{setup}", "{subsetup}")
 KERNEL_SUBSETUP_ELECTRODES = os.path.join(KERNEL_SUBSETUP_DIR, "electrodes.csv")
 KERNEL_DIR = os.path.join(KERNEL_SUBSETUP_DIR, "{basis_functions}", "{path}")
 KERNEL_FILES = {name: os.path.join(KERNEL_DIR, f"{name}.npz")
-                for name in ["phi", "kernel", "analysis"]}
+                for name in ["potential_basis_functions", "kernel", "analysis"]}
 
 PAPER_SLICE_ELECTRODES = [f"{x}_0_{z}" for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
 PAPER_4SM_ELECTRODES = [f"{x}_{i:02d}" for i in range(0, 12) for x in ['B', 'D']]
@@ -312,7 +312,7 @@ rule CSD_EIGENSOURCES:
 
 rule KERNEL_CROSSKERNEL:
     input:
-        transfer_matrix=KERNEL_FILES["phi"],
+        transfer_matrix=KERNEL_FILES["potential_basis_functions"],
         centroids=PBF_CENTROIDS,
         source=PBF_MODEL_SRC,
         grid_csd=KERNEL_CSD_GRID

@@ -393,7 +393,7 @@ kernels/
       electrodes.csv
       <csd basis functions>/
         <inverse model path>/
-          phi.npz
+          potential_basis_functions.npz
           kernel.npz
           analysis.npz
           <csd grid>/
@@ -421,9 +421,9 @@ electrode location as well as its name.
 | `Z`    | `float` $[m]$ | Z coordinate of ...   |
 
 
-##### File `phi.npz`
+##### File `potential_basis_functions.npz`
 
-The compressed NumPy file `phi.npz` contains a single array `PHI`
+The compressed NumPy file `potential_basis_functions.npz` contains a single array `B`
 of shape $M \times N$ and type `float` $[V]$, which columns are
 locations of electrodes mapped according to the $\mathbf{b}$ function
 ($\Phi$ in [Chintaluri 2021](#bibliography-chintaluri2021)):
