@@ -216,7 +216,7 @@ class SphericalSplineSourceBase(SourceBase, _ShellDefined):
                 "coefficients": self._csd_polynomials}
 
 
-class _SphericalSplinePotentialKCSD(_ShellDefined):
+class _SphericalSplinePotentialBaseKCSD(_ShellDefined):
     """
     Notes
     -----
@@ -309,6 +309,8 @@ class _SphericalSplinePotentialKCSD(_ShellDefined):
         finally:
             del self._V, self._R
 
+
+class _SphericalSplinePotentialShellByShellKCSD(_SphericalSplinePotentialBaseKCSD):
     def _calculate_potential(self):
         self._accumulate_potential_shell_by_shell()
 
@@ -362,8 +364,9 @@ class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
         super().__init__(x=x, y=y, z=z, nodes=nodes, coefficients=coefficients,
                          **kwargs)
         self.conductivity = conductivity
-        self._model_potential = _SphericalSplinePotentialKCSD(nodes,
-                                                              coefficients)
+        self._model_potential = _SphericalSplinePotentialShellByShellKCSD(
+                                                                   nodes,
+                                                                   coefficients)
 
     def potential(self, X, Y, Z):
         return (self._model_potential(self._distance(X, Y, Z))
@@ -968,7 +971,9 @@ if __name__ == '__main__':
     conductivity = 1.5
     old = OldSphericalSplineSourceKCSD(0, 0, 0, nodes, coefficients, conductivity)
     new = SphericalSplineSourceKCSD(0, 0, 0, nodes, coefficients, conductivity)
-    potential_shell_by_shell = _SphericalSplinePotentialKCSD(nodes, coefficients)
+    potential_shell_by_shell = _SphericalSplinePotentialShellByShellKCSD(
+                                                                   nodes,
+                                                                   coefficients)
     normalization_factor = old._normalization_factor / conductivity
 
     def regression_tets(name, old, new, tolerance_abs, tolerance_rel, *args):
