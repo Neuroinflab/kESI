@@ -148,6 +148,10 @@ def polynomial(coefficients, X):
     return ACC
 
 
+def sub_polynomials(p_a, p_b):
+    return [a - b for a, b in itertools.zip_longest(p_a, p_b, fillvalue=0)]
+
+
 class _ShellDefined(_Base):
     def __init__(self, nodes, **kwargs):
         super().__init__(**kwargs)
@@ -352,6 +356,62 @@ class _SphericalSplinePotentialShellByShellKCSD(_SphericalSplinePotentialBaseKCS
 
     def _external_shell_potential(self, r_internal, r_external, pot):
         return polynomial(pot, r_external) - polynomial(pot, r_internal)
+
+
+class _SphericalSplinePotentialSphereBySphereKCSD(_SphericalSplinePotentialBaseKCSD):
+    def _calculate_potential_coefficients(self, csd_polynomials):
+        super()._calculate_potential_coefficients(csd_polynomials)
+        self._calculate_internal_shell_potential_dividend_polynomials()
+        self._calculate_external_shell_potential_polynomials()
+
+    def _calculate_internal_shell_potential_dividend_polynomials(self):
+        self._internal_shell_potential_dividend_polynomials = list(map(
+            sub_polynomials,
+            self._internal_sphere_potential_dividend_polynomials,
+            self._internal_sphere_potential_dividend_polynomials[1:] + [[]]
+        ))
+
+    def _calculate_external_shell_potential_polynomials(self):
+        self._external_shell_potential_polynomials = list(map(
+            sub_polynomials,
+            self._offsetted_external_shell_potential_polynomials,
+            self._offsetted_external_shell_potential_polynomials[1:] + [[]]
+            ))
+
+    def _calculate_potential(self):
+        self._accumulate_potential_sphere_by_sphere()
+
+    def _accumulate_potential_sphere_by_sphere(self):
+        for r_in, r_out, p_int, p_ext, p_ispd, p_esp in self._iterate_shells(
+                          self._internal_sphere_potential_dividend_polynomials,
+                          self._offsetted_external_shell_potential_polynomials,
+                          self._internal_shell_potential_dividend_polynomials,
+                          self._external_shell_potential_polynomials):
+            self._add_pot_to_electrodes_within_outer_shell(r_in, r_out, p_int, p_ext)
+            self._add_pot_to_electrodes_inside_sphere(r_out, p_esp)
+            self._add_pot_to_electrodes_outside_sphere(r_out, p_ispd)
+
+    def _add_pot_to_electrodes_outside_sphere(self, r, pot):
+        IDX = self._R >= r
+        if IDX.any():
+            self._V[IDX] += polynomial(pot, r) / self._R[IDX]
+
+    def _add_pot_to_electrodes_inside_sphere(self, r, pot):
+        IDX = self._R < r
+        if IDX.any():
+            self._V[IDX] += polynomial(pot, r)
+
+    def _add_pot_to_electrodes_within_outer_shell(self, r_in, r_out, p_int, p_ext):
+        IDX = self._R_positive_and_between(r_in, r_out)
+        if IDX.any():
+            R = self._R[IDX]
+            self._V[IDX] += polynomial(p_int, R) / R - polynomial(p_ext, R)
+
+    def _R_positive_and_between(self, r_in, r_out):
+        return self._R_positive_and_not_smaller_than(r_in) & (self._R < r_out)
+
+    def _R_positive_and_not_smaller_than(self, r):
+        return self._R >= r if r > 0 else self._R > r
 
 
 class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
@@ -974,6 +1034,9 @@ if __name__ == '__main__':
     potential_shell_by_shell = _SphericalSplinePotentialShellByShellKCSD(
                                                                    nodes,
                                                                    coefficients)
+    potential_sphere_by_sphere = _SphericalSplinePotentialSphereBySphereKCSD(
+                                                                   nodes,
+                                                                   coefficients)
     normalization_factor = old._normalization_factor / conductivity
 
     def regression_tets(name, old, new, tolerance_abs, tolerance_rel, *args):
@@ -1000,6 +1063,12 @@ if __name__ == '__main__':
                     lambda x, y, z: (normalization_factor
                                      * potential_shell_by_shell(np.sqrt(x * x + y * y + z * z))),
                     3.5e-18, 2.3e-16,
+                    R, 0, 0)
+    regression_tets('potential_sphere_by_sphere()',
+                    old.potential,
+                    lambda x, y, z: (normalization_factor
+                                     * potential_sphere_by_sphere(np.sqrt(x*x + y*y + z*z))),
+                    7.0e-18, 4.5e-16,
                     R, 0, 0)
 
 
