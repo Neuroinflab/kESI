@@ -371,8 +371,8 @@ and other wildcards, in [Fenics leadfield corrections](#data-generated-fenics_le
 
 <a name="data-generated-potential_basis_functions_at_electrodes-electrodes_npz"></a>
 The `<electrode>.npz` contains values of basis functions at the location
-of the electrode in the potential codomain ($\phi$ function - $\Phi$ in
-[Chintaluri 2021](#bibliography-chintaluri2021)):
+of the electrode in the potential codomain ($\mathbf{b}$ vector function
+- $\Phi$ in [Chintaluri 2021](#bibliography-chintaluri2021)):
 
 | array name     | shape  | type            | content                                 |
 |----------------|--------|-----------------|-----------------------------------------|
@@ -425,14 +425,14 @@ electrode location as well as its name.
 
 The compressed NumPy file `phi.npz` contains a single array `PHI`
 of shape $M \times N$ and type `float` $[V]$, which columns are
-locations of electrodes mapped according to the $\phi$ function
+locations of electrodes mapped according to the $\mathbf{b}$ function
 ($\Phi$ in [Chintaluri 2021](#bibliography-chintaluri2021)):
 
 $$
-\Phi = \left[ \phi(e_1), \phi(e_2), \dots, \phi(e_{M-1}), \phi(e_M) \right]
+\mathbf{B} = \left[ \mathbf{b}(e_1), \mathbf{b}(e_2), \dots, \mathbf{b}(e_{M-1}), \mathbf{b}(e_M) \right]
 $$
 
-The columns of the $\Phi$ matrix are `POTENTIALS` vectors from the
+The columns of the $\mathbf{B}$ matrix are `POTENTIALS` vectors from the
 [`<electrode>.npy` files described in the previous section](#data-generated-potential_basis_functions_at_electrodes-electrodes_npz)
 for details).
 
@@ -444,7 +444,7 @@ of shape $N \times N$ and type `float` $[V^2]$, which is _kCSD_/_kESI_
 kernel matrix:
 
 $$
-\mathbf{K} = \Phi^T \Phi
+\mathbf{K} = \mathbf{B}^T \mathbf{B}
 $$
 
 
@@ -453,17 +453,17 @@ $$
 The compressed NumPy file `analysis.npz` contains auxiliary analytical
 data.
 
-| array            | shape        | type            | content                                                  |
-|------------------|--------------|-----------------|----------------------------------------------------------|
-| `EIGENVALUES`    | $N$          | `float` $[V^2]$ | Kernel eigenvalues (diagonal of the $\Lambda$ matrix)    |
-| `EIGENSOURCES`   | $M \times N$ | `float` $[1]$   | Eigensources in the canonical form ($\mathbf{U})$        |
-| `SINGULARVALUES` | $N$          | `float` $[V]$   | $\Phi$ singular values (diagonal of the $\Sigma$ matrix) |
-| `EIGENVECTORS`   | $N \times N$ | `float` $[1]$   | Kernel eigenvalues ($\mathbf{W}$)                        |
+| array            | shape        | type            | content                                                        |
+|------------------|--------------|-----------------|----------------------------------------------------------------|
+| `EIGENVALUES`    | $N$          | `float` $[V^2]$ | Kernel eigenvalues (diagonal of the $\Lambda$ matrix)          |
+| `EIGENSOURCES`   | $M \times N$ | `float` $[1]$   | Eigensources in the canonical form ($\mathbf{U})$              |
+| `SINGULARVALUES` | $N$          | `float` $[V]$   | $\mathbf{B}$ singular values (diagonal of the $\Sigma$ matrix) |
+| `EIGENVECTORS`   | $N \times N$ | `float` $[1]$   | Kernel eigenvalues ($\mathbf{W}$)                              |
 
-where $\mathbf{U}$, $\Sigma$, $\mathbf{W}$ are singular value decomposition of $\Phi$:
+where $\mathbf{U}$, $\Sigma$, $\mathbf{W}$ are singular value decomposition of $\mathbf{B}$:
 
 $$
-\Phi = \mathbf{U} \Sigma \mathbf{W}^T
+\mathbf{B} = \mathbf{U} \Sigma \mathbf{W}^T
 \text{,}
 $$
 
@@ -721,7 +721,7 @@ _paper\_mix\_eigensources.py_ loads two sets of volumetric CSD eigensources,
 matches them (by maximizing the absolute value of the dot product of their
 canonical representation) and yields averaged volumetric sources.
 
-Note that both sets must share at least shape of the transfer matrix ($\Phi$).
+Note that both sets must share at least shape of the transfer matrix ($\mathbf{B}$).
 
 | argument   | description                            |
 |------------|----------------------------------------|
