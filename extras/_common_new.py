@@ -303,11 +303,14 @@ class _SphericalSplinePotentialKCSD(_ShellDefined):
         try:
             self._R = R
             self._V = np.zeros_like(R)
-            self._accumulate_potential_shell_by_shell()
+            self._calculate_potential()
             return self._V
 
         finally:
             del self._V, self._R
+
+    def _calculate_potential(self):
+        self._accumulate_potential_shell_by_shell()
 
     def _accumulate_potential_shell_by_shell(self):
         for r_in, r_out, p_int, p_ext in self._iterate_shells(
