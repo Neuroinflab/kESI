@@ -225,7 +225,7 @@ where:
   to calculate the correction,
 - `<electrode>` is the name of the electrode in the setup.
 
-##### Files `<electrode>.h5` and `<electrode>.ini`
+##### Files `<electrode>.h5` and `<electrode>.ini` <a name="data-generated-fenics_leadfield_corrections-electrode"></a>
 
 The `<electrode>.h5` file contains correction of the leadfield of the electrode
 `<electrode>` saved as a 3D _FEniCS_ scaler function $[V/A]$,
@@ -249,7 +249,7 @@ and file `<electrode>.ini` contains its metadata:
 |            | filename                  | relative path to the correction function (`<electrode>.h5`) |
 
 
-##### File `conductivity.ini`
+##### File `conductivity.ini` <a name="data-generated-fenics_leadfield_corrections-conductivity_ini"></a>
 
 The `conductivity.ini` file is a copied [Model properties](#data-bundled-model_properties)
 file appropriate for the `<model>`.  Note that the file **may contain also geometrical
@@ -288,7 +288,7 @@ The grid is a Cartesian product of `X`, `Y` and `Z` arrays, which may be obtaine
 to `numpy.meshgrid(X, Y, Z, indexing='ij')`.
 
 
-##### File `<electrode>.npz`
+##### File `<electrode>.npz` <a name="data-generated-sampled_leadfield_corrections-electrode_npz"></a>
 
 The compressed NumPy file `<electrode>.npz` contains the sampled leadfield correction
 with additional (meta)data:
@@ -328,7 +328,7 @@ codomain.  The `<setup>` wildcard was defined in the [Setups](#data-generated-se
 subsection; and `<electrode>`, in the [Fenics leadfield corrections](#data-generated-fenics_leadfield_corrections).
 
 
-##### File `model_src.json`
+##### File `model_src.json` <a name="data-generated-potential_basis_functions_at_electrodes-model_src_json"></a>
 
 The shape of the basis functions radially spline-defined in the CSD codomain
 is defined in the `model_src.json` function:
@@ -338,7 +338,7 @@ model_src = SphericalSplineSourceBase.fromJSON(open('model_src.json'))
 ```
 
 
-##### File `centroids.npz`
+##### File `centroids.npz` <a name="data-generated-potential_basis_functions_at_electrodes-centroids_npz"></a>
 
 Locations of their centroids (coordinate system origins) are defined
 in the compressed NumPy file `centroids.npz`:
@@ -367,9 +367,8 @@ where `<sampling>` wildcard was defined in
 and other wildcards, in [Fenics leadfield corrections](#data-generated-fenics_leadfield_corrections).
 
 
-##### File `<electrode>.npz`
+##### File `<electrode>.npz` <a name="data-generated-potential_basis_functions_at_electrodes-electrodes_npz"></a>
 
-<a name="data-generated-potential_basis_functions_at_electrodes-electrodes_npz"></a>
 The `<electrode>.npz` contains values of basis functions at the location
 of the electrode in the potential codomain ($\mathbf{b}$ vector function
 - $\Phi$ in [Chintaluri 2021](#bibliography-chintaluri2021)):
@@ -405,7 +404,7 @@ for which the kernel is calculated, and `<csd grid>` defines
 the grid of CSD estimation points.  The other wildcards were discussed
 extensively in previous sections.
 
-##### File `electrodes.csv`
+##### File `electrodes.csv` <a name="data-generated-kernels-electrodes_csv"></a>
 
 File `electrodes.csv` contains a header and $N$ rows (which order defines
 order of electrodes in the `<subsetup>`).  Every row contains (redundant -
@@ -421,7 +420,7 @@ electrode location as well as its name.
 | `Z`    | `float` $[m]$ | Z coordinate of ...   |
 
 
-##### File `potential_basis_functions.npz`
+##### File `potential_basis_functions.npz` <a name="data-generated-kernels-pbf"></a>
 
 The compressed NumPy file `potential_basis_functions.npz` contains a single array `B`
 of shape $M \times N$ and type `float` $[V]$, which columns are
@@ -437,7 +436,7 @@ The columns of the $\mathbf{B}$ matrix are `POTENTIALS` vectors from the
 for details).
 
 
-##### File `kernel.npz`
+##### File `kernel.npz` <a name="data-generated-kernels-kernel_npz"></a>
 
 The compressed NumPy file `kernel.npz` contains a single array `KERNEL`
 of shape $N \times N$ and type `float` $[V^2]$, which is _kCSD_/_kESI_
@@ -448,7 +447,7 @@ $$
 $$
 
 
-##### File `analysis.npz`
+##### File `analysis.npz` <a name="data-generated-kernels-analysis_npz"></a>
 
 The compressed NumPy file `analysis.npz` contains auxiliary analytical
 data.
@@ -499,7 +498,7 @@ It is similar to
 The only difference is $CSD$ substituting the $POT$ as a $n$ superscript index.
 
 
-##### File `crosskernel.npz`
+##### File `crosskernel.npz` <a name="data-generated-kernels-crosskernel_npz"></a>
 
 The `crosskernel.npz` is a compressed NumPy file, which contains
 (redundant - see
@@ -610,110 +609,84 @@ potential values for $n_{CSD}$ CSD profiles.
 | `POTENTIAL_<i>` | `float` $[V]$ | potential for $i$-th CSD profile |
 
 
-
-
-# OLD BELOW
-
 ## Tools
 
 ### Leadfield correction solving
 
-_paper\_solve\_slice\_on\_plate.py_ and _paper\_solve\_sphere\_on\_plate.py_
-take mesh, electrode location and model properties as input and calculate
-the leadfield correction _FEniCS_ function.
-
-| argument         | description                                                                                              |
-|------------------|----------------------------------------------------------------------------------------------------------|
-| `--output`       | path to the metadata file (function filename is inferred by substituting the '.ini' extension with '.h5' |
-| `--config`       | path to the model config file                                                                            |
-| `--electrodes`   | path to the electrode location file                                                                      |
-| `--name`         | name of the electrode                                                                                    |
-| `--mesh`         | path to the main _FEniCS_ mesh                                                                           |
-| `--degree`       | degree of the FEM element (defaults to 1)                                                                |
-| `--element-type` | type of the FEM element (defaults to `'CG'` (Continuous Galerkin)                                        |
-| `--quiet`        | supress control messages                                                                                 |
-
-#### Slice specific
-
-The `--ground-potential` parameter is the potantial $[V]$ at the grounded
-slice-covering dome.  If not given a $0 V$ grounding is assumed at infinity.
+`solve_slice_on_plate.py` and `solve_sphere_on_plate.py`
+take [mesh](#data-generated-meshes),
+[electrode location](#data-generated-setups-electrodes_csv) and
+[model properties](#data-generated-fenics_leadfield_corrections-conductivity_ini)
+as input and calculate
+[the leadfield correction _FEniCS_ function](#data-generated-fenics_leadfield_corrections-electrode)
+for slice and spherical models, respectively.
 
 
-#### Sphere specific
+### Model source generation
 
-The `--grounded-plate-edge-z` parameter is the Z coordinate $[m]$ of the
-edge of the grounded ($0 V$ potential) conductive plate.  Defaults to $-88 mm$.
+`create_model_src.py` generates a spherical model source
+of a given size.  Relation between CSD and distance from
+the centroid is given by a sigmoid spline function.
 
 
 ### Leadfield correction sampling
 
-_paper\_sample\_slice\_solution.py_ and _paper\_sample\_spherical\_solution.py_
-take _FEniCS_ function and sample it on a regular grid.
+`create_grid.py` generates [the sampling grid](#data-generated-sampled_leadfield_corrections-grid_npz) used by either
+`sample_volumetric_solution.py` or `sample_spherical_solution.py`
+to sample [_FEniCS_ functions](#data-generated-fenics_leadfield_corrections-electrode)
+for either slice or spherical model
+as [3D arrays of values](#data-generated-sampled_leadfield_corrections-electrode_npz).
 
-Forces:
-- shape of _POT_ sampling grid to $2^k + 1 \times 2^k + 1 \times 2^k + 1$,
-- shape and location of the sampling area,
-- sampling nodes subset.
-
-| argument   | description                                                          |
-|------------|----------------------------------------------------------------------|
-| `--output` | path to the output _*.npz_ file                                      |
-| `--config` | path to the leadfield correction metadata                            |
-| `-k`       | the $k$ parameter of the sampling grid (defaults to 9)               |
-| `--fill`   | fill value for not sampled points of the grid (defaults to `np.nan`) |
-| `--quiet`  | supress control messages                                             |
-
-#### Slice specific
-
-The `--sampling-radius` parameter is the edge length $[m]$ of the sampled
-cube.  It defaults to $0.3 mm$.
-
-The cube is based at the $Z = 0$ plane and centered at $X = Y = 0$ axis.
+`crop_grid_to_sources.py` crops
+[the sampling grid](#data-generated-sampled_leadfield_corrections-grid_npz)
+to a minimal grid necessary for
+[a CSD profile](#data-generated-potential_basis_functions_at_electrodes-model_src_json)
+centered at
+[centroid nodes](#data-generated-potential_basis_functions_at_electrodes-centroids_npz).
 
 
-#### Sphere specific
+### Potential basis functions vector calculation
 
-The `--sampling-radius` parameter is the radius $[m]$ of the sampled sphere
-centered at the beginning of the coordinate system.  It defaults to $79 mm$.
+`calculate_kcsd_potential_basis_function.py` takes
+[a CSD profile](#data-generated-potential_basis_functions_at_electrodes-model_src_json),
+[centroid nodes](#data-generated-potential_basis_functions_at_electrodes-centroids_npz),
+medium conductivity and [electrode location](#data-generated-setups-electrodes_csv)
+to calculate
+[a vector of values of potential basis functions](#data-generated-potential_basis_functions_at_electrodes-electrodes_npz)
+for kCSD assumptions.
+
+In contrast, `calculate_kesi_potential_basis_function.py`
+calculates the kESI-corrected vector taking
+[the sampled leadfield correction](#data-generated-sampled_leadfield_corrections-electrode_npz)
+instead of conductivity and electrode location
+(which are included therein).
 
 
 ### Kernel calculation
 
-_paper\_calculate\_kernels\_slice.py_
-and _paper\_calculate\_kernels\_four\_spheres.py_ from sampled leadfield
-corrections calculate kernels (and related matrices) for both kESI and kCSD
-(redundant - the same for different kESI configurations).
-
-Contains information about:
-- _POT_, _CSD_, _SRC_ grid (subset of the sampling grid),
-- source size,
-- source profile,
-- base function distribution.
-
-| argument     | description                                              |
-|--------------|----------------------------------------------------------|
-| `electrodes` | names of electrodes to be used                           |
-| `--input`    | path to the directory with sampled leadfield corrections |
-| `--output`   | path to the directory for output files                   |
-| `-k`         | the $k$ parameter of the Romberg integration method      |
-
-The $k$ parameter limits radius of the CSD base function to $2^{k - 1} dx$,
-where $dx$ is spacing of the X axis grid.  It is implicitly assumed that spacing
-of all axes is equal (or at least that grids of Y and Z axes have no smaller
-spacing than grid of the X axis).
-
-#### Slice specific
-
-Limits source centroids to $|y| <= h / 4$,
-where $h = 0.3 mm$ is the slice thickness,
-and adjusts grids appropriately.
+`calculate_kernel.py` takes
+[an ordered list of electrodes](#data-generated-kernels-electrodes_csv)
+and appropriate
+[vectors of values of potential basis functions](#data-generated-potential_basis_functions_at_electrodes-electrodes_npz)
+to generate:
+- [an array of values of potential basis functions at locations of electrodes](#data-generated-kernels-pbf),
+- [auxiliary analytical data](#data-generated-kernels-analysis_npz),
+- [a kernel itself](#data-generated-kernels-kernel_npz).
 
 
-#### Four spheres specific
+### Crosskernel calculation
 
-Limits source centroids to $|x|, |y| < 2 cm$, $2.5 cm \leq z$ and
-$r \leq 7.9 cm - 2^{k-1} dx$, and adjusts grids appropriately.
+`calculate_volumetric_crosskernel.py` takes
+[an array of values of potential basis functions at locations of electrodes](#data-generated-kernels-pbf),
+[a CSD profile](#data-generated-potential_basis_functions_at_electrodes-model_src_json),
+[centroid nodes](#data-generated-potential_basis_functions_at_electrodes-centroids_npz),
+[CSD estimation grid](#data-generated-kernels-grid_csd_npz),
+and calculates
+[a volumetric crosskernel](#data-generated-kernels-crosskernel_npz).
 
+
+
+# OLD BELOW
 
 ### Eigensource mixing
 
@@ -777,3 +750,8 @@ edge of the grounded ($0 V$ potential) conductive plate.  Defaults to $-88 mm$.
 2. <a name="bibliography-zahn1989"></a>Markus Zahn, **Pole elektromagnetyczne**,
    1989 Warszawa, Państwowe Wydawnictwo Naukowe, ISBN: 83-01-07693-3
    (original title: Electromagnetic Field Theory: a problem solving approach)
+
+
+# TODOs
+
+- links from files to tools
