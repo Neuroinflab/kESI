@@ -965,6 +965,8 @@ if __name__ == '__main__':
     conductivity = 1.5
     old = OldSphericalSplineSourceKCSD(0, 0, 0, nodes, coefficients, conductivity)
     new = SphericalSplineSourceKCSD(0, 0, 0, nodes, coefficients, conductivity)
+    potential_shell_by_shell = _SphericalSplinePotentialKCSD(nodes, coefficients)
+    normalization_factor = old._normalization_factor / conductivity
 
     def regression_tets(name, old, new, tolerance_abs, tolerance_rel, *args):
         NEW = new(*args)
@@ -984,6 +986,12 @@ if __name__ == '__main__':
     regression_tets('.potential()',
                     old.potential, new.potential,
                     1.1e-17, 5.6e-16,
+                    R, 0, 0)
+    regression_tets('potential_shell_by_shell()',
+                    old.potential,
+                    lambda x, y, z: (normalization_factor
+                                     * potential_shell_by_shell(np.sqrt(x * x + y * y + z * z))),
+                    3.5e-18, 2.3e-16,
                     R, 0, 0)
 
 
