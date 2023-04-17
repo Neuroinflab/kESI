@@ -838,17 +838,60 @@ def shape(dimensions, axis):
 
 
 if __name__ == '__main__':
-    class OldSphericalSplineSourceKCSD(SphericalSplineSourceBase):
+    class OldSphericalSplineSourceKCSD(SourceBase):
         def __init__(self, x, y, z, nodes,
                      coefficients=((1,),
                                    (-4, 12, -9, 2),
                                    ),
                      conductivity=1.0):
             super(OldSphericalSplineSourceKCSD,
-                  self).__init__(x, y, z, nodes, coefficients)
+                  self).__init__(x, y, z)
 
+            self._nodes = nodes
+            self._csd_polynomials = coefficients
+            self._normalization_factor = 1.0 / self._integrate_spherically()
             self._calculate_potential_coefficients()
             self.conductivity = conductivity
+
+        def _integrate_spherically(self):
+            acc = 0.0
+            coeffs = [0, 0, 0]
+            r0 = 0
+            for r, coefficients in zip(self._nodes,
+                                       self._csd_polynomials):
+                coeffs[3:] = [c / i
+                              for i, c in enumerate(coefficients,
+                                                    start=3)]
+                acc += (self._evaluate_polynomial(r, coeffs)
+                        - self._evaluate_polynomial(r0, coeffs))
+                r0 = r
+            return 4 * np.pi * acc
+
+        def csd(self, X, Y, Z):
+            R = self._distance(X, Y, Z)
+            CSD = np.zeros_like(R)
+            r0 = 0
+            for r, coefficients in zip(self._nodes,
+                                       self._csd_polynomials):
+                IDX = (r0 <= R) & (R < r)
+                CSD[IDX] = self._evaluate_polynomial(R[IDX],
+                                                     coefficients)
+                r0 = r
+
+            return self._normalization_factor * CSD
+
+        def _distance(self, X, Y, Z):
+            return np.sqrt(np.square(X - self.x)
+                           + np.square(Y - self.y)
+                           + np.square(Z - self.z))
+
+        def _evaluate_polynomial(self, X, coefficients):
+            ACC = 0
+            for c in reversed(coefficients):
+                ACC *= X
+                ACC += c
+
+            return ACC
 
         def _calculate_potential_coefficients(self):
             self._offsetted_external_shell_potential_polynomials = list(map(
@@ -922,12 +965,13 @@ if __name__ == '__main__':
     old = OldSphericalSplineSourceKCSD(0, 0, 0, nodes, coefficients, conductivity)
     new = SphericalSplineSourceKCSD(0, 0, 0, nodes, coefficients, conductivity)
 
-    V_new = new.potential(R, 0, 0)
-    V_old = old.potential(R, 0, 0)
-    err_abs = abs(V_new - V_old).max()
-    err_rel = abs(V_new / V_old - 1).max()
-    assert err_abs <= 3.5e-18, f"ABS_ERR: {err_abs:g}"
-    assert err_rel <= 2.5e-16, f"REL_ERR: {err_rel:g}"
+    for method in ["csd", "potential"]:
+        V_new = getattr(new, method)(R, 0, 0)
+        V_old = getattr(old, method)(R, 0, 0)
+        err_abs = abs(V_new - V_old).max()
+        err_rel = abs(V_new / V_old - 1)[V_old != 0].max()
+        assert err_abs <= 7.0e-18, f"ABS_ERR_{method}: {err_abs:g}"
+        assert err_rel <= 4.5e-16, f"REL_ERR_{method}: {err_rel:g}"
 
 
     import common
