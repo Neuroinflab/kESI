@@ -722,7 +722,7 @@ There are two tools calculating
 [//]: # (Note that both sets must share at least shape of the matrix $\mathbf{B}$.)
 
 
-### Forward modelling <a name="tools-forward_modeling"></a>
+### Forward modeling <a name="tools-forward_modeling"></a>
 
 [Potential values](#data-generated-csd_profiles-profiles_csv)
 at given [electrode locations](#data-generated-kernels-electrodes_csv)
