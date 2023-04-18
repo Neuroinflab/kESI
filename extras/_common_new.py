@@ -153,7 +153,7 @@ def sub_polynomials(p_a, p_b):
     return [a - b for a, b in itertools.zip_longest(p_a, p_b, fillvalue=0)]
 
 
-class _ShellDefined(_Base):
+class _RadialNodesDefined(_Base):
     def __init__(self, nodes, **kwargs):
         super().__init__(**kwargs)
         self._nodes = nodes
@@ -163,8 +163,15 @@ class _ShellDefined(_Base):
                    self._nodes,
                    *items)
 
+    def _iterate_spheres(self, *items):
+        return zip(self._nodes, *items)
 
-class SphericalSplineSourceBase(SourceBase, _ShellDefined):
+    @property
+    def radius(self):
+        return self._nodes[-1]
+
+
+class SphericalSplineSourceBase(SourceBase, _RadialNodesDefined):
     def __init__(self, x, y, z, nodes,
                  coefficients=((1,),
                                (-4, 12, -9, 2),
@@ -204,10 +211,6 @@ class SphericalSplineSourceBase(SourceBase, _ShellDefined):
                        + np.square(Y - self.y)
                        + np.square(Z - self.z))
 
-    @property
-    def radius(self):
-        return self._nodes[-1]
-
     def toJSON(self, file):
         json.dump(self._constructor_args(),
                   file,
@@ -221,7 +224,7 @@ class SphericalSplineSourceBase(SourceBase, _ShellDefined):
                 "coefficients": self._csd_polynomials}
 
 
-class _SphericalSplinePotentialBaseKCSD(_ShellDefined):
+class _SphericalSplinePotentialBaseKCSD(_RadialNodesDefined):
     """
     Notes
     -----
