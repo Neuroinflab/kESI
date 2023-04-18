@@ -255,6 +255,9 @@ The `conductivity.ini` file is a copied [Model properties](#data-bundled-model_p
 file appropriate for the `<model>`.  Note that the file **may contain also geometrical
 data**.
 
+See also [leadfield correction solving](#tools-leadfield_correction_solving) subsection
+in the [Tools](#tools) section.
+
 
 #### Sampled leadfield corrections <a name="data-generated-sampled_leadfield_corrections"></a>
 
@@ -305,6 +308,9 @@ with additional (meta)data:
 | `_LOADING_TIME`        | scalar                                        | `float` $[s]$   | loading time of the leadfield correction function                   |
 | `_PROCESSING_TIME`     | scalar                                        | `float` $[s]$   | leadfield correction sampling time                                  |
 | `_R_LIMIT`             | $2$                                           | `float` $[m]$   | inclusive limits of sampling radius (spherical sampling only)       |
+
+See also [leadfield correction sampling](#tools-leadfield_correction_sampling) subsection
+in the [Tools](#tools) section.
 
 [//]: # (TODO: explain samplings: romberg_k; cropped_*)
 
@@ -380,6 +386,9 @@ of the electrode in the potential codomain ($\mathbf{b}$ vector function
 | `Y`            | scalar | `float` $[m]$   | Y coordinate of the electrode           |
 | `Z`            | scalar | `float` $[m]$   | Z coordinate of the electrode           |
 | `CONDUCTIVITY` | scalar | `float` $[S/m]$ | assumed medium conductivity (kCSD only) |
+
+See also [potential basis functions vector calculation](#tools-pbf_vector_calculation)
+subsection in the [Tools](#tools) section.
 
 
 #### Kernels <a name="data-generated-kernels"></a>
@@ -529,8 +538,12 @@ Note that crosskernel $\mathbf{\tilde{K}} ~ [W / m^3]$
 is multiplied by $\beta = \mathbf{K}^{-1}\mathbf{V} ~ [V^{-1}]$,
 thus the unit of $\mathbf{C}^* = \mathbf{\tilde{K}} \beta$ is $[A / m^3]$.
 
-[//]: # (TODO: relation between CSD, POT and SRC - centroid - grids)
+See also [kernel calculation](#tools-pbf_vector_calculation)
+and [crosskernel calculation](#tools-crosskernel_calculation) subsections
+in the [Tools](#tools) section.
 
+
+[//]: # (TODO: relation between CSD, POT and SRC - centroid - grids)
 
 
 
@@ -608,10 +621,13 @@ potential values for $n_{CSD}$ CSD profiles.
 | `Z`             | `float` $[m]$ | Z coordinate of ...              |
 | `POTENTIAL_<i>` | `float` $[V]$ | potential for $i$-th CSD profile |
 
+See also [volumetric CSD profiles calculation](#tools-volumetric_CSD_profiles_calculation)
+subsection in the [Tools](#tools) section.
 
-## Tools
 
-### Leadfield correction solving
+## Tools <a name="tools"></a>
+
+### Leadfield correction solving <a name="tools-leadfield_correction_solving"></a>
 
 `solve_slice_on_plate.py` and `solve_sphere_on_plate.py`
 calculate
@@ -623,14 +639,14 @@ For that purpose [mesh](#data-generated-meshes),
 are taken as input.
 
 
-### Model source generation
+### Model source generation <a name="tools-model_source_generation"></a>
 
 `create_model_src.py` generates a spherical model source
 of a given size.  Relation between CSD and distance from
 the centroid is given by a sigmoid spline function.
 
 
-### Leadfield correction sampling
+### Leadfield correction sampling <a name="tools-leadfield_correction_sampling"></a>
 
 `create_grid.py` generates [the sampling grid](#data-generated-sampled_leadfield_corrections-grid_npz) used by either
 `sample_volumetric_solution.py` or `sample_spherical_solution.py`
@@ -646,7 +662,7 @@ centered at
 [centroid nodes](#data-generated-potential_basis_functions_at_electrodes-centroids_npz).
 
 
-### Potential basis functions vector calculation
+### Potential basis functions vector calculation <a name="tools-pbf_vector_calculation"></a>
 
 `calculate_kcsd_potential_basis_function.py` creates
 [a vector of values of potential basis functions](#data-generated-potential_basis_functions_at_electrodes-electrodes_npz)
@@ -662,7 +678,7 @@ instead of conductivity and electrode location
 (which are included therein).
 
 
-### Kernel calculation
+### Kernel calculation <a name="tools-kernel_calculation"></a>
 
 `calculate_kernel.py` generates:
 - [an array of values of potential basis functions at locations of electrodes](#data-generated-kernels-pbf),
@@ -675,7 +691,7 @@ and appropriate
 are taken as input.
 
 
-### Crosskernel calculation
+### Crosskernel calculation <a name="tools-crosskernel_calculation"></a>
 
 `calculate_volumetric_crosskernel.py` calculates
 [a volumetric crosskernel](#data-generated-kernels-crosskernel_npz) using:
@@ -685,7 +701,7 @@ are taken as input.
 - [CSD estimation grid](#data-generated-kernels-grid_csd_npz).
 
 
-### Volumetric CSD profiles calculation
+### Volumetric CSD profiles calculation <a name="tools-volumetric_CSD_profiles_calculation"></a>
 
 There are two tools calculating
 [volumetric CSD profiles](#data-generated-csd_profiles-profiles_npz):
@@ -706,7 +722,7 @@ There are two tools calculating
 [//]: # (Note that both sets must share at least shape of the matrix $\mathbf{B}$.)
 
 
-### Forward modelling
+### Forward modelling <a name="tools-forward_modeling"></a>
 
 [Potential values](#data-generated-csd_profiles-profiles_csv)
 at given [electrode locations](#data-generated-kernels-electrodes_csv)
