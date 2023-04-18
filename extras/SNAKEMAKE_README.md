@@ -614,12 +614,13 @@ potential values for $n_{CSD}$ CSD profiles.
 ### Leadfield correction solving
 
 `solve_slice_on_plate.py` and `solve_sphere_on_plate.py`
-take [mesh](#data-generated-meshes),
-[electrode location](#data-generated-setups-electrodes_csv) and
-[model properties](#data-generated-fenics_leadfield_corrections-conductivity_ini)
-as input and calculate
+calculate
 [the leadfield correction _FEniCS_ function](#data-generated-fenics_leadfield_corrections-electrode)
 for slice and spherical models, respectively.
+For that purpose [mesh](#data-generated-meshes),
+[electrode location](#data-generated-setups-electrodes_csv) and
+[model properties](#data-generated-fenics_leadfield_corrections-conductivity_ini)
+are taken as input.
 
 
 ### Model source generation
@@ -647,13 +648,12 @@ centered at
 
 ### Potential basis functions vector calculation
 
-`calculate_kcsd_potential_basis_function.py` takes
+`calculate_kcsd_potential_basis_function.py` creates
+[a vector of values of potential basis functions](#data-generated-potential_basis_functions_at_electrodes-electrodes_npz)
+for kCSD assumptions taking
 [a CSD profile](#data-generated-potential_basis_functions_at_electrodes-model_src_json),
 [centroid nodes](#data-generated-potential_basis_functions_at_electrodes-centroids_npz),
-medium conductivity and [electrode location](#data-generated-setups-electrodes_csv)
-to calculate
-[a vector of values of potential basis functions](#data-generated-potential_basis_functions_at_electrodes-electrodes_npz)
-for kCSD assumptions.
+medium conductivity and [electrode location](#data-generated-setups-electrodes_csv).
 
 In contrast, `calculate_kesi_potential_basis_function.py`
 calculates the kESI-corrected vector taking
@@ -664,25 +664,25 @@ instead of conductivity and electrode location
 
 ### Kernel calculation
 
-`calculate_kernel.py` takes
-[an ordered list of electrodes](#data-generated-kernels-electrodes_csv)
-and appropriate
-[vectors of values of potential basis functions](#data-generated-potential_basis_functions_at_electrodes-electrodes_npz)
-to generate:
+`calculate_kernel.py` generates:
 - [an array of values of potential basis functions at locations of electrodes](#data-generated-kernels-pbf),
 - [auxiliary analytical data](#data-generated-kernels-analysis_npz),
 - [a kernel itself](#data-generated-kernels-kernel_npz).
+For that purpose
+[an ordered list of electrodes](#data-generated-kernels-electrodes_csv)
+and appropriate
+[vectors of values of potential basis functions](#data-generated-potential_basis_functions_at_electrodes-electrodes_npz)
+are taken as input.
 
 
 ### Crosskernel calculation
 
-`calculate_volumetric_crosskernel.py` takes
-[an array of values of potential basis functions at locations of electrodes](#data-generated-kernels-pbf),
-[a CSD profile](#data-generated-potential_basis_functions_at_electrodes-model_src_json),
-[centroid nodes](#data-generated-potential_basis_functions_at_electrodes-centroids_npz),
-[CSD estimation grid](#data-generated-kernels-grid_csd_npz),
-and calculates
-[a volumetric crosskernel](#data-generated-kernels-crosskernel_npz).
+`calculate_volumetric_crosskernel.py` calculates
+[a volumetric crosskernel](#data-generated-kernels-crosskernel_npz) using:
+- [an array of values of potential basis functions at locations of electrodes](#data-generated-kernels-pbf),
+- [a CSD profile](#data-generated-potential_basis_functions_at_electrodes-model_src_json),
+- [centroid nodes](#data-generated-potential_basis_functions_at_electrodes-centroids_npz),
+- [CSD estimation grid](#data-generated-kernels-grid_csd_npz).
 
 
 ### Volumetric CSD profiles calculation
