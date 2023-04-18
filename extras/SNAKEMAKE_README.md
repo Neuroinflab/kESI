@@ -572,7 +572,7 @@ section, that is:
 
 All other wildcards were discussed in previous sections.
 
-##### File `<profiles>.npz`
+##### File `<profiles>.npz` <a name="data-generated-csd_profiles-profiles_npz"></a>
 
 The `<profiles>.npz` is a compressed NumPy file, which contains
 (possibly redundant - see
@@ -592,7 +592,7 @@ along the last axis).
 If `<profiles>` are `eigensources` then $n_{CSD} = N$.
 
 
-##### File `<profiles>.csv`
+##### File `<profiles>.csv` <a name="data-generated-csd_profiles-profiles_csv"></a>
 
 File `<profiles>.csv` contains a header and $N$ rows.
 Every row contains (redundant - see information in
@@ -685,58 +685,46 @@ and calculates
 [a volumetric crosskernel](#data-generated-kernels-crosskernel_npz).
 
 
+### Volumetric CSD profiles calculation
 
-# OLD BELOW
+There are two tools calculating
+[volumetric CSD profiles](#data-generated-csd_profiles-profiles_npz):
+- `calculate_volumetric_eigensources.py` calculates
+  eigensources from
+  [auxiliary analytical data](#data-generated-kernels-analysis_npz)
+  and
+  [centroid nodes](#data-generated-potential_basis_functions_at_electrodes-centroids_npz).
+  CSD profiles are sampled at a
+  [given CSD grid](#ata-generated-kernels-grid_csd_npz).
 
-### Eigensource mixing
+- `mix_eigensources.py` averages two sets of volumetric CSD profiles
+  of eigensources.  Before averaging eigensources are matched based on appropriate
+  [auxiliary analytical data](#data-generated-kernels-analysis_npz) files.
+  The match is based on the absolute value of the dot product of eigensource
+  canonical form.
 
-_paper\_mix\_eigensources.py_ loads two sets of volumetric CSD eigensources,
-matches them (by maximizing the absolute value of the dot product of their
-canonical representation) and yields averaged volumetric sources.
-
-Note that both sets must share at least shape of the transfer matrix ($\mathbf{B}$).
-
-| argument   | description                            |
-|------------|----------------------------------------|
-| `input`    | two prefixes of the input eigensources |
-| `--output` | path to the output _*.npz_ file        |
+[//]: # (Note that both sets must share at least shape of the matrix $\mathbf{B}$.)
 
 
 ### Forward modelling
 
-_paper\_forward\_model\_slice.py_ and _paper\_forward\_model\_four\_spheres.py_
-simulate a sequence of CSD profiles to predict potentials on the electrodes.
+[Potential values](#data-generated-csd_profiles-profiles_csv)
+at given [electrode locations](#data-generated-kernels-electrodes_csv)
+are calculated from
+[volumetric CSD profiles](#data-generated-csd_profiles-profiles_npz)
+with FEM (_FEniCS_).  For that purpose
+[mesh](#data-generated-meshes),
+[model properties](#data-generated-fenics_leadfield_corrections-conductivity_ini),
+and element degree (defaults to $1$) and type (defaults to continuous Galerkin)
+are specified.
 
-
-| argument         | description                                                       |
-|------------------|-------------------------------------------------------------------|
-| `--output`       | path to the _CSV_ file where the potentials are to be stored      |
-| `--sources`      | path to the file with volumetric CSD tensor (4D array)            |
-| `--config`       | path to the model config file                                     |
-| `--electrodes`   | path to the electrode location file                               |
-| `--name`         | name of the electrode                                             |
-| `--mesh`         | path to the main _FEniCS_ mesh                                    |
-| `--degree`       | degree of the FEM element (defaults to 1)                         |
-| `--element-type` | type of the FEM element (defaults to `'CG'` (Continuous Galerkin) |
-| `--quiet`        | supress control messages                                          |
-| `--start-from`   | number of the first source to start from (defaults to 0)          |
-
-The `--start-from` argument is useful in case of a broken run, as the output
-file is the electrode location file with additional fields, and it is saved
-after simulating of each source.  Thus in case of a broken run it may be given
-as `--electrodes` with request to complete simulation of missing sources.
-
-
-#### Slice specific
-
-The `--ground-potential` parameter is the potential $[V]$ at the grounded
-slice-covering dome.  If not given a $0 V$ grounding is assumed at infinity.
-
-
-#### Sphere specific
-
-The `--grounded-plate-edge-z` parameter is the Z coordinate $[m]$ of the
-edge of the grounded ($0 V$ potential) conductive plate.  Defaults to $-88 mm$.
+There are two tools:
+- `forward_slice_on_plate.py` (for slice model) which additionally
+  allows to set the ground potential at a slice-covering dome
+  (if not given $0 V$ potential is assumed at infinity),
+- `forward_sphere_on_plate.py` (for spherical model) which additionally
+  allows to set the Z coordinate of the edge of grounded plate
+  (defaults to $-88 mm$).
 
 
 ## Bibliography
