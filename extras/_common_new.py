@@ -242,28 +242,20 @@ class _SphericalSplinePotentialBaseKCSD(_ShellDefined):
     """
     def __init__(self, nodes, csd_polynomials, **kwargs):
         super().__init__(nodes=nodes, **kwargs)
-        self._calculate_potential_coefficients(csd_polynomials)
+        self._preprocess_potential_polynomials(csd_polynomials)
 
-    def _calculate_potential_coefficients(self, csd_polynomials):
-        self._set_attr_by_map_operation(
-                              "_offsetted_external_shell_potential_polynomials",
-                              self._compact_offsetted_external_shell_potential,
-                              # self._offsetted_external_shell_potential,
-                              csd_polynomials)
-        self._set_attr_by_map_operation(
-                              "_internal_sphere_potential_dividend_polynomials",
-                              self._compact_internal_sphere_potential_dividend,
-                              # self._internal_sphere_potential_dividend,
-                              csd_polynomials)
-
-    def _set_attr_by_map_operation(self, name, f, *args):
-        setattr(self, name, self._map(f, *args))
+    def _preprocess_potential_polynomials(self, csd_polynomials):
+        self._preprocess_required_polynomials(
+                     self._map(self._compact_offsetted_external_shell_potential,
+                               csd_polynomials),
+                     self._map(self._compact_internal_sphere_potential_dividend,
+                               csd_polynomials))
 
     def _map(self, f, *args):
         return list(map(f, *args))
 
     @classmethod
-    def _offsetted_external_shell_potential(cls, csd):
+    def offsetted_external_shell_potential(cls, csd):
         """
         Calculate a potential generated at an electrode by a CSD shell external
         to the electrode.
@@ -293,7 +285,7 @@ class _SphericalSplinePotentialBaseKCSD(_ShellDefined):
         return [a / i for i, a in enumerate(csd, start=2)]
 
     @classmethod
-    def _internal_sphere_potential_dividend(cls, csd):
+    def internal_sphere_potential_dividend(cls, csd):
         """
         Calculate a dividend of a potential generated at an electrode by a CSD
         sphere internal to the electrode.
@@ -358,13 +350,19 @@ def _accumulates(idx):
 
 
 class _SphericalSplinePotentialShellByShellKCSD(_SphericalSplinePotentialBaseKCSD):
+    def _preprocess_required_polynomials(self,
+                                    compact_offsetted_external_shell_potential,
+                                    compact_internal_sphere_potential_dividend):
+        self._compact_offsetted_external_shell_potential_polynomials = compact_offsetted_external_shell_potential
+        self._compact_internal_sphere_potential_dividend_polynomials = compact_internal_sphere_potential_dividend
+
     def _calculate_potential(self):
         self._accumulate_potential_shell_by_shell()
 
     def _accumulate_potential_shell_by_shell(self):
         for r_in, r_out, p_int, p_ext in self._iterate_shells(
-                          self._internal_sphere_potential_dividend_polynomials,
-                          self._offsetted_external_shell_potential_polynomials):
+                  self._compact_internal_sphere_potential_dividend_polynomials,
+                  self._compact_offsetted_external_shell_potential_polynomials):
             self._add_pot_to_electrodes_inside_shell(r_in, r_out, p_ext)
             self._add_pot_to_electrodes_within_shell(r_in, r_out, p_int, p_ext)
             self._add_pot_to_electrodes_outside_shell(r_in, r_out, p_int)
@@ -410,29 +408,38 @@ class _SphericalSplinePotentialShellByShellKCSD(_SphericalSplinePotentialBaseKCS
 
 
 class _SphericalSplinePotentialSphereBySphereKCSD(_SphericalSplinePotentialBaseKCSD):
-    def _calculate_potential_coefficients(self, csd_polynomials):
-        super()._calculate_potential_coefficients(csd_polynomials)
-        self._calculate_internal_shell_potential_dividend_polynomials()
-        self._calculate_external_shell_potential_polynomials()
-        self._set_attr_by_map_operation(
-            "_within_shell_potential_polynomials",
-            sub_polynomials,
-            self._internal_sphere_potential_dividend_polynomials,
-            self._offsetted_external_shell_potential_polynomials)
+    def _preprocess_required_polynomials(self,
+                                    compact_offsetted_external_shell_potential,
+                                    compact_internal_sphere_potential_dividend):
+        self._set_internal_shell_potential_dividend_polynomials(
+                                     compact_internal_sphere_potential_dividend)
+        self._set_external_shell_potential_polynomials(
+                                     compact_offsetted_external_shell_potential)
+        self._set_within_shell_potential_polynomials(
+                                     compact_internal_sphere_potential_dividend,
+                                     compact_offsetted_external_shell_potential)
 
-    def _calculate_internal_shell_potential_dividend_polynomials(self):
-        self._set_attr_by_map_operation(
-                "_internal_shell_potential_dividend_polynomials",
-                sub_polynomials,
-                self._internal_sphere_potential_dividend_polynomials,
-                self._internal_sphere_potential_dividend_polynomials[1:] + [[]])
+    def _set_within_shell_potential_polynomials(self,
+                                    compact_internal_sphere_potential_dividend,
+                                    compact_offsetted_external_shell_potential):
+        self._within_shell_potential_polynomials = self._map(
+                                     sub_polynomials,
+                                     compact_internal_sphere_potential_dividend,
+                                     compact_offsetted_external_shell_potential)
 
-    def _calculate_external_shell_potential_polynomials(self):
-        self._set_attr_by_map_operation(
-                "_external_shell_potential_polynomials",
-                sub_polynomials,
-                self._offsetted_external_shell_potential_polynomials,
-                self._offsetted_external_shell_potential_polynomials[1:] + [[]])
+    def _set_internal_shell_potential_dividend_polynomials(self,
+                                    compact_internal_sphere_potential_dividend):
+        self._internal_shell_potential_dividend_polynomials = self._map(
+                          sub_polynomials,
+                          compact_internal_sphere_potential_dividend,
+                          compact_internal_sphere_potential_dividend[1:] + [[]])
+
+    def _set_external_shell_potential_polynomials(self,
+                                    compact_offsetted_external_shell_potential):
+        self._external_shell_potential_polynomials = self._map(
+                          sub_polynomials,
+                          compact_offsetted_external_shell_potential,
+                          compact_offsetted_external_shell_potential[1:] + [[]])
 
     def _calculate_potential(self):
         self._accumulate_potential_sphere_by_sphere()
