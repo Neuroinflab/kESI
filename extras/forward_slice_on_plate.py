@@ -36,10 +36,10 @@ from forward_model import Slice as ForwardModel
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Model CSD in sphere on plate geometry with FEM.")
     parser.add_argument("-o", "--output",
-                        metavar="<images.csv>",
+                        metavar="<potentials.csv>",
                         dest="output",
                         required=True,
-                        help="path to the images file")
+                        help="path to the potentials file")
     parser.add_argument("-s", "--sources",
                         metavar="<sources.npz>",
                         dest="sources",
