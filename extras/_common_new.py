@@ -24,6 +24,7 @@
 #                                                                             #
 ###############################################################################
 
+import functools
 import logging
 import collections
 import operator
@@ -244,12 +245,17 @@ class _SphericalSplinePotentialBaseKCSD(_ShellDefined):
         self._calculate_potential_coefficients(csd_polynomials)
 
     def _calculate_potential_coefficients(self, csd_polynomials):
-        self._offsetted_external_shell_potential_polynomials = list(map(
-                                       self._offsetted_external_shell_potential,
-                                       csd_polynomials))
-        self._internal_sphere_potential_dividend_polynomials = list(map(
-                                       self._internal_sphere_potential_dividend,
-                                       csd_polynomials))
+        self._set_attr_by_map_operation(
+                              "_offsetted_external_shell_potential_polynomials",
+                              self._offsetted_external_shell_potential,
+                              csd_polynomials)
+        self._set_attr_by_map_operation(
+                              "_internal_sphere_potential_dividend_polynomials",
+                              self._internal_sphere_potential_dividend,
+                              csd_polynomials)
+
+    def _set_attr_by_map_operation(self, name, f, *args):
+        setattr(self, name, list(map(f, *args)))
 
     @staticmethod
     def _offsetted_external_shell_potential(csd):
@@ -313,6 +319,22 @@ class _SphericalSplinePotentialBaseKCSD(_ShellDefined):
         finally:
             del self._V, self._R
 
+    def _accumulate(self, IDX, V):
+        self._V[IDX] += V
+
+
+def _accumulates(idx):
+    def decorator(f):
+        @functools.wraps(f)
+        def wrapper(self, *args, **kwargs):
+            IDX = idx(self, *args, **kwargs)
+            if IDX.any():
+                self._accumulate(IDX,
+                                 f(self, IDX, *args, **kwargs))
+        return wrapper
+
+    return decorator
+
 
 class _SphericalSplinePotentialShellByShellKCSD(_SphericalSplinePotentialBaseKCSD):
     def _calculate_potential(self):
@@ -326,28 +348,35 @@ class _SphericalSplinePotentialShellByShellKCSD(_SphericalSplinePotentialBaseKCS
             self._add_pot_to_electrodes_within_shell(r_in, r_out, p_int, p_ext)
             self._add_pot_to_electrodes_outside_shell(r_in, r_out, p_int)
 
-    def _add_pot_to_electrodes_outside_shell(self, r_in, r_out,
-                                             pot):
-        IDX = self._R >= r_out
-        if IDX.any():
-            self._V[IDX] += self._internal_shell_potential(self._R[IDX],
-                                                           r_in, r_out, pot)
+    @_accumulates
+    def _add_pot_to_electrodes_outside_shell(self, r_in, r_out, pot):
+        return self._R >= r_out
 
+    @_add_pot_to_electrodes_outside_shell
+    def _add_pot_to_electrodes_outside_shell(self, IDX, r_in, r_out, pot):
+        return self._internal_shell_potential(self._R[IDX], r_in, r_out, pot)
+
+    @_accumulates
     def _add_pot_to_electrodes_within_shell(self, r_in, r_out, pot_int, pot_ext):
-        IDX = (self._R > r_in) & (self._R < r_out)
-        if IDX.any():
-            self._V[IDX] += self._potential_within_shell(self._R[IDX],
-                                                         r_in, r_out,
-                                                         pot_int, pot_ext)
+        return (self._R > r_in) & (self._R < r_out)
+
+    @_add_pot_to_electrodes_within_shell
+    def _add_pot_to_electrodes_within_shell(self, IDX, r_in, r_out, pot_int,
+                                                pot_ext):
+        return self._potential_within_shell(self._R[IDX], r_in, r_out,
+                                            pot_int, pot_ext)
 
     def _potential_within_shell(self, R, r_in, r_out, p_int, p_ext):
         return (self._external_shell_potential(R, r_out, p_ext)
                 + self._internal_shell_potential(R, r_in, R, p_int))
 
+    @_accumulates
     def _add_pot_to_electrodes_inside_shell(self, r_in, r_out, pot):
-        IDX = self._R <= r_in
-        if IDX.any():
-            self._V[IDX] += self._external_shell_potential(r_in, r_out, pot)
+        return self._R <= r_in
+
+    @_add_pot_to_electrodes_inside_shell
+    def _add_pot_to_electrodes_inside_shell(self, IDX, r_in, r_out, pot):
+        return self._external_shell_potential(r_in, r_out, pot)
 
     def _internal_shell_potential(self, r_electrode, r_internal, r_external,
                                   potential):
@@ -365,18 +394,18 @@ class _SphericalSplinePotentialSphereBySphereKCSD(_SphericalSplinePotentialBaseK
         self._calculate_external_shell_potential_polynomials()
 
     def _calculate_internal_shell_potential_dividend_polynomials(self):
-        self._internal_shell_potential_dividend_polynomials = list(map(
-            sub_polynomials,
-            self._internal_sphere_potential_dividend_polynomials,
-            self._internal_sphere_potential_dividend_polynomials[1:] + [[]]
-        ))
+        self._set_attr_by_map_operation(
+                "_internal_shell_potential_dividend_polynomials",
+                sub_polynomials,
+                self._internal_sphere_potential_dividend_polynomials,
+                self._internal_sphere_potential_dividend_polynomials[1:] + [[]])
 
     def _calculate_external_shell_potential_polynomials(self):
-        self._external_shell_potential_polynomials = list(map(
-            sub_polynomials,
-            self._offsetted_external_shell_potential_polynomials,
-            self._offsetted_external_shell_potential_polynomials[1:] + [[]]
-            ))
+        self._set_attr_by_map_operation(
+                "_external_shell_potential_polynomials",
+                sub_polynomials,
+                self._offsetted_external_shell_potential_polynomials,
+                self._offsetted_external_shell_potential_polynomials[1:] + [[]])
 
     def _calculate_potential(self):
         self._accumulate_potential_sphere_by_sphere()
@@ -391,21 +420,33 @@ class _SphericalSplinePotentialSphereBySphereKCSD(_SphericalSplinePotentialBaseK
             self._add_pot_to_electrodes_inside_sphere(r_out, p_esp)
             self._add_pot_to_electrodes_outside_sphere(r_out, p_ispd)
 
+    @_accumulates
     def _add_pot_to_electrodes_outside_sphere(self, r, pot):
-        IDX = self._R >= r
-        if IDX.any():
-            self._V[IDX] += polynomial(pot, r) / self._R[IDX]
+        return self._R >= r
 
+    @_add_pot_to_electrodes_outside_sphere
+    def _add_pot_to_electrodes_outside_sphere(self, IDX, r, pot):
+        return self._internal_sphere_potential(self._R[IDX], r, pot)
+
+    def _internal_sphere_potential(self, r_electrode, r_sphere, pot):
+        return polynomial(pot, r_sphere) / r_electrode
+
+    @_accumulates
     def _add_pot_to_electrodes_inside_sphere(self, r, pot):
-        IDX = self._R < r
-        if IDX.any():
-            self._V[IDX] += polynomial(pot, r)
+        return self._R < r
 
+    @_add_pot_to_electrodes_inside_sphere
+    def _add_pot_to_electrodes_inside_sphere(self, IDX, r, pot):
+        return polynomial(pot, r)
+
+    @_accumulates
     def _add_pot_to_electrodes_within_outer_shell(self, r_in, r_out, p_int, p_ext):
-        IDX = self._R_positive_and_between(r_in, r_out)
-        if IDX.any():
-            R = self._R[IDX]
-            self._V[IDX] += polynomial(p_int, R) / R - polynomial(p_ext, R)
+        return self._R_positive_and_between(r_in, r_out)
+
+    @_add_pot_to_electrodes_within_outer_shell
+    def _add_pot_to_electrodes_within_outer_shell(self, IDX, r_in, r_out, p_int, p_ext):
+        R = self._R[IDX]
+        return self._internal_sphere_potential(R, R, p_int) - polynomial(p_ext, R)
 
     def _R_positive_and_between(self, r_in, r_out):
         return self._R_positive_and_not_smaller_than(r_in) & (self._R < r_out)
