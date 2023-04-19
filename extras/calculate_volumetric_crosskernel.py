@@ -89,9 +89,9 @@ if __name__ == "__main__":
                                                          dtype=bool))
 
     with np.load(args.input) as fh:
-        PHI = fh["PHI"]
+        B = fh["B"]
 
-    CROSSKERNEL = crosskernel_constructor(PHI)
+    CROSSKERNEL = crosskernel_constructor(B)
     crosskernel_shape = convolver.shape("CSD") + (-1,)
     np.savez_compressed(os.path.join(args.output),
                         CROSSKERNEL=CROSSKERNEL.reshape(crosskernel_shape),
