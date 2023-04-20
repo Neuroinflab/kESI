@@ -504,7 +504,7 @@ $$
 The `grid_csd.npz` file defines the grid on which the CSD is estimated.
 It is similar to
 [the previously described `grid.npz` file](#data-generated-sampled_leadfield_corrections-grid_npz).
-The only difference is $CSD$ substituting the $POT$ as a $n$ superscript index.
+The only difference is $CSD$ substituting the $POT$ as an $n$ superscript index.
 
 
 ##### File `crosskernel.npz` <a name="data-generated-kernels-crosskernel_npz"></a>
