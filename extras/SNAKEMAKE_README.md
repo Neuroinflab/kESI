@@ -278,14 +278,14 @@ function is sampled on and other wildcards were discussed in
 
 ##### File `grid.npz` <a name="data-generated-sampled_leadfield_corrections-grid_npz"></a>
 
-The `grid.npz` is a compressed NumPy file containing the $n^{POT}_x \times n^{POT}_y \times n^{POT}_z$
+The `grid.npz` is a compressed NumPy file containing the $n_x^{POT} \times n_y^{POT} \times n_z^{POT}$
 regular grid description:
 
 | array name | shape                         | type          | content                            |
 |------------|-------------------------------|---------------|------------------------------------|
-| `X`        | $n^{POT}_x \times 1 \times 1$ | `float` $[m]$ | grid nodes projected on the X axis |
-| `Y`        | $1 \times n^{POT}_y \times 1$ | `float` $[m]$ | grid nodes projected on the Y axis |
-| `Z`        | $1 \times 1 \times n^{POT}_z$ | `float` $[m]$ | grid nodes projected on the Z axis |
+| `X`        | $n_x^{POT} \times 1 \times 1$ | `float` $[m]$ | grid nodes projected on the X axis |
+| `Y`        | $1 \times n_y^{POT} \times 1$ | `float` $[m]$ | grid nodes projected on the Y axis |
+| `Z`        | $1 \times 1 \times n_z^{POT}$ | `float` $[m]$ | grid nodes projected on the Z axis |
 
 The grid is a Cartesian product of `X`, `Y` and `Z` arrays, which may be obtained with a call
 to `numpy.meshgrid(X, Y, Z, indexing='ij')`.
@@ -298,10 +298,10 @@ with additional (meta)data:
 
 | array name             | shape                                         | type            | content                                                             |
 |------------------------|-----------------------------------------------|-----------------|---------------------------------------------------------------------|
-| `CORRECTION_POTENTIAL` | $n^{POT}_x \times n^{POT}_y \times n^{POT}_z$ | `float` $[V/A]$ | sampled leadfield correction                                        |
-| `X`                    | $n^{POT}_x \times 1 \times 1$                 | `float` $[m]$   | grid nodes projected on the X axis (redundant with `grid.npz` file) |
-| `Y`                    | $1 \times n^{POT}_y \times 1$                 | `float` $[m]$   | grid nodes projected on the Y axis (redundant with `grid.npz` file) |
-| `Z`                    | $1 \times 1 \times n^{POT}_z$                 | `float` $[m]$   | grid nodes projected on the Z axis (redundant with `grid.npz` file) |
+| `CORRECTION_POTENTIAL` | $n_x^{POT} \times n_y^{POT} \times n_z^{POT}$ | `float` $[V/A]$ | sampled leadfield correction                                        |
+| `X`                    | $n_x^{POT} \times 1 \times 1$                 | `float` $[m]$   | grid nodes projected on the X axis (redundant with `grid.npz` file) |
+| `Y`                    | $1 \times n_y^{POT} \times 1$                 | `float` $[m]$   | grid nodes projected on the Y axis (redundant with `grid.npz` file) |
+| `Z`                    | $1 \times 1 \times n_z^{POT}$                 | `float` $[m]$   | grid nodes projected on the Z axis (redundant with `grid.npz` file) |
 | `LOCATION`             | $3$                                           | `float` $[m]$   | X, Y, Z coordinates of the electrode                                |
 | `BASE_CONDUCTIVITY`    | scalar                                        | `float` $[S/m]$ | medium conductivity for which the corrected potential is calculated |
 | `_PREPROCESSING_TIME`  | scalar                                        | `float` $[s]$   | construction time of the `FunctionManager` object                   |
@@ -351,10 +351,10 @@ in the compressed NumPy file `centroids.npz`:
 
 | array name | shape                                         | type          | content                            |
 |------------|-----------------------------------------------|---------------|------------------------------------|
-| `X`        | $n^{SRC}_x \times 1 \times 1$                 | `float` $[m]$ | grid nodes projected on the X axis |
-| `Y`        | $1 \times n^{SRC}_y \times 1$                 | `float` $[m]$ | grid nodes projected on the Y axis |
-| `Z`        | $1 \times 1 \times n^{SRC}_z$                 | `float` $[m]$ | grid nodes projected on the Z axis |
-| `MASK`     | $n^{SRC}_x \times n^{SRC}_y \times n^{SRC}_z$ | `bool`        | subset of grid nodes               |
+| `X`        | $n_x^{SRC} \times 1 \times 1$                 | `float` $[m]$ | grid nodes projected on the X axis |
+| `Y`        | $1 \times n_y^{SRC} \times 1$                 | `float` $[m]$ | grid nodes projected on the Y axis |
+| `Z`        | $1 \times 1 \times n_z^{SRC}$                 | `float` $[m]$ | grid nodes projected on the Z axis |
+| `MASK`     | $n_x^{SRC} \times n_y^{SRC} \times n_z^{SRC}$ | `bool`        | subset of grid nodes               |
 
 The Cartesian product of `X`, `Y` and `Z` defines regular grid on which
 the centroids may be located, while `MASK` defines its ordered subset
@@ -523,16 +523,16 @@ $$
 
 where $\mathbf{V}$ is either an $N$-element vector or $N \times n_t$
 matrix (with $n_t$ timepoints) of measured potentials, and $\mathbf{C}^*$
-is either an $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z$
-or $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times n_t$ array,
+is either an $n_x^{CSD} \times n_y^{CSD} \times n_z^{CSD}$
+or $n_x^{CSD} \times n_y^{CSD} \times n_z^{CSD} \times n_t$ array,
 respectively.
 
 | array         | shape                                                  | type                | content                              |
 |---------------|--------------------------------------------------------|---------------------|--------------------------------------|
-| `CROSSKERNEL` | $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times N$ | `float` $[W / m^3]$ | The crosskernel tensor ($\tilde{K}$) |
-| `X`           | $n^{CSD}_x \times 1 \times 1$                          | `float` $[m]$       | X nodes of the CSD sampling grid     |
-| `Y`           | $1 \times n^{CSD}_y \times 1$                          | `float` $[m]$       | Y nodes of the CSD sampling grid     |
-| `Z`           | $1 \times 1 \times n^{CSD}_z$                          | `float` $[m]$       | Z nodes of the CSD sampling grid     |
+| `CROSSKERNEL` | $n_x^{CSD} \times n_y^{CSD} \times n_z^{CSD} \times N$ | `float` $[W / m^3]$ | The crosskernel tensor ($\tilde{K}$) |
+| `X`           | $n_x^{CSD} \times 1 \times 1$                          | `float` $[m]$       | X nodes of the CSD sampling grid     |
+| `Y`           | $1 \times n_y^{CSD} \times 1$                          | `float` $[m]$       | Y nodes of the CSD sampling grid     |
+| `Z`           | $1 \times 1 \times n_z^{CSD}$                          | `float` $[m]$       | Z nodes of the CSD sampling grid     |
 
 Note that crosskernel $\mathbf{\tilde{K}} ~ [W / m^3]$
 is multiplied by $\beta = \mathbf{K}^{-1}\mathbf{V} ~ [V^{-1}]$,
@@ -592,15 +592,15 @@ The `<profiles>.npz` is a compressed NumPy file, which contains
 [the `grid_csd.npz` file](#data-generated-kernels-grid_csd_npz)
 for details) the grid on which the CSD is estimated, as well as
 $n_{CSD}$ volumetric CSD profiles (3D arrays of
-$n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z$ shape stacked
+$n_x^{CSD} \times n_y^{CSD} \times n_z^{CSD}$ shape stacked
 along the last axis).
 
 | array | shape                                                        | type                | content                          |
 |-------|--------------------------------------------------------------|---------------------|----------------------------------|
 | `CSD` | $n_x^{CSD} \times n_y^{CSD} \times n_z^{CSD} \times n_{CSD}$ | `float` $[A / m^3]$ | CSD profiles                     |
-| `X`   | $n^{CSD}_x \times 1 \times 1$                                | `float` $[m]$       | X nodes of the CSD sampling grid |
-| `Y`   | $1 \times n^{CSD}_y \times 1$                                | `float` $[m]$       | Y nodes of the CSD sampling grid |
-| `Z`   | $1 \times 1 \times n^{CSD}_z$                                | `float` $[m]$       | Z nodes of the CSD sampling grid |
+| `X`   | $n_x^{CSD} \times 1 \times 1$                                | `float` $[m]$       | X nodes of the CSD sampling grid |
+| `Y`   | $1 \times n_y^{CSD} \times 1$                                | `float` $[m]$       | Y nodes of the CSD sampling grid |
+| `Z`   | $1 \times 1 \times n_z^{CSD}$                                | `float` $[m]$       | Z nodes of the CSD sampling grid |
 
 If `<profiles>` are `eigensources` then $n_{CSD} = N$.
 
