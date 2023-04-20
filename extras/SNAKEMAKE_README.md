@@ -597,7 +597,7 @@ along the last axis).
 
 | array | shape                                                        | type                | content                          |
 |-------|--------------------------------------------------------------|---------------------|----------------------------------|
-| `CSD` | $n^{CSD}_x \times n^{CSD}_y \times n^{CSD}_z \times n_{CSD}$ | `float` $[A / m^3]$ | CSD profiles                     |
+| `CSD` | $n_x^{CSD} \times n_y^{CSD} \times n_z^{CSD} \times n_{CSD}$ | `float` $[A / m^3]$ | CSD profiles                     |
 | `X`   | $n^{CSD}_x \times 1 \times 1$                                | `float` $[m]$       | X nodes of the CSD sampling grid |
 | `Y`   | $1 \times n^{CSD}_y \times 1$                                | `float` $[m]$       | Y nodes of the CSD sampling grid |
 | `Z`   | $1 \times 1 \times n^{CSD}_z$                                | `float` $[m]$       | Z nodes of the CSD sampling grid |
