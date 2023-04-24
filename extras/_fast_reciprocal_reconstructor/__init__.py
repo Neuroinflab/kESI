@@ -183,15 +183,15 @@ class KernelConstructor(object):
                                                 potential_basis_functions):
         with self:
             with potential_basis_functions:
-                self._potential_basis_functions_at_electrodes(
+                self._calculate_potential_basis_functions_at_electrodes(
                                                       electrodes,
                                                       potential_basis_functions)
 
             return self._potential_basis_functions
 
-    def _potential_basis_functions_at_electrodes(self,
-                                                 electrodes,
-                                                 potential_basis_functions):
+    def _calculate_potential_basis_functions_at_electrodes(self,
+                                                           electrodes,
+                                                           potential_basis_functions):
         for i, electrode in enumerate(electrodes):
             POT = potential_basis_functions(electrode)
 
