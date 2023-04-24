@@ -171,7 +171,7 @@ if __name__ == '__main__':
     regularization_parameter = REGULARIZATION_PARAMETERS[idx]
     plt.figure()
     plt.title('CV')
-    plt.xscale('symlog', linthreshx=10**LOG_START)
+    plt.xscale('symlog', linthresh=10**LOG_START)
     plt.axvspan(abs(EIGENVALUES).min(),
                 abs(EIGENVALUES).max(),
                 color=cbf.YELLOW)
