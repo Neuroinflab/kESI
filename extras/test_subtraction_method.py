@@ -14,7 +14,7 @@ import dolfin
 import FEM.fem_sphere_point_new as fspn
 import FEM.fem_common as fc
 
-import _common_new as common
+import common as common
 
 
 class NegativePotential(dolfin.UserExpression):

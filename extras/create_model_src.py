@@ -25,7 +25,7 @@
 import argparse
 from itertools import cycle
 
-from _common_new import SphericalSplineSourceBase
+from common import SphericalSplineSourceBase
 
 parser = argparse.ArgumentParser(description="Create a sigmoid model source definition.")
 parser.add_argument("-d", "--definition",

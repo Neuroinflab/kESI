@@ -1,6 +1,6 @@
 import logging
 
-from _common_new import FourSphereModel, cv, altitude_azimuth_mesh
+from common import FourSphereModel, cv, altitude_azimuth_mesh
 
 
 class DipolarSourcesFactory(object):
@@ -50,8 +50,6 @@ if __name__ == '__main__':
                                               1.00 * BRAIN_CONDUCTIVITY)
     RADIUS = FourSphereModel.Properties(7.9, 8.0, 8.5, 9.0)
 
-    import common
-
     BRAIN_R = RADIUS.brain
     SCALP_R = RADIUS.scalp
     WHITE_R = 7.5
@@ -76,9 +74,8 @@ if __name__ == '__main__':
     DF = pd.DataFrame(ele_coords, columns=['X', 'Y', 'Z',
                                            'R', 'ALTITUDE', 'AZIMUTH'])
     ELECTRODES = DF[['X', 'Y', 'Z']].copy()
-    field = common.FourSphereModel(CONDUCTIVITY,
-                                   RADIUS,
-                                   ELECTRODES)
+    model = FourSphereModel(CONDUCTIVITY,
+                            RADIUS)
 
     dipolar_source_factory = DipolarSourcesFactory(CONDUCTIVITY, RADIUS)
     DIPOLES, sources = dipolar_source_factory(0.5 * (BRAIN_R + WHITE_R),
@@ -96,7 +93,11 @@ if __name__ == '__main__':
            SRC_DIPOLE.Z - 0.05 * SRC_DIPOLE.PZ,
            ]
 
-    DF['V'] = field.compute_phi(SRC, SNK)
+    field = model(list(SRC_DIPOLE[['X', 'Y', 'Z']]),
+                  list(SRC_DIPOLE[['PX', 'PY', 'PZ']]))
+    DF['V'] = field(ELECTRODES.X,
+                    ELECTRODES.Y,
+                    ELECTRODES.Z).flatten()
 
     import matplotlib.pyplot as plt
     import cbf

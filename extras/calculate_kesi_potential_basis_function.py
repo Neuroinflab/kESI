@@ -4,7 +4,7 @@
 #                                                                             #
 #    kESI                                                                     #
 #                                                                             #
-#    Copyright (C) 2019-2021 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
+#    Copyright (C) 2019-2023 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
 #    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
 #    Copyright (C) 2021-2023 Jakub M. Dzik (Institute of Applied Psychology;  #
 #    Faculty of Management and Social Communication; Jagiellonian University) #
@@ -35,7 +35,7 @@ import numpy as np
 import scipy.integrate as si
 
 import _fast_reciprocal_reconstructor as frr
-import _common_new as common
+import common
 from electrodes import ElectrodeIntegrationNodesAtSamplingGrid as Electrode
 
 

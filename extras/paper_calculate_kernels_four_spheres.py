@@ -9,7 +9,7 @@ import scipy.integrate as si
 import pandas as pd
 
 import _fast_reciprocal_reconstructor as frr
-import _common_new as common
+import common
 
 
 class Electrode(object):

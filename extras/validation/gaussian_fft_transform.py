@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import sys
 
 sys.path.append('../')
-from _common_new import GaussianSourceKCSD3D
+from common import GaussianSourceKCSD3D
 
 
 H = 1e-2

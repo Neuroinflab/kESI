@@ -4,7 +4,7 @@ import numpy as np
 from kesi._verbose import VerboseFFR, _Eigenreconstructor
 
 import cbf
-from _common_new import GaussianSourceKCSD3D
+from common import GaussianSourceKCSD3D
 
 CONDUCTIVITY = 0.33  # S / m
 H = 3e-4  # m

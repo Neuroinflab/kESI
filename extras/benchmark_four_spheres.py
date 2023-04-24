@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 from FEM._fem_common import Stopwatch
 
-from _common_new import FourSphereModel as ModelNew
+from common import FourSphereModel as ModelNew
 
 
 CONFIG = 'FEM/model_properties/four_spheres_csf_3_mm.ini'

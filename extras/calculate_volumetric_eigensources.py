@@ -30,7 +30,7 @@ import os
 import numpy as np
 
 import _fast_reciprocal_reconstructor as frr
-import _common_new as common
+import common
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ from kesi._verbose import (VerboseFFR,
 from kesi._engine import _LinearKernelSolver
 from FEM.fem_sphere_gaussian import (SomeSphereGaussianSourceFactory3D,
                                      SomeSphereGaussianSourceFactoryOnlyCSD)
-from _common_new import altitude_azimuth_mesh
+from common import altitude_azimuth_mesh
 
 MeasurementManagerBase = VerboseFFR.MeasurementManagerBase
 

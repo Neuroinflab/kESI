@@ -4,7 +4,7 @@
 #                                                                             #
 #    kESI                                                                     #
 #                                                                             #
-#    Copyright (C) 2019 Jakub M. Dzik (Laboratory of Neuroinformatics;        #
+#    Copyright (C) 2019-2023 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
 #    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
 #                                                                             #
 #    This software is free software: you can redistribute it and/or modify    #
@@ -21,6 +21,7 @@
 #    along with this software.  If not, see http://www.gnu.org/licenses/.     #
 #                                                                             #
 ###############################################################################
+
 import logging
 import os
 
@@ -29,7 +30,7 @@ import numpy as np
 
 import cbf
 from FEM import fem_finite_slice_gaussian as ffsg
-import _common_new as common
+import common
 
 logging.basicConfig(level=logging.INFO)
 

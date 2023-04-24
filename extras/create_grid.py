@@ -27,7 +27,7 @@ from itertools import cycle
 
 import numpy as np
 
-from _common_new import shape
+from common import shape
 
 parser = argparse.ArgumentParser(description="Create sampling grid.")
 parser.add_argument("-g", "--grid",

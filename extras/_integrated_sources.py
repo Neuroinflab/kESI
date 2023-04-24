@@ -178,7 +178,7 @@ class IntegratedGaussianSourceKCSD3D(object):
 
 
 if __name__ == '__main__':
-    from _common_new import GaussianSourceKCSD3D
+    from common import GaussianSourceKCSD3D
     import cbf
     import matplotlib.pyplot as plt
 

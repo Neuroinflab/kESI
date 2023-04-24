@@ -4,6 +4,8 @@
 #                                                                             #
 #    kESI                                                                     #
 #                                                                             #
+#    Copyright (C) 2023 Jakub M. Dzik (Laboratory of Neuroinformatics;        #
+#    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
 #    Copyright (C) 2021-2023 Jakub M. Dzik (Institute of Applied Psychology;  #
 #    Faculty of Management and Social Communication; Jagiellonian University) #
 #                                                                             #
@@ -29,7 +31,7 @@ import pandas as pd
 
 from dolfin import assemble, Constant, Expression, grad, inner
 
-from _common_new import FourSphereModel
+from common import FourSphereModel
 import FEM.fem_common as fc
 
 import logging

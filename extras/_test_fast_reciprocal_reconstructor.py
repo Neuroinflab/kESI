@@ -29,7 +29,7 @@ import itertools
 import numpy as np
 import scipy.integrate as si
 
-import _common_new as common
+import common
 
 import _fast_reciprocal_reconstructor as frr
 

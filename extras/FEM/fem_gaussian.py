@@ -114,7 +114,7 @@ if __name__ == '__main__':
                         / (radius * np.pi))
 
 
-### COPIED FROM _common_new.py
+### COPIED FROM common.py
         class GaussianSourceBase(object):
             def __init__(self, x, y, z, standard_deviation):
                 self.x = x
@@ -157,7 +157,7 @@ if __name__ == '__main__':
                     Rc >= self._radius_of_erf_to_x_limit_applicability,
                     erf(Rc) / R,
                     self._c * self._fraction_of_erf_to_x_limit_in_0)
-### END OF COPIED FROM _common_new.py
+### END OF COPIED FROM common.py
 
         logging.basicConfig(level=logging.INFO)
 
