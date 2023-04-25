@@ -58,7 +58,7 @@ class _LeadfieldCorrectionBase(object):
                                               [X, Y, Z])
 
 
-class _InterpolatedLeadfieldCorrection(_LeadfieldCorrectionBase):
+class _Regularized(_LeadfieldCorrectionBase):
     def __init__(self, filename, dx=0):
         """
         Parameters
@@ -73,18 +73,6 @@ class _InterpolatedLeadfieldCorrection(_LeadfieldCorrectionBase):
         """
         self.dx = dx
         super().__init__(filename)
-
-    def _interpolate(self, SAMPLES, XYZ):
-        interpolator = si.RegularGridInterpolator(
-            self.SAMPLING_GRID,
-            SAMPLES,
-            bounds_error=False,
-            fill_value=0,
-            method=self.interpolation_method)
-        return interpolator(np.stack(XYZ, axis=-1))
-
-    def _correction_leadfield(self, SAMPLES, XYZ):
-        return self._interpolate(SAMPLES, XYZ)
 
     @property
     def _epsilon(self):
@@ -126,6 +114,20 @@ class _InterpolatedLeadfieldCorrection(_LeadfieldCorrectionBase):
     # def leadfield(self, X, Y, Z):
     #     # For numerical kESI.
     #     return self.base_leadfield(X, Y, Z) + self.correction_leadfield(X, Y, Z)
+
+
+class _InterpolatedLeadfieldCorrection(_LeadfieldCorrectionBase):
+    def _correction_leadfield(self, SAMPLES, XYZ):
+        return self._interpolate(SAMPLES, XYZ)
+
+    def _interpolate(self, SAMPLES, XYZ):
+        interpolator = si.RegularGridInterpolator(
+            self.SAMPLING_GRID,
+            SAMPLES,
+            bounds_error=False,
+            fill_value=0,
+            method=self.interpolation_method)
+        return interpolator(np.stack(XYZ, axis=-1))
 
 
 class LinearlyInterpolatedLeadfieldCorrection(_InterpolatedLeadfieldCorrection):
