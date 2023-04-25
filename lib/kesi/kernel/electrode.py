@@ -28,8 +28,21 @@ import numpy as np
 import scipy.interpolate as si
 
 
-class _LeadfieldCorrectionBase(object):
-    def __init__(self, filename):
+class _Base(object):
+    def __init__(self, x, y, z):
+        self.x = x
+        self.y = y
+        self.z = z
+
+
+class Conductivity(_Base):
+    def __init__(self, x, y, z, conductivity, **kwargs):
+        super().__init__(x=x, y=y, z=z, **kwargs)
+        self.conductivity = conductivity
+
+
+class _LeadfieldCorrectionBase(Conductivity):
+    def __init__(self, filename, **kwargs):
         """
         Parameters
         ----------
@@ -39,9 +52,13 @@ class _LeadfieldCorrectionBase(object):
         """
         self.filename = filename
         with np.load(filename) as fh:
+            self._call_super_init_with_read_arguments(fh, kwargs)
             self.SAMPLING_GRID = [fh[c].flatten() for c in "XYZ"]
-            self.x, self.y, self.z = fh["LOCATION"]
-            self.conductivity = fh["BASE_CONDUCTIVITY"]
+
+    def _call_super_init_with_read_arguments(self, fh, kwargs):
+        kwargs.update(zip("xyz", fh["LOCATION"]))
+        super().__init__(conductivity=fh["BASE_CONDUCTIVITY"],
+                         **kwargs)
 
     def correction_leadfield(self, X, Y, Z):
         """
@@ -58,8 +75,8 @@ class _LeadfieldCorrectionBase(object):
                                               [X, Y, Z])
 
 
-class _Regularized(_LeadfieldCorrectionBase):
-    def __init__(self, filename, dx=0):
+class _Regularized(Conductivity):
+    def __init__(self, dx=0, **kwargs):
         """
         Parameters
         ----------
@@ -71,8 +88,8 @@ class _Regularized(_LeadfieldCorrectionBase):
             Integration step used to calculate a regularization
             parameter of the `.leadfield()` method.
         """
+        super().__init__(**kwargs)
         self.dx = dx
-        super().__init__(filename)
 
     @property
     def _epsilon(self):
@@ -87,7 +104,7 @@ class _Regularized(_LeadfieldCorrectionBase):
         """
         return 0.15 * self.dx
 
-    def base_leadfield(self, X, Y, Z):
+    def _regularized_leadfield(self, X, Y, Z):
         """
         Regularized leadfield of the electrode in infinite homogenous
         isotropic medium (kCSD assumptions) of conductivity
