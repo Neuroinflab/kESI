@@ -43,7 +43,7 @@ class ckESI_convolver(Convolver):
 
     @deprecated('.ds() method', '.steps()')
     def ds(self, name):
-        return self.steps()
+        return self.steps(name)
 
     @property
     @deprecated('.POT_MESH attribute', '.POT_GRID')
