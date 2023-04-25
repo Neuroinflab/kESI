@@ -36,7 +36,7 @@ import scipy.integrate as si
 
 import _fast_reciprocal_reconstructor as frr
 import common
-from electrodes import ElectrodeIntegrationNodesAtSamplingGrid as Electrode
+from electrode import IntegrationNodesAtSamplingGrid as Electrode
 
 
 if __name__ == "__main__":

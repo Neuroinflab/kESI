@@ -28,7 +28,7 @@ import numpy as np
 import scipy.interpolate as si
 
 
-class _ElectrodeLeadfieldCorrectionBase(object):
+class _LeadfieldCorrectionBase(object):
     def __init__(self, filename):
         """
         Parameters
@@ -58,8 +58,7 @@ class _ElectrodeLeadfieldCorrectionBase(object):
                                               [X, Y, Z])
 
 
-class _ElectrodeInterpolatedLeadfieldCorrection(
-                                             _ElectrodeLeadfieldCorrectionBase):
+class _InterpolatedLeadfieldCorrection(_LeadfieldCorrectionBase):
     def __init__(self, filename, dx=0):
         """
         Parameters
@@ -129,19 +128,15 @@ class _ElectrodeInterpolatedLeadfieldCorrection(
     #     return self.base_leadfield(X, Y, Z) + self.correction_leadfield(X, Y, Z)
 
 
-class ElectrodeLinearlyInterpolatedLeadfieldCorrection(
-                                     _ElectrodeInterpolatedLeadfieldCorrection):
+class LinearlyInterpolatedLeadfieldCorrection(_InterpolatedLeadfieldCorrection):
     interpolation_method = "linear"
 
 
-class ElectrodeNearestNeighbourInterpolatedLeadfieldCorrection(
-                                     _ElectrodeInterpolatedLeadfieldCorrection):
+class NearestNeighbourInterpolatedLeadfieldCorrection(_InterpolatedLeadfieldCorrection):
     interpolation_method = "nearest"
 
 
-class ElectrodeIntegrationNodesAtSamplingGrid(
-                                             _ElectrodeLeadfieldCorrectionBase):
-
+class IntegrationNodesAtSamplingGrid(_LeadfieldCorrectionBase):
     def _correction_leadfield(self, SAMPLES, XYZ):
         # if XYZ points are in nodes of the sampling grid,
         # no time-consuming interpolation is necessary
