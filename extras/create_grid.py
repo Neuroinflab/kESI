@@ -4,6 +4,8 @@
 #                                                                             #
 #    kESI                                                                     #
 #                                                                             #
+#    Copyright (C) 2023 Jakub M. Dzik (Laboratory of Neuroinformatics;        #
+#    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
 #    Copyright (C) 2023 Jakub M. Dzik (Institute of Applied Psychology;       #
 #    Faculty of Management and Social Communication; Jagiellonian University) #
 #                                                                             #
@@ -27,7 +29,8 @@ from itertools import cycle
 
 import numpy as np
 
-from common import shape
+from kesi.common import shape
+
 
 parser = argparse.ArgumentParser(description="Create sampling grid.")
 parser.add_argument("-g", "--grid",

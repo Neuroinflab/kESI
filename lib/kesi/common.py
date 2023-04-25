@@ -24,7 +24,6 @@
 #                                                                             #
 ###############################################################################
 
-import functools
 import logging
 import collections
 import operator
@@ -35,6 +34,11 @@ import json
 
 import numpy as np
 from scipy.special import erf, lpmv
+
+try:
+    from .kernel._tools import shape
+except ImportError:
+    pass
 
 
 logger = logging.getLogger(__name__)
@@ -992,13 +996,6 @@ def altitude_azimuth_mesh(base, step, alternate=True):
             yield altitude, azimuth
 
 
-def one_hot_vector(length, hot_position, hot=1, cold=0):
-    return np.where(np.arange(length) == hot_position, hot, cold)
-
-
-def shape(dimensions, axis):
-    return one_hot_vector(dimensions, axis, hot=-1, cold=1)
-
 
 if __name__ == '__main__':
     class OldSphericalSplineSourceKCSD(SourceBase):
@@ -1468,11 +1465,3 @@ if __name__ == '__main__':
     # TEST SphericalSplineSourceBase.radius
     assert SphericalSplineSourceBase(0, 0, 0, [2], [[1]]).radius == 2
     assert SphericalSplineSourceBase(0, 0, 0, [1, 2], [[1]] * 2).radius == 2
-
-
-    # TESTS one_hot_vector()
-    assert np.all(one_hot_vector(1, 0) == [1])
-    assert np.all(one_hot_vector(2, 0) == [1, 0])
-    assert np.all(one_hot_vector(2, 1) == [0, 1])
-    assert np.all(one_hot_vector(2, 1, hot=-1) == [0, -1])
-    assert np.all(one_hot_vector(2, 1, hot=-1, cold=1) == [1, -1])

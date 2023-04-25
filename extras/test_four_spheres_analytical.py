@@ -31,7 +31,8 @@ import pandas as pd
 
 from dolfin import assemble, Constant, Expression, grad, inner
 
-from common import FourSphereModel
+from kesi.common import FourSphereModel
+
 import FEM.fem_common as fc
 
 import logging

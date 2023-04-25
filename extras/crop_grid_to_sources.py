@@ -28,7 +28,7 @@ import argparse
 
 import numpy as np
 
-import common
+from kesi import common
 
 
 def support_bounds(centroids, r):

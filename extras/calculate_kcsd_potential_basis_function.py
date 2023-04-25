@@ -30,11 +30,10 @@ import os
 import numpy as np
 import pandas as pd
 
-from kesi.kernel.electrode import Conductivity as Electrode
+from kesi import common
 from kesi.kernel import potential_basis_functions as pbf
+from kesi.kernel.electrode import Conductivity as Electrode
 from kesi.kernel.constructor import Convolver, ConvolverInterfaceIndexed
-
-import common
 
 
 if __name__ == "__main__":

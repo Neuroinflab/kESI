@@ -1,5 +1,26 @@
 #!/usr/bin/env python
-# coding: utf-8
+# encoding: utf-8
+###############################################################################
+#                                                                             #
+#    kESI                                                                     #
+#                                                                             #
+#    Copyright (C) 2019-2023 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
+#    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
+#                                                                             #
+#    This software is free software: you can redistribute it and/or modify    #
+#    it under the terms of the GNU General Public License as published by     #
+#    the Free Software Foundation, either version 3 of the License, or        #
+#    (at your option) any later version.                                      #
+#                                                                             #
+#    This software is distributed in the hope that it will be useful,         #
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of           #
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            #
+#    GNU General Public License for more details.                             #
+#                                                                             #
+#    You should have received a copy of the GNU General Public License        #
+#    along with this software.  If not, see http://www.gnu.org/licenses/.     #
+#                                                                             #
+###############################################################################
 
 import argparse
 import csv
@@ -7,14 +28,14 @@ import csv
 import numpy as np
 import scipy.integrate as si
 
-from dolfin import (Expression, Measure, inner, grad, assemble,
+from dolfin import (Expression, inner, grad, assemble,
                     Constant, KrylovSolver, DirichletBC)
 import dolfin
 
+from kesi import common
+
 import FEM.fem_sphere_point_new as fspn
 import FEM.fem_common as fc
-
-import common as common
 
 
 class NegativePotential(dolfin.UserExpression):

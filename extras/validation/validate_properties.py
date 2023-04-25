@@ -17,7 +17,7 @@ try:
 except (ImportError, SystemError, ValueError):
     from .api_stabilizer import VerboseFFR, MeasurementManagerBase, LinearMixture
 
-from common import GaussianSourceKCSD3D
+from kesi.common import GaussianSourceKCSD3D
 
 
 class ValidateKESI(VerboseFFR):

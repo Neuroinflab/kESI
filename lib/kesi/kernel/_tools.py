@@ -26,10 +26,24 @@
 import numpy as np
 
 
-def shape(axis, n=3):
-    return [-1 if i == axis else 1
-            for i in range(n)]
+def one_hot_vector(length, hot_position, hot=1, cold=0):
+    return np.where(np.arange(length) == hot_position, hot, cold)
+
+
+def shape(dimensions, axis):
+    return one_hot_vector(dimensions, axis, hot=-1, cold=1)
 
 
 def reshape(A, axis, n=3):
-    return np.reshape(A, shape(axis, n))
+    return np.reshape(A, shape(n, axis))
+
+
+if __name__ == '__main__':
+
+    # TESTS one_hot_vector()
+
+    assert np.all(one_hot_vector(1, 0) == [1])
+    assert np.all(one_hot_vector(2, 0) == [1, 0])
+    assert np.all(one_hot_vector(2, 1) == [0, 1])
+    assert np.all(one_hot_vector(2, 1, hot=-1) == [0, -1])
+    assert np.all(one_hot_vector(2, 1, hot=-1, cold=1) == [1, -1])

@@ -9,12 +9,12 @@ import itertools
 import time
 
 from kesi._verbose import (VerboseFFR,
-                           LinearMixture,
-                           LoadableVerboseFFR, _CrossKernelReconstructor)
+                           LoadableVerboseFFR,
+                           _CrossKernelReconstructor)
 from kesi._engine import _LinearKernelSolver
 from FEM.fem_sphere_gaussian import (SomeSphereGaussianSourceFactory3D,
                                      SomeSphereGaussianSourceFactoryOnlyCSD)
-from common import altitude_azimuth_mesh
+from kesi.common import altitude_azimuth_mesh
 
 MeasurementManagerBase = VerboseFFR.MeasurementManagerBase
 

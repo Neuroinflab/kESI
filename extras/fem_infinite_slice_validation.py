@@ -28,9 +28,11 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
+from kesi import common
+
 import cbf
 from FEM import fem_finite_slice_gaussian as ffsg
-import common
+
 
 logging.basicConfig(level=logging.INFO)
 

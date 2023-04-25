@@ -34,10 +34,10 @@ logging.basicConfig(level=logging.INFO)
 import numpy as np
 import scipy.integrate as si
 
-import common
+from kesi import common
+from kesi.kernel import potential_basis_functions as pbf
 from kesi.kernel.constructor import Convolver, ConvolverInterfaceIndexed
 from kesi.kernel.electrode import IntegrationNodesAtSamplingGrid as Electrode
-from kesi.kernel import potential_basis_functions as pbf
 
 
 if __name__ == "__main__":

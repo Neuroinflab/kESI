@@ -29,7 +29,7 @@ import itertools
 import numpy as np
 import scipy.integrate as si
 
-import common
+from kesi import common
 
 from kesi.kernel import constructor, pbf
 

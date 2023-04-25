@@ -4,6 +4,8 @@
 #                                                                             #
 #    kESI                                                                     #
 #                                                                             #
+#    Copyright (C) 2023 Jakub M. Dzik (Laboratory of Neuroinformatics;        #
+#    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
 #    Copyright (C) 2023 Jakub M. Dzik (Institute of Applied Psychology;       #
 #    Faculty of Management and Social Communication; Jagiellonian University) #
 #                                                                             #
@@ -25,7 +27,8 @@
 import argparse
 from itertools import cycle
 
-from common import SphericalSplineSourceBase
+from kesi.common import SphericalSplineSourceBase
+
 
 parser = argparse.ArgumentParser(description="Create a sigmoid model source definition.")
 parser.add_argument("-d", "--definition",
