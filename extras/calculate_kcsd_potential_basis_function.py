@@ -26,16 +26,14 @@
 
 import argparse
 import os
-import collections
 
 import numpy as np
 import pandas as pd
 
+from kesi.kernel.electrode import Conductivity as Electrode
 import _fast_reciprocal_reconstructor as frr
 import common
 
-
-Electrode = collections.namedtuple("Electrode", ['x', 'y', 'z', 'conductivity'])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Calculate values of kCSD potential basis functions at electrode.")
