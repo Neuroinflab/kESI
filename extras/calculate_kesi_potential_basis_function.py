@@ -34,8 +34,8 @@ logging.basicConfig(level=logging.INFO)
 import numpy as np
 import scipy.integrate as si
 
-import _fast_reciprocal_reconstructor as frr
 import common
+from kesi.kernel.constructor import Convolver, ConvolverInterfaceIndexed
 from kesi.kernel.electrode import IntegrationNodesAtSamplingGrid as Electrode
 from kesi.kernel import potential_basis_functions as pbf
 
@@ -87,7 +87,7 @@ if __name__ == "__main__":
                   for A, C in zip(electrode.SAMPLING_GRID,
                                   CENTROID_XYZ)]
 
-        convolver = frr.Convolver(LF_XYZ, LF_XYZ)
+        convolver = Convolver(LF_XYZ, LF_XYZ)
 
         CENTROIDS_IN_SRC = [np.isin(C.flatten(), S)
                             for S, C in zip(convolver.SRC_GRID, CENTROID_XYZ)]
@@ -104,10 +104,10 @@ if __name__ == "__main__":
         SRC_MASK[np.ix_(*SRC_IN_CENTROIDS)] = CENTROID_MASK[
                                                       np.ix_(*CENTROIDS_IN_SRC)]
 
-        convolver_interface = frr.ConvolverInterfaceIndexed(convolver,
-                                                            model_src.csd,
-                                                            romberg_weights,
-                                                            SRC_MASK)
+        convolver_interface = ConvolverInterfaceIndexed(convolver,
+                                                        model_src.csd,
+                                                        romberg_weights,
+                                                        SRC_MASK)
 
         with pbf.AnalyticalCorrectedNumerically(
                                             convolver_interface,

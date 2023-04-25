@@ -234,7 +234,7 @@ class LeadfieldIntegrator(object):
                                for xx, CSD_X in zip(X, CSD)])
 
     def _legacy_romberg_by_convotulion(self, leadfield, src, k=4):
-        from _fast_reciprocal_reconstructor import Convolver
+        from kesi.kernel.constructor import Convolver
         r = max(src._nodes)
         n = 2 ** k + 1
 

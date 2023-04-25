@@ -31,7 +31,7 @@ import scipy.integrate as si
 
 import common
 
-import _fast_reciprocal_reconstructor as frr
+from kesi.kernel import constructor, pbf
 
 
 if __name__ == '__main__':
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     csd_grid = [np.linspace(-1, 1, n // 2 + 1) for n in ns]
     src_grid = [np.linspace(-1, 1, n // 6 + 1) for n in ns]
 
-    conv = frr.Convolver(pot_grid, csd_grid)
+    conv = constructor.Convolver(pot_grid, csd_grid)
 
     for name, expected_grid in [('POT', pot_grid),
                                 ('CSD', csd_grid),
@@ -94,7 +94,7 @@ if __name__ == '__main__':
         assert (abs(POT[idx_x, idx_y, idx_z] - wx * wy * wz) < 1e-11).all()
 
     grid = [np.linspace(-1.1, -1, 100)] * 3
-    conv = frr.Convolver(grid, grid)
+    conv = constructor.Convolver(grid, grid)
 
     conductivity = 0.33
     LEADFIELD = 0.25 / np.pi / conductivity / np.sqrt(np.square(conv.POT_X)
@@ -187,7 +187,7 @@ if __name__ == '__main__':
     Y = np.linspace(-1.5 * R, 2.5 * R, 2 * 2 ** (ROMBERG_K + 1) + 1)
     Z = np.linspace(0, 4 * R, 4 * 2 ** (ROMBERG_K + 1) + 1)
 
-    convolver = frr.Convolver([X, Y, Z], [X, Y, Z])
+    convolver = constructor.Convolver([X, Y, Z], [X, Y, Z])
     romberg_weights = tuple(si.romb(np.identity(2 ** _k + 1)) / 2 ** _k
                             for _k in range(ROMBERG_K, ROMBERG_K + 3))
 
@@ -196,10 +196,10 @@ if __name__ == '__main__':
                     convolver.SRC_Y <= 1.5 * R)) & (
                      (convolver.SRC_Z >= R) & (convolver.SRC_Z <= 3 * R))
 
-    convolver_interface = frr.ConvolverInterfaceIndexed(convolver,
-                                                        model_src.csd,
-                                                        romberg_weights,
-                                                        SRC_MASK)
+    convolver_interface = constructor.ConvolverInterfaceIndexed(convolver,
+                                                                model_src.csd,
+                                                                romberg_weights,
+                                                                SRC_MASK)
 
 
     MASK_XY = (np.ones_like(convolver.SRC_X, dtype=bool)
@@ -216,30 +216,28 @@ if __name__ == '__main__':
                                         convolver.SRC_Z)[SRC_MASK]
     # kCSD analytical
 
-    tested = frr.pbf.Analytical(convolver_interface,
-                                potential=model_src.potential)
+    tested = pbf.Analytical(convolver_interface,
+                            potential=model_src.potential)
     with tested:
         observed = tested(test_electrode_kcsd)
     assertRelativeErrorWithinTolerance(expected, observed, 1e-10, ECHO)
 
     # kCSD numeric
-    tested = frr.pbf.Numerical(convolver_interface)
+    tested = pbf.Numerical(convolver_interface)
     with tested:
         observed = tested(test_electrode_kcsd)
     assertRelativeErrorWithinTolerance(expected, observed, 1e-2, ECHO)
 
     # kCSD masked
     # kCSD masked analytical
-    tested = frr.pbf.AnalyticalMaskedNumerically(
-                                              convolver_interface,
-                                              potential=model_src.potential,
-                                              leadfield_allowed_mask=MASK_MAJOR)
+    tested = pbf.AnalyticalMaskedNumerically(convolver_interface,
+                                             potential=model_src.potential,
+                                             leadfield_allowed_mask=MASK_MAJOR)
     with tested:
         observed_major = tested(test_electrode_kcsd)
-    tested = frr.pbf.AnalyticalMaskedNumerically(
-                                              convolver_interface,
-                                              potential=model_src.potential,
-                                              leadfield_allowed_mask=MASK_MINOR)
+    tested = pbf.AnalyticalMaskedNumerically(convolver_interface,
+                                             potential=model_src.potential,
+                                             leadfield_allowed_mask=MASK_MINOR)
     with tested:
         observed_minor = tested(test_electrode_kcsd)
     assertRelativeErrorWithinTolerance(expected,
@@ -248,12 +246,12 @@ if __name__ == '__main__':
                                        ECHO)
 
     # kCSD masked numerical
-    tested = frr.pbf.NumericalMasked(convolver_interface,
-                                     leadfield_allowed_mask=MASK_MAJOR)
+    tested = pbf.NumericalMasked(convolver_interface,
+                                 leadfield_allowed_mask=MASK_MAJOR)
     with tested:
         observed_major = tested(test_electrode_kcsd)
-    tested = frr.pbf.NumericalMasked(convolver_interface,
-                                     leadfield_allowed_mask=MASK_MINOR)
+    tested = pbf.NumericalMasked(convolver_interface,
+                                 leadfield_allowed_mask=MASK_MINOR)
     with tested:
         observed_minor = tested(test_electrode_kcsd)
     assertRelativeErrorWithinTolerance(expected,
@@ -267,7 +265,7 @@ if __name__ == '__main__':
                                           convolver.SRC_Z)[SRC_MASK]
 
     # kESI correction
-    tested = frr.pbf.NumericalCorrection(convolver_interface)
+    tested = pbf.NumericalCorrection(convolver_interface)
     with tested:
         observed = tested(test_electrode_kesi)
     assertRelativeErrorWithinTolerance(correction, observed, 2e-4, ECHO)
@@ -276,27 +274,26 @@ if __name__ == '__main__':
     expected += correction
 
     # kESI analytical
-    tested = frr.pbf.AnalyticalCorrectedNumerically(
-                                                  convolver_interface,
-                                                  potential=model_src.potential)
+    tested = pbf.AnalyticalCorrectedNumerically(convolver_interface,
+                                                potential=model_src.potential)
     with tested:
         observed = tested(test_electrode_kesi)
     assertRelativeErrorWithinTolerance(expected, observed, 1e-4, ECHO)
 
     # kESI numerical
-    tested = frr.pbf.Numerical(convolver_interface)
+    tested = pbf.Numerical(convolver_interface)
     with tested:
         observed = tested(test_electrode_kesi)
     assertRelativeErrorWithinTolerance(expected, observed, 1e-2, ECHO)
 
     # kESI analytical masked
-    tested = frr.pbf.AnalyticalMaskedAndCorrectedNumerically(
-                                               convolver_interface,
-                                               potential=model_src.potential,
-                                               leadfield_allowed_mask=MASK_MAJOR)
+    tested = pbf.AnalyticalMaskedAndCorrectedNumerically(
+                                              convolver_interface,
+                                              potential=model_src.potential,
+                                              leadfield_allowed_mask=MASK_MAJOR)
     with tested:
         observed_major = tested(test_electrode_kesi)
-    tested = frr.pbf.AnalyticalMaskedAndCorrectedNumerically(
+    tested = pbf.AnalyticalMaskedAndCorrectedNumerically(
                                               convolver_interface,
                                               potential=model_src.potential,
                                               leadfield_allowed_mask=MASK_MINOR)
@@ -308,12 +305,12 @@ if __name__ == '__main__':
                                        ECHO)
 
     # kESI numerical masked
-    tested = frr.pbf.NumericalMasked(convolver_interface,
-                                     leadfield_allowed_mask=MASK_MAJOR)
+    tested = pbf.NumericalMasked(convolver_interface,
+                                 leadfield_allowed_mask=MASK_MAJOR)
     with tested:
         observed_major = tested(test_electrode_kesi)
-    tested = frr.pbf.NumericalMasked(convolver_interface,
-                                     leadfield_allowed_mask=MASK_MINOR)
+    tested = pbf.NumericalMasked(convolver_interface,
+                                 leadfield_allowed_mask=MASK_MINOR)
     with tested:
         observed_minor = tested(test_electrode_kesi)
     assertRelativeErrorWithinTolerance(expected,

@@ -29,7 +29,8 @@ import os
 
 import numpy as np
 
-import _fast_reciprocal_reconstructor as frr
+from kesi.kernel.constructor import Convolver
+
 import common
 
 
@@ -73,7 +74,7 @@ if __name__ == "__main__":
 
     model_src = common.SphericalSplineSourceBase.fromJSON(open(args.source))
 
-    convolver = frr.Convolver(centroids, csd_grid)
+    convolver = Convolver(centroids, csd_grid)
 
     src_diameters = [int(2 * np.floor(model_src.radius / _d)) + 1
                      for _d in convolver.steps("CSD")]

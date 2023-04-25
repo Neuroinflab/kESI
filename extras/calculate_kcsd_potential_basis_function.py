@@ -32,7 +32,8 @@ import pandas as pd
 
 from kesi.kernel.electrode import Conductivity as Electrode
 from kesi.kernel import potential_basis_functions as pbf
-import _fast_reciprocal_reconstructor as frr
+from kesi.kernel.constructor import Convolver, ConvolverInterfaceIndexed
+
 import common
 
 
@@ -75,13 +76,13 @@ if __name__ == "__main__":
 
     model_src = common.SphericalSplineSourceKCSD.fromJSON(open(args.source))
 
-    convolver = frr.Convolver([X, Y, Z],
-                              [X, Y, Z])
+    convolver = Convolver([X, Y, Z],
+                          [X, Y, Z])
 
-    convolver_interface = frr.ConvolverInterfaceIndexed(convolver,
-                                                        model_src.csd,
-                                                        [],
-                                                        MASK)
+    convolver_interface = ConvolverInterfaceIndexed(convolver,
+                                                    model_src.csd,
+                                                    [],
+                                                    MASK)
 
     with pbf.Analytical(convolver_interface,
                         potential=model_src.potential) as b:
