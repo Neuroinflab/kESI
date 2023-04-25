@@ -37,6 +37,7 @@ import scipy.integrate as si
 import _fast_reciprocal_reconstructor as frr
 import common
 from kesi.kernel.electrode import IntegrationNodesAtSamplingGrid as Electrode
+from kesi.kernel import potential_basis_functions as pbf
 
 
 if __name__ == "__main__":
@@ -108,12 +109,12 @@ if __name__ == "__main__":
                                                             romberg_weights,
                                                             SRC_MASK)
 
-        with frr.pbf.AnalyticalCorrectedNumerically(
-                                          convolver_interface,
-                                          potential=model_src.potential) as pbf:
+        with pbf.AnalyticalCorrectedNumerically(
+                                            convolver_interface,
+                                            potential=model_src.potential) as b:
             np.savez_compressed(os.path.join(args.output,
                                              f"{name}.npz"),
-                                POTENTIALS=pbf(electrode),
+                                POTENTIALS=b(electrode),
                                 X=electrode.x,
                                 Y=electrode.y,
                                 Z=electrode.z)

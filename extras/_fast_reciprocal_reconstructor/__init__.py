@@ -30,7 +30,7 @@ import warnings
 import numpy as np
 import scipy.signal as ssi
 
-from . import potential_basis_functions as pbf
+from kesi.kernel import potential_basis_functions as pbf
 
 
 def deprecated(old, new):

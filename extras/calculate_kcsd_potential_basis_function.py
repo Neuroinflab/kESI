@@ -31,6 +31,7 @@ import numpy as np
 import pandas as pd
 
 from kesi.kernel.electrode import Conductivity as Electrode
+from kesi.kernel import potential_basis_functions as pbf
 import _fast_reciprocal_reconstructor as frr
 import common
 
@@ -82,14 +83,14 @@ if __name__ == "__main__":
                                                         [],
                                                         MASK)
 
-    with frr.pbf.Analytical(convolver_interface,
-                            potential=model_src.potential) as pbf:
+    with pbf.Analytical(convolver_interface,
+                        potential=model_src.potential) as b:
         for name, (x, y, z) in ELECTRODES.iterrows():
             electrode = Electrode(x, y, z, args.conductivity)
 
             np.savez_compressed(os.path.join(args.output,
                                              f"{name}.npz"),
-                                POTENTIALS=pbf(electrode),
+                                POTENTIALS=b(electrode),
                                 CONDUCTIVITY=args.conductivity,
                                 X=electrode.x,
                                 Y=electrode.y,
