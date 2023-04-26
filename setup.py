@@ -63,7 +63,7 @@ SETUP_PARAMETERS = {
     # 'keywords': 'IntelliCage mice behavioural data loading analysis',
     'packages': ['kesi',
                  ],
-    'package_dir': {'': 'lib'},
+    'package_dir': {'': 'src'},
     # 'package_data': {'pymice': ['data/tutorial/demo.zip',
     #                             'data/tutorial/LICENSE',
     #                             'data/tutorial/COPYING',
