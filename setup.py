@@ -42,7 +42,7 @@ SETUP_PARAMETERS = {
     'description': 'kESI',
     # 'long_description': loadTextFrom('README.rst'),
     'author': "Jakub M. Dzik (Laboratory of Neuroinformatics; Nencki Institute of Experimental Biology)",
-    'author_email': "jakub.m.dzik+pymice@gmail.com",
+    'author_email': "jakub.m.dzik+kesi@gmail.com",
     'license': 'GPL3',
     'classifiers': ['Development Status :: 3 - Alpha',
                     'Intended Audience :: Developers',
