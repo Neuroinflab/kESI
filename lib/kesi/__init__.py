@@ -26,6 +26,7 @@ from ._engine import (FunctionalFieldReconstructor,
                       LoadableFunctionalFieldReconstructor,
                       MeasurementManagerBase)
 from . import kernel
+from . import common
 
 
 class FunctionalKernelFieldReconstructor(FunctionalFieldReconstructor):
