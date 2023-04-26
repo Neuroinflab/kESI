@@ -11,7 +11,7 @@ do
 ## there is at least one system in which ipython_genutils are missing if not installed explicitely
 #  mamba install -c conda-forge --yes numpy scipy matplotlib pandas ipython ipython_genutils ipykernel importlib_metadata
   mamba install -c conda-forge --yes fenics meshio
-  python setup.py develop
+  pip install -e .
   mamba clean -a --yes
   conda deactivate
 done
