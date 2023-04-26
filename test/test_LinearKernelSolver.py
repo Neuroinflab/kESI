@@ -30,11 +30,11 @@ import numpy as np
 try:
     from ._common import TestCase
     # When run as script raises:
-    #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
+    #  - `ImportError` (Python 3.6-9), or
     #  - `SystemError` (Python 3.3-5), or
     #  - `ValueError` (Python 2.7).
 
-except (ImportError, SystemError, ValueError):
+except ImportError:
     from _common import TestCase
 
 from kesi._engine import _LinearKernelSolver

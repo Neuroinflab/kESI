@@ -11,10 +11,11 @@ sys.path.append('../')
 try:
     from api_stabilizer import VerboseFFR, MeasurementManagerBase, LinearMixture
     # When run as script raises:
-    #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
+    #  - `ImportError` (Python 3.6-9), or
     #  - `SystemError` (Python 3.3-5), or
     #  - `ValueError` (Python 2.7).
-except (ImportError, SystemError, ValueError):
+
+except ImportError:
     from .api_stabilizer import VerboseFFR, MeasurementManagerBase, LinearMixture
 
 from kesi.common import GaussianSourceKCSD3D

@@ -32,11 +32,11 @@ try:
                    test_LoadableFunctionalFieldReconstructor)
     from ._common import TestCase
     # When run as script raises:
-    #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
+    #  - `ImportError` (Python 3.6-9), or
     #  - `SystemError` (Python 3.3-5), or
     #  - `ValueError` (Python 2.7).
 
-except (ImportError, SystemError, ValueError):
+except ImportError:
     import test_MeasurementManagerBase
     import test_Engine
     import test_Verbose

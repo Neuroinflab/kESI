@@ -35,11 +35,11 @@ try:
     from . import _fem_common as fc
     from . import _fem_sphere_common as fsc
     # When run as script raises:
-    #  - `ModuleNotFoundError(ImportError)` (Python 3.6-7), or
+    #  - `ImportError` (Python 3.6-9), or
     #  - `SystemError` (Python 3.3-5), or
     #  - `ValueError` (Python 2.7).
 
-except (ImportError, SystemError, ValueError):
+except ImportError:
     import _fem_common as fc
     import _fem_sphere_common as fsc
 
