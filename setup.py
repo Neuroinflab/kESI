@@ -37,7 +37,7 @@ import os, sys, logging
 
 SETUP_PARAMETERS = {
     'name': 'kESI',
-    'version': '0.2.dev1',
+    'version': '0.3a0.dev0',
     'url': 'https://neuroinflab.wordpress.com/',
     'description': 'kESI',
     # 'long_description': loadTextFrom('README.rst'),
