@@ -24,3 +24,4 @@
 
 from . import electrode
 from . import potential_basis_functions as pbf
+from . import constructor
