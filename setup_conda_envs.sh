@@ -2,8 +2,9 @@
 # run with `source`
 # 3.5 -> no gcc package required by fenics
 # 3.6 -> no pyproject.toml support
-for python_version in "3.7" "3.8" "3.9" "3.10"
+for minor_version in {7..10}
 do
+  python_version=3.${minor_version}
   name=kesi${python_version}
   conda create --name $name --no-default-packages --yes -c conda-forge mamba python=$python_version
   conda activate $name
