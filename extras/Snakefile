@@ -99,8 +99,9 @@ PBF_KESI = os.path.join(PBF_DIR_PATTERN.replace("{path}",
 KERNEL_SUBSETUP_DIR = os.path.join(DATA_DIR, "kernels", "{setup}", "{subsetup}")
 KERNEL_SUBSETUP_ELECTRODES = os.path.join(KERNEL_SUBSETUP_DIR, "electrodes.csv")
 KERNEL_DIR = os.path.join(KERNEL_SUBSETUP_DIR, "{basis_functions}", "{path}")
+KERNEL_FILES_KEYS = ["potential_basis_functions", "kernel", "analysis"]
 KERNEL_FILES = {name: os.path.join(KERNEL_DIR, f"{name}.npz")
-                for name in ["potential_basis_functions", "kernel", "analysis"]}
+                for name in KERNEL_FILES_KEYS}
 
 PAPER_SLICE_ELECTRODES = [f"{x}_0_{z}" for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
 PAPER_4SM_ELECTRODES = [f"{x}_{i:02d}" for i in range(0, 12) for x in ['B', 'D']]
@@ -364,11 +365,18 @@ def get_kernel_electrodes_paths(wildcards):
 
 
 rule KERNEL:
+    # WARNING: Undocumented feature used!
+    # The rule may crash if Snakemake implementation changes.  In that case:
+    #  - change dict comprehension to list comprehension (dict values sorted in
+    #    order given by `KERNEL_FILES_KEYS`),
+    #  - change `output.potential_basis_functions` to `output[0]`,
+    #  - change `output.kernel` to `output[1]`,
+    #  - change `output.analysis` to `output[2]`.
     input:
         get_kernel_electrodes_paths,
         electrodes=KERNEL_SUBSETUP_ELECTRODES
     output:
-        list(map(protect_transfer_matrix, KERNEL_FILES.values()))
+        **{k: protect_transfer_matrix(v) for k, v in KERNEL_FILES.items()}
     params:
         output_directory=KERNEL_DIR,
         input_directory=PBF_DIR_PATTERN
@@ -376,7 +384,9 @@ rule KERNEL:
         """
         mkdir -p {params.output_directory}
         python calculate_kernel.py \\
-          --output {params.output_directory} \\
+          --pbf {output.potential_basis_functions} \\
+          --kernel {output.kernel} \\
+          --analysis {output.analysis} \\
           --input {params.input_directory} \\
           --electrodes {input.electrodes}
         """

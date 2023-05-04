@@ -33,11 +33,18 @@ import pandas as pd
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create kernel.")
-    parser.add_argument("-o", "--output",
-                        required=True,
-                        metavar="<output>",
-                        dest="output",
-                        help="output directory")
+    parser.add_argument("-k", "--kernel",
+                        metavar="<kernel.npz>",
+                        dest="kernel",
+                        help="kernel matrix")
+    parser.add_argument("-p", "--pbf",
+                        metavar="<pbf.npz>",
+                        dest="pbf",
+                        help="values of potential basis functions at electrodes")
+    parser.add_argument("-a", "--analysis",
+                        metavar="<analysis.npz>",
+                        dest="analysis",
+                        help="auxiliary analytical data")
     parser.add_argument("-i", "--input",
                         required=True,
                         metavar="<input>",
@@ -62,22 +69,20 @@ if __name__ == "__main__":
 
             B[:, i] = COL
 
-    np.savez_compressed(os.path.join(args.output,
-                                     "potential_basis_functions.npz"),
-                        B=B)
+    if args.pbf is not None:
+        np.savez_compressed(args.pbf, B=B)
 
-    np.savez_compressed(os.path.join(args.output,
-                                     "kernel.npz"),
-                        KERNEL=np.matmul(B.T, B))
+    if args.kernel is not None:
+        np.savez_compressed(args.kernel, KERNEL=np.matmul(B.T, B))
 
-    _U, _S, _V = np.linalg.svd(B,
-                               full_matrices=False,
-                               compute_uv=True)
-    del B
+    if args.analysis is not None:
+        _U, _S, _V = np.linalg.svd(B,
+                                   full_matrices=False,
+                                   compute_uv=True)
+        del B
 
-    np.savez_compressed(os.path.join(args.output,
-                                     "analysis.npz"),
-                        EIGENVALUES=np.square(_S),
-                        EIGENSOURCES=_U,
-                        SINGULARVALUES=_S,
-                        EIGENVECTORS=_V.T)
+        np.savez_compressed(args.analysis,
+                            EIGENVALUES=np.square(_S),
+                            EIGENSOURCES=_U,
+                            SINGULARVALUES=_S,
+                            EIGENVECTORS=_V.T)
