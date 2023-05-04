@@ -671,25 +671,13 @@ rule SETUP_ELECTRODES_CSV:
         setup_to_electrodes
     output:
         SETUP_ELECTRODES
-    run:
-        import configparser
-        import pandas as pd
-
-        os.makedirs(os.path.dirname(str(output)),
-                    mode=0o755,
-                    exist_ok=True)
-
-        config = configparser.ConfigParser()
-        config.read(str(input))
-
-        DF = pd.DataFrame([[name,
-                            config.getfloat(name, "x"),
-                            config.getfloat(name, "y"),
-                            config.getfloat(name, "z"),
-                            ] for name in config.sections()],
-                            columns=["NAME", "X", "Y", "Z"])
-
-        DF.to_csv(str(output), index=False)
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        cp {input} {output}
+        """
 
 
 rule FENICS_LFCOR_COND_INI:
