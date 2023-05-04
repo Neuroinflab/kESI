@@ -45,9 +45,22 @@ at `(0, 0, 0)`, which make them so-called _model sources_.
 
 #### Position of electrodes <a name="data-bundled-position_of_electrodes"></a>
 
-Locations of electrodes are stored in `*.ini` files, 
-where section names are names of the respective point electrodes 
-and fields of a section (_'x'_, _'y'_, _'z'_) are coordinates of the electrode.
+Locations of electrodes are stored in `*.csv` files.  Each contains a table
+with location of the electrodes, with columns named intuitively: _NAME_
+(name of the electrode), _X_, _Y_ and _Z_ (its location coordinates in meters).
+An exemplary file may look like:
+```
+NAME,X,Y,Z
+A_00,-0.006,0.0,0.046
+A_01,-0.006,0.0,0.0485
+```
+
+| field  | type          | content               |
+|--------|---------------|-----------------------|
+| `NAME` | `str`         | name of the electrode |
+| `X`    | `float` $[m]$ | X coordinate of ...   |
+| `Y`    | `float` $[m]$ | Y coordinate of ...   |
+| `Z`    | `float` $[m]$ | Z coordinate of ...   |
 
 In case you want to provide your own files mind that double underscores (`__`)
 are allowed neither in names of files nor directories in that directory subtree.
@@ -163,14 +176,11 @@ Content of a file depends on suffix of the filename:
 
 #### Setups <a name="data-generated-setups"></a>
 
-The filesystem subtree follows the pattern:
-```
-setups/
-  [<aaa>__[<bbb>__[...]]]<zzz>/
-    electrodes.csv
-```
-(part in `[]` is optional and `...` is used instead of further recursion),
-where directory name encodes path to [the bundled file](#data-bundled-position_of_electrodes)
+Names of files in the `setups` directory follow the pattern `<setup>.csv`.
+Files contain locations of electrodes available within the given setup.
+The `<setup>` is `[<aaa>__[<bbb>__[...]]]<zzz>`
+(part in `[]` is optional and `...` is used instead of further recursion)
+and encodes path to [the bundled file](#data-bundled-position_of_electrodes)
 the locations of electrodes were copied from, that is to:
 ```
 <root of the working directory>/
@@ -181,26 +191,13 @@ the locations of electrodes were copied from, that is to:
           [aaa/
             [bbb/
               [...]]]
-                zzz.ini
+                zzz.csv
 ```
 
-##### File `electrodes.csv` <a name="data-generated-setups-electrodes_csv"></a>
+##### File `<setup>.csv` <a name="data-generated-setups-electrodes_csv"></a>
 
-The `electrodes.csv` files contain a table  with location of the electrodes,
-with columns named intuitively: _NAME_ (name of the electrode), _X_, _Y_ and _Z_
-(its location coordinates in meters).  An exemplary file may look like:
-```
-NAME,X,Y,Z
-A_00,-0.006,0.0,0.046
-A_01,-0.006,0.0,0.0485
-```
-
-| field  | type          | content               |
-|--------|---------------|-----------------------|
-| `NAME` | `str`         | name of the electrode |
-| `X`    | `float` $[m]$ | X coordinate of ...   |
-| `Y`    | `float` $[m]$ | Y coordinate of ...   |
-| `Z`    | `float` $[m]$ | Z coordinate of ...   |
+The `<setup>.csv` files are in the same format as
+[the bundled files with electrode locations](#data-bundled-position_of_electrodes)
 
 
 #### Fenics leadfield corrections <a name="data-generated-fenics_leadfield_corrections"></a>

@@ -57,7 +57,7 @@ PATH = Path(kESI=os.path.join("{sampling}", FEM_PATH),
             kCSD="{conductivity}")
 FWD_FEM_PATH = FEM_PATH.replace("{", "{fwd_")
 
-SETUP_ELECTRODES = os.path.join(DATA_DIR, "setups", "{setup}", "electrodes.csv")
+SETUP_ELECTRODES = os.path.join(DATA_DIR, "setups", "{setup}.csv")
 
 FENICS_LFCOR_ROOT = os.path.join(DATA_DIR, "fenics_leadfield_corrections")
 FENICS_LFCOR_COND = os.path.join(FENICS_LFCOR_ROOT,
