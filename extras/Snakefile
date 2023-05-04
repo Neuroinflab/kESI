@@ -663,7 +663,7 @@ rule FENICS_LFCOR_SOLVE:
 def setup_to_electrodes(wildcards):
     prefix = os.path.join(ELE_DIR,
                           *wildcards.setup.split("__"))
-    return f"{prefix}.ini"
+    return f"{prefix}.csv"
 
 
 rule SETUP_ELECTRODES_CSV:
