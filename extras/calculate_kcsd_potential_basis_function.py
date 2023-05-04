@@ -24,74 +24,50 @@
 #                                                                             #
 ###############################################################################
 
-import argparse
-import os
-
-import numpy as np
 import pandas as pd
 
-from kesi import common
 from kesi.kernel import potential_basis_functions as pbf
 from kesi.kernel.electrode import Conductivity as Electrode
-from kesi.kernel.constructor import Convolver, ConvolverInterfaceIndexed
+
+from _calculate_potential_basis_function import ScriptBase
+
+
+class Script(ScriptBase):
+    PotentialBasisFunction = pbf.Analytical
+
+    class ArgumentParser(ScriptBase.ArgumentParser):
+        def __init__(self):
+            super().__init__("kCSD")
+            self.add_argument("-e", "--electrodes",
+                              required=True,
+                              metavar="<electrodes.csv>",
+                              help="locations of electrodes")
+            self.add_argument("--conductivity",
+                              type=float,
+                              default=0.33,
+                              metavar="<conductivity [S/m]>",
+                              help="medium conductivity")
+
+    def _load_electrodes(self, args):
+        ELES = pd.read_csv(args.electrodes,
+                           index_col="NAME",
+                           usecols=["NAME", "X", "Y", "Z"]).loc[args.names]
+        self._electrodes = {name: Electrode(x, y, z, args.conductivity)
+                            for name, (x, y, z) in ELES.iterrows()}
+
+    def run(self):
+        self._run(self._electrodes)
+
+    def _get_convolver_grid(self):
+        return self.CENTROID_XYZ
+
+    def _get_quadrature(self):
+        return []
+
+    def _get_src_mask(self, convolver):
+        return self.CENTROID_MASK
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Calculate values of kCSD potential basis functions at electrode.")
-    parser.add_argument("-o", "--output",
-                        metavar="<output>",
-                        dest="output",
-                        help="output directory")
-    parser.add_argument("-c", "--centroids",
-                        required=True,
-                        metavar="<centroids.npz>",
-                        help="centroids grid with mask")
-    parser.add_argument("-s", "--source",
-                        required=True,
-                        metavar="<source.json>",
-                        help="definition of shape of CSD basis function")
-    parser.add_argument("-e", "--electrodes",
-                        required=True,
-                        metavar="<electrodes.csv>",
-                        help="locations of electrodes")
-    parser.add_argument("--conductivity",
-                        type=float,
-                        default=0.33,
-                        metavar="<conductivity [S/m]>",
-                        help="medium conductivity")
-    parser.add_argument("names",
-                        metavar="<electrode name>",
-                        nargs="+",
-                        help="names of electrodes")
-
-    args = parser.parse_args()
-
-    ELECTRODES = pd.read_csv(args.electrodes,
-                             index_col="NAME",
-                             usecols=["NAME", "X", "Y", "Z"]).loc[args.names]
-
-    with np.load(args.centroids) as fh:
-        X, Y, Z, MASK = [fh[c] for c in ["X", "Y", "Z", "MASK"]]
-
-    model_src = common.SphericalSplineSourceKCSD.fromJSON(open(args.source))
-
-    convolver = Convolver([X, Y, Z],
-                          [X, Y, Z])
-
-    convolver_interface = ConvolverInterfaceIndexed(convolver,
-                                                    model_src.csd,
-                                                    [],
-                                                    MASK)
-
-    with pbf.Analytical(convolver_interface,
-                        potential=model_src.potential) as b:
-        for name, (x, y, z) in ELECTRODES.iterrows():
-            electrode = Electrode(x, y, z, args.conductivity)
-
-            np.savez_compressed(os.path.join(args.output,
-                                             f"{name}.npz"),
-                                POTENTIALS=b(electrode),
-                                CONDUCTIVITY=args.conductivity,
-                                X=electrode.x,
-                                Y=electrode.y,
-                                Z=electrode.z)
+    model = Script()
+    model.run()

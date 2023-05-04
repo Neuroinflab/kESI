@@ -24,8 +24,8 @@
 #                                                                             #
 ###############################################################################
 
-import argparse
 import os
+import collections
 
 import logging
 logger = logging.getLogger(__name__)
@@ -34,87 +34,76 @@ logging.basicConfig(level=logging.INFO)
 import numpy as np
 import scipy.integrate as si
 
-from kesi import common
 from kesi.kernel import potential_basis_functions as pbf
-from kesi.kernel.constructor import Convolver, ConvolverInterfaceIndexed
 from kesi.kernel.electrode import IntegrationNodesAtSamplingGrid as Electrode
+
+from _calculate_potential_basis_function import ScriptBase
+
+
+class Script(ScriptBase):
+    PotentialBasisFunction = pbf.AnalyticalCorrectedNumerically
+
+    class ArgumentParser(ScriptBase.ArgumentParser):
+        def __init__(self):
+            super().__init__("kESI")
+            self.add_argument("-i", "--input",
+                              metavar="<input>",
+                              dest="input",
+                              help="input directory")
+
+    def Electrode(self, directory):
+        class _Electrode(Electrode):
+            def __init__(self, name):
+                super().__init__(os.path.join(directory, f"{name}.npz"))
+                self.name = name
+
+        return _Electrode
+
+    def _load_electrodes(self, args):
+        self._electrodes = collections.defaultdict(dict)
+        for electrode in map(self.Electrode(args.input), args.names):
+            self._store_electrode(electrode)
+
+    def _store_electrode(self, electrode):
+        key = tuple(map(tuple, electrode.SAMPLING_GRID))
+        self._electrodes[key][electrode.name] = electrode
+
+    def run(self):
+        for sampling_grid, electrodes in self._electrodes.items():
+            self._run(electrodes, sampling_grid)
+
+    def _get_convolver_grid(self, sampling_grid):
+        return [A[(A >= C.min() - self.src_radius)
+                  & (A <= C.max() + self.src_radius)]
+                for A, C in zip(sampling_grid,
+                                self.CENTROID_XYZ)]
+
+    def _get_quadrature(self, sampling_grid):
+        d_xyz = np.array([(A[-1] - A[0]) / (len(A) - 1)
+                          for A in sampling_grid])
+        _ns = np.ceil(self.src_radius / d_xyz)
+        romberg_ks = 1 + np.ceil(np.log2(_ns)).astype(int)
+        return tuple(si.romb(np.identity(2 ** k + 1)) * 2.0 ** -k
+                     for k in romberg_ks)
+
+    def _get_src_mask(self, convolver):
+        CENTROIDS_IN_SRC = [np.isin(C.flatten(), S)
+                            for S, C in zip(convolver.SRC_GRID,
+                                            self.CENTROID_XYZ)]
+        for c, IDX in zip("XYZ", CENTROIDS_IN_SRC):
+            if not IDX.all():
+                logger.warning(
+                    f"{(~IDX).sum()} centroid grid nodes missing along the {c} axis")
+        SRC_IN_CENTROIDS = [np.isin(S.flatten(), C)
+                            for S, C in zip(convolver.SRC_GRID,
+                                            self.CENTROID_XYZ)]
+        SRC_MASK = np.zeros(convolver.shape("SRC"),
+                            dtype=bool)
+        SRC_MASK[np.ix_(*SRC_IN_CENTROIDS)] = self.CENTROID_MASK[
+            np.ix_(*CENTROIDS_IN_SRC)]
+        return SRC_MASK
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Calculate values of kCSD potential basis functions at electrode.")
-    parser.add_argument("-o", "--output",
-                        metavar="<output>",
-                        dest="output",
-                        help="output directory")
-    parser.add_argument("-i", "--input",
-                        metavar="<input>",
-                        dest="input",
-                        help="input directory")
-    parser.add_argument("-c", "--centroids",
-                        required=True,
-                        metavar="<centroids.npz>",
-                        help="centroids grid with mask")
-    parser.add_argument("-s", "--source",
-                        required=True,
-                        metavar="<source.json>",
-                        help="definition of shape of CSD basis function")
-    parser.add_argument("names",
-                        metavar="<electrode name>",
-                        nargs="+",
-                        help="names of electrodes")
-
-    args = parser.parse_args()
-
-
-    with np.load(args.centroids) as fh:
-        CENTROID_XYZ = [fh[c] for c in ["X", "Y", "Z"]]
-        CENTROID_MASK = fh["MASK"]
-
-    model_src = common.SphericalSplineSourceKCSD.fromJSON(open(args.source))
-
-    for name in args.names:
-        electrode = Electrode(os.path.join(args.input, f"{name}.npz"))
-
-        d_xyz = np.array([(A[-1] - A[0]) / (len(A) - 1)
-                          for A in electrode.SAMPLING_GRID])
-        _ns = np.ceil(model_src.radius / d_xyz)
-        romberg_ks = 1 + np.ceil(np.log2(_ns)).astype(int)
-        romberg_weights = tuple(si.romb(np.identity(2 ** k + 1)) * 2.0 ** -k
-                                for k in romberg_ks)
-
-        LF_XYZ = [A[(A >= C.min() - model_src.radius)
-                    & (A <= C.max() + model_src.radius)]
-                  for A, C in zip(electrode.SAMPLING_GRID,
-                                  CENTROID_XYZ)]
-
-        convolver = Convolver(LF_XYZ, LF_XYZ)
-
-        CENTROIDS_IN_SRC = [np.isin(C.flatten(), S)
-                            for S, C in zip(convolver.SRC_GRID, CENTROID_XYZ)]
-
-        for c, IDX in zip("XYZ", CENTROIDS_IN_SRC):
-            if not IDX.all():
-                logger.warning(f"{(~IDX).sum()} centroid grid nodes missing along the {c} axis")
-
-        SRC_IN_CENTROIDS = [np.isin(S.flatten(), C)
-                            for S, C in zip(convolver.SRC_GRID, CENTROID_XYZ)]
-
-        SRC_MASK = np.zeros(convolver.shape("SRC"),
-                            dtype=bool)
-        SRC_MASK[np.ix_(*SRC_IN_CENTROIDS)] = CENTROID_MASK[
-                                                      np.ix_(*CENTROIDS_IN_SRC)]
-
-        convolver_interface = ConvolverInterfaceIndexed(convolver,
-                                                        model_src.csd,
-                                                        romberg_weights,
-                                                        SRC_MASK)
-
-        with pbf.AnalyticalCorrectedNumerically(
-                                            convolver_interface,
-                                            potential=model_src.potential) as b:
-            np.savez_compressed(os.path.join(args.output,
-                                             f"{name}.npz"),
-                                POTENTIALS=b(electrode),
-                                X=electrode.x,
-                                Y=electrode.y,
-                                Z=electrode.z)
+    model = Script()
+    model.run()
