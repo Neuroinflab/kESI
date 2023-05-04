@@ -70,7 +70,7 @@ class Script(ScriptBase):
 
     def run(self):
         for sampling_grid, electrodes in self._electrodes.items():
-            self._run(electrodes, sampling_grid)
+            self._run(electrodes, [np.array(A) for A in sampling_grid])
 
     def _get_convolver_grid(self, sampling_grid):
         return [A[(A >= C.min() - self.src_radius)
