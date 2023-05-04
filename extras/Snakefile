@@ -99,7 +99,10 @@ PBF_KESI = os.path.join(PBF_DIR_PATTERN.replace("{path}",
 KERNEL_SUBSETUP_DIR = os.path.join(DATA_DIR, "kernels", "{setup}", "{subsetup}")
 KERNEL_SUBSETUP_ELECTRODES = os.path.join(KERNEL_SUBSETUP_DIR, "electrodes.csv")
 KERNEL_DIR = os.path.join(KERNEL_SUBSETUP_DIR, "{basis_functions}", "{path}")
-KERNEL_FILES_KEYS = ["potential_basis_functions", "kernel", "analysis"]
+KERNEL_FILES_KEYS = ["kernel",
+                     "analysis",
+#                      "potential_basis_functions",
+                     ]
 KERNEL_FILES = {name: os.path.join(KERNEL_DIR, f"{name}.npz")
                 for name in KERNEL_FILES_KEYS}
 
@@ -311,25 +314,44 @@ rule CSD_EIGENSOURCES:
         """
 
 
+def get_kernel_electrodes(wildcards):
+    if wildcards.subsetup == "paper":
+        if wildcards.setup == "paper__circular_slice__grid_3d":
+            return PAPER_SLICE_ELECTRODES
+
+        elif wildcards.setup == "paper__four_spheres__comb":
+            return PAPER_4SM_ELECTRODES
+
+
+def get_kernel_electrodes_paths(wildcards):
+    pattern = os.path.join(PBF_DIR_PATTERN.replace("{", "{w.").format(
+                                                                   w=wildcards),
+                           "{}.npz")
+    return list(map(pattern.format, get_kernel_electrodes(wildcards)))
+
+
 rule KERNEL_CROSSKERNEL:
     input:
-        transfer_matrix=KERNEL_FILES["potential_basis_functions"],
+        get_kernel_electrodes_paths,
         centroids=PBF_CENTROIDS,
         source=PBF_MODEL_SRC,
         grid_csd=KERNEL_CSD_GRID
     output:
         protect_transfer_matrix(KERNEL_CROSSKERNEL)
     params:
-        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+        output_directory=lambda wildcards, output: os.path.dirname(str(output)),
+        names=lambda wildcards, output: get_kernel_electrodes(wildcards),
+        input_directory=PBF_DIR_PATTERN
     shell:
         """
         mkdir -p {params.output_directory}
         python calculate_volumetric_crosskernel.py \\
           --output {output} \\
-          --input {input.transfer_matrix} \\
+          --input {params.input_directory} \\
           --centroids {input.centroids} \\
           --source {input.source} \\
-          --grid {input.grid_csd}
+          --grid {input.grid_csd} \\
+          {params.names}
         """
 
 
@@ -349,29 +371,14 @@ rule KERNEL_CSD_GRID_as_LF:
         """
 
 
-def get_kernel_electrodes(wildcards):
-    if wildcards.subsetup == "paper":
-        if wildcards.setup == "paper__circular_slice__grid_3d":
-            return PAPER_SLICE_ELECTRODES
-
-        elif wildcards.setup == "paper__four_spheres__comb":
-            return PAPER_4SM_ELECTRODES
-
-def get_kernel_electrodes_paths(wildcards):
-    pattern = os.path.join(PBF_DIR_PATTERN.replace("{", "{w.").format(
-                                                                   w=wildcards),
-                           "{}.npz")
-    return list(map(pattern.format, get_kernel_electrodes(wildcards)))
-
-
 rule KERNEL:
     # WARNING: Undocumented feature used!
     # The rule may crash if Snakemake implementation changes.  In that case:
     #  - change dict comprehension to list comprehension (dict values sorted in
     #    order given by `KERNEL_FILES_KEYS`),
-    #  - change `output.potential_basis_functions` to `output[0]`,
-    #  - change `output.kernel` to `output[1]`,
-    #  - change `output.analysis` to `output[2]`.
+    #  - change `output.kernel` to `output[0]`,
+    #  - change `output.analysis` to `output[1]`.
+    #  - change `output.potential_basis_functions` to `output[2]` if present,
     input:
         get_kernel_electrodes_paths,
         electrodes=KERNEL_SUBSETUP_ELECTRODES
@@ -384,12 +391,13 @@ rule KERNEL:
         """
         mkdir -p {params.output_directory}
         python calculate_kernel.py \\
-          --pbf {output.potential_basis_functions} \\
           --kernel {output.kernel} \\
           --analysis {output.analysis} \\
           --input {params.input_directory} \\
           --electrodes {input.electrodes}
         """
+#           --pbf {output.potential_basis_functions} \\
+
 
 rule KERNEL_ELECTRODES:
     input:

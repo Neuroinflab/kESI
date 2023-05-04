@@ -43,9 +43,9 @@ if __name__ == "__main__":
                         dest="output",
                         help="volumetric crosskernel")
     parser.add_argument("-i", "--input",
-                        metavar="<potential basis functions.npz>",
+                        metavar="<potential basis functions[.npz]>",
                         dest="input",
-                        help="matrix of values of potential basis functions")
+                        help="matrix of values of potential basis functions or a directory containing vectors")
     parser.add_argument("-c", "--centroids",
                         required=True,
                         metavar="<centroids.npz>",
@@ -62,6 +62,10 @@ if __name__ == "__main__":
                         default="XYZ",
                         metavar="<coordinate system>",
                         help="a string containing one-letter label of grid coords (like the default 'XYZ')")
+    parser.add_argument("names",
+                        metavar="<electrode name>",
+                        nargs="*",
+                        help="names of electrodes - if given, --input is interpreted as a directory")
 
     args = parser.parse_args()
 
@@ -85,18 +89,31 @@ if __name__ == "__main__":
                                                     fake_weights,
                                                     SRC_MASK)
 
-    crosskernel_constructor = CrossKernelConstructor(
+    n_names = len(args.names)
+    if n_names == 0:
+        crosskernel_constructor = CrossKernelConstructor(
                                                  convolver_interface,
                                                  np.ones(convolver.shape("CSD"),
                                                          dtype=bool))
 
-    with np.load(args.input) as fh:
-        B = fh["B"]
+        with np.load(args.input) as fh:
+            B = fh["B"]
 
-    CROSSKERNEL = crosskernel_constructor(B)
-    crosskernel_shape = convolver.shape("CSD") + (-1,)
+        crosskernel_shape = convolver.shape("CSD") + (-1,)
+        CROSSKERNEL = crosskernel_constructor(B).reshape(crosskernel_shape)
+
+    else:
+        CROSSKERNEL = np.full(convolver.shape("CSD") + (n_names,),
+                              np.nan)
+        SRC = convolver_interface.zeros("SRC")
+        for i, name in enumerate(args.names):
+            with np.load(os.path.join(args.input, f"{name}.npz")) as fh:
+                convolver_interface.update_src(SRC, fh["POTENTIALS"])
+                CROSSKERNEL[:, :, :, i] = convolver_interface.basis_functions_weights_to_csd(SRC)
+        del SRC
+
     np.savez_compressed(os.path.join(args.output),
-                        CROSSKERNEL=CROSSKERNEL.reshape(crosskernel_shape),
+                        CROSSKERNEL=CROSSKERNEL,
                         X=convolver.CSD_X,
                         Y=convolver.CSD_Y,
                         Z=convolver.CSD_Z)
