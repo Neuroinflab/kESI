@@ -35,10 +35,10 @@ import json
 import numpy as np
 from scipy.special import erf, lpmv
 
-try:
-    from .kernel._tools import shape
-except ImportError:
-    pass
+try:                                   # Enables further import of `shape()`
+    from .kernel._tools import shape   # from the module; if the file is not a
+except ImportError:                    # module, `shape()` is unnecessary, thus
+    pass                               # the raised exception may be ignored.
 
 
 logger = logging.getLogger(__name__)
