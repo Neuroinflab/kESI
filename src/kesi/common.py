@@ -157,6 +157,11 @@ def sub_polynomials(p_a, p_b):
     return [a - b for a, b in itertools.zip_longest(p_a, p_b, fillvalue=0)]
 
 
+def scale_array_in_place(A, factor):
+    A *= factor
+    return A
+
+
 class _RadialNodesDefined(_Base):
     def __init__(self, nodes, **kwargs):
         super().__init__(**kwargs)
@@ -208,7 +213,7 @@ class SphericalSplineSourceBase(SourceBase, _RadialNodesDefined):
             IDX = (r_in <= R) & (R < r_out)
             CSD[IDX] = polynomial(csd_p, R[IDX])
 
-        return self._normalization_factor * CSD
+        return scale_array_in_place(CSD, self._normalization_factor)
 
     def _distance(self, X, Y, Z):
         return np.sqrt(np.square(X - self.x)
@@ -530,6 +535,7 @@ class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
                                                                    coefficients)
 
     def potential(self, X, Y, Z):
+        # in-place multiplication gives no measurable boost
         return (self._model_potential(self._distance(X, Y, Z))
                 * (self._normalization_factor / self.conductivity))
 
@@ -1122,48 +1128,49 @@ if __name__ == '__main__':
     R = np.linspace(R_MIN, R_MAX, N)
     nodes = [1, 2, 3]
     coefficients = [[1], [2, 3], [4.5, 6.7, 8.9, 10]]
-    conductivity = 1.5
-    old = OldSphericalSplineSourceKCSD(0, 0, 0, nodes, coefficients, conductivity)
-    new = SphericalSplineSourceKCSD(0, 0, 0, nodes, coefficients, conductivity)
-    potential_shell_by_shell = _SphericalSplineShellwisePotentialKCSD(
-                                                                   nodes,
-                                                                   coefficients)
-    potential_sphere_by_sphere = _SphericalSplineSpherewisePotentialKCSD(
-                                                                   nodes,
-                                                                   coefficients)
-    normalization_factor = old._normalization_factor / conductivity
 
     def regression_tets(name, old, new, tolerance_abs, tolerance_rel, *args):
         NEW = new(*args)
         OLD = old(*args)
         err_abs = abs(NEW - OLD).max()
-        assert err_abs <= tolerance_abs, f"FAILED {name}: abs_err = {err_abs:g} > {tolerance_abs:g}"
+        assert err_abs <= tolerance_abs, f"FAILED {name}:\n\tabs_err = {err_abs:g} > {tolerance_abs:g}"
 
         IDX = OLD != 0
         if IDX.any():
             err_rel = abs(NEW / OLD - 1)[IDX].max()
-            assert err_rel <= tolerance_rel, f"FAILED {name}: rel_err = {err_rel:g} > {tolerance_rel:g}"
+            assert err_rel <= tolerance_rel, f"FAILED {name}:\n\trel_err = {err_rel:g} > {tolerance_rel:g}"
 
-    regression_tets('.csd()',
-                    old.csd, new.csd,
-                    7.0e-18, 4.5e-16,
-                    R, 0, 0)
-    regression_tets('.potential()',
-                    old.potential, new.potential,
-                    1.4e-17, 7.8e-16,
-                    R, 0, 0)
-    regression_tets('potential_shell_by_shell()',
-                    old.potential,
-                    lambda x, y, z: (normalization_factor
-                                     * potential_shell_by_shell(np.sqrt(x * x + y * y + z * z))),
-                    7.0e-18, 4.5e-16,
-                    R, 0, 0)
-    regression_tets('potential_sphere_by_sphere()',
-                    old.potential,
-                    lambda x, y, z: (normalization_factor
-                                     * potential_sphere_by_sphere(np.sqrt(x*x + y*y + z*z))),
-                    1.1e-17, 6.7e-16,
-                    R, 0, 0)
+    for conductivity in [0.5, 1.0, 1.5]:
+        old = OldSphericalSplineSourceKCSD(0, 0, 0, nodes, coefficients, conductivity)
+        new = SphericalSplineSourceKCSD(0, 0, 0, nodes, coefficients, conductivity)
+        potential_shell_by_shell = _SphericalSplineShellwisePotentialKCSD(
+                                                                       nodes,
+                                                                       coefficients)
+        potential_sphere_by_sphere = _SphericalSplineSpherewisePotentialKCSD(
+                                                                       nodes,
+                                                                       coefficients)
+        normalization_factor = old._normalization_factor / conductivity
+
+        regression_tets(".csd()",
+                        old.csd, new.csd,
+                        7.0e-18, 4.5e-16,
+                        R, 0, 0)
+        regression_tets(f".potential(conductivity={conductivity:g})",
+                        old.potential, new.potential,
+                        4.2e-17, 7.8e-16,
+                        R, 0, 0)
+        regression_tets(f"potential_shell_by_shell(conductivity={conductivity:g})",
+                        old.potential,
+                        lambda x, y, z: (normalization_factor
+                                         * potential_shell_by_shell(np.sqrt(x * x + y * y + z * z))),
+                        1.4e-17, 4.5e-16,
+                        R, 0, 0)
+        regression_tets(f"potential_sphere_by_sphere(conductivity={conductivity:g})",
+                        old.potential,
+                        lambda x, y, z: (normalization_factor
+                                         * potential_sphere_by_sphere(np.sqrt(x*x + y*y + z*z))),
+                        2.8e-17, 6.7e-16,
+                        R, 0, 0)
 
 
 
