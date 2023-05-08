@@ -157,9 +157,12 @@ def sub_polynomials(p_a, p_b):
     return [a - b for a, b in itertools.zip_longest(p_a, p_b, fillvalue=0)]
 
 
-def scale_array_in_place(A, factor):
-    A *= factor
-    return A
+def _scale_polynomial(factor, polynomial):
+    return [a * factor for a in polynomial]
+
+
+def scale_polynomials(factor, *polynomials):
+    return [_scale_polynomial(factor, p) for p in polynomials]
 
 
 class _RadialNodesDefined(_Base):
@@ -187,8 +190,16 @@ class SphericalSplineSourceBase(SourceBase, _RadialNodesDefined):
                                ),
                  **kwargs):
         super().__init__(x=x, y=y, z=z, nodes=nodes, **kwargs)
-        self._csd_polynomials = coefficients
-        self._normalization_factor = 1.0 / self._get_unnormalized_current()
+        self._set_csd_polynomials(coefficients)
+
+    def _set_csd_polynomials(self, polynomials):
+        self._csd_polynomials = polynomials
+        self._set_normalized_csd_polynomials()
+
+    def _set_normalized_csd_polynomials(self):
+        self._normalized_csd_polynomials = scale_polynomials(
+                                         1.0 / self._get_unnormalized_current(),
+                                         *self._csd_polynomials)
 
     def _get_unnormalized_current(self):
         return sum(self._get_shell_current(csd_p, r_in, r_out)
@@ -209,11 +220,12 @@ class SphericalSplineSourceBase(SourceBase, _RadialNodesDefined):
         R = self._distance(X, Y, Z)
         CSD = np.zeros_like(R)
 
-        for r_in, r_out, csd_p in self._iterate_shells(self._csd_polynomials):
+        for r_in, r_out, csd_p in self._iterate_shells(
+                                              self._normalized_csd_polynomials):
             IDX = (r_in <= R) & (R < r_out)
             CSD[IDX] = polynomial(csd_p, R[IDX])
 
-        return scale_array_in_place(CSD, self._normalization_factor)
+        return CSD
 
     def _distance(self, X, Y, Z):
         return np.sqrt(np.square(X - self.x)
@@ -337,7 +349,7 @@ class _SphericalSplinePotentialBaseKCSD(_RadialNodesDefined):
     def __call__(self, R):
         try:
             self._R = R
-            self._V = np.zeros_like(R)
+            self._V = np.empty_like(R)
             self._calculate_potential()
             return self._V
 
@@ -521,6 +533,7 @@ class _SphericalSplineSpherewisePotentialKCSD(_SphericalSplinePotentialBaseKCSD)
 
 
 class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
+    _Potential = _SphericalSplineSpherewisePotentialKCSD
     def __init__(self, x, y, z, nodes,
                  coefficients=((1,),
                                (-4, 12, -9, 2),
@@ -530,14 +543,19 @@ class SphericalSplineSourceKCSD(SphericalSplineSourceBase):
         super().__init__(x=x, y=y, z=z, nodes=nodes, coefficients=coefficients,
                          **kwargs)
         self.conductivity = conductivity
-        self._model_potential = _SphericalSplineSpherewisePotentialKCSD(
-                                                                   nodes,
-                                                                   coefficients)
+        self._set_model_potential()
+
+    def _set_model_potential(self):
+        self._model_potential = self._Potential(self._nodes,
+                                                self._potential_polynomials)
+
+    @property
+    def _potential_polynomials(self):
+        return scale_polynomials(1.0 / self.conductivity,
+                                 *self._normalized_csd_polynomials)
 
     def potential(self, X, Y, Z):
-        # in-place multiplication gives no measurable boost
-        return (self._model_potential(self._distance(X, Y, Z))
-                * (self._normalization_factor / self.conductivity))
+        return self._model_potential(self._distance(X, Y, Z))
 
     def _constructor_args(self):
         d = super()._constructor_args()
@@ -1153,11 +1171,11 @@ if __name__ == '__main__':
 
         regression_tets(".csd()",
                         old.csd, new.csd,
-                        7.0e-18, 4.5e-16,
+                        7.0e-18, 5.6e-16,
                         R, 0, 0)
         regression_tets(f".potential(conductivity={conductivity:g})",
                         old.potential, new.potential,
-                        4.2e-17, 7.8e-16,
+                        4.9e-17, 1.0e-15,
                         R, 0, 0)
         regression_tets(f"potential_shell_by_shell(conductivity={conductivity:g})",
                         old.potential,
