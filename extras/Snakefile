@@ -125,6 +125,23 @@ CSD_EIGENSOURCES = CSD_SOURCES.replace("{sources}", "eigensources")
 CSD_FORWARD = os.path.join(CSD_SOURCES_DIR, FWD_FEM_PATH, "{sources}.csv")
 
 
+TUTORIAL_DIR = os.path.join(DATA_DIR, "tutorial")
+TUTORIAL_SETUP_DIR = os.path.join(TUTORIAL_DIR, "{setup}")
+TUTORIAL_FENICS_LFCOR_DIR = os.path.join(TUTORIAL_SETUP_DIR,
+                                         "fenics_leadfield_corrections")
+TUTORIAL_FENICS_LFCOR_METADATA = os.path.join(TUTORIAL_FENICS_LFCOR_DIR,
+                                              "{name}.ini")
+TUTORIAL_FENICS_LFCOR_H5 = os.path.join(TUTORIAL_FENICS_LFCOR_DIR,
+                                        "{name}.h5")
+
+TUTORIAL_SAMPLED_LFCOR_DIR = os.path.join(TUTORIAL_SETUP_DIR,
+                                          "sampled_leadfield_corrections")
+TUTORIAL_SAMPLED_LFCOR_GRID = os.path.join(TUTORIAL_SETUP_DIR,
+                                           "leadfield_correction_grid.npz")
+
+TUTORIAL_SAMPLED_LFCOR = os.path.join(TUTORIAL_SAMPLED_LFCOR_DIR,
+                                      "{name}.npz")
+
 TUTORIAL_CASE_STUDY_ELECTRODES = [f"{_electrode}_{_i:02d}"
                                   for _electrode, _n in [("LZ", 14),
                                                          ("LPM", 5),
@@ -150,12 +167,8 @@ def get_mem_mb_exponential(base_mem=12_500):
 
 rule TUTORIAL_CASE_STUDY_TRIGGER:
     input:
-        [SAMPLED_LFCOR.format(name=name,
-                              setup="tutorial__case_study",
-                              sampling="romberg_9",
-                              model="four_spheres_csf_3_mm__Naess_Chintaluri_2017",
-                              mesh="plain__normal",
-                              degree=3)
+        [TUTORIAL_SAMPLED_LFCOR.format(name=name,
+                                       setup="four_spheres")
          for name in TUTORIAL_CASE_STUDY_ELECTRODES]
     output:
         ".tutorial_case_study"
@@ -163,13 +176,13 @@ rule TUTORIAL_CASE_STUDY_TRIGGER:
         "touch {output}"
 
 
-rule TUTORIAL_CASE_STUDY_SAMPLED_LFCOR:
+rule TUTORIAL_FOUR_SPHERES_SAMPLED_LFCOR:
     input:
-        FENICS_LFCOR_H5,
-        grid=SAMPLED_LFCOR_GRID,
-        correction=FENICS_LFCOR_METADATA
+        TUTORIAL_FENICS_LFCOR_H5,
+        grid=TUTORIAL_SAMPLED_LFCOR_GRID,
+        correction=TUTORIAL_FENICS_LFCOR_METADATA
     output:
-        SAMPLED_LFCOR.replace("{setup}", "{setup,tutorial__case_study}")
+        TUTORIAL_SAMPLED_LFCOR.replace("{setup}", "{setup,four_spheres}")
     params:
         output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
@@ -186,10 +199,41 @@ rule TUTORIAL_CASE_STUDY_SAMPLED_LFCOR:
         """
 
 
-rule TUTORIAL_CASE_STUDY_SAMPLING_GRID:
+rule TUTORIAL_CASE_STUDY_FENICS_LFCOR:
+    input:
+        electrodes="data/bundled/electrode_locations/tutorial/case_study.csv",
+        mesh_paths=[os.path.join(MESH_DIR,
+                                 "four_spheres_csf_3_mm__plain",
+                                 f"normal{suffix}.{ext}")
+                    for suffix in ["", "_subdomains", "_boundaries"]
+                    for ext in ["xdmf", "h5"]],
+        config="data/bundled/model_properties/four_spheres_csf_3_mm__Naess_Chintaluri_2017.ini"
     output:
-        SAMPLED_LFCOR_GRID.format(setup="tutorial__case_study",
-                                  sampling="romberg_{k,\\d+}")
+        TUTORIAL_FENICS_LFCOR_H5.replace("{setup}", "{setup,four_spheres}"),
+        metadata=TUTORIAL_FENICS_LFCOR_METADATA.replace("{setup}",
+                                                        "{setup,four_spheres}")
+    resources:
+        mem_mb=get_mem_mb_exponential(15_000)
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output.metadata))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        ulimit -v $(({resources.mem_mb} * 1024))
+        python solve_sphere_on_plate.py \\
+          --mesh {input.mesh_paths[0]} \\
+          --degree 1 \\
+          --config {input.config} \\
+          --electrodes {input.electrodes} \\
+          --name {wildcards.name} \\
+          --output {output.metadata}
+        """
+
+
+
+rule TUTORIAL_FOUR_SPHERES_SAMPLING_GRID:
+    output:
+        TUTORIAL_SAMPLED_LFCOR_GRID.format(setup="four_spheres")
     params:
         output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
@@ -200,7 +244,7 @@ rule TUTORIAL_CASE_STUDY_SAMPLING_GRID:
           --coords XYZ \\
           --start -0.079 \\
           --end 0.079 \\
-          -k {wildcards.k}
+          -k 9
         """
 
 def get_mesh_getter(mesh_attr="mesh"):
