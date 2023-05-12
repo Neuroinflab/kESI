@@ -24,6 +24,8 @@
 #                                                                             #
 ###############################################################################
 
+import os
+import sys
 import argparse
 from itertools import cycle
 
@@ -69,19 +71,38 @@ group.add_argument("-k",
                    dest="ks",
                    metavar="<k>",
                    help="k exponent of number of grid nodes along each axis defined as 2**k + 1 (cycles if not enough values given)")
+parser.add_argument("-l", "--lazy",
+                    action="store_true",
+                    help="do not update existing file if grid not changed")
+
 args = parser.parse_args()
 
 ns = args.ns if args.ns is not None else [2**k + 1 for k in args.ks]
 dimensionality = len(args.coords)
 
-np.savez_compressed(
-    args.grid,
-    **{coord: np.linspace(start, end, n_nodes).reshape(shape(dimensionality,
-                                                             dimension))
-       for dimension, (coord, n_nodes, start, end)
-       in enumerate(zip(args.coords,
-                        cycle(ns),
-                        cycle(args.starts),
-                        cycle(args.ends)))
+grid = {coord: np.linspace(start, end, n_nodes).reshape(shape(dimensionality,
+                                                              dimension))
+        for dimension, (coord, n_nodes, start, end)
+        in enumerate(zip(args.coords,
+                         cycle(ns),
+                         cycle(args.starts),
+                         cycle(args.ends)))}
 
-       })
+if args.lazy and os.path.exists(args.grid):
+    try:
+        with np.load(args.grid) as fh:
+            for coord, nodes in grid.items():
+                old_nodes = fh[coord]
+                if old_nodes.shape != nodes.shape:
+                    break
+
+                if (old_nodes != nodes).any():
+                    break
+
+            else:
+                sys.exit()
+
+    except (FileNotFoundError, KeyError):
+        pass
+
+np.savez_compressed(args.grid, **grid)
