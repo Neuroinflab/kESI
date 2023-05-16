@@ -199,9 +199,9 @@ rule TUTORIAL_FOUR_SPHERES_SAMPLED_LFCOR:
         """
 
 
-rule TUTORIAL_CASE_STUDY_FENICS_LFCOR:
+rule TUTORIAL_FOUR_SPHERES_FENICS_LFCOR:
     input:
-        electrodes="data/bundled/electrode_locations/tutorial/case_study.csv",
+        electrodes="data/bundled/electrode_locations/tutorial/four_spheres.csv",
         mesh_paths=[os.path.join(MESH_DIR,
                                  "four_spheres_csf_3_mm__plain",
                                  f"normal{suffix}.{ext}")
