@@ -132,6 +132,15 @@ def _BipolarColormap(name, negative, positive, zero=_WHITE):
                        for k in ['red', 'green', 'blue']})
 
 
+def _UnipolarColormap(name, positive, zero=_WHITE):
+    return colors.LinearSegmentedColormap(
+                      name,
+                      {k: [(0.0,) + (getattr(zero, k),) * 2,
+                           (1.0,) + (getattr(positive, k),) * 2,
+                           ]
+                       for k in ['red', 'green', 'blue']})
+
+
 def _normalize_colors(negative, positive):
     neg_max = negative.lRGB.max()
     pos_max = positive.lRGB.max()
@@ -155,3 +164,5 @@ def _normalize_colors(negative, positive):
 bwr = _BipolarColormap('cbf.bwr', _BLUE, _VERMILION)
 bbr = _BipolarColormap('cbf.bbr', _BLUE, _VERMILION, _BLACK)
 PRGn = _BipolarColormap('cbf.PRGn', _PURPLE, _GREEN)
+wr = _UnipolarColormap('cbf.wr', _VERMILION)
+wo = _UnipolarColormap('cbf.wo', _ORANGE)
