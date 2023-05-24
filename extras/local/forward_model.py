@@ -28,7 +28,7 @@ import configparser
 import numpy as np
 import dolfin
 
-import fem.common as fc
+from .fem import common as fc
 
 
 class _Base(object):
