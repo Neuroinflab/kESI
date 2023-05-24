@@ -124,7 +124,8 @@ if __name__ == '__main__':
                     ELECTRODES.Z).flatten()
 
     import matplotlib.pyplot as plt
-    import cbf
+    from local import cbf
+
 
     def plot_altitude_lines(ax, altitude_max,
                             step=10 * np.pi / 180.,

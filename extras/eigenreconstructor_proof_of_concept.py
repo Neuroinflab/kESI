@@ -28,7 +28,7 @@ import numpy as np
 from kesi._verbose import VerboseFFR, _Eigenreconstructor
 from kesi.common import GaussianSourceKCSD3D
 
-import cbf
+from local import cbf
 
 
 CONDUCTIVITY = 0.33  # S / m

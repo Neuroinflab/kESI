@@ -225,7 +225,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import cm
 #from mpl_toolkits.mplot3d import Axes3D
-import cbf
+from local import cbf
 
 fh = np.load('proof_of_concept_fem_dirchlet_newman_CTX_rev2.npz')
 ELECTRODES = fh['ELECTRODES']

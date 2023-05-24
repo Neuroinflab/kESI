@@ -40,8 +40,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 import matplotlib.pyplot as plt
-import cbf
-
+from local import cbf
 
 CONFIG = 'FEM/model_properties/four_spheres_csf_3_mm.ini'
 MESH = sys.argv[1]

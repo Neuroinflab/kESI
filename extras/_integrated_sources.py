@@ -203,8 +203,10 @@ class IntegratedGaussianSourceKCSD3D(object):
 
 if __name__ == '__main__':
     from kesi.common import GaussianSourceKCSD3D
-    import cbf
+
     import matplotlib.pyplot as plt
+    from local import cbf
+
 
     CONDUCTIVITY = 0.3  # S / m
     H = 0.15e-3         # m

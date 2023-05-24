@@ -30,7 +30,7 @@ import numpy as np
 
 from kesi import common
 
-import cbf
+from local import cbf
 from FEM import fem_finite_slice_gaussian as ffsg
 
 

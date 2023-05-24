@@ -30,7 +30,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from local import forward_model
-import cbf
+from local import cbf
 
 
 class SphericalForwardModel(forward_model.Spherical):
