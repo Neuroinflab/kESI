@@ -29,8 +29,8 @@ from itertools import repeat
 import numpy as np
 from matplotlib import pyplot as plt
 
-from local import forward_model
-from local import cbf
+from .. import forward_model
+from .. import cbf
 
 
 class SphericalForwardModel(forward_model.Spherical):
