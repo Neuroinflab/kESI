@@ -67,6 +67,7 @@ if __name__ == '__main__':
     import pandas as pd
     import numpy as np
 
+
     BRAIN_CONDUCTIVITY = 1. / 300.  # S / cm
     CONDUCTIVITY = FourSphereModel.Properties(1.00 * BRAIN_CONDUCTIVITY,
                                               5.00 * BRAIN_CONDUCTIVITY,
@@ -133,10 +134,10 @@ if __name__ == '__main__':
         altitude = step
         while altitude <= altitude_max:
             ax.add_artist(plt.Circle((0, 0),
-                          radius=r * altitude,
-                          ls=':',
-                          edgecolor=cbf.BLACK,
-                          facecolor='none'))
+                                     radius=r * altitude,
+                                     ls=':',
+                                     edgecolor=cbf.BLACK,
+                                     facecolor='none'))
             altitude += step
 
     plt.title('Potential')
