@@ -4,7 +4,7 @@
 #                                                                             #
 #    kESI                                                                     #
 #                                                                             #
-#    Copyright (C) 2019-2021 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
+#    Copyright (C) 2019-2023 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
 #    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
 #    Copyright (C) 2021-2023 Jakub M. Dzik (Institute of Applied Psychology;  #
 #    Faculty of Management and Social Communication; Jagiellonian University) #
@@ -27,8 +27,8 @@
 import argparse
 import configparser
 
-import FEM.fem_sphere_point_new as fspn
-import FEM.fem_common as fc
+import local.fem.sphere_point_new as fspn
+import local.fem.common as fc
 
 
 if __name__ == "__main__":

@@ -35,14 +35,14 @@ from kesi._engine import deprecated
 from kesi._verbose import VerboseFFR
 
 try:
-    from . import _fem_common as fc
+    from . import _common as fc
     # When run as script raises:
     #  - `ImportError` (Python 3.6-9), or
     #  - `SystemError` (Python 3.3-5), or
     #  - `ValueError` (Python 2.7).
 
 except ImportError:
-    import _fem_common as fc
+    import _common as fc
 
 
 logger = logging.getLogger(__name__)

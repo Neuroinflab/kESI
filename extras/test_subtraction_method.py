@@ -34,8 +34,8 @@ import dolfin
 
 from kesi import common
 
-import FEM.fem_sphere_point_new as fspn
-import FEM.fem_common as fc
+import local.fem.sphere_point_new as fspn
+import local.fem.common as fc
 
 
 class NegativePotential(dolfin.UserExpression):

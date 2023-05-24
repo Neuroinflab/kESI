@@ -30,7 +30,7 @@ import numpy as np
 import pandas as pd
 import scipy.interpolate as si
 
-from forward_model import Spherical as ForwardModel
+from local.forward_model import Spherical as ForwardModel
 
 
 if __name__ == "__main__":

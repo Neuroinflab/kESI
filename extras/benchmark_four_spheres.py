@@ -38,7 +38,7 @@ from scipy.special import lpmv
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from FEM._fem_common import Stopwatch
+from local.fem._common import Stopwatch
 
 from kesi.common import FourSphereModel as ModelNew
 

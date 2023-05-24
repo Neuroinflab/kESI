@@ -33,7 +33,7 @@ from dolfin import assemble, Constant, Expression, grad, inner
 
 from kesi.common import FourSphereModel
 
-import FEM.fem_common as fc
+import local.fem.common as fc
 
 import logging
 logger = logging.getLogger(__name__)

@@ -4,7 +4,7 @@
 #                                                                             #
 #    kESI                                                                     #
 #                                                                             #
-#    Copyright (C) 2019-2020 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
+#    Copyright (C) 2019-2023 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
 #    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
 #                                                                             #
 #    This software is free software: you can redistribute it and/or modify    #
@@ -31,7 +31,7 @@ from scipy.interpolate import RegularGridInterpolator
 from kesi._engine import deprecated
 
 try:
-    from . import _fem_common as fc
+    from extras.local.fem import _common as fc
     from . import _fem_sphere_common as fsc
     # When run as script raises:
     #  - `ImportError` (Python 3.6-9), or
@@ -39,7 +39,7 @@ try:
     #  - `ValueError` (Python 2.7).
 
 except ImportError:
-    import _fem_common as fc
+    import extras.local.fem._common as fc
     import _fem_sphere_common as fsc
 
 

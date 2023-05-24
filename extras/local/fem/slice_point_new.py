@@ -23,19 +23,18 @@
 ###############################################################################
 
 import logging
-import os
 
 import numpy as np
 
 try:
-    from . import fem_common as fc
+    from . import common as fc
     # When run as script raises:
     #  - `ImportError` (Python 3.6-9), or
     #  - `SystemError` (Python 3.3-5), or
     #  - `ValueError` (Python 2.7).
 
 except ImportError:
-    import fem_common as fc
+    import common as fc
 
 
 logger = logging.getLogger(__name__)

@@ -29,7 +29,7 @@ from itertools import repeat
 import numpy as np
 from matplotlib import pyplot as plt
 
-import forward_model
+from local import forward_model
 import cbf
 
 
