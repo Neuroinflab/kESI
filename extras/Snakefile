@@ -158,6 +158,15 @@ TUTORIAL_CASE_STUDY_ELECTRODES = [f"{_electrode}_{_i:02d}"
                                   for _i in range(1, _n + 1)]
 
 
+MESH_INSPECT = MESH_PATTERN.replace("{suffix}", ".msh.gmsh_check_stdout.txt")
+MESH_STATS = os.path.join(MESH_DIR, "{mesh_name}.csv")
+INSPECTABLE_MESHES = {"circular_slice": ["coarsest", "coarser", "coarse", "normal", "fine", "finer", "finest", "composite"],
+                       "single_sphere__composite": ["coarser", "coarse", "normal", "fine", "finer", "finest"],
+                       "four_spheres_csf_1_mm__plain": ["finest"],
+                       "four_spheres_csf_3_mm__plain": ["normal", "fine", "finer", "finest"],
+                       }
+
+
 def get_mem_mb(wildcards, attempt):
     return 1_000 if attempt == 1 else (10_000 * 2 ** (attempt))
 
@@ -858,3 +867,44 @@ rule XDMF:
                                  cells=[("tetra", msh.cells_dict["tetra"])],
                                  cell_data={"subdomains":
                                             [msh.cell_data_dict["gmsh:physical"]["tetra"]]}))
+
+
+rule MSH_INSPECTION:
+    input:
+        MESH_MSH
+    output:
+        MESH_INSPECT
+    shell:
+        """
+        gmsh -check {input} > {output}
+        """
+
+
+rule MESH_STATS:
+    input:
+        lambda wildcards: [MESH_INSPECT.format(
+                               mesh_path=os.path.join(wildcards.mesh_name,
+                                                      res))
+                           for res in INSPECTABLE_MESHES[wildcards.mesh_name]]
+    output:
+        MESH_STATS
+    params:
+        resolutions=lambda wildcards: INSPECTABLE_MESHES[wildcards.mesh_name]
+    run:
+        import pandas as pd
+        import re
+
+        stats = []
+        for resolution, filename in zip(params.resolutions, input):
+            row = {"resolution": resolution}
+            stats.append(row)
+            with open(filename) as fh:
+                text = fh.read()
+                for field in ["nodes", "elements"]:
+                    m = re.search(f"^Info\\s*:\\s*(\\d+)\\s*{field}\\s*$",
+                                  text,
+                                  re.MULTILINE | re.IGNORECASE)
+                    row[field] = int(m.group(1))
+
+        pd.DataFrame(stats).to_csv(str(output),
+                                   index=False)
