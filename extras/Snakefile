@@ -51,6 +51,8 @@ MESH_SRC_DIR = "data/bundled/meshes/"
 DATA_DIR = "data/generated/"
 
 MESH_DIR = os.path.join(DATA_DIR, "meshes")
+MESH_PATTERN = os.path.join(MESH_DIR, "{mesh_path}{suffix}")
+MESH_MSH = MESH_PATTERN.replace("{suffix}", ".msh")
 
 FEM_PATH = os.path.join("{model}", "{mesh}", "{degree}")
 PATH = Path(kESI=os.path.join("{sampling}", FEM_PATH),
@@ -817,9 +819,9 @@ rule GEO_TEMPLATE:
 
 rule MSH:
     input:
-        os.path.join(MESH_DIR, "{mesh_path}.geo")
+        MESH_PATTERN.replace("{suffix}", ".geo")
     output:
-        os.path.join(MESH_DIR, "{mesh_path}.msh")
+        MESH_MSH
     shell:
         "gmsh -3 -optimize_netgen {input} || gmsh -3 -optimize {input} || gmsh -3 {input}"
 
@@ -832,9 +834,9 @@ rule XDMF:
     #  - change `output.mesh_boundaries_xdmf` to `output[1]`,
     #  - change `output.mesh_subdomains_xdmf` to `output[2]`.
     input:
-        os.path.join(MESH_DIR, "{mesh_path}.msh")
+        MESH_MSH
     output:
-        **{f"mesh{suffix}_{ext}": os.path.join(MESH_DIR, f"{{mesh_path}}{suffix}.{ext}")
+        **{f"mesh{suffix}_{ext}": MESH_PATTERN.replace("{suffix}", f"{suffix}.{ext}")
            for ext in ["xdmf", "h5"]
            for suffix in ["", "_boundaries", "_subdomains"]}
     run:
