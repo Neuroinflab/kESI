@@ -39,16 +39,25 @@ def _sum_of_not_none(f):
 
 class _Base(object):
     def __init__(self, convolver_interface):
+        self.__in_context = False
         self.convolver_interface = convolver_interface
 
     def __call__(self, electrode):
+        if self.__in_context:
+            return self._potential_basis_functions(electrode)
+
+        with self:
+            return self._potential_basis_functions(electrode)
+
+    def _potential_basis_functions(self, electrode):
         return None
 
     def __enter__(self):
+        self.__in_context = True
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
+        self.__in_context = False
 
 
 class _PotAttribute(_Base):
@@ -69,10 +78,10 @@ class _PotProperty(object):
 
 class _FromLeadfield(_Base):
     @_sum_of_not_none
-    def __call__(self, electrode):
+    def _potential_basis_functions(self, electrode):
         self._create_leadfield(electrode)
         return (self._integrate_source_potential(),
-                super().__call__(electrode))
+                super()._potential_basis_functions(electrode))
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         del self.LEADFIELD
@@ -188,10 +197,10 @@ class Analytical(_Base):
         super().__exit__(exc_type, exc_val, exc_tb)
 
     @_sum_of_not_none
-    def __call__(self, electrode):
+    def _potential_basis_functions(self, electrode):
         return (self._potential_divided_by_relative_conductivity_if_available(
                                                                      electrode),
-                super().__call__(electrode))
+                super()._potential_basis_functions(electrode))
 
     def _potential_divided_by_relative_conductivity_if_available(self,
                                                                  electrode):

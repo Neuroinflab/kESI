@@ -317,3 +317,26 @@ if __name__ == '__main__':
                                        (observed_major + observed_minor),
                                        1e-2,
                                        ECHO)
+
+
+    class MockContextManagerPBF(pbf._Base):
+        def __init__(self):
+            super().__init__(None)
+            self.__in_context = False
+
+        def _potential_basis_functions(self, electrode):
+            assert self.__in_context
+            return super()._potential_basis_functions(electrode)
+
+        def __enter__(self):
+            super().__enter__()
+            self.__in_context = True
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            self.__in_context = False
+            super().__exit__(exc_type, exc_val, exc_tb)
+
+
+    # test when executed without context works
+    tested = MockContextManagerPBF()
+    tested(None)
