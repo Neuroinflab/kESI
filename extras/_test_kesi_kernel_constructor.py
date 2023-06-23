@@ -329,10 +329,12 @@ if __name__ == '__main__':
             return super()._potential_basis_functions(electrode)
 
         def __enter__(self):
+            assert not self.__in_context
             super().__enter__()
             self.__in_context = True
 
         def __exit__(self, exc_type, exc_val, exc_tb):
+            assert self.__in_context
             self.__in_context = False
             super().__exit__(exc_type, exc_val, exc_tb)
 
@@ -340,3 +342,7 @@ if __name__ == '__main__':
     # test when executed without context works
     tested = MockContextManagerPBF()
     tested(None)
+
+    # test if execution in context is handled properly
+    with tested:
+        tested(None)
