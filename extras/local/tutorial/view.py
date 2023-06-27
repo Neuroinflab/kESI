@@ -121,6 +121,23 @@ class CoordinatePlanes(object):
     def _parse_planes(self, YZ, XZ, XY):
         return YZ.T, XZ.T, XY
 
+    def plot_function(self, f, title):
+        self.plot_planes([self._probe(f, *xyz) for xyz in self.PLANES_XYZ],
+                         title)
+
+    def _probe(self, f, X, Y, Z):
+        with np.nditer([np.reshape(X, (-1, 1, 1)),
+                        np.reshape(Y, (1, -1, 1)),
+                        np.reshape(Z, (1, 1, -1)),
+                        None]) as it:
+            for _x, _y, _z, _res in it:
+                try:
+                    _res[...] = f(_x, _y, _z)
+                except RuntimeError:
+                    _res[...] = np.nan
+
+            return np.ma.masked_invalid(it.operands[3])
+
 
 class Slice(CoordinatePlanes):
     def __init__(self,
