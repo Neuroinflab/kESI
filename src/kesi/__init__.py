@@ -24,7 +24,10 @@
 
 from ._engine import (FunctionalFieldReconstructor,
                       LoadableFunctionalFieldReconstructor,
-                      MeasurementManagerBase)
+                      MeasurementManagerBase,
+                      _LinearKernelSolver)
+from ._verbose import _CrossKernelReconstructor
+
 from . import kernel
 from . import common
 
@@ -85,3 +88,42 @@ class FunctionalKernelFieldReconstructor(FunctionalFieldReconstructor):
         return super(FunctionalKernelFieldReconstructor,
                      self).__call__(measurements,
                                     regularization_parameter=regularization_parameter)
+
+
+class Reconstructor(_CrossKernelReconstructor):
+    """
+    A wrapper around (cross)kernel matrices facilitating
+    CSD reconstruction without explicit matrix operations.
+    """
+    def __init__(self, kernel, crosskernel):
+        """
+        Parameters
+        ----------
+        kernel : ndarray
+            N x N element kernel matrix
+
+        crosskernel : ndarray
+            C x N element cross-kernel matrix (or 3+D array if C is a tuple);
+            for C see docstring of the `.__call__()` method
+        """
+        super().__init__(_LinearKernelSolver(kernel),
+                         crosskernel)
+
+    def __call__(self, potential, regularization_parameter=0):
+        """
+        Parameters
+        ----------
+        potential : ndarray
+            N [x T] element vector (or matrix) of measured potential values;
+            N is fixed (see docstring of the `.__init__()` method)
+
+        regularization_parameter : float or int, optional
+            regularization parameter
+
+        Returns
+        -------
+        ndarray
+            C [x T] element vector (or 2+D array); C is fixed and may be a tuple
+            (see docstring of the `.__init__()` method)
+        """
+        return super().__call__(potential, regularization_parameter)
