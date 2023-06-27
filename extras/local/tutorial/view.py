@@ -17,7 +17,7 @@ class CoordinatePlanes(object):
                  length_unit='$m$',
                  unit_factor=1,
                  unit=''):
-        self.grid = grid
+        self.grid = [_x.flatten() for _x in grid]
         self.plane_intersection = np.array(plane_intersection)
         self.dpi = dpi
         self.cmap = cmap
@@ -144,7 +144,7 @@ class Slice(CoordinatePlanes):
                          unit=unit)
         self.indices = [np.searchsorted(g, a)
                         for a, g in zip(plane_intersection,
-                                        grid)]
+                                        self.grid)]
 
     def _parse_planes(self, YZ, XZ, XY, indices=repeat(0)):
         return super()._parse_planes(*self._slice_planes([YZ, XZ, XY],
