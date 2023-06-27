@@ -24,6 +24,8 @@
 #                                                                             #
 ###############################################################################
 
+import numpy as np
+
 from .. import forward_model
 
 
@@ -40,3 +42,9 @@ class SliceForwardModel(forward_model.Slice):
                          quiet=quiet,
                          ground_potential=ground_potential,
                          element_type=element_type)
+
+
+def eigh(kernel):
+    eigenvalues, eigenvectors = np.linalg.eigh(kernel)
+    idx = np.argsort(eigenvalues)[::-1]
+    return eigenvalues[idx], eigenvectors[:, idx]
