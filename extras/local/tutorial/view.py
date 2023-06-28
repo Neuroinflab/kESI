@@ -281,16 +281,31 @@ class LCurvePlotter(object):
     def _get_idx(self, value):
         return np.searchsorted(self._regularization_parameters, value)
 
-    def __call__(self, prediction_error, solution_norm, eigenvalues,
+    def __call__(self, kernel, measured,
                  cv_selected_parameter=None):
-        self._prediction_error = prediction_error
-        self._solution_norm = solution_norm
-
-        self._set_bbox(eigenvalues)
+        self._kernel = kernel
+        self._measured = measured
+        self._calculate_curve()
+        self._set_bbox()
         self._plot_whole_curve()
         self._plot_cropped_curve(cv_selected_parameter)
 
-    def _set_bbox(self, eigenvalues):
+    def _calculate_curve(self):
+        (self._prediction_error,
+         self._solution_norm) = zip(*map(self._get_regularization_assesment,
+                                         self._regularization_parameters))
+
+    def _get_regularization_assesment(self, regularization_parameter):
+        beta = np.linalg.solve(self._kernel
+                               + regularization_parameter
+                                 * np.identity(self._kernel.shape[0]),
+                               self._measured)
+        reconstructed = np.matmul(self._kernel, beta)
+        return (np.sqrt(np.square(self._measured - reconstructed).mean()),
+                np.dot(beta, reconstructed))
+
+    def _set_bbox(self):
+        eigenvalues = np.linalg.eigvalsh(self._kernel)
         i_low, i_high = self._get_idx([eigenvalues.min(), eigenvalues.max()])
         self._bottom = self._solution_norm[i_high]
         self._top = self._solution_norm[i_low]
