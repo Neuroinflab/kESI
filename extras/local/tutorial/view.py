@@ -272,3 +272,77 @@ class CaseStudy(_SphericalBase):
     def _plot_reconstruction(self, CSD, amp, title):
         super()._plot_reconstruction(CSD, amp, title)
         self._add_spheres(self.SPHERE_RADII)
+
+
+class LCurvePlotter(object):
+    def __init__(self, regularization_parameters):
+        self._regularization_parameters = regularization_parameters
+
+    def _get_idx(self, value):
+        return np.searchsorted(self._regularization_parameters, value)
+
+    def __call__(self, prediction_error, solution_norm, eigenvalues,
+                 cv_selected_parameter=None):
+        self._prediction_error = prediction_error
+        self._solution_norm = solution_norm
+
+        self._set_bbox(eigenvalues)
+        self._plot_whole_curve()
+        self._plot_cropped_curve(cv_selected_parameter)
+
+    def _set_bbox(self, eigenvalues):
+        i_low, i_high = self._get_idx([eigenvalues.min(), eigenvalues.max()])
+        self._bottom = self._solution_norm[i_high]
+        self._top = self._solution_norm[i_low]
+        self._left = self._prediction_error[i_low]
+        self._right = self._prediction_error[i_high]
+
+    def _plot_cropped_curve(self, cv_selected_parameter):
+        ax = self._plot_curve('L-curve cropped to the range of eigenvalues')
+
+        ax.set_ylim(self._bottom, self._top)
+        ax.set_xlim(self._left, self._right)
+
+        if cv_selected_parameter is not None:
+            self._mark_cv_selected_parameter(ax, cv_selected_parameter)
+
+    def _plot_curve(self, title):
+        fig, ax = plt.subplots()
+        ax.set_title(title)
+        ax.plot(self._prediction_error, self._solution_norm,
+                marker='.',
+                color=cbf.BLUE)
+        ax.set_ylabel('norm of the model')
+        ax.set_yscale('log')
+        ax.set_xlabel('L2 norm of the prediction error')
+        ax.set_xscale('log')
+        return ax
+
+    def _plot_whole_curve(self):
+        ax = self._plot_curve('L-curve')
+
+        ax.add_patch(plt.Rectangle(((self._left), (self._bottom)),
+                                   self._right - self._left,
+                                   self._top - self._bottom,
+                                   ls=':',
+                                   edgecolor=cbf.BLACK,
+                                   facecolor='none'))
+
+    def _mark_cv_selected_parameter(self, ax, cv_selected_parameter):
+        idx = self._get_idx(cv_selected_parameter)
+        cv_prediction_error = self._prediction_error[idx]
+        cv_solution_norm = self._solution_norm[idx]
+
+        ax.plot(cv_prediction_error, cv_solution_norm,
+                marker='o',
+                color=cbf.VERMILION)
+        ax.annotate(
+            f'$\\lambda$ = {cv_selected_parameter:.2e}\n(selected by CV)',
+            (cv_prediction_error, cv_solution_norm),
+            xytext=(25, -50),
+            textcoords='offset points',
+            arrowprops={'facecolor': cbf.BLACK,
+                        'shrink': 0.1,
+                        'headwidth': 6,
+                        'width': 2,
+                        })
