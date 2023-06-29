@@ -282,9 +282,11 @@ class LCurvePlotter(object):
         return np.searchsorted(self._regularization_parameters, value)
 
     def __call__(self, kernel, measured,
-                 cv_selected_parameter=None):
+                 cv_selected_parameter=None,
+                 horizontal_offset=25):
         self._kernel = kernel
         self._measured = measured
+        self._horizontal_offset = horizontal_offset
         self._calculate_curve()
         self._set_bbox()
         self._plot_whole_curve()
@@ -354,7 +356,7 @@ class LCurvePlotter(object):
         ax.annotate(
             f'$\\lambda$ = {cv_selected_parameter:.2e}\n(selected by CV)',
             (cv_prediction_error, cv_solution_norm),
-            xytext=(25, -50),
+            xytext=(self._horizontal_offset, -50),
             textcoords='offset points',
             arrowprops={'facecolor': cbf.BLACK,
                         'shrink': 0.1,
