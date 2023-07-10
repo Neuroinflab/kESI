@@ -133,6 +133,12 @@ class Convolver(object):
 
 
 class KernelConstructor(object):
+    class NoElectrodesGivenException(ValueError):
+        @classmethod
+        def check(cls, electrodes):
+            if len(electrodes) == 0:
+                raise cls
+
     @staticmethod
     def kernel(potential_basis_functions_at_electrodes):
         return np.matmul(potential_basis_functions_at_electrodes.T,
@@ -147,6 +153,8 @@ class KernelConstructor(object):
     def potential_basis_functions_at_electrodes(self,
                                                 electrodes,
                                                 potential_basis_functions):
+        self.NoElectrodesGivenException.check(electrodes)
+
         with self:
             with potential_basis_functions:
                 self._calculate_potential_basis_functions_at_electrodes(
