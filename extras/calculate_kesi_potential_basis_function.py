@@ -35,13 +35,53 @@ import numpy as np
 import scipy.integrate as si
 
 from kesi.kernel import potential_basis_functions as pbf
-from kesi.kernel.electrode import IntegrationNodesAtSamplingGrid as Electrode
+from kesi.kernel.electrode import (IntegrationNodesAtSamplingGrid,
+                                   LinearlyInterpolatedLeadfieldCorrection)
 
 from _calculate_potential_basis_function import ScriptBase
 
 
 class Script(ScriptBase):
     PotentialBasisFunction = pbf.AnalyticalCorrectedNumerically
+
+    class WrapElectrode(type):
+        def __new__(cls, name, bases, attrs):
+            try:
+                class Electrode(attrs["Electrode"]):
+                    def __init__(self, directory, name):
+                        super().__init__(os.path.join(directory, f"{name}.npz"))
+                        self.name = name
+
+                attrs = attrs.copy()
+                attrs["Electrode"] = Electrode
+            except KeyError:
+                pass
+            return super().__new__(cls, name, bases, attrs)
+
+    class _LeadfieldIntegratedBase(metaclass=WrapElectrode):
+        def __init__(self, directory):
+            self.directory = directory
+
+        def get_electrode(self, name):
+            return self.Electrode(self.directory, name)
+
+    class LeadfieldIntegratedOnSaplingCorrectionGrid(_LeadfieldIntegratedBase):
+        Electrode = IntegrationNodesAtSamplingGrid
+
+        def get_sampling_grid(self, electrode):
+            return tuple(map(tuple, electrode.SAMPLING_GRID))
+
+    class LeadfieldIntegratedOnCustomGrid(_LeadfieldIntegratedBase):
+        Electrode = LinearlyInterpolatedLeadfieldCorrection
+
+        def __init__(self, directory, grid):
+            super().__init__(directory)
+            with np.load(grid) as fh:
+                self.sampling_grid = tuple(tuple(fh[c].flatten())
+                                           for c in "XYZ")
+
+        def get_sampling_grid(self, electrode):
+            return self.sampling_grid
 
     class ArgumentParser(ScriptBase.ArgumentParser):
         def __init__(self):
@@ -50,22 +90,28 @@ class Script(ScriptBase):
                               metavar="<input>",
                               dest="input",
                               help="input directory")
+            self.add_argument("-g", "--grid",
+                              metavar="<grid.npz>",
+                              help="grid for integration of correction to the reciprocal potential of the electrode to be used instead of the sampling grid (integration is slower due to interpolation)")
 
-    def Electrode(self, directory):
-        class _Electrode(Electrode):
-            def __init__(self, name):
-                super().__init__(os.path.join(directory, f"{name}.npz"))
-                self.name = name
+    def _init(self, args):
+        self._grid_handler = self._get_grid_handler(args)
+        super()._init(args)
 
-        return _Electrode
+    def _get_grid_handler(self, args):
+        if args.grid is not None:
+            return self.LeadfieldIntegratedOnCustomGrid(args.input, args.grid)
+
+        return self.LeadfieldIntegratedOnSaplingCorrectionGrid(args.input)
 
     def _load_electrodes(self, args):
         self._electrodes = collections.defaultdict(dict)
-        for electrode in map(self.Electrode(args.input), args.names):
-            self._store_electrode(electrode)
+
+        for name in args.names:
+            self._store_electrode(self._grid_handler.get_electrode(name))
 
     def _store_electrode(self, electrode):
-        key = tuple(map(tuple, electrode.SAMPLING_GRID))
+        key = self._grid_handler.get_sampling_grid(electrode)
         self._electrodes[key][electrode.name] = electrode
 
     def run(self):
