@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
     src_diameters = [int(2 * np.floor(model_src.radius / _d)) + 1
                      for _d in convolver.steps("CSD")]
-    fake_weights = [[None] * n for n in src_diameters]
+    fake_weights = tuple([None] * n for n in src_diameters)
 
     convolver_interface = ConvolverInterfaceIndexed(convolver,
                                                     model_src.csd,
