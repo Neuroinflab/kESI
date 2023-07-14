@@ -237,6 +237,17 @@ class CrossKernelConstructor(object):
 
 
 class ConvolverInterface_base(object):
+    """
+    Parameters
+    ----------
+    weights : sequence or tuple of sequences
+        weights of the quadrature
+
+    Note
+    ----
+    If `weights` are tuple they are interpreted as weights of quadrature in X, Y
+    and Z direction.
+    """
     def __init__(self, convolver, csd, weights):
         self.convolver = convolver
         self.csd = csd
