@@ -2,7 +2,7 @@
 # run with `source`
 # 3.5 -> no gcc package required by fenics
 # 3.6 -> no pyproject.toml support
-for minor_version in {7..10}
+for minor_version in {7..11}
 do
   python_version=3.${minor_version}
   name=kesi${python_version}
