@@ -101,7 +101,7 @@ class _LinearKernelSolver(object):
                 for i, ROW in enumerate(rhs)]
 
     def _leave_one_out_estimate(self, KERNEL, X, i, IDX):
-        CROSS_KERNEL = KERNEL[np.ix_([i], IDX)]
+        CROSS_KERNEL = self._kernel[np.ix_([i], IDX)]
         # As the first dimension of the `CROSS_KERNEL` is degenerated,
         # it is removed from the product
         return np.matmul(CROSS_KERNEL,
