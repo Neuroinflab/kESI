@@ -110,6 +110,7 @@ KERNEL_FILES = {name: os.path.join(KERNEL_DIR, f"{name}.npz")
 
 PAPER_SLICE_ELECTRODES = [f"{x}_0_{z}" for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
 PAPER_4SM_ELECTRODES = [f"{x}_{i:02d}" for i in range(0, 12) for x in ['B', 'D']]
+PAPER_1SM_ELECTRODES = PAPER_4SM_ELECTRODES
 
 KERNEL_CSD_GRID_DIR = os.path.join(KERNEL_DIR, "{csd_grid}")
 KERNEL_CSD_GRID = os.path.join(KERNEL_CSD_GRID_DIR, "grid_csd.npz")
@@ -376,6 +377,9 @@ def get_kernel_electrodes(wildcards):
 
         elif wildcards.setup == "paper__four_spheres__comb":
             return PAPER_4SM_ELECTRODES
+
+        elif wildcards.setup == "paper__single_sphere__comb":
+            return PAPER_1SM_ELECTRODES
 
 
 def get_kernel_electrodes_paths(wildcards):
