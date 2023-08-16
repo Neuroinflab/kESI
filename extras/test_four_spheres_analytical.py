@@ -42,7 +42,7 @@ logger.setLevel(logging.INFO)
 import matplotlib.pyplot as plt
 from local import cbf
 
-CONFIG = 'FEM/model_properties/four_spheres_csf_3_mm.ini'
+CONFIG = "data/bundled/model_properties/four_spheres_csf_3_mm__Naess_Chintaluri_2017.ini"
 MESH = sys.argv[1]
 DEGREE = int(sys.argv[2])
 
