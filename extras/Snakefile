@@ -180,7 +180,7 @@ def get_mem_mb_exponential(base_mem=12_500):
 rule TUTORIAL_CASE_STUDY_TRIGGER:
     input:
         [TUTORIAL_SAMPLED_LFCOR.format(name=name,
-                                       setup="four_spheres")
+                                       setup="case_study")
          for name in TUTORIAL_CASE_STUDY_ELECTRODES]
     output:
         ".tutorial_case_study"
@@ -188,13 +188,13 @@ rule TUTORIAL_CASE_STUDY_TRIGGER:
         "touch {output}"
 
 
-rule TUTORIAL_FOUR_SPHERES_SAMPLED_LFCOR:
+rule TUTORIAL_CASE_STUDY_SAMPLED_LFCOR:
     input:
         TUTORIAL_FENICS_LFCOR_H5,
         grid=TUTORIAL_SAMPLED_LFCOR_GRID,
         correction=TUTORIAL_FENICS_LFCOR_METADATA
     output:
-        TUTORIAL_SAMPLED_LFCOR.replace("{setup}", "{setup,four_spheres}")
+        TUTORIAL_SAMPLED_LFCOR.replace("{setup}", "{setup,case_study}")
     params:
         output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
@@ -211,9 +211,9 @@ rule TUTORIAL_FOUR_SPHERES_SAMPLED_LFCOR:
         """
 
 
-rule TUTORIAL_FOUR_SPHERES_FENICS_LFCOR:
+rule TUTORIAL_CASE_STUDY_FENICS_LFCOR:
     input:
-        electrodes="data/bundled/electrode_locations/tutorial/four_spheres.csv",
+        electrodes="data/bundled/electrode_locations/tutorial/case_study.csv",
         mesh_paths=[os.path.join(MESH_DIR,
                                  "four_spheres_csf_3_mm__plain",
                                  f"normal{suffix}.{ext}")
@@ -221,9 +221,9 @@ rule TUTORIAL_FOUR_SPHERES_FENICS_LFCOR:
                     for ext in ["xdmf", "h5"]],
         config="data/bundled/model_properties/four_spheres_csf_3_mm__Naess_Chintaluri_2017.ini"
     output:
-        TUTORIAL_FENICS_LFCOR_H5.replace("{setup}", "{setup,four_spheres}"),
+        TUTORIAL_FENICS_LFCOR_H5.replace("{setup}", "{setup,case_study}"),
         metadata=TUTORIAL_FENICS_LFCOR_METADATA.replace("{setup}",
-                                                        "{setup,four_spheres}")
+                                                        "{setup,case_study}")
     resources:
         mem_mb=get_mem_mb_exponential(15_000)
     params:
@@ -243,9 +243,9 @@ rule TUTORIAL_FOUR_SPHERES_FENICS_LFCOR:
 
 
 
-rule TUTORIAL_FOUR_SPHERES_SAMPLING_GRID:
+rule TUTORIAL_CASE_STUDY_SAMPLING_GRID:
     output:
-        TUTORIAL_SAMPLED_LFCOR_GRID.format(setup="four_spheres")
+        TUTORIAL_SAMPLED_LFCOR_GRID.format(setup="{setup,case_study}")
     params:
         output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
