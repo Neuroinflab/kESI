@@ -247,7 +247,7 @@ rule TUTORIAL_CASE_STUDY2_FENICS_LFCOR:
         electrodes="data/bundled/electrode_locations/tutorial/case_study.csv",
         mesh_paths=[os.path.join(MESH_DIR,
                                  "single_sphere__composite",
-                                 f"fine{suffix}.{ext}")
+                                 f"normal{suffix}.{ext}")
                     for suffix in ["", "_subdomains", "_boundaries"]
                     for ext in ["xdmf", "h5"]],
         config="data/bundled/model_properties/single_sphere__Naess_Chintaluri_2017.ini"
@@ -265,7 +265,7 @@ rule TUTORIAL_CASE_STUDY2_FENICS_LFCOR:
         ulimit -v $(({resources.mem_mb} * 1024))
         python solve_sphere_on_plate.py \\
           --mesh {input.mesh_paths[0]} \\
-          --degree 3 \\
+          --degree 1 \\
           --config {input.config} \\
           --electrodes {input.electrodes} \\
           --name {wildcards.name} \\
