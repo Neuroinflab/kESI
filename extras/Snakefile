@@ -194,7 +194,7 @@ rule TUTORIAL_CASE_STUDY_SAMPLED_LFCOR:
         grid=TUTORIAL_SAMPLED_LFCOR_GRID,
         correction=TUTORIAL_FENICS_LFCOR_METADATA
     output:
-        TUTORIAL_SAMPLED_LFCOR.replace("{setup}", "{setup,case_study.?}")
+        TUTORIAL_SAMPLED_LFCOR.replace("{setup}", "{setup,case_study.+}")
     params:
         output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
@@ -214,47 +214,17 @@ rule TUTORIAL_CASE_STUDY_SAMPLED_LFCOR:
 rule TUTORIAL_CASE_STUDY_FENICS_LFCOR:
     input:
         electrodes="data/bundled/electrode_locations/tutorial/case_study.csv",
-        mesh_paths=[os.path.join(MESH_DIR,
-                                 "four_spheres_csf_3_mm__plain",
+        mesh_paths=lambda wildcards: [
+                    os.path.join(MESH_DIR,
+                                 f"{wildcards.geometry}{'_csf_3_mm__plain' if wildcards.geometry == 'four_spheres' else '__composite'}",
                                  f"normal{suffix}.{ext}")
                     for suffix in ["", "_subdomains", "_boundaries"]
                     for ext in ["xdmf", "h5"]],
-        config="data/bundled/model_properties/four_spheres_csf_3_mm__Naess_Chintaluri_2017.ini"
+        config=lambda wildcards: f"data/bundled/model_properties/{wildcards.geometry}{'_csf_3_mm' if wildcards.geometry == 'four_spheres' else ''}__Naess_Chintaluri_2017.ini"
     output:
-        TUTORIAL_FENICS_LFCOR_H5.replace("{setup}", "{setup,case_study}"),
+        TUTORIAL_FENICS_LFCOR_H5.replace("{setup}", "{setup,case_study_}{geometry}"),
         metadata=TUTORIAL_FENICS_LFCOR_METADATA.replace("{setup}",
-                                                        "{setup,case_study}")
-    resources:
-        mem_mb=get_mem_mb_exponential(15_000)
-    params:
-        output_directory=lambda wildcards, output: os.path.dirname(str(output.metadata))
-    shell:
-        """
-        mkdir -p {params.output_directory}
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python solve_sphere_on_plate.py \\
-          --mesh {input.mesh_paths[0]} \\
-          --degree 1 \\
-          --config {input.config} \\
-          --electrodes {input.electrodes} \\
-          --name {wildcards.name} \\
-          --output {output.metadata}
-        """
-
-
-rule TUTORIAL_CASE_STUDY2_FENICS_LFCOR:
-    input:
-        electrodes="data/bundled/electrode_locations/tutorial/case_study.csv",
-        mesh_paths=[os.path.join(MESH_DIR,
-                                 "single_sphere__composite",
-                                 f"normal{suffix}.{ext}")
-                    for suffix in ["", "_subdomains", "_boundaries"]
-                    for ext in ["xdmf", "h5"]],
-        config="data/bundled/model_properties/single_sphere__Naess_Chintaluri_2017.ini"
-    output:
-        TUTORIAL_FENICS_LFCOR_H5.replace("{setup}", "{setup,case_study2}"),
-        metadata=TUTORIAL_FENICS_LFCOR_METADATA.replace("{setup}",
-                                                        "{setup,case_study2}")
+                                                        "{setup,case_study_}{geometry}")
     resources:
         mem_mb=get_mem_mb_exponential(15_000)
     params:
@@ -275,7 +245,7 @@ rule TUTORIAL_CASE_STUDY2_FENICS_LFCOR:
 
 rule TUTORIAL_CASE_STUDY_SAMPLING_GRID:
     output:
-        TUTORIAL_SAMPLED_LFCOR_GRID.format(setup="{setup,case_study.?}")
+        TUTORIAL_SAMPLED_LFCOR_GRID.format(setup="{setup,case_study.+}")
     params:
         output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
