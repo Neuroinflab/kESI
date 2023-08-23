@@ -163,7 +163,7 @@ MESH_INSPECT = MESH_PATTERN.replace("{suffix}", ".msh.gmsh_check_stdout.txt")
 MESH_STATS = os.path.join(MESH_DIR, "{mesh_name}.csv")
 INSPECTABLE_MESHES = {"circular_slice": ["coarsest", "coarser", "coarse", "normal", "fine", "finer", "finest", "composite"],
                        "single_sphere__composite": ["coarser", "coarse", "normal", "fine", "finer", "finest"],
-                       "four_spheres_csf_1_mm__plain": ["finest"],
+                       "four_spheres_csf_1_mm__plain": ["fine", "finer", "finest"],
                        "four_spheres_csf_3_mm__plain": ["normal", "fine", "finer", "finest"],
                        }
 
