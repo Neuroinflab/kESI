@@ -127,6 +127,23 @@ CSD_SOURCES = os.path.join(CSD_SOURCES_DIR, "{sources}.npz")
 CSD_EIGENSOURCES = CSD_SOURCES.replace("{sources}", "eigensources")
 CSD_FORWARD = os.path.join(CSD_SOURCES_DIR, FWD_FEM_PATH, "{sources}.csv")
 
+RECONSTRUCTION_DIR = os.path.join(DATA_DIR,
+                                  "reconstructions",
+                                  "{setup}",
+                                  "{subsetup}",
+                                  "{basis_functions}",
+                                  "{path}",
+                                  "{csd_grid}",
+                                  FWD_FEM_PATH,
+                                  "{kernel_path}",
+                                  "{regularization}")
+RECONSTRUCTION_CV = os.path.join(RECONSTRUCTION_DIR,
+                                 "{sources}.csv")
+RECONSTRUCTION_KERNEL = os.path.join(DATA_DIR,
+                                     "kernels",
+                                     "{kernel_path}",
+                                     "kernel.npz")
+
 
 TUTORIAL_DIR = os.path.join(DATA_DIR, "tutorial")
 TUTORIAL_SETUP_DIR = os.path.join(TUTORIAL_DIR, "{setup}")
@@ -260,6 +277,32 @@ rule TUTORIAL_CASE_STUDY_SAMPLING_GRID:
           -k 7
         """
 
+
+def get_cv_command(wildcards):
+    start, stop, n = wildcards.regularization.split("_")
+    return f"cv_potentials -s {start.replace('n', '-').replace('m', '-')} -e {stop.replace('n', '-').replace('m', '-')} -n {n}"
+
+
+rule RECONSTRUCTION_CV:
+   input:
+       kernel=RECONSTRUCTION_KERNEL,
+       potentials=CSD_FORWARD,
+   output:
+       protect_transfer_matrix(RECONSTRUCTION_CV.replace(
+                              "{kernel_path}", "{kernel_path,[^/]+/[^/]+/[^/]+/k(ESI/[^/]+/[^/]+/[^/]+|CSD)/[^/]+}"))
+   params:
+       output_directory=lambda wildcards, output: os.path.dirname(str(output)),
+       command=get_cv_command
+   shell:
+       """
+       mkdir -p {params.output_directory}
+       python {params.command} \\
+         --potentials {input.potentials} \\
+         --kernel {input.kernel} \\
+         --output {output}
+       """
+
+
 def get_mesh_getter(mesh_attr="mesh"):
     def solver(wildcards):
         wildcard_mesh = getattr(wildcards, mesh_attr)
@@ -381,6 +424,8 @@ def get_kernel_electrodes(wildcards):
 
         elif wildcards.setup == "paper__single_sphere__comb":
             return PAPER_1SM_ELECTRODES
+        elif wildcards.setup.endswith("case_study"):
+            return TUTORIAL_CASE_STUDY_ELECTRODES
 
 
 def get_kernel_electrodes_paths(wildcards):
