@@ -280,7 +280,7 @@ rule TUTORIAL_CASE_STUDY_SAMPLING_GRID:
 
 def get_cv_command(wildcards):
     start, stop, n = wildcards.regularization.split("_")
-    return f"cv_potentials -s {start.replace('n', '-').replace('m', '-')} -e {stop.replace('n', '-').replace('m', '-')} -n {n}"
+    return f"cv_potentials.py -s {start.replace('n', '-').replace('m', '-')} -e {stop.replace('n', '-').replace('m', '-')} -n {n}"
 
 
 rule RECONSTRUCTION_CV:
