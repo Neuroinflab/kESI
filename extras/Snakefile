@@ -622,15 +622,23 @@ rule PBF_CENTROIDS_paper:
 
         elif "sphere" in wildcards.geometry:
             brain_r = 0.079  # NOTE that brain_r for 1SM ia same as for 4SM
-            h_x = 2e-2
-            h_y = 2e-2
-            h_z = 2.5e-2
-            X = XX[(XX >= max(XX.min() + src_r, -h_x))
-                   & (XX <= min(XX.max() - src_r, h_x))].reshape(-1, 1, 1)
-            Y = YY[(YY >= max(YY.min() + src_r, -h_y))
-                   & (YY <= min(YY.max() - src_r, h_y))].reshape(1, -1, 1)
-            Z = ZZ[(ZZ >= max(ZZ.min() + src_r, h_z))
-                   & (ZZ <= min(ZZ.max(), brain_r) - src_r)].reshape(1, 1, -1)
+            if wildcards.electrodes == "comb":
+                h_x = 2e-2
+                h_y = 2e-2
+                h_z = 2.5e-2
+                X = XX[(XX >= max(XX.min() + src_r, -h_x))
+                       & (XX <= min(XX.max() - src_r, h_x))].reshape(-1, 1, 1)
+                Y = YY[(YY >= max(YY.min() + src_r, -h_y))
+                       & (YY <= min(YY.max() - src_r, h_y))].reshape(1, -1, 1)
+                Z = ZZ[(ZZ >= max(ZZ.min() + src_r, h_z))
+                       & (ZZ <= min(ZZ.max(), brain_r) - src_r)].reshape(1, 1, -1)
+            elif wildcards.electrodes == "case_study":
+                X = XX[(XX >= XX.min() + src_r)
+                       & (XX <= XX.max() - src_r)].reshape(-1, 1, 1)
+                Y = YY[(YY >= YY.min() + src_r)
+                       & (YY <= YY.max() - src_r)].reshape(1, -1, 1)
+                Z = ZZ[(ZZ >= ZZ.min() + src_r)
+                       & (ZZ <= ZZ.max() - src_r)].reshape(1, 1, -1)
             MASK = (np.square(X)
                     + np.square(Y)
                     + np.square(Z)
