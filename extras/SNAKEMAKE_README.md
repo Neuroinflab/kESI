@@ -666,6 +666,9 @@ cross-validation root mean square error (RMSEs) for every column of
 | `REGULARIZATION_PARAMETER` | `float`       | regularization parameter              |
 | `POTENTIAL_<*>`            | `float` $[V]$ | RMSE for appropriate potential column |
 
+See also [leave-one-out cross-validation](#tools-cv)
+subsection in the [Tools](#tools) section.
+
 
 ## Tools <a name="tools"></a>
 
@@ -783,6 +786,14 @@ There are two tools:
 - `forward_sphere_on_plate.py` (for spherical model) which additionally
   allows to set the Z coordinate of the edge of grounded plate
   (defaults to $-88 mm$).
+
+
+### Leave-one-out cross-validation <a name="tools-cv"></a>
+
+[Leave-one-out cross-validation errors](#data-generated-reconstructions-profiles_csv)
+are calculated by the `cv_potentials.py`
+for a given [kernel](#data-generated-kernels-kernel_npz)
+and [potential profiles](#data-generated-csd_profiles-profiles_csv).
 
 
 ## Bibliography
