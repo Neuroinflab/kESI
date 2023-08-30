@@ -554,7 +554,7 @@ csd_profiles/
     <subsetup>/
       <csd basis functions>/
         <csd path>/
-          <csd_grid>/
+          <csd grid>/
             <profiles>.npz
             <fwd path>/
               <profiles>.csv
@@ -632,7 +632,7 @@ reconstructions/
     <subsetup>/
       <csd basis functions>/
         <csd path>/
-          <csd_grid>/
+          <csd grid>/
             <fwd path>/
               <kernel path>/
                  <cv regularization parameters>/
