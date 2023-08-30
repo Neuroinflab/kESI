@@ -110,6 +110,7 @@ generated/
   potential_basis_functions/
   kernel/
   csd_profiles/
+  reconstructions/
 ```
 
 where
@@ -123,7 +124,7 @@ where
 | `potential_basis_functions`     | [Potential basis functions](#data-generated-potential_basis_functions)         |
 | `kernel`                        | [Kernel](#data-generated-kernel)                                               |
 | `csd_profiles`                  | [CSD profiles](#data-generated_csd_profiles)                                   |
-
+| `reconstructions`               | [Reconstructions](#data-generated_reconstructions)                             |
 
 #### Meshes <a name="data-generated-meshes"></a>
 
@@ -620,6 +621,50 @@ potential values for $n_{CSD}$ CSD profiles.
 
 See also [volumetric CSD profiles calculation](#tools-volumetric_CSD_profiles_calculation)
 subsection in the [Tools](#tools) section.
+
+
+#### Reconstructions <a name="data-generated-reconstructions"></a>
+
+The filesystem subtree follows the pattern:
+```
+reconstructions/
+  <setup>/
+    <subsetup>/
+      <csd basis functions>/
+        <csd path>/
+          <csd_grid>/
+            <fwd path>/
+              <kernel path>/
+                 <cv regularization parameters>/
+                   <profiles>.csv
+```
+where `<kernel path>` is part of paths to
+[kernel](#data-generated-kernels-kernel_npz)
+(`kernels/<kernel path>/kernel.npz`)
+and [crosskernel](#data-generated-kernels-crosskernel_npz)
+(`kernels/<kernel path>/<used csd grid>/crosskernel.npz`)
+used for the reconstruction.  The `<cv regularization parameters>`
+is `<cv_start>_<cv_end>_<cv_num>`, where meaning of `<cv_start>`, `<cv_stop>`
+and `<cv_num>` is similar as in `numpy.logspace(start, stop, num)` function.
+I.e. `<cv_start>` and `<cv_stop>` are decimal logarithms of the first and
+the last (respectively) elements of `<cv_num>`-element sequence
+of regularization parameters evenly spaced on logarithmic scale.
+If either `<cv_start>` or `<cv_stop>` is negative, it starts with either `m`
+(for _minus_) or `n` (for _negative_) instead of `-`.
+The other wildcards were discussed before.  They point to
+[the forward-modelled potential values](#data-generated-csd_profiles-profiles_csv).
+
+#### File `<profiles>.csv` <a name="data-generated-reconstructions-profiles_csv"></a>
+
+File `<profiles>.csv` contains a header and `<cv_num>` rows.
+Every row contains value of regularization parameter and leave-one-out
+cross-validation root mean square error (RMSEs) for every column of
+[the file with potential profiles](#data-generated-csd_profiles-profiles_csv).
+
+| field                      | type          | content                               |
+|----------------------------|---------------|---------------------------------------|
+| `REGULARIZATION_PARAMETER` | `float`       | regularization parameter              |
+| `POTENTIAL_<*>`            | `float` $[V]$ | RMSE for appropriate potential column |
 
 
 ## Tools <a name="tools"></a>
