@@ -106,7 +106,7 @@ generated/
   meshes/
   setups/
   fenics_leadfield_corrections/
-  sampled_leadfield_corrections
+  sampled_leadfield_corrections/
   potential_basis_functions/
   kernel/
   csd_profiles/
@@ -553,8 +553,8 @@ csd_profiles/
   <setup>/
     <subsetup>/
       <csd basis functions>/
-        <csd path>
-          <csd_grid>
+        <csd path>/
+          <csd_grid>/
             <profiles>.npz
             <fwd path>/
               <profiles>.csv
