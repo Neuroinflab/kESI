@@ -319,7 +319,7 @@ def get_cv_command(wildcards):
 rule RECONSTRUCTION_CV:
    input:
        kernel=RECONSTRUCTION_KERNEL,
-       potentials=CSD_FORWARD,
+       potentials=CSD_FORWARD
    output:
        protect_transfer_matrix(RECONSTRUCTION_CV.replace(
                               "{kernel_path}", "{kernel_path,[^/]+/[^/]+/[^/]+/k(ESI/[^/]+/[^/]+/[^/]+|CSD)/[^/]+}"))
