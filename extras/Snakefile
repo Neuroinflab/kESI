@@ -135,14 +135,24 @@ RECONSTRUCTION_DIR = os.path.join(DATA_DIR,
                                   "{path}",
                                   "{csd_grid}",
                                   FWD_FEM_PATH,
-                                  "{kernel_path}",
-                                  "{regularization}")
-RECONSTRUCTION_CV = os.path.join(RECONSTRUCTION_DIR,
+                                  "{kernel_path}")
+RECONSTRUCTION_UNREGULARIZED = os.path.join(RECONSTRUCTION_DIR,
+                                            "{sources}.npz")
+RECONSTRUCTION_DIR_REGULARIZED = os.path.join(RECONSTRUCTION_DIR,
+                                              "{regularization}")
+RECONSTRUCTION_CV = os.path.join(RECONSTRUCTION_DIR_REGULARIZED,
                                  "{sources}.csv")
+RECONSTRUCTION_REGULARIZED = os.path.join(RECONSTRUCTION_DIR_REGULARIZED,
+                                          "{sources}.npz")
 RECONSTRUCTION_KERNEL = os.path.join(DATA_DIR,
                                      "kernels",
                                      "{kernel_path}",
                                      "kernel.npz")
+RECONSTRUCTION_CROSSKERNEL = os.path.join(DATA_DIR,
+                                          "kernels",
+                                          "{kernel_path}",
+                                          "{csd_grid}",
+                                          "crosskernel.npz")
 
 
 TUTORIAL_DIR = os.path.join(DATA_DIR, "tutorial")
@@ -278,6 +288,29 @@ rule TUTORIAL_CASE_STUDY_SAMPLING_GRID:
         """
 
 
+rule RECONSTRUCTION_REGULARIZED:
+   input:
+       kernel=RECONSTRUCTION_KERNEL,
+       crosskernel=RECONSTRUCTION_CROSSKERNEL,
+       potentials=CSD_FORWARD,
+       cross_validation=RECONSTRUCTION_CV
+   output:
+       protect_transfer_matrix(RECONSTRUCTION_REGULARIZED.replace(
+                              "{kernel_path}", "{kernel_path,[^/]+/[^/]+/[^/]+/k(ESI/[^/]+/[^/]+/[^/]+|CSD)/[^/]+}"))
+   params:
+       output_directory=lambda wildcards, output: os.path.dirname(str(output)),
+   shell:
+       """
+       mkdir -p {params.output_directory}
+       python reconstruct_csds.py \\
+         --potentials {input.potentials} \\
+         --kernel {input.kernel} \\
+         --crosskernel {input.crosskernel} \\
+         --cross-validation {input.cross_validation} \\
+         --output {output}
+       """
+
+
 def get_cv_command(wildcards):
     start, stop, n = wildcards.regularization.split("_")
     return f"cv_potentials.py -s {start.replace('n', '-').replace('m', '-')} -e {stop.replace('n', '-').replace('m', '-')} -n {n}"
@@ -299,6 +332,27 @@ rule RECONSTRUCTION_CV:
        python {params.command} \\
          --potentials {input.potentials} \\
          --kernel {input.kernel} \\
+         --output {output}
+       """
+
+
+rule RECONSTRUCTION_UNREGULARIZED:
+   input:
+       kernel=RECONSTRUCTION_KERNEL,
+       crosskernel=RECONSTRUCTION_CROSSKERNEL,
+       potentials=CSD_FORWARD
+   output:
+       protect_transfer_matrix(RECONSTRUCTION_UNREGULARIZED.replace(
+                              "{kernel_path}", "{kernel_path,[^/]+/[^/]+/[^/]+/k(ESI/[^/]+/[^/]+/[^/]+|CSD)/[^/]+}"))
+   params:
+       output_directory=lambda wildcards, output: os.path.dirname(str(output)),
+   shell:
+       """
+       mkdir -p {params.output_directory}
+       python reconstruct_csds.py \\
+         --potentials {input.potentials} \\
+         --kernel {input.kernel} \\
+         --crosskernel {input.crosskernel} \\
          --output {output}
        """
 
