@@ -30,14 +30,10 @@ import pandas as pd
 from kesi import Reconstructor
 
 class RegularizationParameter(object):
-    def __init__(self, CV : pd.DataFrame = None, default : float = 0.0):
+    def __init__(self, CV : pd.DataFrame = None):
         self.CV = CV
-        self.default = default
 
     def __call__(self, name : str) -> float:
-        if self.CV is None:
-            return self.default
-
         return  self.CV.REGULARIZATION_PARAMETER[self.CV[name].argmin()]
 
 
@@ -86,21 +82,21 @@ if __name__ == "__main__":
         output = {k: fh[k] for k in "XYZ" if k in fh}
 
     reconstructor = Reconstructor(KERNEL, CROSSKERNEL)
-
-    regularization_parameter = RegularizationParameter(
-        pd.read_csv(args.cross_validation)
-        if args.cross_validation is not None
-        else None,
-        args.regularization_parameter)
-
     names = [name for name in POTENTIALS.columns if name.startswith("POTENTIAL")]
-    CSD = np.full(CROSSKERNEL.shape[:-1] + (len(names),),
-                  np.nan)
-    output["CSD"] = CSD
 
-    _idx = (slice(0, None),) * (len(CROSSKERNEL.shape) - 1)
-    for i, name in enumerate(names):
-        CSD[_idx + (i,)] = reconstructor(POTENTIALS[name].to_numpy().copy(),
-                                         regularization_parameter(name))
+    if args.cross_validation is not None:
+        regularization_parameter = RegularizationParameter(
+                                             pd.read_csv(args.cross_validation))
+        CSD = np.full(CROSSKERNEL.shape[:-1] + (len(names),),
+                      np.nan)
+        output["CSD"] = CSD
+
+        _idx = (slice(0, None),) * (len(CROSSKERNEL.shape) - 1)
+        for i, name in enumerate(names):
+            CSD[_idx + (i,)] = reconstructor(POTENTIALS[name].to_numpy(copy=True),
+                                             regularization_parameter(name))
+    else:
+        output["CSD"] = reconstructor(POTENTIALS[names].to_numpy(copy=True),
+                                      args.regularization_parameter)
 
     np.savez_compressed(args.output, **output)
