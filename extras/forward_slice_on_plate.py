@@ -25,6 +25,7 @@
 ###############################################################################
 
 import argparse
+import logging
 
 import numpy as np
 import pandas as pd
@@ -34,6 +35,8 @@ from local.forward_model import Slice as ForwardModel
 
 
 if __name__ == "__main__":
+    logger = logging.getLogger("forward_slice_on_plate.py")
+
     parser = argparse.ArgumentParser(description="Model CSD in sphere on plate geometry with FEM.")
     parser.add_argument("-o", "--output",
                         metavar="<potentials.csv>",
@@ -106,7 +109,12 @@ if __name__ == "__main__":
             csd = si.RegularGridInterpolator(XYZ, CSD[:, :, :, i],
                                              bounds_error=False,
                                              fill_value=0)
-            potential = fem(csd)
-            DF[f"POTENTIAL_{i}"] = [potential(*xyz) for xyz in ELECTRODE_LOCATION]
+            try:
+                potential = fem(csd)
+            except Exception as e:
+                logger.warning(f"Exception {e!r} while solving for POTENTIAL_{i}")
+                DF[f"POTENTIAL_{i}"] = [np.nan] * len(ELECTRODE_LOCATION)
+            else:
+                DF[f"POTENTIAL_{i}"] = [potential(*xyz) for xyz in ELECTRODE_LOCATION]
             DF.to_csv(args.output,
                       index=False)
