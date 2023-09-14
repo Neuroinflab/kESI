@@ -93,8 +93,10 @@ if __name__ == "__main__":
 
         _idx = (slice(0, None),) * (len(CROSSKERNEL.shape) - 1)
         for i, name in enumerate(names):
-            CSD[_idx + (i,)] = reconstructor(POTENTIALS[name].to_numpy(copy=True),
-                                             regularization_parameter(name))
+            V = POTENTIALS[name].to_numpy(copy=True)
+            if np.isnan(V).any():
+                continue
+            CSD[_idx + (i,)] = reconstructor(V, regularization_parameter(name))
     else:
         output["CSD"] = reconstructor(POTENTIALS[names].to_numpy(copy=True),
                                       args.regularization_parameter)
