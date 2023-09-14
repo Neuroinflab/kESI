@@ -681,6 +681,9 @@ The reconstructions are regularized if stored in the
 `<cv regularization parameters>/` directory, otherwise
 they are unregularized.
 
+See also [Reconstruction of CSDs](#tools-reconstruction)
+subsection in the [Tools](#tools) section.
+
 
 ## Tools <a name="tools"></a>
 
@@ -803,9 +806,23 @@ There are two tools:
 ### Leave-one-out cross-validation <a name="tools-cv"></a>
 
 [Leave-one-out cross-validation errors](#data-generated-reconstructions-profiles_csv)
-are calculated by the `cv_potentials.py`
+are calculated by the `cv_potentials.py` tool
 for a given [kernel](#data-generated-kernels-kernel_npz)
 and [potential profiles](#data-generated-csd_profiles-profiles_csv).
+
+
+### Reconstruction of CSDs <a name="tools-reconstruction"></a>
+
+[Reconstructed CSD profiles](#data-generated-reconstructions-profiles_npz)
+are calculated by the `reconstruct_csds.py` tool
+for given [potential profiles](#data-generated-csd_profiles-profiles_csv)
+with [kernel](#data-generated-kernels-kernel_npz)
+and [crosskernel](#data-generated-kernels-crosskernel_npz).
+
+If regularized reconstruction is requested, either
+a positive regularization parameter should be given,
+or [cross-validation errors](#data-generated-reconstructions-profiles_csv)
+for a set of regularization parameters.
 
 
 ## Bibliography
