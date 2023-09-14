@@ -83,9 +83,11 @@ if __name__ == "__main__":
 
     for name in POTENTIALS.columns:
         if name.startswith("POTENTIAL_"):
-            DF[name] = cv(solver,
-                          POTENTIALS[name].to_numpy(copy=True),
-                          REGULARIZATION_PARAMETERS)
+            V = POTENTIALS[name].to_numpy(copy=True)
+            if np.isnan(V).any():
+                DF[name] = np.nan
+            else:
+                DF[name] = cv(solver, V, REGULARIZATION_PARAMETERS)
 
     DF.to_csv(args.output,
               index=False)
