@@ -635,8 +635,10 @@ reconstructions/
           <csd grid>/
             <fwd path>/
               <kernel path>/
+                 <profiles>.npz
                  <cv regularization parameters>/
                    <profiles>.csv
+                   <profiles>.npz
 ```
 where `<kernel path>` is part of paths to
 [kernel](#data-generated-kernels-kernel_npz)
@@ -668,6 +670,16 @@ cross-validation root mean square error (RMSEs) for every column of
 
 See also [leave-one-out cross-validation](#tools-cv)
 subsection in the [Tools](#tools) section.
+
+
+##### File `<profiles>.npz` <a name="data-generated-reconstructions-profiles_npz"></a>
+
+The `<profiles>.npz` contains reconstructed CSDs in
+[CSD profiles format](#data-generated-csd_profiles-profiles_npz).
+
+The reconstructions are regularized if stored in the
+`<cv regularization parameters>/` directory, otherwise
+they are unregularized.
 
 
 ## Tools <a name="tools"></a>
