@@ -154,6 +154,15 @@ RECONSTRUCTION_CROSSKERNEL = os.path.join(DATA_DIR,
                                           "{csd_grid}",
                                           "crosskernel.npz")
 
+RECONSTRUCTION_ERRORS = RECONSTRUCTION_UNREGULARIZED.replace(
+                             "{kernel_path}", "{reconstruction_path}").replace(
+                             "reconstructions", "errors").replace(
+                             ".npz", ".csv"
+                             )
+RECONSTRUCTION_ERRORS_CSD = RECONSTRUCTION_UNREGULARIZED.replace(
+                                       "{kernel_path}", "{reconstruction_path}"
+                                       )
+
 
 TUTORIAL_DIR = os.path.join(DATA_DIR, "tutorial")
 TUTORIAL_SETUP_DIR = os.path.join(TUTORIAL_DIR, "{setup}")
@@ -286,6 +295,25 @@ rule TUTORIAL_CASE_STUDY_SAMPLING_GRID:
           --end 0.079 \\
           -k 7
         """
+
+
+rule RECONSTRUCTION_ERRORS:
+   input:
+       csd=RECONSTRUCTION_ERRORS_CSD,
+       reference=CSD_SOURCES
+   output:
+       protect_transfer_matrix(RECONSTRUCTION_ERRORS.replace(
+                              "{reconstruction_path}", "{reconstruction_path,[^/]+/[^/]+/[^/]+/k(ESI/[^/]+/[^/]+/[^/]+|CSD)/[^/]+(/[^/]+)?}"))
+   params:
+       output_directory=lambda wildcards, output: os.path.dirname(str(output)),
+   shell:
+       """
+       mkdir -p {params.output_directory}
+       python calculate_errors.py \\
+         --csd {input.csd} \\
+         --reference {input.reference} \\
+         --output {output}
+       """
 
 
 rule RECONSTRUCTION_REGULARIZED:
