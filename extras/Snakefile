@@ -1,58 +1,208 @@
-# snakemake .4SM_CSF_3_mm__uniform_coarser_1_comb -j 4 --resources mem_mb=100000 --restart-times 3
-rule all:
-    input: ".4SM_composite_normal_2_stereotactic"
+# snakemake -j 4 --resources mem_mb=100000 --restart-times 3 ...
 
-rule epi_wroclaw_trigger:
-    input: ["FEM/solutions/paper/{{MODEL}}/{{FEM}}/epi_wroclaw_sampled/9/{}.npz".format(name) for name in ['TP_1', 'TP_2', 'TP_3', 'TP_4', 'TP_5', 'TP_6', 'TP_7', 'TP_8', 'AMG_1', 'AMG_2', 'AMG_3', 'AMG_4', 'AMG_5', 'AMG_6', 'AMG_7', 'AMG_8', 'HH_1', 'HH_2', 'HH_3', 'HH_4', 'HH_5', 'HH_6', 'HH_7', 'HH_8', 'HP_1', 'HP_2', 'HP_3', 'HP_4', 'HP_5', 'HP_6', 'HP_7', 'HP_8', 'STG_1', 'STG_2', 'STG_3', 'STG_4', 'STG_5', 'STG_6', 'STG_7', 'STG_8', 'PC_1', 'PC_2', 'PC_3', 'PC_4', 'PC_5', 'PC_6', 'PC_7', 'PC_8', 'PM_1', 'PM_2', 'PM_3', 'PM_4', 'PM_5', 'PM_6']]
-    output: ".{MODEL}__{FEM}_epi_wroclaw"
-    shell: "touch {output}"
+###############################################################################
+#                                                                             #
+#    kESI                                                                     #
+#                                                                             #
+#    Copyright (C) 2019-2023 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
+#    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
+#    Copyright (C) 2021-2023 Jakub M. Dzik (Institute of Applied Psychology;  #
+#    Faculty of Management and Social Communication; Jagiellonian University) #
+#                                                                             #
+#    This software is free software: you can redistribute it and/or modify    #
+#    it under the terms of the GNU General Public License as published by     #
+#    the Free Software Foundation, either version 3 of the License, or        #
+#    (at your option) any later version.                                      #
+#                                                                             #
+#    This software is distributed in the hope that it will be useful,         #
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of           #
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            #
+#    GNU General Public License for more details.                             #
+#                                                                             #
+#    You should have received a copy of the GNU General Public License        #
+#    along with this software.  If not, see http://www.gnu.org/licenses/.     #
+#                                                                             #
+###############################################################################
 
-rule stereotactic_trigger:
-    input: ["FEM/solutions/paper/{{MODEL}}/{{FEM}}/stereotactic_sampled/9/{}.npz".format(name) for name in ['LZ_01', 'LZ_10', 'LAM_08', 'LAM_09', 'LPM_01', 'LPM_02', 'LPM_03', 'LPM_04', 'LPM_05', 'LZ_11', 'LK_01', 'LK_02', 'LK_03', 'LK_04', 'LK_05', 'LZ_12', 'LK_06', 'LK_07', 'LK_08', 'LK_09', 'LK_10', 'LK_11', 'RB_01', 'RB_02', 'LZ_13', 'LZ_14', 'LA_01', 'LA_02', 'LA_03', 'LZ_02', 'LA_04', 'LA_05', 'LA_06', 'LA_07', 'LA_08', 'LA_09', 'LA_10', 'LA_11', 'LA_12', 'LZ_03', 'LB_01', 'LB_02', 'LB_03', 'LB_04', 'LB_05', 'LB_06', 'LB_07', 'LB_08', 'LB_09', 'LZ_04', 'LB_10', 'LB_11', 'LB_12', 'LB_13', 'LB_14', 'LB_15', 'LC_01', 'LC_02', 'LC_03', 'LZ_05', 'LC_04', 'LC_05', 'LC_06', 'LC_07', 'LC_08', 'LC_09', 'LC_10', 'LC_11', 'LC_12', 'LZ_06', 'LP_01', 'LP_02', 'LP_03', 'LP_04', 'LP_05', 'LP_06', 'LP_07', 'LP_08', 'LP_09', 'LZ_07', 'LP_10', 'LP_11', 'LP_12', 'LP_13', 'LV_01', 'LV_02', 'LV_03', 'LZ_08', 'LV_04', 'LV_05', 'LV_06', 'LV_07', 'LV_08', 'LV_09', 'LV_10', 'LV_11', 'LV_12', 'LV_13', 'LZ_09', 'LV_14', 'LV_15', 'LV_16', 'LAM_01', 'LAM_02', 'LAM_03', 'LAM_04', 'LAM_05', 'LAM_06', 'LAM_07']]
-    output: ".{MODEL}__{FEM}_stereotactic"
-    shell: "touch {output}"
+import os
 
-rule comb_trigger:
-    input: ["FEM/solutions/paper/{{MODEL}}/{{FEM}}/comb_sampled/9/{}_{:02d}.npz".format(a, b) for a in 'ABCDE' for b in range(14)]
-    output: ".{MODEL}__{FEM}_comb"
-    shell: "touch {output}"
+def replace(string, replacements={}):
+    for k, v in replacements.items():
+        string = string.replace(k, v)
 
-rule slice_original_trigger:
-    input: ["FEM/solutions/paper/finite_slice/{{FEM}}/grid_3d_sampled/9/{x}_0_{z}.npz".format(x=x if x >= 0 else 'minus{}'.format(-x), z=z) for x in range(-24, 25, 12) for z in range(6, 66, 6)]
-    output: ".finite_slice__{FEM}_original"
-    shell: "touch {output}"
+    return string
 
-
-rule PaperSliceOriginalINI:
-    input: ["FEM/fem_configs/paper/{PATH}/grid_3d.ini"] +  ["FEM/solutions/paper/{{PATH}}/grid_3d/{x}_0_{z}.ini".format(x=x if x >= 0 else 'minus{}'.format(-x), z=z) for x in range(-24, 25, 12) for z in range(6, 66, 6)]
-    output: "FEM/solutions/paper/{PATH}/grid_3d.ini"
-    run:
-        import configparser
-        metadata = configparser.ConfigParser()
-        metadata.read(input)
-        metadata.write(open(output[0], 'w'))
-
-
-rule PaperStereotacticINI:
-    input: ["FEM/fem_configs/paper/{CONFIG}/stereotactic.ini"] + ["FEM/solutions/paper/{{CONFIG}}/stereotactic/{}.ini".format(name) for name in ['LZ_01', 'LZ_10', 'LAM_08', 'LAM_09', 'LPM_01', 'LPM_02', 'LPM_03', 'LPM_04', 'LPM_05', 'LZ_11', 'LK_01', 'LK_02', 'LK_03', 'LK_04', 'LK_05', 'LZ_12', 'LK_06', 'LK_07', 'LK_08', 'LK_09', 'LK_10', 'LK_11', 'RB_01', 'RB_02', 'LZ_13', 'LZ_14', 'LA_01', 'LA_02', 'LA_03', 'LZ_02', 'LA_04', 'LA_05', 'LA_06', 'LA_07', 'LA_08', 'LA_09', 'LA_10', 'LA_11', 'LA_12', 'LZ_03', 'LB_01', 'LB_02', 'LB_03', 'LB_04', 'LB_05', 'LB_06', 'LB_07', 'LB_08', 'LB_09', 'LZ_04', 'LB_10', 'LB_11', 'LB_12', 'LB_13', 'LB_14', 'LB_15', 'LC_01', 'LC_02', 'LC_03', 'LZ_05', 'LC_04', 'LC_05', 'LC_06', 'LC_07', 'LC_08', 'LC_09', 'LC_10', 'LC_11', 'LC_12', 'LZ_06', 'LP_01', 'LP_02', 'LP_03', 'LP_04', 'LP_05', 'LP_06', 'LP_07', 'LP_08', 'LP_09', 'LZ_07', 'LP_10', 'LP_11', 'LP_12', 'LP_13', 'LV_01', 'LV_02', 'LV_03', 'LZ_08', 'LV_04', 'LV_05', 'LV_06', 'LV_07', 'LV_08', 'LV_09', 'LV_10', 'LV_11', 'LV_12', 'LV_13', 'LZ_09', 'LV_14', 'LV_15', 'LV_16', 'LAM_01', 'LAM_02', 'LAM_03', 'LAM_04', 'LAM_05', 'LAM_06', 'LAM_07']]
-    output:
-        "FEM/solutions/paper/{CONFIG}/stereotactic.ini"
-    run:
-        import configparser
-        metadata = configparser.ConfigParser()
-        metadata.read(input)
-        metadata.write(open(output[0], 'w'))
+def protect_transfer_matrix(path):
+    return replace(path,
+                   {"setup}": "setup,[^/]*}",
+                    "basis_functions}": "basis_functions,[^/]*}"})
 
 
-rule epi_wroclaw_ini:
-    input: ["FEM/fem_configs/paper/{CONFIG}/epi_wroclaw.ini"] + ["FEM/solutions/paper/{{CONFIG}}/epi_wroclaw/{}.ini".format(name) for name in ['TP_1', 'TP_2', 'TP_3', 'TP_4', 'TP_5', 'TP_6', 'TP_7', 'TP_8', 'AMG_1', 'AMG_2', 'AMG_3', 'AMG_4', 'AMG_5', 'AMG_6', 'AMG_7', 'AMG_8', 'HH_1', 'HH_2', 'HH_3', 'HH_4', 'HH_5', 'HH_6', 'HH_7', 'HH_8', 'HP_1', 'HP_2', 'HP_3', 'HP_4', 'HP_5', 'HP_6', 'HP_7', 'HP_8', 'STG_1', 'STG_2', 'STG_3', 'STG_4', 'STG_5', 'STG_6', 'STG_7', 'STG_8', 'PC_1', 'PC_2', 'PC_3', 'PC_4', 'PC_5', 'PC_6', 'PC_7', 'PC_8', 'PM_1', 'PM_2', 'PM_3', 'PM_4', 'PM_5', 'PM_6']]
-    output:
-        "FEM/solutions/paper/{CONFIG}/epi_wroclaw.ini"
-    run:
-        import configparser
-        metadata = configparser.ConfigParser()
-        metadata.read(input)
-        metadata.write(open(output[0], 'w'))
+class Path(dict):
+    def path(self, k):
+        return os.path.join(k, self[k])
+
+
+PROP_DIR = "data/bundled/model_properties/"
+ELE_DIR = "data/bundled/electrode_locations/"
+CSD_BASIS_DIR = "data/bundled/csd_basis_functions/"
+MESH_SRC_DIR = "data/bundled/meshes/"
+
+DATA_DIR = "data/generated/"
+
+MESH_DIR = os.path.join(DATA_DIR, "meshes")
+MESH_PATTERN = os.path.join(MESH_DIR, "{mesh_path}{suffix}")
+MESH_MSH = MESH_PATTERN.replace("{suffix}", ".msh")
+
+FEM_PATH = os.path.join("{model}", "{mesh}", "{degree}")
+PATH = Path(kESI=os.path.join("{sampling}", FEM_PATH),
+            kCSD="{conductivity}")
+FWD_FEM_PATH = FEM_PATH.replace("{", "{fwd_")
+
+SETUP_ELECTRODES = os.path.join(DATA_DIR, "setups", "{setup}.csv")
+
+FENICS_LFCOR_ROOT = os.path.join(DATA_DIR, "fenics_leadfield_corrections")
+FENICS_LFCOR_COND = os.path.join(FENICS_LFCOR_ROOT,
+                                 "{setup}",
+                                 "{model}",
+                                 "conductivity.ini")
+FENICS_LFCOR_DIR_PATTERN = os.path.join(FENICS_LFCOR_ROOT,
+                                        "{setup}",
+                                        FEM_PATH)
+FENICS_LFCOR_METADATA = os.path.join(FENICS_LFCOR_DIR_PATTERN, "{name}.ini")
+FENICS_LFCOR_H5 = os.path.join(FENICS_LFCOR_DIR_PATTERN, "{name}.h5")
+
+SAMPLED_LFCOR_GRID_ROOT = os.path.join(DATA_DIR,
+                                       "sampled_leadfield_corrections",
+                                       "{setup}",
+                                       "{sampling}")
+SAMPLED_LFCOR_GRID = os.path.join(SAMPLED_LFCOR_GRID_ROOT, "grid.npz")
+SAMPLED_LFCOR_DIR = os.path.join(SAMPLED_LFCOR_GRID_ROOT,
+                                 FEM_PATH)
+SAMPLED_LFCOR = os.path.join(SAMPLED_LFCOR_DIR, "{name}.npz")
+
+PBF_DIR = os.path.join(DATA_DIR,
+                       "potential_basis_functions",
+                       "{setup}",
+                       "{basis_functions}")
+PBF_CENTROIDS = os.path.join(PBF_DIR, "centroids.npz")
+PBF_MODEL_SRC = os.path.join(PBF_DIR, "model_src.json")
+
+PBF_DIR_PATTERN = os.path.join(PBF_DIR, "{path}")
+
+PBF_KCSD = os.path.join(PBF_DIR_PATTERN.replace("{path}",
+                                                PATH.path("kCSD")),
+                        "{name}.npz")
+
+PBF_KESI = os.path.join(PBF_DIR_PATTERN.replace("{path}",
+                                                PATH.path("kESI")),
+                        "{name}.npz")
+
+KERNEL_SUBSETUP_DIR = os.path.join(DATA_DIR, "kernels", "{setup}", "{subsetup}")
+KERNEL_SUBSETUP_ELECTRODES = os.path.join(KERNEL_SUBSETUP_DIR, "electrodes.csv")
+KERNEL_DIR = os.path.join(KERNEL_SUBSETUP_DIR, "{basis_functions}", "{path}")
+KERNEL_FILES_KEYS = ["kernel",
+                     "analysis",
+#                      "potential_basis_functions",
+                     ]
+KERNEL_FILES = {name: os.path.join(KERNEL_DIR, f"{name}.npz")
+                for name in KERNEL_FILES_KEYS}
+
+PAPER_SLICE_ELECTRODES = [f"{x}_0_{z}" for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
+PAPER_4SM_ELECTRODES = [f"{x}_{i:02d}" for i in range(0, 12) for x in ['B', 'D']]
+PAPER_1SM_ELECTRODES = PAPER_4SM_ELECTRODES
+
+KERNEL_CSD_GRID_DIR = os.path.join(KERNEL_DIR, "{csd_grid}")
+KERNEL_CSD_GRID = os.path.join(KERNEL_CSD_GRID_DIR, "grid_csd.npz")
+KERNEL_CROSSKERNEL = os.path.join(KERNEL_CSD_GRID_DIR, "crosskernel.npz")
+
+CSD_SOURCES_DIR = os.path.join(DATA_DIR,
+                               "csd_profiles",
+                               "{setup}",
+                               "{subsetup}",
+                               "{basis_functions}",
+                               "{path}",
+                               "{csd_grid}")
+CSD_SOURCES = os.path.join(CSD_SOURCES_DIR, "{sources}.npz")
+CSD_EIGENSOURCES = CSD_SOURCES.replace("{sources}", "eigensources")
+CSD_FORWARD = os.path.join(CSD_SOURCES_DIR, FWD_FEM_PATH, "{sources}.csv")
+
+RECONSTRUCTION_DIR = os.path.join(DATA_DIR,
+                                  "reconstructions",
+                                  "{setup}",
+                                  "{subsetup}",
+                                  "{basis_functions}",
+                                  "{path}",
+                                  "{csd_grid}",
+                                  FWD_FEM_PATH,
+                                  "{kernel_path}")
+RECONSTRUCTION_UNREGULARIZED = os.path.join(RECONSTRUCTION_DIR,
+                                            "{sources}.npz")
+RECONSTRUCTION_DIR_REGULARIZED = os.path.join(RECONSTRUCTION_DIR,
+                                              "{regularization}")
+RECONSTRUCTION_CV = os.path.join(RECONSTRUCTION_DIR_REGULARIZED,
+                                 "{sources}.csv")
+RECONSTRUCTION_REGULARIZED = os.path.join(RECONSTRUCTION_DIR_REGULARIZED,
+                                          "{sources}.npz")
+RECONSTRUCTION_KERNEL = os.path.join(DATA_DIR,
+                                     "kernels",
+                                     "{kernel_path}",
+                                     "kernel.npz")
+RECONSTRUCTION_CROSSKERNEL = os.path.join(DATA_DIR,
+                                          "kernels",
+                                          "{kernel_path}",
+                                          "{csd_grid}",
+                                          "crosskernel.npz")
+
+RECONSTRUCTION_ERRORS = RECONSTRUCTION_UNREGULARIZED.replace(
+                             "{kernel_path}", "{reconstruction_path}").replace(
+                             "reconstructions", "errors").replace(
+                             ".npz", ".csv"
+                             )
+RECONSTRUCTION_ERRORS_CSD = RECONSTRUCTION_UNREGULARIZED.replace(
+                                       "{kernel_path}", "{reconstruction_path}"
+                                       )
+
+
+TUTORIAL_DIR = os.path.join(DATA_DIR, "tutorial")
+TUTORIAL_SETUP_DIR = os.path.join(TUTORIAL_DIR, "{setup}")
+TUTORIAL_FENICS_LFCOR_DIR = os.path.join(TUTORIAL_SETUP_DIR,
+                                         "fenics_leadfield_corrections")
+TUTORIAL_FENICS_LFCOR_METADATA = os.path.join(TUTORIAL_FENICS_LFCOR_DIR,
+                                              "{name}.ini")
+TUTORIAL_FENICS_LFCOR_H5 = os.path.join(TUTORIAL_FENICS_LFCOR_DIR,
+                                        "{name}.h5")
+
+TUTORIAL_SAMPLED_LFCOR_DIR = os.path.join(TUTORIAL_SETUP_DIR,
+                                          "sampled_leadfield_corrections")
+TUTORIAL_SAMPLED_LFCOR_GRID = os.path.join(TUTORIAL_SETUP_DIR,
+                                           "leadfield_correction_grid.npz")
+
+TUTORIAL_SAMPLED_LFCOR = os.path.join(TUTORIAL_SAMPLED_LFCOR_DIR,
+                                      "{name}.npz")
+
+TUTORIAL_CASE_STUDY_ELECTRODES = [f"{_electrode}_{_i:02d}"
+                                  for _electrode, _n in [("LZ", 14),
+                                                         ("LPM", 5),
+                                                         ("LK", 11),
+                                                         ("RB", 2),
+                                                         ("LA", 12),
+                                                         ("LB", 15),
+                                                         ("LC", 12),
+                                                         ("LP", 13),
+                                                         ("LV", 16),
+                                                         ("LAM", 9)]
+                                  for _i in range(1, _n + 1)]
+
+
+MESH_INSPECT = MESH_PATTERN.replace("{suffix}", ".msh.gmsh_check_stdout.txt")
+MESH_STATS = os.path.join(MESH_DIR, "{mesh_name}.csv")
+INSPECTABLE_MESHES = {"circular_slice": ["coarsest", "coarser", "coarse", "normal", "fine", "finer", "finest", "composite"],
+                       "single_sphere__composite": ["coarser", "coarse", "normal", "fine", "finer", "finest"],
+                       "four_spheres_csf_1_mm__plain": ["fine", "finer", "finest"],
+                       "four_spheres_csf_2_mm__plain": ["fine", "finer", "finest"],
+                       "four_spheres_csf_3_mm__plain": ["normal", "fine", "finer", "finest"],
+                       }
 
 
 def get_mem_mb(wildcards, attempt):
@@ -64,480 +214,837 @@ def get_mem_mb_exponential(base_mem=12_500):
     return f
 
 
-rule PaperCombINI:
-    input: ["FEM/fem_configs/paper/{PATH}/comb.ini"] + ["FEM/solutions/paper/{{PATH}}/comb/{}_{:02d}.ini".format(a, b) for a in 'ABCDE' for b in range(14)]
-    output: "FEM/solutions/paper/{PATH}/comb.ini"
-    run:
-        import configparser
-        metadata = configparser.ConfigParser()
-        metadata.read(input)
-        metadata.write(open(output[0], 'w'))
-
-
-rule Paper_solve_finite_slice:
+rule TUTORIAL_CASE_STUDY_TRIGGER:
     input:
-        "FEM/fem_configs/paper/finite_slice/{MESH}/{CONFIG}.ini"
+        [TUTORIAL_SAMPLED_LFCOR.format(name=name,
+                                       setup="case_study{ext}")
+         for name in TUTORIAL_CASE_STUDY_ELECTRODES]
     output:
-        "FEM/solutions/paper/finite_slice/{MESH}/{CONFIG}/{NAME}.h5", METADATA="FEM/solutions/paper/finite_slice/{MESH}/{CONFIG}/{NAME}.ini"
-    resources:
-        mem_mb=get_mem_mb_exponential(25_000)
+        ".tutorial_case_study{ext}"
+    shell:
+        "touch {output}"
+
+
+rule TUTORIAL_CASE_STUDY_SAMPLED_LFCOR:
+    input:
+        TUTORIAL_FENICS_LFCOR_H5,
+        grid=TUTORIAL_SAMPLED_LFCOR_GRID,
+        correction=TUTORIAL_FENICS_LFCOR_METADATA
+    output:
+        TUTORIAL_SAMPLED_LFCOR.replace("{setup}", "{setup,case_study.+}")
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
         """
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_solve_slice_on_plate.py -o {output.METADATA} -c {input[0]} -n {wildcards.NAME}
+        mkdir -p {params.output_directory}
+        python sample_spherical_solution.py \\
+          --center 0.0 0.0 0.0 \\
+          --radius 0.079 \\
+          --output {output} \\
+          --config {input.correction} \\
+          --grid {input.grid} \\
+          --fill 0 \\
+          --quiet
         """
 
 
-rule sample_finite_slice:
+rule TUTORIAL_CASE_STUDY_FENICS_LFCOR:
     input:
-		    "FEM/solutions/paper/finite_slice/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/finite_slice/{CONFIG}.ini"
+        electrodes="data/bundled/electrode_locations/tutorial/case_study.csv",
+        mesh_paths=lambda wildcards: [
+                    os.path.join(MESH_DIR,
+                                 f"{wildcards.geometry}{'_csf_3_mm__plain' if wildcards.geometry == 'four_spheres' else '__composite'}",
+                                 f"normal{suffix}.{ext}")
+                    for suffix in ["", "_subdomains", "_boundaries"]
+                    for ext in ["xdmf", "h5"]],
+        config=lambda wildcards: f"data/bundled/model_properties/{wildcards.geometry}{'_csf_3_mm' if wildcards.geometry == 'four_spheres' else ''}__Naess_Chintaluri_2017.ini"
     output:
-		    "FEM/solutions/paper/finite_slice/{CONFIG}_sampled/{K}/{NAME}.npz"
-    resources:
-        mem_mb=get_mem_mb_exponential()
-    shell:
-        """
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_sample_slice_solution.py -o {output} -c {input.CONFIG} -n {wildcards.NAME} -r 0.0003 -k {wildcards.K}
-        """
-
-
-rule Paper_solve_n_concentric_spheres:
-    input:
-        "FEM/fem_configs/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}.ini"
-    output:
-        "FEM/solutions/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}/{NAME}.h5", METADATA="FEM/solutions/paper/{N}SM{MODIFIER}/{MESH}/{CONFIG}/{NAME}.ini"
-    wildcard_constraints:
-        MODIFIER=".*"
-    resources:
-        mem_mb=get_mem_mb_exponential()
-    shell:
-        """
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_solve_sphere_on_plate.py -o {output.METADATA} -c {input[0]} -n {wildcards.NAME} -g -0.088
-        """
-
-
-rule sample_1SM:
-    input:
-		    "FEM/solutions/paper/1SM/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/1SM/{CONFIG}.ini"
-    output:
-		    "FEM/solutions/paper/1SM/{CONFIG}_sampled/{K}/{NAME}.npz"
-    resources:
-        mem_mb=get_mem_mb_exponential()
-    shell:
-        """
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_sample_spherical_solution.py -o {output} -c {input.CONFIG} -n {wildcards.NAME} -f 0 -r 0.090 -k {wildcards.K}
-        """
-
-
-rule sample_4SM:
-    input:
-		    "FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}/{NAME}.h5", CONFIG="FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}.ini"
-    output:
-		    "FEM/solutions/paper/4SM{MODIFIER}/{CONFIG}_sampled/{K}/{NAME}.npz"
-    wildcard_constraints:
-        MODIFIER=".*"
-    resources:
-        mem_mb=get_mem_mb_exponential()
-    shell:
-        """
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_sample_spherical_solution.py -o {output} -c {input.CONFIG} -n {wildcards.NAME} -f 0 -r 0.079 -k {wildcards.K}
-        """
-
-
-rule tutorial_case_study_trigger:
-    input: ["FEM/solutions/tutorial/case_study/sampled/9/{}.npz".format(name) for name in ['LZ_01', 'LZ_10', 'LAM_08', 'LAM_09', 'LPM_01', 'LPM_02', 'LPM_03', 'LPM_04', 'LPM_05', 'LZ_11', 'LK_01', 'LK_02', 'LK_03', 'LK_04', 'LK_05', 'LZ_12', 'LK_06', 'LK_07', 'LK_08', 'LK_09', 'LK_10', 'LK_11', 'RB_01', 'RB_02', 'LZ_13', 'LZ_14', 'LA_01', 'LA_02', 'LA_03', 'LZ_02', 'LA_04', 'LA_05', 'LA_06', 'LA_07', 'LA_08', 'LA_09', 'LA_10', 'LA_11', 'LA_12', 'LZ_03', 'LB_01', 'LB_02', 'LB_03', 'LB_04', 'LB_05', 'LB_06', 'LB_07', 'LB_08', 'LB_09', 'LZ_04', 'LB_10', 'LB_11', 'LB_12', 'LB_13', 'LB_14', 'LB_15', 'LC_01', 'LC_02', 'LC_03', 'LZ_05', 'LC_04', 'LC_05', 'LC_06', 'LC_07', 'LC_08', 'LC_09', 'LC_10', 'LC_11', 'LC_12', 'LZ_06', 'LP_01', 'LP_02', 'LP_03', 'LP_04', 'LP_05', 'LP_06', 'LP_07', 'LP_08', 'LP_09', 'LZ_07', 'LP_10', 'LP_11', 'LP_12', 'LP_13', 'LV_01', 'LV_02', 'LV_03', 'LZ_08', 'LV_04', 'LV_05', 'LV_06', 'LV_07', 'LV_08', 'LV_09', 'LV_10', 'LV_11', 'LV_12', 'LV_13', 'LZ_09', 'LV_14', 'LV_15', 'LV_16', 'LAM_01', 'LAM_02', 'LAM_03', 'LAM_04', 'LAM_05', 'LAM_06', 'LAM_07']]
-    output: ".tutorial_case_study"
-    shell: "touch {output}"
-
-
-rule tutorial_case_study_sample:
-    input:
-		    "FEM/solutions/tutorial/case_study/{NAME}.h5", CONFIG="FEM/solutions/tutorial/case_study/{NAME}.ini"
-    output:
-		    "FEM/solutions/tutorial/case_study/sampled/{K}/{NAME}.npz"
-    resources:
-        mem_mb=get_mem_mb_exponential(7_500)
-    shell:
-        """
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_sample_spherical_solution.py -o {output} -c {input.CONFIG} -f 0 -r 0.079 -k {wildcards.K}
-        """
-
-rule tutorial_case_study_solve:
-    input:
-        ELECTRODES="FEM/electrode_locations/tutorial/case_study.ini", MESH="FEM/meshes/meshes/four_spheres_csf_3_mm_plain/coarse.xdmf", CONFIG="FEM/model_properties/four_spheres_csf_3_mm.ini"
-    output:
-        "FEM/solutions/tutorial/case_study/{NAME}.h5", METADATA="FEM/solutions/tutorial/case_study/{NAME}.ini"
+        TUTORIAL_FENICS_LFCOR_H5.replace("{setup}", "{setup,case_study_}{geometry}"),
+        metadata=TUTORIAL_FENICS_LFCOR_METADATA.replace("{setup}",
+                                                        "{setup,case_study_}{geometry}")
     resources:
         mem_mb=get_mem_mb_exponential(15_000)
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output.metadata))
     shell:
         """
+        mkdir -p {params.output_directory}
         ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_solve_sphere_on_plate.py \
-          --mesh {input.MESH} \
-          --degree 3 \
-          --config {input.CONFIG} \
-          --grounded-plate-edge-z -0.088 \
-          --electrodes {input.ELECTRODES} \
-          --name {wildcards.NAME} \
-          --output {output.METADATA}
+        python solve_sphere_on_plate.py \\
+          --mesh {input.mesh_paths[0]} \\
+          --degree 1 \\
+          --config {input.config} \\
+          --electrodes {input.electrodes} \\
+          --name {wildcards.name} \\
+          --output {output.metadata}
         """
 
 
-rule paper_slice_trigger:
-    input: ["FEM/solutions/paper/circular_slice/{{MESH}}/{{DEGREE}}/sampled/9/{}_0_{}.npz".format(x, z) for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
-    output: ".paper_slice_{MESH}_{DEGREE,\d}"
-    shell: "touch {output}"
-
-
-rule paper_slice_sample:
-    input:
-		    "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/{NAME}.h5", CONFIG="FEM/solutions/paper/circular_slice/{MESH}/{DEGREE}/{NAME}.ini"
+rule TUTORIAL_CASE_STUDY_SAMPLING_GRID:
     output:
-		    "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE,\d}/sampled/{K,\d+}/{NAME}.npz"
-    resources:
-        mem_mb=get_mem_mb_exponential(7_500)
+        TUTORIAL_SAMPLED_LFCOR_GRID.format(setup="{setup,case_study.+}")
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
     shell:
         """
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_sample_slice_solution.py -o {output} -c {input.CONFIG} -f 0 -r 0.0003 -k {wildcards.K}
+        mkdir -p {params.output_directory}
+        python create_grid.py \\
+          --grid {output} \\
+          --coords XYZ \\
+          --start -0.079 \\
+          --end 0.079 \\
+          -k 7
         """
 
 
-rule paper_slice_solve:
-    input:
-        ELECTRODES="FEM/electrode_locations/paper/circular_slice/grid_3d.ini", MESH_PATH="FEM/meshes/meshes/circular_slice/{MESH}.xdmf", CONFIG="FEM/model_properties/circular_slice.ini"
-    output:
-        "FEM/solutions/paper/circular_slice/{MESH}/{DEGREE,\d}/{NAME}.h5", METADATA="FEM/solutions/paper/circular_slice/{MESH}/{DEGREE,\d}/{NAME}.ini"
-    resources:
-        mem_mb=get_mem_mb_exponential(15_000)
-    shell:
-        """
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_solve_slice_on_plate.py \
-          --mesh {input.MESH_PATH} \
-          --degree {wildcards.DEGREE} \
-          --config {input.CONFIG} \
-          --ground-potential 0.0 \
-          --electrodes {input.ELECTRODES} \
-          --name {wildcards.NAME} \
-          --output {output.METADATA}
-        """
-
-
-#rule paper_composite_slice_solve:
-#    input:
-#        ELECTRODES="FEM/electrode_locations/paper/circular_slice/grid_3d.ini", MESH_PATH="FEM/meshes/circular_slice_composite.xdmf", CONFIG="FEM/model_properties/circular_slice.ini"
-#    output:
-#        "FEM/solutions/paper/circular_slice/composite/{DEGREE,\d}/{NAME}.h5", METADATA="FEM/solutions/paper/circular_slice/composite/{DEGREE,\d}/{NAME}.ini"
-#    resources:
-#        mem_mb=get_mem_mb_exponential(15_000)
-#    shell:
-#        """
-#        ulimit -v $(({resources.mem_mb} * 1024))
-#        python paper_solve_slice_on_plate.py \
-#          --mesh {input.MESH_PATH} \
-#          --degree {wildcards.DEGREE} \
-#          --config {input.CONFIG} \
-#          --ground-potential 0.0 \
-#          --electrodes {input.ELECTRODES} \
-#          --name {wildcards.NAME} \
-#          --output {output.METADATA}
-#        """
-
-
-
-rule paper_4SM_trigger:
-    input: ["FEM/solutions/paper/four_spheres_{{GEOMETRY}}/{{MESH}}/{{DEGREE}}/sampled/9/{}_{:02d}.npz".format(x, z) for x in ['B', 'D'] for z in range(0, 12)]
-    output: ".paper_four_spheres_{GEOMETRY}_{MESH}_{DEGREE,\d}"
-    shell: "touch {output}"
-
-
-rule paper_4SM_sample:
-    input:
-		    "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/{NAME}.h5", CONFIG="FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE}/{NAME}.ini"
-    output:
-		    "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE,\d}/sampled/{K,\d+}/{NAME}.npz"
-    resources:
-        mem_mb=get_mem_mb_exponential(7_500)
-    shell:
-        """
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_sample_spherical_solution.py -o {output} -c {input.CONFIG} -f 0 -r 0.079 -k {wildcards.K}
-        """
-
-
-rule paper_4SM_solve:
-    input:
-        ELECTRODES="FEM/electrode_locations/paper/four_spheres/comb.ini", MESH_PATH="FEM/meshes/meshes/four_spheres_{GEOMETRY}_plain/{MESH}.xdmf", CONFIG="FEM/model_properties/four_spheres_{GEOMETRY}.ini"
-    output:
-        "FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE,\d}/{NAME}.h5", METADATA="FEM/solutions/paper/four_spheres_{GEOMETRY}/{MESH}/{DEGREE,\d}/{NAME}.ini"
-    resources:
-        mem_mb=get_mem_mb_exponential(15_000)
-    shell:
-        """
-        ulimit -v $(({resources.mem_mb} * 1024))
-        python paper_solve_sphere_on_plate.py \
-          --mesh {input.MESH_PATH} \
-          --degree {wildcards.DEGREE} \
-          --config {input.CONFIG} \
-          --grounded-plate-edge-z -0.088 \
-          --electrodes {input.ELECTRODES} \
-          --name {wildcards.NAME} \
-          --output {output.METADATA}
-        """
-
-
-rule paper_4SM_forward:
+rule RECONSTRUCTION_ERRORS:
    input:
-       ELECTRODES="{SRC_DIR}/electrodes.csv",
-       SOURCES="{SRC_DIR}/{NAME}.npz",
-       MESH_PATH="FEM/meshes/meshes/four_spheres_{GEOMETRY}_plain/{MESH}.xdmf",
-       CONFIG="FEM/model_properties/four_spheres_{GEOMETRY}.ini"
+       csd=RECONSTRUCTION_ERRORS_CSD,
+       reference=CSD_SOURCES
    output:
-       "{SRC_DIR}/images/four_spheres_{GEOMETRY}/{MESH}/{DEGREE,\d}/{NAME}.csv"
+       protect_transfer_matrix(RECONSTRUCTION_ERRORS.replace(
+                              "{reconstruction_path}", "{reconstruction_path,[^/]+/[^/]+/[^/]+/k(ESI/[^/]+/[^/]+/[^/]+|CSD)/[^/]+(/[^/]+)?}"))
+   params:
+       output_directory=lambda wildcards, output: os.path.dirname(str(output)),
    shell:
        """
-       python paper_forward_model_four_spheres.py \
-         --mesh {input.MESH_PATH} \
-         --degree {wildcards.DEGREE} \
-         --config {input.CONFIG} \
-         --grounded-plate-edge-z -0.088 \
-         --electrodes {input.ELECTRODES} \
-         --sources {input.SOURCES} \
+       mkdir -p {params.output_directory}
+       python calculate_errors.py \\
+         --csd {input.csd} \\
+         --reference {input.reference} \\
          --output {output}
        """
 
 
-rule paper_fair_sources:
-    input:
-        [f"{{PATH}}/{method}_{data}.npz" for method in ['kCSD', 'kESI'] for data in ['analysis', 'eigensources']]
-    output:
-        "{PATH}/fair_sources.npz"
-    params:
-        PREFIXES=[f"{{PATH}}/{method}" for method in ['kCSD', 'kESI']]
-    shell:
-        "python paper_mix_eigensources.py -o {output} {params.PREFIXES}"
-
-
-PAPER_INPUT_DIR = "FEM/solutions/paper"
-PAPER_IMAGES_DIR = "FEM/solutions/paper/images"
-
-PAPER_4SM_ELECTRODES = [f'{x}_{i:02d}' for i in range(0, 12) for x in ['B', 'D']]
-PAPER_4SM_OUTPUT_DIR = f"{PAPER_IMAGES_DIR}/four_spheres_{{GEOMETRY}}/{{MESH}}/{{DEGREE,\d}}/kernels/{{K,\\d+}}"
-PAPER_4SM_OUTPUT = [f'{PAPER_4SM_OUTPUT_DIR}/{name}' for name in (['electrodes.csv', 'src_mask.npz'] + [f'{method}_{data}.npz' for method in ['kCSD', 'kESI'] for data in ['phi', 'kernel', 'crosskernel', 'analysis', 'eigensources']])]
-PAPER_4SM_INPUT_DIR = f"{PAPER_INPUT_DIR}/four_spheres_{{GEOMETRY}}/{{MESH}}/{{DEGREE}}/sampled/{{K}}"
-
-rule paper_4SM_kernel:
-    input:
-        [f"{PAPER_4SM_INPUT_DIR}/{name}.npz" for name in PAPER_4SM_ELECTRODES]
-    output:
-        PAPER_4SM_OUTPUT
-    params:
-        INPUT_DIR=PAPER_4SM_INPUT_DIR,
-        ELECTRODES=PAPER_4SM_ELECTRODES,
-        OUTPUT_DIR='FEM/solutions/paper/images/four_spheres_{GEOMETRY}/{MESH}/{DEGREE,\d}/kernels/{K,\d+}'
-    shell:
-        """
-        mkdir -p {params.OUTPUT_DIR}
-        python paper_calculate_kernels_four_spheres.py \
-          --output {params.OUTPUT_DIR} \
-          --input {params.INPUT_DIR} \
-          -k 5 \
-          {params.ELECTRODES}
-        """
-
-
-PAPER_SLICE_ELECTRODES = ["{}_0_{}".format(x, z) for x in ['minus12', '12'] for z in [6, 12, 18, 24, 30, 36, 42, 48, 54, 60]]
-PAPER_SLICE_OUTPUT_DIR = f"{PAPER_IMAGES_DIR}/circular_slice/{{MESH}}/{{DEGREE,\d}}/kernels/{{K,\\d+}}"
-PAPER_SLICE_OUTPUT = [f'{PAPER_SLICE_OUTPUT_DIR}/{name}' for name in (['electrodes.csv', 'src_mask.npz'] + [f'{method}_{data}.npz' for method in ['kCSD', 'kESI'] for data in ['phi', 'kernel', 'crosskernel', 'analysis', 'eigensources']])]
-PAPER_SLICE_INPUT_DIR = f"{PAPER_INPUT_DIR}/circular_slice/{{MESH}}/{{DEGREE}}/sampled/{{K}}"
-
-rule paper_slice_kernel:
-    input:
-        [f"{PAPER_SLICE_INPUT_DIR}/{name}.npz" for name in PAPER_SLICE_ELECTRODES]
-    output:
-        PAPER_SLICE_OUTPUT
-    params:
-        INPUT_DIR=PAPER_SLICE_INPUT_DIR,
-        ELECTRODES=PAPER_SLICE_ELECTRODES,
-        OUTPUT_DIR=PAPER_SLICE_OUTPUT_DIR
-    shell:
-        """
-        mkdir -p {params.OUTPUT_DIR}
-        python paper_calculate_kernels_slice.py \
-          --output {params.OUTPUT_DIR} \
-          --input {params.INPUT_DIR} \
-          -k 6 \
-          --thickness 0.0003 \
-          {params.ELECTRODES}
-        """
-
-
-rule paper_slice_forward:
+rule RECONSTRUCTION_REGULARIZED:
    input:
-       ELECTRODES="{SRC_DIR}/electrodes.csv",
-       SOURCES="{SRC_DIR}/{NAME}.npz",
-       MESH_PATH="FEM/meshes/meshes/circular_slice/{MESH}.xdmf",
-       CONFIG="FEM/model_properties/circular_slice.ini"
+       kernel=RECONSTRUCTION_KERNEL,
+       crosskernel=RECONSTRUCTION_CROSSKERNEL,
+       potentials=CSD_FORWARD,
+       cross_validation=RECONSTRUCTION_CV
    output:
-       "{SRC_DIR}/images/circular_slice/{MESH}/{DEGREE,\d}/{NAME}.csv"
+       protect_transfer_matrix(RECONSTRUCTION_REGULARIZED.replace(
+                              "{kernel_path}", "{kernel_path,[^/]+/[^/]+/[^/]+/k(ESI/[^/]+/[^/]+/[^/]+|CSD)/[^/]+}"))
+   params:
+       output_directory=lambda wildcards, output: os.path.dirname(str(output)),
    shell:
        """
-       python paper_forward_model_slice.py \
-         --mesh {input.MESH_PATH} \
-         --degree {wildcards.DEGREE} \
-         --config {input.CONFIG} \
-         --ground-potential 0.0 \
-         --electrodes {input.ELECTRODES} \
-         --sources {input.SOURCES} \
-         --output {output} \
+       mkdir -p {params.output_directory}
+       python reconstruct_csds.py \\
+         --potentials {input.potentials} \\
+         --kernel {input.kernel} \\
+         --crosskernel {input.crosskernel} \\
+         --cross-validation {input.cross_validation} \\
+         --output {output}
+       """
+
+
+def get_cv_command(wildcards):
+    start, stop, n = wildcards.regularization.split("_")
+    return f"cv_potentials.py -s {start.replace('n', '-').replace('m', '-')} -e {stop.replace('n', '-').replace('m', '-')} -n {n}"
+
+
+rule RECONSTRUCTION_CV:
+   input:
+       kernel=RECONSTRUCTION_KERNEL,
+       potentials=CSD_FORWARD
+   output:
+       protect_transfer_matrix(RECONSTRUCTION_CV.replace(
+                              "{kernel_path}", "{kernel_path,[^/]+/[^/]+/[^/]+/k(ESI/[^/]+/[^/]+/[^/]+|CSD)/[^/]+}"))
+   params:
+       output_directory=lambda wildcards, output: os.path.dirname(str(output)),
+       command=get_cv_command
+   shell:
+       """
+       mkdir -p {params.output_directory}
+       python {params.command} \\
+         --potentials {input.potentials} \\
+         --kernel {input.kernel} \\
+         --output {output}
+       """
+
+
+rule RECONSTRUCTION_UNREGULARIZED:
+   input:
+       kernel=RECONSTRUCTION_KERNEL,
+       crosskernel=RECONSTRUCTION_CROSSKERNEL,
+       potentials=CSD_FORWARD
+   output:
+       protect_transfer_matrix(RECONSTRUCTION_UNREGULARIZED.replace(
+                              "{kernel_path}", "{kernel_path,[^/]+/[^/]+/[^/]+/k(ESI/[^/]+/[^/]+/[^/]+|CSD)/[^/]+}"))
+   params:
+       output_directory=lambda wildcards, output: os.path.dirname(str(output)),
+   shell:
+       """
+       mkdir -p {params.output_directory}
+       python reconstruct_csds.py \\
+         --potentials {input.potentials} \\
+         --kernel {input.kernel} \\
+         --crosskernel {input.crosskernel} \\
+         --output {output}
+       """
+
+
+def get_mesh_getter(mesh_attr="mesh"):
+    def solver(wildcards):
+        wildcard_mesh = getattr(wildcards, mesh_attr)
+        if '__' in wildcard_mesh:
+            type, granularity = wildcard_mesh.split('__')
+            mesh = f"{wildcards.geometry}__{type}"
+        else:
+            granularity = wildcard_mesh
+            mesh = wildcards.geometry
+        return [os.path.join(MESH_DIR,
+                             mesh,
+                             f"{granularity}{suffix}.{ext}")
+                for suffix in ["", "_subdomains", "_boundaries"]
+                for ext in ["xdmf", "h5"]]
+
+    return solver
+
+def get_solver_script_getter(prefix="solve_"):
+    def getter(wildcards):
+        if "_slice" in wildcards.geometry:
+            return f"""{prefix}slice_on_plate.py \\
+              --ground-potential 0.0"""
+
+        if "_sphere" in wildcards.geometry:
+            return f"""{prefix}sphere_on_plate.py \\
+              --grounded-plate-edge-z -0.088"""
+
+    return getter
+
+
+rule CSD_FORWARD:
+   input:
+       electrodes=KERNEL_SUBSETUP_ELECTRODES,
+       sources=CSD_SOURCES,
+       mesh_paths=get_mesh_getter("fwd_mesh"),
+       config=os.path.join(PROP_DIR, "{geometry}__{conductivity}.ini")
+   output:
+       protect_transfer_matrix(
+              CSD_FORWARD.replace("{fwd_model}",  "{geometry}__{conductivity}"))
+   params:
+       command=get_solver_script_getter("forward_"),
+       output_directory=lambda wildcards, output: os.path.dirname(str(output))
+   shell:
+       """
+       mkdir -p {params.output_directory}
+       python {params.command} \\
+         --mesh {input.mesh_paths[0]} \\
+         --degree {wildcards.fwd_degree} \\
+         --config {input.config} \\
+         --electrodes {input.electrodes} \\
+         --sources {input.sources} \\
+         --output {output} \\
          --quiet
        """
 
 
-#rule paper_composite_slice_forward:
-#   input:
-#       ELECTRODES="{SRC_DIR}/electrodes.csv",
-#       SOURCES="{SRC_DIR}/{NAME}.npz",
-#       MESH_PATH="FEM/meshes/circular_slice_composite.xdmf",
-#       CONFIG="FEM/model_properties/circular_slice.ini"
-#   output:
-#       "{SRC_DIR}/images/circular_slice/composite/{DEGREE,\d}/{NAME}.csv"
-#   shell:
-#       """
-#       python paper_forward_model_slice.py \
-#         --mesh {input.MESH_PATH} \
-#         --degree {wildcards.DEGREE} \
-#         --config {input.CONFIG} \
-#         --ground-potential 0.0 \
-#         --electrodes {input.ELECTRODES} \
-#         --sources {input.SOURCES} \
-#         --output {output} \
-#         --quiet
-#       """
+rule CSD_EIGENSOURCES_mixed:
+    # WARNING: Undocumented feature used!
+    # The rule may crash if Snakemake implementation changes.  In that case:
+    #  - change dict comprehension to list comprehension (dict values),
+    #  - change `input.kESI_analysis` to `input[0]`,
+    #  - change `input.kESI_eigensources` to `input[1]`,
+    #  - change `input.kCSD_analysis` to `input[2]`,
+    #  - change `input.kCSD_eigensources` to `input[3]`.
+    # Note that the order of kESI/kCSD may change safely as long as the change
+    # is consistent.
+    # Try `--analysis {input[::2]} --eigensources {input[1::2]}`
+    input:
+        **{f"{method}_{file}": path.replace("{path}", PATH.path(method))
+           for method in PATH
+           for file, path in [("analysis", KERNEL_FILES["analysis"]),
+                              ("eigensources", CSD_EIGENSOURCES)]}
+    output:
+        CSD_EIGENSOURCES.replace("{path}",
+                                 os.path.join("mixed",
+                                              PATH["kCSD"],
+                                              PATH["kESI"]))
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        python mix_eigensources.py \\
+          --output {output} \\
+          --analysis {input.kCSD_analysis} {input.kESI_analysis} \\
+          --eigensources {input.kCSD_eigensources} {input.kESI_eigensources}
+        """
 
 
-MESH_DIR = "FEM/meshes/"
+rule CSD_EIGENSOURCES:
+    input:
+        analysis=KERNEL_FILES["analysis"],
+        centroids=PBF_CENTROIDS,
+        source=PBF_MODEL_SRC,
+        grid_csd=KERNEL_CSD_GRID
+    output:
+        protect_transfer_matrix(CSD_EIGENSOURCES)
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        python calculate_volumetric_eigensources.py \\
+          --output {output} \\
+          --input {input.analysis} \\
+          --centroids {input.centroids} \\
+          --source {input.source} \\
+          --grid {input.grid_csd}
+        """
 
-rule GEO:
-    input: f'{MESH_DIR}{{mesh_name}}.geo'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/mesh.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      cp {{input}} {{output}}
-      """
+
+def get_kernel_electrodes(wildcards):
+    if wildcards.subsetup == "paper":
+        if wildcards.setup == "paper__circular_slice__grid_3d":
+            return PAPER_SLICE_ELECTRODES
+
+        elif wildcards.setup == "paper__four_spheres__comb":
+            return PAPER_4SM_ELECTRODES
+
+        elif wildcards.setup == "paper__single_sphere__comb":
+            return PAPER_1SM_ELECTRODES
+        elif wildcards.setup.endswith("case_study"):
+            return TUTORIAL_CASE_STUDY_ELECTRODES
+
+
+def get_kernel_electrodes_paths(wildcards):
+    pattern = os.path.join(PBF_DIR_PATTERN.replace("{", "{w.").format(
+                                                                   w=wildcards),
+                           "{}.npz")
+    return list(map(pattern.format, get_kernel_electrodes(wildcards)))
+
+
+rule KERNEL_CROSSKERNEL:
+    input:
+        get_kernel_electrodes_paths,
+        centroids=PBF_CENTROIDS,
+        source=PBF_MODEL_SRC,
+        grid_csd=KERNEL_CSD_GRID
+    output:
+        protect_transfer_matrix(KERNEL_CROSSKERNEL)
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output)),
+        names=lambda wildcards, output: get_kernel_electrodes(wildcards),
+        input_directory=PBF_DIR_PATTERN
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        python calculate_volumetric_crosskernel.py \\
+          --output {output} \\
+          --input {params.input_directory} \\
+          --centroids {input.centroids} \\
+          --source {input.source} \\
+          --grid {input.grid_csd} \\
+          {params.names}
+        """
+
+
+rule KERNEL_CSD_GRID_as_LF:
+    input:
+        SAMPLED_LFCOR_GRID
+    output:
+        replace(KERNEL_CSD_GRID,
+                {"setup}": "setup,[^/]*}",
+                 "{csd_grid}": "as_sampled_leadfield_correction__{sampling}"})
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        cp {input} {output}
+        """
+
+
+rule KERNEL:
+    # WARNING: Undocumented feature used!
+    # The rule may crash if Snakemake implementation changes.  In that case:
+    #  - change dict comprehension to list comprehension (dict values sorted in
+    #    order given by `KERNEL_FILES_KEYS`),
+    #  - change `output.kernel` to `output[0]`,
+    #  - change `output.analysis` to `output[1]`.
+    #  - change `output.potential_basis_functions` to `output[2]` if present,
+    input:
+        get_kernel_electrodes_paths,
+        electrodes=KERNEL_SUBSETUP_ELECTRODES
+    output:
+        **{k: protect_transfer_matrix(v) for k, v in KERNEL_FILES.items()}
+    params:
+        output_directory=KERNEL_DIR,
+        input_directory=PBF_DIR_PATTERN
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        python calculate_kernel.py \\
+          --kernel {output.kernel} \\
+          --analysis {output.analysis} \\
+          --input {params.input_directory} \\
+          --electrodes {input.electrodes}
+        """
+#           --pbf {output.potential_basis_functions} \\
+
+
+rule KERNEL_ELECTRODES:
+    input:
+        SETUP_ELECTRODES
+    output:
+        KERNEL_SUBSETUP_ELECTRODES
+    run:
+        import pandas as pd
+
+        os.makedirs(os.path.dirname(str(output)),
+                    mode=0o755,
+                    exist_ok=True)
+        DF = pd.read_csv(str(input),
+                         index_col="NAME")
+
+        DF.loc[get_kernel_electrodes(wildcards)].to_csv(str(output))
+
+
+rule PBF_KESI:
+    input:
+        SAMPLED_LFCOR,
+        centroids=PBF_CENTROIDS,
+        source=PBF_MODEL_SRC
+    output:
+        PBF_KESI
+    params:
+        output_directory=os.path.dirname(PBF_KESI),
+        input_directory=SAMPLED_LFCOR_DIR
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        python calculate_kesi_potential_basis_function.py {wildcards.name} \\
+          --output {params.output_directory} \\
+          --input {params.input_directory} \\
+          --centroids {input.centroids} \\
+          --source {input.source}
+        """
+
+
+rule PBF_KCSD:
+    input:
+        centroids=PBF_CENTROIDS,
+        source=PBF_MODEL_SRC,
+        electrodes=SETUP_ELECTRODES
+    output:
+        PBF_KCSD.replace("{conductivity}", r"{conductivity,\d+(\.\d*)}")
+    params:
+        output_directory=os.path.dirname(PBF_KCSD)
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        python calculate_kcsd_potential_basis_function.py {wildcards.name} \\
+          --output {params.output_directory} \\
+          --centroids {input.centroids} \\
+          --source {input.source} \\
+          --electrodes {input.electrodes} \\
+          --conductivity {wildcards.conductivity}
+        """
+
+
+rule SAMPLED_LFCOR_GRID_CROPPED:
+    input:
+        centroids=PBF_CENTROIDS,
+        source=PBF_MODEL_SRC,
+        grid=SAMPLED_LFCOR_GRID
+    output:
+        SAMPLED_LFCOR_GRID.replace("{sampling}",
+                                   "cropped___{sampling}___{basis_functions}")
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        python crop_grid_to_sources.py \\
+          --input {input.grid} \\
+          --output {output} \\
+          --centroids {input.centroids} \\
+          --source {input.source}
+        """
+
+
+_PBF_CENTROIDS_FORMAT = {
+             "setup": "paper__{geometry}__{electrodes}",
+             "basis_functions": "{sampling}__{function_set}__{type}_r_{radius}",
+             }
+
+PBF_CENTROIDS_paper = PBF_CENTROIDS.format(**_PBF_CENTROIDS_FORMAT)
+
+rule PBF_CENTROIDS_paper:
+    input:
+        SAMPLED_LFCOR_GRID.replace("{setup}", "paper__{geometry}__{electrodes}")
+    output:
+        PBF_CENTROIDS_paper.replace("{radius}", r"{radius,\d+(\.\d*)?}")
+    run:
+        import numpy as np
+
+        grid_filename = str(output)
+        os.makedirs(os.path.dirname(grid_filename),
+                    exist_ok=True)
+
+        src_r = float(wildcards.radius)
+
+        with np.load(str(input)) as fh:
+            XX, YY, ZZ = [fh[c].flatten() for c in "XYZ"]
+
+        if wildcards.geometry == "circular_slice":
+            h = 0.3e-3
+            h_y = h / 4
+            X = XX[(XX >= XX.min() + src_r)
+                   & (XX <= XX.max() - src_r)].reshape(-1, 1, 1)
+            Y = YY[(YY >= max(YY.min() + src_r, -h_y))
+                   & (YY <= min(YY.max() - src_r, h_y))].reshape(1, -1, 1)
+            Z = ZZ[(ZZ >= max(ZZ.min(), 0) + src_r)
+                   & (ZZ <= min(ZZ.max(), h) - src_r)].reshape(1, 1, -1)
+            MASK = np.ones((X.size, Y.size, Z.size),
+                           dtype=bool)
+
+        elif "sphere" in wildcards.geometry:
+            brain_r = 0.079  # NOTE that brain_r for 1SM ia same as for 4SM
+            if wildcards.electrodes == "comb":
+                h_x = 2e-2
+                h_y = 2e-2
+                h_z = 2.5e-2
+                X = XX[(XX >= max(XX.min() + src_r, -h_x))
+                       & (XX <= min(XX.max() - src_r, h_x))].reshape(-1, 1, 1)
+                Y = YY[(YY >= max(YY.min() + src_r, -h_y))
+                       & (YY <= min(YY.max() - src_r, h_y))].reshape(1, -1, 1)
+                Z = ZZ[(ZZ >= max(ZZ.min() + src_r, h_z))
+                       & (ZZ <= min(ZZ.max(), brain_r) - src_r)].reshape(1, 1, -1)
+            elif wildcards.electrodes == "case_study":
+                X = XX[(XX >= XX.min() + src_r)
+                       & (XX <= XX.max() - src_r)].reshape(-1, 1, 1)
+                Y = YY[(YY >= YY.min() + src_r)
+                       & (YY <= YY.max() - src_r)].reshape(1, -1, 1)
+                Z = ZZ[(ZZ >= ZZ.min() + src_r)
+                       & (ZZ <= ZZ.max() - src_r)].reshape(1, 1, -1)
+            MASK = (np.square(X)
+                    + np.square(Y)
+                    + np.square(Z)
+                    <= np.square(brain_r - src_r))
+
+        np.savez_compressed(grid_filename,
+                            X=X,
+                            Y=Y,
+                            Z=Z,
+                            MASK=MASK)
+
+
+PBF_MODEL_SRC_kesi_bundle = PBF_MODEL_SRC.format(
+                   setup="{setup}__{geometry}__{electrodes}",
+                   basis_functions="{grid}__kESI_bundle__{basis_function}")
+
+rule PBF_MODEL_SRC_kesi_bundle:
+    input:
+        os.path.join(CSD_BASIS_DIR,
+                     "{setup}",
+                     "{geometry}",
+                     "{basis_function}.json")
+    output:
+        PBF_MODEL_SRC_kesi_bundle
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        cp {input} {output}
+        """
+
+
+PBF_MODEL_SRC_kesi_sigmoid = PBF_MODEL_SRC.format(
+                   setup="{setup}__{geometry}__{electrodes}",
+                   basis_functions="{grid}__kESI_generated__sigmoid_r_{radius}")
+
+rule PBF_MODEL_SRC_kesi_generated_sigmoid:
+    output:
+        PBF_MODEL_SRC_kesi_sigmoid
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        python create_model_src.py \\
+          --definition {output} \\
+          --radius {wildcards.radius}
+        """
+
+
+def get_sampled_lfcor_paper_command(wildcards):
+    if "slice" in wildcards.model:
+        return "sample_volumetric_solution.py"
+
+    if "single_sphere" in wildcards.model:
+        return """sample_spherical_solution.py \\
+          --center 0.0 0.0 0.0 \\
+          --radius 0.090"""
+
+    if "four_spheres" in wildcards.model:
+        return """sample_spherical_solution.py \\
+          --center 0.0 0.0 0.0 \\
+          --radius 0.079"""
+
+rule SAMPLED_LFCOR_paper:
+    input:
+        FENICS_LFCOR_H5,
+        grid=SAMPLED_LFCOR_GRID,
+        correction=FENICS_LFCOR_METADATA
+    output:
+        SAMPLED_LFCOR.replace("{setup}", "{setup,paper_.+}")
+    params:
+        command=get_sampled_lfcor_paper_command,
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        python {params.command} \\
+          --output {output} \\
+          --config {input.correction} \\
+          --grid {input.grid} \\
+          --fill 0 \\
+          --quiet
+        """
+
+
+def get_sampled_lfcor_grid_paper_volume(wildcards):
+    if "slice" in wildcards.setup:
+        h = 300e-6
+        start = [-h/2, -h/2, 0]
+        end = [h/2, h/2, h]
+    elif "sphere" in wildcards.setup:
+        if "single_sphere" in wildcards.setup:
+            r = 90e-3
+        else:
+            r = 79e-3
+
+        start = [-r]
+        end = [r]
+
+    return f"""--start {" ".join(map("{:.20f}".format, start))} \\
+          --end {" ".join(map("{:.20f}".format, end))}"""
+
+rule SAMPLED_LFCOR_GRID_paper_romberg:
+    output:
+        SAMPLED_LFCOR_GRID.format(setup="{setup,paper.+}",
+                                  sampling="romberg_{k,\\d+}")
+    params:
+        volume=get_sampled_lfcor_grid_paper_volume,
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        python create_grid.py \\
+          --grid {output} \\
+          --coords XYZ \\
+          {params.volume} \\
+          -k {wildcards.k}
+        """
+
+
+rule FENICS_LFCOR_SOLVE:
+    input:
+        electrodes=SETUP_ELECTRODES,
+        mesh_paths=get_mesh_getter(),
+        config=FENICS_LFCOR_COND.replace("{model}",
+                                         "{geometry}__{conductivity}")
+    output:
+        FENICS_LFCOR_H5.replace("{model}",
+                                "{geometry}__{conductivity}"),
+        metadata=FENICS_LFCOR_METADATA.replace("{model}",
+                                               "{geometry}__{conductivity}")
+    resources:
+        mem_mb=get_mem_mb_exponential(15_000)
+    params:
+        command=get_solver_script_getter(),
+        output_directory=lambda wildcards, output: os.path.dirname(str(output.metadata))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        ulimit -v $(({resources.mem_mb} * 1024))
+        python {params.command} \\
+          --mesh {input.mesh_paths[0]} \\
+          --degree {wildcards.degree} \\
+          --config {input.config} \\
+          --electrodes {input.electrodes} \\
+          --name {wildcards.name} \\
+          --output {output.metadata}
+        """
+
+
+def setup_to_electrodes(wildcards):
+    prefix = os.path.join(ELE_DIR,
+                          *wildcards.setup.split("__"))
+    return f"{prefix}.csv"
+
+
+rule SETUP_ELECTRODES_CSV:
+    input:
+        setup_to_electrodes
+    output:
+        SETUP_ELECTRODES
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        cp {input} {output}
+        """
+
+
+rule FENICS_LFCOR_COND_INI:
+    input:
+        os.path.join(PROP_DIR, "{model}.ini")
+    output:
+        FENICS_LFCOR_COND
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        cp {input} {output}
+        """
+
+
+# rule GEO:
+#     input:
+#         f'{MESH_SRC_DIR}{{mesh_name}}.geo'
+#     output:
+#         f'{MESH_DIR}{{mesh_name}}/mesh.geo'
+#     shell:
+#         f"""
+#         mkdir -p {MESH_DIR}{{wildcards.mesh_name}}
+#         cp {{input}} {{output}}
+#         """
+
+GEO_circular_slice_composite_out = os.path.join(MESH_DIR,
+                                                "circular_slice/composite.geo")
 
 rule GEO_circular_slice_composite:
-    input: f'{MESH_DIR}circular_slice_composite.geo'
-    output: f'{MESH_DIR}meshes/circular_slice/composite.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/circular_slice
-      cp {{input}} {{output}}
-      """
+    input:
+        os.path.join(MESH_SRC_DIR, "circular_slice_composite.geo")
+    output:
+        GEO_circular_slice_composite_out
+    params:
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        cp {input} {output}
+        """
 
-rule GEO_NORMAL:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/normal.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/1.0/g' < {{input}} > {{output}}
-      """
 
-rule GEO_FINE:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/fine.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.5/g' < {{input}} > {{output}}
-      """
+def granularity_to_relative_element_size(wildcards):
+    sed_relative_element_size = {
+                                 "coarsest": 8.0,
+                                 "coarser": 4.0,
+                                 "coarse": 2.0,
+                                 "normal": 1.0,
+                                 "fine": 0.5,
+                                 "finer": 0.25,
+                                 "finest": 0.125,
+                                 "superfine": 0.0625,
+                                 "superfinest": 0.03125,
+                                 }
+    return sed_relative_element_size[wildcards.granularity]
 
-rule GEO_FINER:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/finer.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.25/g' < {{input}} > {{output}}
-      """
 
-rule GEO_FINEST:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/finest.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.125/g' < {{input}} > {{output}}
-      """
+rule GEO_TEMPLATE:
+    input:
+        os.path.join(MESH_SRC_DIR,
+                     "{mesh_name}.geo.template")
+    output:
+        os.path.join(MESH_DIR, "{mesh_name}", "{granularity}.geo")
+    params:
+        sed_relative_element_size=granularity_to_relative_element_size,
+        output_directory=lambda wildcards, output: os.path.dirname(str(output))
+    shell:
+        """
+        mkdir -p {params.output_directory}
+        sed 's/SED_RELATIVE_ELEMENT_SIZE/{params.sed_relative_element_size}/g' < {input} > {output}
+        """
 
-rule GEO_SUPERFINE:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/superfine.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.0625/g' < {{input}} > {{output}}
-      """
-
-rule GEO_SUPERFINER:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/superfiner.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/0.03125/g' < {{input}} > {{output}}
-      """
-
-rule GEO_COARSE:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/coarse.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/2.0/g' < {{input}} > {{output}}
-      """
-
-rule GEO_COARSER:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/coarser.geo'
-    shell: f"""
-      mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-      sed 's/SED_RELATIVE_ELEMENT_SIZE/4.0/g' < {{input}} > {{output}}
-      """
-
-rule GEO_COARSEST:
-    input: f'{MESH_DIR}{{mesh_name}}.geo.template'
-    output: f'{MESH_DIR}meshes/{{mesh_name}}/coarsest.geo'
-    shell: f"""
-       mkdir -p {MESH_DIR}meshes/{{wildcards.mesh_name}}
-       sed 's/SED_RELATIVE_ELEMENT_SIZE/8.0/g' < {{input}} > {{output}}
-       """
 
 rule MSH:
-    input: f'{MESH_DIR}{{mesh_name}}.geo'
-    output: f'{MESH_DIR}{{mesh_name}}.msh'
-    shell: 'gmsh -3 -optimize_netgen {input} || gmsh -3 -optimize {input} || gmsh -3 {input}'
+    input:
+        MESH_PATTERN.replace("{suffix}", ".geo")
+    output:
+        MESH_MSH
+    shell:
+        "gmsh -3 -optimize_netgen {input} || gmsh -3 -optimize {input} || gmsh -3 {input}"
+
 
 rule XDMF:
-    input: f'{MESH_DIR}{{mesh_name}}.msh'
-    output: mesh=f'{MESH_DIR}{{mesh_name}}.xdmf', subdomains=f'{MESH_DIR}{{mesh_name}}_subdomains.xdmf',  boundaries=f'{MESH_DIR}{{mesh_name}}_boundaries.xdmf'
+    # WARNING: Undocumented feature used!
+    # The rule may crash if Snakemake implementation changes.  In that case:
+    #  - change dict comprehension to list comprehension (dict values),
+    #  - change `output.mesh_xdmf` to `output[0]`,
+    #  - change `output.mesh_boundaries_xdmf` to `output[1]`,
+    #  - change `output.mesh_subdomains_xdmf` to `output[2]`.
+    input:
+        MESH_MSH
+    output:
+        **{f"mesh{suffix}_{ext}": MESH_PATTERN.replace("{suffix}", f"{suffix}.{ext}")
+           for ext in ["xdmf", "h5"]
+           for suffix in ["", "_boundaries", "_subdomains"]}
     run:
         import meshio
         # REQUIRES meshio v. 4.0.0
         # see: https://github.com/nschloe/meshio/blob/master/CHANGELOG.md#v400-feb-18-2020
         msh = meshio.read(str(input))
 
-        meshio.write(output.mesh,
+        meshio.write(output.mesh_xdmf,
                      meshio.Mesh(points=msh.points,
-                                 cells=[("tetra", msh.cells_dict["tetra"]
-                                         )]))
-        meshio.write(str(output.boundaries),
+                                 cells=[("tetra", msh.cells_dict["tetra"])]))
+        meshio.write(str(output.mesh_boundaries_xdmf),
                      meshio.Mesh(points=msh.points,
                                  cells=[("triangle", msh.cells_dict["triangle"])],
                                  cell_data={"boundaries":
                                             [msh.cell_data_dict["gmsh:physical"]["triangle"]]}))
-
-        meshio.write(str(output.subdomains),
+        meshio.write(str(output.mesh_subdomains_xdmf),
                      meshio.Mesh(points=msh.points,
                                  cells=[("tetra", msh.cells_dict["tetra"])],
                                  cell_data={"subdomains":
                                             [msh.cell_data_dict["gmsh:physical"]["tetra"]]}))
+
+
+rule MSH_INSPECTION:
+    input:
+        MESH_MSH
+    output:
+        MESH_INSPECT
+    shell:
+        """
+        gmsh -check {input} > {output}
+        """
+
+
+rule MESH_STATS:
+    input:
+        lambda wildcards: [MESH_INSPECT.format(
+                               mesh_path=os.path.join(wildcards.mesh_name,
+                                                      res))
+                           for res in INSPECTABLE_MESHES[wildcards.mesh_name]]
+    output:
+        MESH_STATS
+    params:
+        resolutions=lambda wildcards: INSPECTABLE_MESHES[wildcards.mesh_name]
+    run:
+        import pandas as pd
+        import re
+
+        stats = []
+        for resolution, filename in zip(params.resolutions, input):
+            row = {"resolution": resolution}
+            stats.append(row)
+            with open(filename) as fh:
+                text = fh.read()
+                for field in ["nodes", "elements"]:
+                    m = re.search(f"^Info\\s*:\\s*(\\d+)\\s*{field}\\s*$",
+                                  text,
+                                  re.MULTILINE | re.IGNORECASE)
+                    row[field] = int(m.group(1))
+
+        pd.DataFrame(stats).to_csv(str(output),
+                                   index=False)

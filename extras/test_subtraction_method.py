@@ -1,5 +1,26 @@
 #!/usr/bin/env python
-# coding: utf-8
+# encoding: utf-8
+###############################################################################
+#                                                                             #
+#    kESI                                                                     #
+#                                                                             #
+#    Copyright (C) 2019-2023 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
+#    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
+#                                                                             #
+#    This software is free software: you can redistribute it and/or modify    #
+#    it under the terms of the GNU General Public License as published by     #
+#    the Free Software Foundation, either version 3 of the License, or        #
+#    (at your option) any later version.                                      #
+#                                                                             #
+#    This software is distributed in the hope that it will be useful,         #
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of           #
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            #
+#    GNU General Public License for more details.                             #
+#                                                                             #
+#    You should have received a copy of the GNU General Public License        #
+#    along with this software.  If not, see http://www.gnu.org/licenses/.     #
+#                                                                             #
+###############################################################################
 
 import argparse
 import csv
@@ -7,14 +28,14 @@ import csv
 import numpy as np
 import scipy.integrate as si
 
-from dolfin import (Expression, Measure, inner, grad, assemble,
+from dolfin import (Expression, inner, grad, assemble,
                     Constant, KrylovSolver, DirichletBC)
 import dolfin
 
-import FEM.fem_sphere_point_new as fspn
-import FEM.fem_common as fc
+from kesi import common
 
-import _common_new as common
+import local.fem.sphere_point_new as fspn
+import local.fem.common as fc
 
 
 class NegativePotential(dolfin.UserExpression):
@@ -234,7 +255,7 @@ class LeadfieldIntegrator(object):
                                for xx, CSD_X in zip(X, CSD)])
 
     def _legacy_romberg_by_convotulion(self, leadfield, src, k=4):
-        from _fast_reciprocal_reconstructor import Convolver
+        from kesi.kernel.constructor import Convolver
         r = max(src._nodes)
         n = 2 ** k + 1
 
@@ -253,7 +274,7 @@ class LeadfieldIntegrator(object):
 
         model_src = common.SphericalSplineSourceKCSD(0, 0, 0,
                                                      src._nodes,
-                                                     src._coefficients,
+                                                     src._csd_polynomials,
                                                      src.conductivity)
 
         LEADFIELD = np.full([n, n, n], np.nan)
@@ -264,9 +285,9 @@ class LeadfieldIntegrator(object):
                     LEADFIELD[i, j, k] = leadfield(x, y, z)
 
         weights = si.romb(np.identity(n), dx=r / (n // 2))
-        POT_CORR = convolver.leadfield_to_base_potentials(LEADFIELD,
-                                                          model_src.csd,
-                                                          (weights,) * 3)
+        POT_CORR = convolver.leadfield_to_potential_basis_functions(LEADFIELD,
+                                                                    model_src.csd,
+                                                                    (weights,) * 3)
         return POT_CORR[n // 2, n // 2, n // 2]
 
 

@@ -15,7 +15,7 @@ from kesi._engine import _LinearKernelSolver
 sys.path.append('..')
 from FEM.fem_sphere_gaussian import (SomeSphereGaussianSourceFactory3D,
                                      SomeSphereGaussianSourceFactoryOnlyCSD)
-from _common_new import altitude_azimuth_mesh
+from kesi.common import altitude_azimuth_mesh
 
 try:
     from joblib import Parallel, delayed

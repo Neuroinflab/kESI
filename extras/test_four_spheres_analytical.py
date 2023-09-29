@@ -4,6 +4,8 @@
 #                                                                             #
 #    kESI                                                                     #
 #                                                                             #
+#    Copyright (C) 2023 Jakub M. Dzik (Laboratory of Neuroinformatics;        #
+#    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
 #    Copyright (C) 2021-2023 Jakub M. Dzik (Institute of Applied Psychology;  #
 #    Faculty of Management and Social Communication; Jagiellonian University) #
 #                                                                             #
@@ -29,18 +31,18 @@ import pandas as pd
 
 from dolfin import assemble, Constant, Expression, grad, inner
 
-from _common_new import FourSphereModel
-import FEM.fem_common as fc
+from kesi.common import FourSphereModel
+
+import local.fem.common as fc
 
 import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 import matplotlib.pyplot as plt
-import cbf
+from local import cbf
 
-
-CONFIG = 'FEM/model_properties/four_spheres_csf_3_mm.ini'
+CONFIG = "data/bundled/model_properties/four_spheres_csf_3_mm__Naess_Chintaluri_2017.ini"
 MESH = sys.argv[1]
 DEGREE = int(sys.argv[2])
 

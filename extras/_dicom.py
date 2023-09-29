@@ -326,7 +326,7 @@ else:
 
 try:
     import matplotlib.pyplot as plt
-    import cbf
+    from local import cbf
 
 
 except (ImportError, SystemError, ValueError):

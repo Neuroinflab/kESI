@@ -1,9 +1,9 @@
 # !!! IMPORTANT !!!
 # run with `source`
-# for python_version in "3.6"
-for python_version in "3.6"
+for minor_version in {7..10}
 do
-  name=kesi${python_version/./}
+  python_version=3.${minor_version}
+  name=kesi${python_version}
   conda activate $name
   python -m unittest discover
   conda deactivate
