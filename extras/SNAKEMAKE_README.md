@@ -111,6 +111,7 @@ generated/
   kernel/
   csd_profiles/
   reconstructions/
+  errors/
 ```
 
 where
@@ -125,6 +126,8 @@ where
 | `kernel`                        | [Kernel](#data-generated-kernel)                                               |
 | `csd_profiles`                  | [CSD profiles](#data-generated_csd_profiles)                                   |
 | `reconstructions`               | [Reconstructions](#data-generated_reconstructions)                             |
+| `errors`                        | [Reconstructions](#data-generated_errors)                                      |
+
 
 #### Meshes <a name="data-generated-meshes"></a>
 
@@ -685,6 +688,50 @@ See also [Reconstruction of CSDs](#tools-reconstruction)
 subsection in the [Tools](#tools) section.
 
 
+#### Errors <a name="data-generated-errors"></a>
+
+The filesystem subtree follows the pattern:
+```
+errors/
+  <setup>/
+    <subsetup>/
+      <csd basis functions>/
+        <csd path>/
+          <csd grid>/
+            <fwd path>/
+              <reconstruction path>/
+                 <profiles>.csv
+                 <cv regularization parameters>/
+                   <profiles>.csv
+```
+where `<reconstruction path>` is the `<kernel path>` part of path to
+[reconstructed CSDs](#data-generated-reconstructions-profiles_npz).
+The other wildcards were discussed previously.
+
+#### File `<profiles>.csv` <a name="data-generated-errors-profiles_csv"></a>
+
+File `<profiles>.csv` contains a header and $n_{CSD}$ rows.  The $i$-th row
+contains information about the $i$-th of
+[appropriate ground truth CSD profiles](data-generated-csd_profiles-profiles_npz)
+and errors of its [reconstruction](#data-generated-reconstructions-profiles_npz)
+from [simulated potentials](#data-generated-csd_profiles-profiles_csv).
+
+| field            | type                | content                          |
+|------------------|---------------------|----------------------------------|
+| `SOURCE`         | `int`               | number of the CSD profile        |
+| `REFERENCE_BIAS` | `float` $[A / m^3]$ | mean of the profile              |
+| `REFERENCE_L1`   | `float` $[A / m^3]$ | $L_1$ norm of the profile        |
+| `REFERENCE_L2`   | `float` $[A / m^3]$ | $L_2$ norm of the profile        |
+| `REFERENCE_LInf` | `float` $[A / m^3]$ | $L_{\infty}$ norm of the profile |
+| `ERROR_BIAS`     | `float` $[A / m^3]$ | mean of the reconstruction error |
+| `ERROR_L1`       | `float` $[A / m^3]$ | $L_1$ norm of the error          |
+| `ERROR_L2`       | `float` $[A / m^3]$ | $L_2$ norm of the error          |
+| `ERROR_LInf`     | `float` $[A / m^3]$ | $L_{\infty}$ norm of the error   |
+
+See also [leave-one-out cross-validation](#tools-errors)
+subsection in the [Tools](#tools) section.
+
+
 ## Tools <a name="tools"></a>
 
 ### Leadfield correction solving <a name="tools-leadfield_correction_solving"></a>
@@ -823,6 +870,16 @@ If regularized reconstruction is requested, either
 a positive regularization parameter should be given,
 or [cross-validation errors](#data-generated-reconstructions-profiles_csv)
 for a set of regularization parameters.
+
+
+### Reconstruction error calculation <a name="tools-error"></a>
+
+The `calculate_errors.py` tool calculates norms of
+[ground truth CSD profiles](data-generated-csd_profiles-profiles_npz),
+then subtracts profiles from
+[CSD reconstructions](#data-generated-reconstructions-profiles_npz)
+and calculates norms of differences.  It stores them as
+[a CSV file](#data-generated-errors-profiles_csv).
 
 
 ## Bibliography
