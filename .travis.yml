@@ -8,13 +8,11 @@ os:
 env:
   matrix:
     - PYTHON_VERSION="2.7" REQUIRES="numpy"
-    - PYTHON_VERSION="3.3" REQUIRES="numpy"
     - PYTHON_VERSION="3.4" REQUIRES="numpy"
     - PYTHON_VERSION="3.5" REQUIRES="numpy"
     - PYTHON_VERSION="3.6" REQUIRES="numpy"
     - PYTHON_VERSION="3.7" REQUIRES="numpy"
     - PYTHON_VERSION="2.7" REQUIRES="numpy pandas"
-    - PYTHON_VERSION="3.3" REQUIRES="numpy pandas"
     - PYTHON_VERSION="3.4" REQUIRES="numpy pandas"
     - PYTHON_VERSION="3.5" REQUIRES="numpy pandas"
     - PYTHON_VERSION="3.6" REQUIRES="numpy pandas"

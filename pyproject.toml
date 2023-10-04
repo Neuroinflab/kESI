@@ -1,0 +1,71 @@
+###############################################################################
+#                                                                             #
+#    kESI                                                                     #
+#                                                                             #
+#    Copyright (C) 2019-2023 Jakub M. Dzik (Laboratory of Neuroinformatics;   #
+#    Nencki Institute of Experimental Biology of Polish Academy of Sciences)  #
+#                                                                             #
+#    This software is free software: you can redistribute it and/or modify    #
+#    it under the terms of the GNU General Public License as published by     #
+#    the Free Software Foundation, either version 3 of the License, or        #
+#    (at your option) any later version.                                      #
+#                                                                             #
+#    This software is distributed in the hope that it will be useful,         #
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of           #
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            #
+#    GNU General Public License for more details.                             #
+#                                                                             #
+#    You should have received a copy of the GNU General Public License        #
+#    along with this software.  If not, see http://www.gnu.org/licenses/.     #
+#                                                                             #
+###############################################################################
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kesi"
+version = "0.3a0.dev0"
+authors = [
+    { name = "Jakub M. Dzik", email = "jakub.m.dzik+kesi@gmail.com" },
+    { name = "Marta Bejtka", email = "m.bejtka@nencki.edu.pl" },
+]
+# maintainers = []
+description = "Implementation of kernel Electric Source Imaging (kESI) method."
+license = { file = "LICENSE" }
+# readme = "README.md"
+# keywords = []
+requires-python = ">=3.7"
+dependencies = [
+    "numpy",
+    "scipy",
+    # "dolfin",
+    # "meshio",
+    # "snakemake",
+    # "pandas",
+    # # "matplotlib",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/Neuroinflab/kESI"
+"Repository" = "https://github.com/Neuroinflab/kESI.git"
+"Bug Tracker" = "https://github.com/Neuroinflab/kESI/issues"
