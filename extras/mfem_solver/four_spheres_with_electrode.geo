@@ -1,11 +1,13 @@
 // Gmsh project created on Fri May 10 17:43:53 2024
-Mesh.Algorithm = 6;
+Mesh.Algorithm = 5;
 Mesh.MshFileVersion = 2.2;
+
+General.NumThreads = 16;
 
 Mesh.MeshSizeExtendFromBoundary = 1;
 Mesh.MeshSizeFactor = 1;
 Mesh.MeshSizeMin = 0;
-Mesh.MeshSizeMax  = 0.01;
+Mesh.MeshSizeMax  = 0.005;
 //Automatically compute mesh element sizes from curvature, using the value as the target number of elements per 2 * Pi radians
 Mesh.MeshSizeFromCurvature = 0;
 Mesh.MeshSizeFromPoints = 1;
