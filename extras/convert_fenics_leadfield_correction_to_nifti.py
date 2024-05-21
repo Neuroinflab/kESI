@@ -18,6 +18,22 @@ def main():
     dy = np.diff(data['Y'].flatten())[0]
     dz = np.diff(data['Z'].flatten())[0]
     potential_grid = data['CORRECTION_POTENTIAL']
+
+    X = np.ones_like(potential_grid) * data['X']
+    Y = np.ones_like(potential_grid) * data['Y']
+    Z = np.ones_like(potential_grid) * data['Z']
+
+    grid_points = np.array([X.ravel(),
+                            Y.ravel(),
+                            Z.ravel(),
+                            ]).T
+
+    electrode_position = [0, 0, 0.0785]
+    sigma_base = 0.33
+    distance_to_electrode = np.linalg.norm(np.array(electrode_position) - grid_points, ord=2, axis=1)
+    v_kcsd = 1.0 / (4 * np.pi * sigma_base * distance_to_electrode)
+    v_kcsd_grid = v_kcsd.reshape(list(X.shape) + [-1, ]).squeeze()
+
     x0 = data['X'].flatten()[0]
     y0 = data['Y'].flatten()[0]
     z0 = data['Z'].flatten()[0]
@@ -32,6 +48,12 @@ def main():
 
     img = Nifti1Image(potential_grid, affine)
     nibabel.save(img, "{}.nii.gz".format(os.path.splitext(namespace.file)[0]))
+
+    img = Nifti1Image(potential_grid+v_kcsd_grid, affine)
+    nibabel.save(img, "{}+potential.nii.gz".format(os.path.splitext(namespace.file)[0]))
+
+    img = Nifti1Image(v_kcsd_grid, affine)
+    nibabel.save(img, "{}_potential_only.nii.gz".format(os.path.splitext(namespace.file)[0]))
 
 
 
