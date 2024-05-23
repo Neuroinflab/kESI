@@ -126,6 +126,29 @@ sol = x.GetDataArray()
 verts_n = np.array(verts)
 
 
+outname = os.path.basename(mesh_path)
+
+from io import StringIO
+
+output = StringIO()
+
+ref = 0
+mesh.PrintVTK(output, 0)
+x.SaveVTK(output, "potential", 0)
+
+with open(f"{outname}_potential.vtk", 'w') as vtk_file:
+    vtk_file.write(output.getvalue())
+
+output = StringIO()
+
+ref = 0
+mesh.PrintVTK(output, 0)
+x.SaveVTK(output, "potential", 0)
+
+with open(f"{outname}_potential.vtk", 'w') as vtk_file:
+    vtk_file.write(output.getvalue())
+
+
 # Vkcsd:
 # import IPython
 # IPython.embed()
@@ -136,6 +159,23 @@ sigma_base = 0.33
 distance_to_electrode = np.linalg.norm(np.array(electrode_position) - verts, ord=2, axis=1)
 
 v_kcsd = 1.0 / (4 * np.pi * sigma_base * distance_to_electrode)
+
+import IPython
+IPython.embed()
+
+x_theory = mfem.GridFunction(fespace)
+# setting initial values in all points, boundary elements will enforce this  value
+x_theory.Assign(v_kcsd)
+
+output = StringIO()
+
+ref = 0
+mesh.PrintVTK(output, 0)
+x_theory.SaveVTK(output, "potential", 0)
+
+with open(f"{outname}_potential_theory.vtk", 'w') as vtk_file:
+    vtk_file.write(output.getvalue())
+
 
 lower_bound = np.min(verts_n, axis=0) - np.abs(np.min(verts_n, axis=0)) * 0.5
 upper_bound = np.max(verts_n, axis=0) + np.abs(np.max(verts_n, axis=0)) * 0.5

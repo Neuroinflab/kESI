@@ -57,7 +57,19 @@ files = [
 "/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/four_spheres_in_air_with_plane_0.002.msh_potential_theory.nii.gz",
 "/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/four_spheres_in_air_with_plane_0.005.msh_potential_theory_sphere.nii.gz",
 "/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/four_spheres_in_air_with_plane_0.002.msh_potential_theory_sphere.nii.gz",
+"/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/four_spheres_in_air_with_plane_0.005.msh_potential_theory_vista.nii.gz",
+"/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/four_spheres_in_air_with_plane_0.005.msh_potential_vista.nii.gz",
 "/home/mdovgialo/projects/halje_data_analysis/kESI/extras/data/generated/tutorial/four_spheres/sampled_leadfield_corrections_finest/theoretic_potenial_dx_0.00078.nii.gz",
+
+]
+
+
+files = [
+"/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/four_spheres_in_air_with_plane_0.005.msh_potential_theory_vista.nii.gz",
+"/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/four_spheres_in_air_with_plane_0.005.msh_potential_vista.nii.gz",
+    "/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/four_spheres_in_air_with_plane_0.002.msh_potential.nii.gz",
+    "/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/four_spheres_in_air_with_plane_0.005.msh_potential.nii.gz",
+    "/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/four_spheres_in_air_with_plane.msh_potential_vista.nii.gz",
 
 ]
 for file in files:
