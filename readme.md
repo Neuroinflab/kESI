@@ -29,3 +29,29 @@ Additionally, kESI requires `gmsh` for mesh generation and FEM segmentation. You
 `sudo apt install gmsh`
 
 Kesi will be available in this conda enviroment.
+
+# Building MFEM with serial support
+
+## Requirements
+
+Tested with  Ubuntu 22.04
+
+```sudo apt install chrpath
+git clone https://github.com/mfem/PyMFEM.git
+cd PyMFEM
+git checkout v_4.6.1.0
+```
+
+enable your virtual env of choice
+
+```
+pip install mpi4py==3.1.6 swig==4.2.1
+python setup.py install --with-parallel --mfem-branch v4.6
+```
+
+maybe in future:
+
+```
+python setup.py install --with-parallel --with-cuda
+```
+

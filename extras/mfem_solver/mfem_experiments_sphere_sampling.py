@@ -11,42 +11,11 @@ try:
 except ImportError:
     from voxel_downsampling import voxel_downsampling
 
-if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description="Solve mesh and sample the solution using voxel downsampling")
-    parser.add_argument('-m', "--meshfile", help='MFEM compatible mesh',
-                        default="/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/four_spheres_in_air_with_plane.msh")
-    parser.add_argument("-g", "--grid",
-                        dest="grid",
-                        required=True,
-                        metavar="<sampling_grid.npz>",
-                        help="path to the sampling grid definition")
-    parser.add_argument("-o", "--output",
-                        metavar="<metadata.ini>",
-                        dest="output",
-                        required=True,
-                        help="path to the metadata file")
-    parser.add_argument("-c", "--config",
-                        metavar="<config.ini>",
-                        dest="config",
-                        required=True,
-                        help="path to the model config file")
-    parser.add_argument("-e", "--electrodes",
-                        metavar="<electrodes.csv>",
-                        dest="electrodes",
-                        required=True,
-                        help="path to the electrode location config file")
-    parser.add_argument("-n", "--name",
-                        metavar="<electrode name>",
-                        dest="name",
-                        required=True,
-                        help="name of the electrode")
-    parser.add_argument("-m", "--mesh",
-                        metavar="<mesh.xdmf>",
-                        dest="mesh",
-                        required=True,
-                        help="path to the FEM mesh")
-
+parser = argparse.ArgumentParser(description="samples mesh solution using voxel downsampling")
+parser.add_argument('-m', "--meshfile", help='MFEM compatible mesh',
+                    default="/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/four_spheres_in_air_with_plane.msh")
+parser.add_argument('-s', "--sampling-step", type=float, help="step of the sampling grid", default=0.001)
 
 namespace = parser.parse_args()
 
@@ -172,38 +141,20 @@ lower_bound = np.min(verts_n, axis=0) - np.abs(np.min(verts_n, axis=0)) * 0.5
 upper_bound = np.max(verts_n, axis=0) + np.abs(np.max(verts_n, axis=0)) * 0.5
 
 sampled_solution, affine = voxel_downsampling(verts_n, sol, lower_bound=lower_bound, upper_bound=upper_bound,
-                                              step=step, mesh_max_elem_size=mesh_max_elem_size)
+                                              step=step, mesh_max_elem_size=mesh_max_elem_size, sampling_metric='euclidean')
 
 img = Nifti1Image(sampled_solution, affine)
 
 outname = os.path.basename(mesh_path)
-nibabel.save(img, f"{outname}_potential.nii.gz")
+nibabel.save(img, f"{outname}_potential_sphere.nii.gz")
 #
 sampled_solution, affine = voxel_downsampling(verts_n, v_kcsd, lower_bound=lower_bound, upper_bound=upper_bound,
-                                              step=step, mesh_max_elem_size=mesh_max_elem_size)
+                                              step=step, mesh_max_elem_size=mesh_max_elem_size, sampling_metric='euclidean')
 img = Nifti1Image(sampled_solution, affine)
-nibabel.save(img, f"{outname}_potential_theory.nii.gz")
+nibabel.save(img, f"{outname}_potential_theory_sphere.nii.gz")
 
 sampled_solution, affine = voxel_downsampling(verts_n, sol-v_kcsd, lower_bound=lower_bound, upper_bound=upper_bound,
-                                              step=step, mesh_max_elem_size=mesh_max_elem_size)
+                                              step=step, mesh_max_elem_size=mesh_max_elem_size, sampling_metric='euclidean')
 img = Nifti1Image(sampled_solution, affine)
-nibabel.save(img, f"{outname}_potential_combined.nii.gz")
+nibabel.save(img, f"{outname}_potential_combined_sphere.nii.gz")
 
-for i in range(0, mesh.GetNE()):
-
-    mfem.Geometries.GetCenter(mesh.GetElementBaseGeometry(i))
-
-mesh.Print('refined_brain_test2.mesh', 8)
-x.Save('sol_brain_test2.gf', 8)
-
-paraview_dc = mfem.ParaViewDataCollection("test2", mesh)
-paraview_dc.SetPrefixPath("ParaView")
-paraview_dc.SetLevelsOfDetail(order)
-paraview_dc.SetDataFormat(mfem.VTKFormat_BINARY)
-paraview_dc.SetHighOrderOutput(True)
-paraview_dc.SetCycle(0)
-paraview_dc.SetTime(0.0)
-paraview_dc.RegisterField("potential", x)
-paraview_dc.Save()
-
-plate_z = -0.088

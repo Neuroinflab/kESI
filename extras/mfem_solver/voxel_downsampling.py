@@ -101,7 +101,7 @@ def sample_points_parallel(query_points, kdtree, values, sampling_size=0.01, emp
 
 
 def voxel_downsampling(points, values, lower_bound=np.array([0, 0 , 0]), upper_bound=np.array([1, 1, 1]), step=0.01,
-                       empty=0.0, mesh_max_elem_size=None
+                       empty=0.0, mesh_max_elem_size=None, sampling_metric='cityblock'
                        ):
     """Performs voxel downsampling of a scalar field, resulting a grid of positions
     points - np.array of points of the point cloud shape: (n_points, 3)
@@ -125,7 +125,7 @@ def voxel_downsampling(points, values, lower_bound=np.array([0, 0 , 0]), upper_b
                            grid[2].ravel(),
                            ]).T
     print("Building a kdtree...")
-    kdtree = KDTree(points, metric='cityblock')
+    kdtree = KDTree(points, metric=sampling_metric)
     print("Building a kdtree, done")
 
     sampled = sample_points_parallel(grid_points, kdtree, values, sampling_size=sampling_size, empty=empty)

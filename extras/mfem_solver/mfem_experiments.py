@@ -1,3 +1,6 @@
+import argparse
+import os
+
 import mfem.ser as mfem
 import nibabel
 import numpy as np
@@ -8,22 +11,39 @@ try:
 except ImportError:
     from voxel_downsampling import voxel_downsampling
 
+
+parser = argparse.ArgumentParser(description="samples mesh solution using voxel downsampling")
+parser.add_argument('-m', "--meshfile", help='MFEM compatible mesh',
+                    default="/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/four_spheres_in_air_with_plane.msh")
+parser.add_argument('-s', "--sampling-step", type=float, help="step of the sampling grid", default=0.001)
+
+namespace = parser.parse_args()
+
+mesh_path = namespace.meshfile
+step = namespace.sampling_step
+
 device = mfem.Device("cpu")
 device.Print()
 
 electrode_position = [0, 0, 0.0785]
-step = 0.004
 
 # to create run
 # gmsh -3 -format msh22 four_spheres_in_air_with_plane.geo
-mesh = mfem.Mesh("/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/four_spheres_in_air_with_plane_0.002.msh", 1, 1)
+# mesh = mfem.Mesh("/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/four_spheres_in_air_with_plane_0.002.msh", 1, 1)
+mesh = mfem.Mesh(mesh_path, 1, 1)
 # mesh = mfem.Mesh("/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/four_spheres_with_electrode_0.002.msh", 1, 1)
 
 
+
 mesh.UniformRefinement()
+
+n_elements_after_refinment = mesh.GetNE()
+element_sizes_after_refinment = [mesh.GetElementSize(i) for i in range(n_elements_after_refinment)]
+mesh_max_elem_size = np.max(element_sizes_after_refinment)
+
+
 # mesh = mfem.Mesh("/home/mdovgialo/projects/halje_data_analysis/kESI/extras/mfem_solver/fine_with_plane.msh")
-# import IPython
-# IPython.embed()
+
 dim = mesh.Dimension()
 
 order = 1
@@ -55,21 +75,10 @@ boundary_potential_coeff = mfem.PWConstCoefficient(boundary_potential)
 
 b = mfem.LinearForm(fespace)
 
-# is this supposed to be conductivity? or inverse times pi???
-
-# Expression(f'''
-#                                             {-0.25 / np.pi / conductivity}
-#                                             / {r_src}
-# conductivities_vector = mfem.Vector([0.33, 1.65, 0.0165, 0.33, 1e-10])
-# conductivities_vector = mfem.Vector([0.33, 1.65, 0.0165, 0.33])
-
-
 conductivities_vector = mfem.Vector(list(1.0 / (4 * np.pi * np.array([0.33, 1.65, 0.0165, 0.33, 1e-10]))))
-# conductivities_vector = mfem.Vector(list(1 / np.array([0.33, 1.65, 0.0165, 0.33, 1e-10])))
-# conductivities_vector = mfem.Vector([0.33] * 4)
+
 conductivities_coeff = mfem.PWConstCoefficient(conductivities_vector)
 
-# b.AddBoundaryIntegrator(mfem.BoundaryLFIntegrator(boundary_potential_coeff))
 
 # for each point charge
 point_charge_coeff = mfem.DeltaCoefficient()
@@ -81,6 +90,7 @@ b.AddDomainIntegrator(mfem.DomainLFIntegrator(point_charge_coeff))
 
 b.Assemble()
 x = mfem.GridFunction(fespace)
+# setting initial values in all points, boundary elements will enforce this  value
 x.Assign(0.0)
 
 a = mfem.BilinearForm(fespace)
@@ -130,20 +140,23 @@ v_kcsd = 1.0 / (4 * np.pi * sigma_base * distance_to_electrode)
 lower_bound = np.min(verts_n, axis=0) - np.abs(np.min(verts_n, axis=0)) * 0.5
 upper_bound = np.max(verts_n, axis=0) + np.abs(np.max(verts_n, axis=0)) * 0.5
 
-sampled_solution, affine = voxel_downsampling(verts_n, sol, lower_bound=lower_bound, upper_bound=upper_bound, step=step)
+sampled_solution, affine = voxel_downsampling(verts_n, sol, lower_bound=lower_bound, upper_bound=upper_bound,
+                                              step=step, mesh_max_elem_size=mesh_max_elem_size)
 
 img = Nifti1Image(sampled_solution, affine)
-nibabel.save(img, "sampled_solution_plane_mfem.nii.gz")
 
-sampled_solution, affine = voxel_downsampling(verts_n, v_kcsd, lower_bound=lower_bound, upper_bound=upper_bound, step=step)
-
+outname = os.path.basename(mesh_path)
+nibabel.save(img, f"{outname}_potential.nii.gz")
+#
+sampled_solution, affine = voxel_downsampling(verts_n, v_kcsd, lower_bound=lower_bound, upper_bound=upper_bound,
+                                              step=step, mesh_max_elem_size=mesh_max_elem_size)
 img = Nifti1Image(sampled_solution, affine)
-nibabel.save(img, "sampled_solution_plane_v_kcsd.nii.gz")
+nibabel.save(img, f"{outname}_potential_theory.nii.gz")
 
-sampled_solution, affine = voxel_downsampling(verts_n, sol - 4*v_kcsd, lower_bound=lower_bound, upper_bound=upper_bound, step=step)
-
+sampled_solution, affine = voxel_downsampling(verts_n, sol-v_kcsd, lower_bound=lower_bound, upper_bound=upper_bound,
+                                              step=step, mesh_max_elem_size=mesh_max_elem_size)
 img = Nifti1Image(sampled_solution, affine)
-nibabel.save(img, "sampled_solution_plane_combined.nii.gz")
+nibabel.save(img, f"{outname}_potential_combined.nii.gz")
 
 for i in range(0, mesh.GetNE()):
 
