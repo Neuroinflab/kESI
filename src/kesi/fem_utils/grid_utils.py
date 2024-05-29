@@ -47,8 +47,41 @@ def create_grid(xxyyzz, dx, pad=20):
 
 
 def load_or_create_grid(voxels, step, gridfile=None):
-    pass
+    if gridfile is None:
+        lower_bound = np.min(voxels, axis=0)
+        upper_bound = np.max(voxels, axis=0)
 
+        grid, affine = create_grid([[lower_bound[0], upper_bound[0]],
+                                    [lower_bound[1], upper_bound[1]],
+                                    [lower_bound[2], upper_bound[2]],
+                                    ], dx=step, pad=0)
+        return grid, affine
+    else:
+        gridspec = np.load(gridfile)
+
+        grid = np.meshgrid(np.squeeze(gridspec["X"]), np.squeeze(gridspec["Y"]), np.squeeze(gridspec["Z"]),
+                           indexing='ij')
+
+        sdx = np.squeeze(gridspec["X"])[-1] - np.squeeze(gridspec["X"])[-2]
+        sdy = np.squeeze(gridspec["Y"])[-1] - np.squeeze(gridspec["Y"])[-2]
+        sdz = np.squeeze(gridspec["Z"])[-1] - np.squeeze(gridspec["Z"])[-2]
+
+        x0 = np.squeeze(gridspec["X"])[0]
+        y0 = np.squeeze(gridspec["Y"])[0]
+        z0 = np.squeeze(gridspec["Z"])[0]
+
+        new_affine = np.zeros((4, 4))
+        new_affine[0][0] = np.abs(sdx)
+        new_affine[1][1] = np.abs(sdy)
+        new_affine[2][2] = np.abs(sdz)
+        # last row is always 0 0 0 1
+        new_affine[3][3] = 1
+
+        new_000 = np.array([x0, y0, z0])
+        new_affine[0][3] = new_000[0]
+        new_affine[1][3] = new_000[1]
+        new_affine[2][3] = new_000[2]
+        return grid, new_affine
 
 def save_sampled_solution():
     pass

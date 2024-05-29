@@ -169,7 +169,6 @@ def main():
         results = []
         for result in tqdm(results_np, desc='recovering solutions'):
             solution_gridf = mfem.GridFunction(fespace)
-            # setting initial values in all points, boundary elements will enforce this  value
             solution_gridf.Assign(np.array(result))
             results.append(solution_gridf)
         # need to recreate solution in FEM
@@ -191,7 +190,6 @@ def main():
         v_kcsd = 1.0 / (4 * np.pi * namespace.base_conductivity * distance_to_electrode)
         correction = result.GetDataArray() - v_kcsd
         correction_gridf = mfem.GridFunction(fespace)
-        # setting initial values in all points, boundary elements will enforce this  value
         correction_gridf.Assign(correction)
         results_correction.append(correction_gridf)
 

@@ -5,12 +5,14 @@ from functools import partial
 import nibabel
 import numpy
 import numpy as np
+import pandas as pd
+import pyvista
 from nibabel import Nifti1Image
 from sklearn.neighbors import KDTree
 from tqdm import tqdm
 import mfem.ser as mfem
 from tqdm.contrib.concurrent import process_map
-from kesi.fem_utils.grid_utils import create_grid
+from kesi.fem_utils.grid_utils import create_grid, load_or_create_grid
 
 
 def sample_points(query_points, kdtree, values, sampling_size=0.01, empty=0.0):
@@ -57,13 +59,22 @@ def sample_points_parallel(query_points, kdtree, values, sampling_size=0.01, emp
     return sampled
 
 
-def voxel_downsampling(points, values, lower_bound=np.array([0, 0 , 0]), upper_bound=np.array([1, 1, 1]), step=0.01,
-                       empty=0.0, mesh_max_elem_size=None, sampling_metric='cityblock'
+def voxel_downsampling(points, values, lower_bound=np.array([0, 0, 0]), upper_bound=np.array([1, 1, 1]), step=0.01,
+                       empty=0.0, mesh_max_elem_size=None, sampling_metric='cityblock', grid=None, affine=None
                        ):
     """Performs voxel downsampling of a scalar field, resulting a grid of positions
     points - np.array of points of the point cloud shape: (n_points, 3)
     values np. array of n_points of the scalar field
     """
+
+    if grid is None or affine is None:
+        grid, affine = create_grid([[lower_bound[0], upper_bound[0]],
+                                    [lower_bound[1], upper_bound[1]],
+                                    [lower_bound[2], upper_bound[2]],
+                                    ], dx=step, pad=0)
+    else:
+        step = np.max([affine[0][0], affine[1][1], affine[2][2]])
+        print("Using step ", step)
 
     if mesh_max_elem_size is None:
         mesh_max_elem_size = step * 2
@@ -71,11 +82,6 @@ def voxel_downsampling(points, values, lower_bound=np.array([0, 0 , 0]), upper_b
         sampling_size = step
     else:
         sampling_size = mesh_max_elem_size * 2
-
-    grid, affine = create_grid([[lower_bound[0], upper_bound[0]],
-                                [lower_bound[1], upper_bound[1]],
-                                [lower_bound[2], upper_bound[2]],
-                                ], dx=step, pad=0)
 
     grid_points = np.array([grid[0].ravel(),
                            grid[1].ravel(),
@@ -94,32 +100,73 @@ def voxel_downsampling(points, values, lower_bound=np.array([0, 0 , 0]), upper_b
 def main():
     parser = argparse.ArgumentParser(description="samples mesh solution using voxel downsampling")
     parser.add_argument("meshfile", help='VTK mesh file with solution')
+    parser.add_argument("electrodefile",
+                        help=('CSV with electrode names and positions, in meters, with a header of: \n'
+                              '\tNAME,X,Y,Z')
+                        )
+    parser.add_argument("output", help="Output folder")
+    parser.add_argument("-bc", "--base-conductivity", type=float,
+                        help="base conductivity for kCSD assumptions", default=0.33)
+
     parser.add_argument("--attribute", help='VTK attribute to sample', default='potential')
-    parser.add_argument('-s', "--sampling-step", type=float, help="step of the sampling grid", default=0.004)
+    parser.add_argument('-s', "--sampling-step", type=float, help="step of the sampling grid", default=0.001)
+    parser.add_argument('-ms', "--mesh_max_elem_size", type=float, help="maximum element size of the mesh", default=0.005)  # todo make it automatic
     parser.add_argument('-g', "--grid-file", type=str, help="grid file, if provided sampling step is ignored", default=None)
+    parser.add_argument('--nifti', dest='nifti', action='store_true',
+                        help='Additionally store sampled potential in nifti format')
 
     namespace = parser.parse_args()
+    mesh = pyvista.read(namespace.meshfile, progress_bar=True)
+    electrodes = pd.read_csv(namespace.electrodefile)
 
-    mesh = mfem.Mesh(namespace.meshfile, 0, 0)
-    n_elements = mesh.GetNE()
-    element_sizes = [mesh.GetElementSize(i) for i in range(n_elements)]
-    mesh_max_elem_size = np.max(element_sizes)
+    vertices = mesh.points
 
-    x = mfem.GridFunction(mesh, namespace.solutionfile)
+    grid, affine = load_or_create_grid(vertices, step=namespace.sampling_step, gridfile=namespace.grid_file)
 
-    verts = mesh.GetVertexArray()
-    sol = x.GetDataArray()
-    verts_n = np.array(verts)
+    to_sample = [i for i in mesh.array_names if i.startswith(namespace.attribute)]
+    save_names = []
+    for i in to_sample:
+        line = i.split("_", maxsplit=1)
+        if len(line) > 1:
+            name = line[-1]
+        else:
+            name = line[0]
+        save_names.append(name)
 
-    lower_bound = np.min(verts_n, axis=0) - np.abs(np.min(verts_n, axis=0)) * 0.5
-    upper_bound = np.max(verts_n, axis=0) + np.abs(np.max(verts_n, axis=0)) * 0.5
-    step = namespace.sampling_step
+    os.makedirs(namespace.output, exist_ok=True)
 
-    sampled_solution, affine = voxel_downsampling(verts_n, sol, lower_bound=lower_bound, upper_bound=upper_bound,
-                                                  step=step, mesh_max_elem_size=mesh_max_elem_size)
-    img = Nifti1Image(sampled_solution, affine)
-    outfile = os.path.splitext(namespace.solutionfile)[0] + '.nii.gz'
-    nibabel.save(img, outfile)
+    for nr, save_name in enumerate(tqdm(save_names, "saving")):
+
+        array_name = to_sample[nr]
+        sol = np.array(mesh[array_name])
+        sampled_solution, affine = voxel_downsampling(np.array(vertices), sol, grid=grid, affine=affine,
+                                                      mesh_max_elem_size=namespace.mesh_max_elem_size)
+
+        sampled_grid = sampled_solution.squeeze()
+        CORRECTION_POTENTIAL = sampled_grid
+        X = grid[0][:, 0, 0][:, None, None]
+        Y = grid[1][0, :, 0][None, :, None]
+        Z = grid[2][0, 0, :][None, None, :]
+        if np.sum(electrodes.NAME == save_name) > 1:
+            raise Exception("Multiple electrodes have the same names")
+        if np.sum(electrodes.NAME == save_name) == 0:
+            raise Exception("Electrode {} not found".format(save_name))
+        LOCATION = electrodes[electrodes.NAME == save_name][['X', 'Y', 'Z']].values[0]
+        BASE_CONDUCTIVITY = np.array(namespace.base_conductivity)
+
+        outfile = os.path.join(namespace.output, save_name + '.npz')
+        np.savez(outfile, CORRECTION_POTENTIAL=CORRECTION_POTENTIAL,
+                 X=X,
+                 Y=Y,
+                 Z=Z,
+                 LOCATION=LOCATION,
+                 BASE_CONDUCTIVITY=BASE_CONDUCTIVITY
+                 )
+
+        if namespace.nifti:
+            img = Nifti1Image(sampled_grid, affine)
+            outfile = os.path.join(namespace.output, save_name + '.nii.gz')
+            nibabel.save(img, outfile)
 
 
 if __name__ == "__main__":
