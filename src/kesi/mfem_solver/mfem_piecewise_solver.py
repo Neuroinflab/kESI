@@ -47,14 +47,14 @@ def mfem_solve_mesh_multiprocessing_wrap(electrode_position, meshfile, boundary_
 def mfem_solve_mesh(electrode_position, mesh, boundary_potential, conductivities):
     fespace = prepare_fespace(mesh)
     print('Number of finite element unknowns: ' +
-      str(fespace.GetTrueVSize()))
+          str(fespace.GetTrueVSize()))
 
     # this is a masking list which decides, which boundaries of the mesh are Dirichlet boundaries
     # in this case we have 4 spheres, and for some reason index of the outside boundary is 5
     # for now I want to set the outside boundary of the 4 spheres as essential boundary and having a 0 potential.
     ess_bdr = mfem.intArray(mesh.bdr_attributes.Max())
     ess_bdr.Assign(0)
-    ess_bdr[mesh.bdr_attributes[-1]-1] = 1
+    ess_bdr[mesh.bdr_attributes[-1] - 1] = 1
 
     ess_tdof_list = mfem.intArray()
     fespace.GetEssentialTrueDofs(ess_bdr, ess_tdof_list)
@@ -112,7 +112,7 @@ def main():
                         )
     parser.add_argument("output", type=str,
                         help=("output folder or path to .vtk file with results."
-                                                         "Results will be saved as VTK attributes with names:"
+                              "Results will be saved as VTK attributes with names:"
                               "potential_ELECTRODE_NAME, and correction_ELECTRODE_NAME"
                               )
                         )
@@ -134,10 +134,10 @@ def main():
                         help='Enable additional uniform refinement of the mesh')
     parser.set_defaults(additional_refinement=False)
 
+    # todo debug multiprocessing!!!!
     parser.add_argument('--multiprocessing', dest='multiprocessing', action='store_true',
-                        help='Enable multiprocessing per electrode')
+                        help='Enable multiprocessing per electrode, broken rn')
     parser.set_defaults(multiprocessing=False)
-
 
     namespace = parser.parse_args()
 
@@ -147,6 +147,13 @@ def main():
     device = mfem.Device("cpu")
     device.Print()
     mesh = prepare_mesh(namespace.meshfile, namespace.additional_refinement)
+
+    if len(mesh.attributes.GetDataArray()) > len(conductivities_vector):
+        raise Exception("There is more materials than provided conductivities!")
+
+    if not (mesh.attributes.GetDataArray()[:len(mesh.attributes.GetDataArray())] == (
+            np.array(range(len(mesh.attributes.GetDataArray()))) + 1)).all():
+        raise Exception("Mesh material indexes are not correct, they should start with 1 and increase by 1")
 
     if namespace.multiprocessing:
         electrode_positions = electrodes[["X", "Y", "Z"]].values
@@ -179,8 +186,7 @@ def main():
     verts = mesh.GetVertexArray()
     fespace = prepare_fespace(mesh)
     for result, electrode_position in tqdm(list(zip(results, electrodes[["X", "Y", "Z"]].astype(float).values)),
-                       desc='adding theoretical solution'):
-
+                                           desc='adding theoretical solution'):
         distance_to_electrode = np.linalg.norm(np.array(electrode_position) - verts, ord=2, axis=1)
         v_kcsd = 1.0 / (4 * np.pi * namespace.base_conductivity * distance_to_electrode)
         correction = result.GetDataArray() - v_kcsd
@@ -204,12 +210,10 @@ def main():
     for result, electrode_name in tqdm(list(zip(results, electrodes.NAME.values)), desc='formatting output potential'):
         result.SaveVTK(output, "potential_{}".format(electrode_name), 0)
 
-    for result, electrode_name in tqdm(list(zip(results_correction, electrodes.NAME.values)), desc='formatting output correction'):
+    for result, electrode_name in tqdm(list(zip(results_correction, electrodes.NAME.values)),
+                                       desc='formatting output correction'):
         result.SaveVTK(output, "correction_{}".format(electrode_name), 0)
 
     print("Saving")
     with open(output_filename, 'w') as vtk_file:
         vtk_file.write(output.getvalue())
-
-    import IPython
-    IPython.embed()
