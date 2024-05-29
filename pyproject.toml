@@ -38,18 +38,23 @@ license = { file = "LICENSE" }
 # keywords = []
 requires-python = ">=3.7"
 dependencies = [
-    "numpy",
-    "scipy",
+    "numpy ~= 1.24",
+    "scipy ~= 1.10",
     "mfem ~= 4.6.1.0",
-    "scikit-learn ~= 1.4.2",
+    "scikit-learn ~= 1.4",
     "tqdm ~= 4.66",
     "pyvista ~= 0.43",
+    "pandas ~= 2.0",
+    "nibabel ~= 5.1.0",
     # "dolfin",
     # "meshio",
     # "snakemake",
     # "pandas",
     # # "matplotlib",
 ]
+
+
+
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -73,3 +78,9 @@ classifiers = [
 "Homepage" = "https://github.com/Neuroinflab/kESI"
 "Repository" = "https://github.com/Neuroinflab/kESI.git"
 "Bug Tracker" = "https://github.com/Neuroinflab/kESI/issues"
+
+[project.scripts]
+kesi_create_grid = "kesi.fem_utils.create_grid:main"
+kesi_mfem_piecewise_solver = "kesi.mfem_solver.mfem_piecewise_solver:main"
+kesi_voxel_downsampling = "kesi.fem_utils.voxel_downsampling:main"
+kesi_vista_resampling = "kesi.fem_utils.pyvista_resampling:main"
