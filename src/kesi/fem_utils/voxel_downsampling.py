@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import pyvista
 from nibabel import Nifti1Image
+from sklearn.metrics import DistanceMetric
 from sklearn.neighbors import KDTree
 from tqdm import tqdm
 import mfem.ser as mfem
@@ -139,8 +140,10 @@ def main():
 
         array_name = to_sample[nr]
         sol = np.array(mesh[array_name])
+        metric = DistanceMetric.get_metric('minkowski', p=np.inf)
         sampled_solution, affine = voxel_downsampling(np.array(vertices), sol, grid=grid, affine=affine,
-                                                      mesh_max_elem_size=namespace.mesh_max_elem_size)
+                                                      mesh_max_elem_size=namespace.mesh_max_elem_size,
+                                                      sampling_metric=metric)
 
         sampled_grid = sampled_solution.squeeze()
         CORRECTION_POTENTIAL = sampled_grid
