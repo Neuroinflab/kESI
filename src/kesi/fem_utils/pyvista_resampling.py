@@ -63,7 +63,7 @@ def main():
     for nr, save_name in enumerate(tqdm(save_names, "saving")):
         array_name = to_sample[nr]
         sampled_grid = result[array_name].reshape((*result.dimensions, 1), order="F")
-        CORRECTION_POTENTIAL = sampled_grid
+        CORRECTION_POTENTIAL = sampled_grid[:, :, :, 0]
         X = grid[0][:, 0, 0][:, None, None]
         Y = grid[1][0, :, 0][None, :, None]
         Z = grid[2][0, 0, :][None, None, :]

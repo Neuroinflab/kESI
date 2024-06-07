@@ -74,7 +74,7 @@ def mfem_solve_mesh(electrode_position, mesh, boundary_potential, conductivities
     b.Assemble()
     x = mfem.GridFunction(fespace)
     # setting initial values in all points, boundary elements will enforce this  value
-    x.Assign(boundary_potential)
+    x.Assign(float(boundary_potential))
 
     a = mfem.BilinearForm(fespace)
 
@@ -116,7 +116,7 @@ def main():
                               "potential_ELECTRODE_NAME, and correction_ELECTRODE_NAME"
                               )
                         )
-    parser.add_argument('-bp', "--boundary-potential", nargs=1, type=float,
+    parser.add_argument('-bp', "--boundary-potential", nargs="?", type=float,
                         help="Potential value at the boundary condition in Volts",
                         default=0.0)
 
@@ -126,7 +126,7 @@ def main():
                               " which are brain tissue, CSF, skull bone, skin, air"),
                         default=[0.33, 1.65, 0.0165, 0.33, 1e-10])
 
-    parser.add_argument('-bc', "--base-conductivity", nargs=1, type=float,
+    parser.add_argument('-bc', "--base-conductivity", nargs="?", type=float,
                         help="base conductivity of infinite space, for the leadfield theoretical part estimation",
                         default=0.33)
 

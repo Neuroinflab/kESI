@@ -92,6 +92,20 @@ class Convolver(object):
                                     for i, (w, n, d) in enumerate(zip(weights,
                                                                       ns,
                                                                       steps))])
+        # import IPython
+        # IPython.embed()
+        # import pylab as pb
+        # globals().update(locals())
+        # def visualise(LEADFIELD):
+        #     slices = 30
+        #     fig, axs = pb.subplots(slices, 1, figsize=(5, 5*slices))
+        #     for i in range(slices):
+        #         z = int(LEADFIELD.shape[-1] / slices * i)
+        #         axs[i].imshow(LEADFIELD[:, :, z])
+        #     fig.tight_layout()
+        #     fig.savefig("test.png")
+        #     pb.show()
+        # visualise(LEADFIELD)
         return ssi.fftconvolve(LEADFIELD,
                                CSD * WEIGHTS,
                                mode='same')[self.src_idx('POT')]
