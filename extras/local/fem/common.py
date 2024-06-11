@@ -425,6 +425,7 @@ else:
             self._setup_expression(self._base_potential_gradient_normal_expression,
                                    base_conductivity, x, y, z)
             # Eq. 20 at Piastra et al 2018
+            # https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2018.00030/full
             return (-sum((inner((Constant(c - base_conductivity)
                                  * grad(self._base_potential_expression)),
                                 grad(self._v))
