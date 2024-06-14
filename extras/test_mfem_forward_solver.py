@@ -1,6 +1,4 @@
 import os.path
-
-import IPython.utils.path
 import numpy as np
 import pandas as pd
 
@@ -63,5 +61,8 @@ potential = solver.sample_solution(sampling_points)
 
 meshgird_collate = np.rollaxis(np.array(meshgrid), 0, 4)
 potential_grid = solver.sample_solution(meshgird_collate)
+
+
+
 
 
