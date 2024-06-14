@@ -229,16 +229,23 @@ def main():
     os.makedirs(outdir, exist_ok=True)
 
     output = StringIO()
-
-    print("Formatting output mesh")
+    print("saving output mesh")
     mesh.PrintVTK(output, 0)
-    for result, electrode_name in tqdm(list(zip(results, electrodes.NAME.values)), desc='formatting output potential'):
-        result.SaveVTK(output, "potential_{}".format(electrode_name), 0)
-
-    for result, electrode_name in tqdm(list(zip(results_correction, electrodes.NAME.values)),
-                                       desc='formatting output correction'):
-        result.SaveVTK(output, "correction_{}".format(electrode_name), 0)
-
-    print("Saving")
     with open(output_filename, 'w') as vtk_file:
         vtk_file.write(output.getvalue())
+    del output
+
+    for result, electrode_name in tqdm(list(zip(results, electrodes.NAME.values)), desc='saving output potential'):
+        output = StringIO()
+        result.SaveVTK(output, "potential_{}".format(electrode_name), 0)
+        with open(output_filename, 'a') as vtk_file:
+            vtk_file.write(output.getvalue())
+        del output
+
+    for result, electrode_name in tqdm(list(zip(results_correction, electrodes.NAME.values)),
+                                       desc='saving output correction'):
+        output = StringIO()
+        result.SaveVTK(output, "correction_{}".format(electrode_name), 0)
+        with open(output_filename, 'a') as vtk_file:
+            vtk_file.write(output.getvalue())
+        del output
