@@ -88,7 +88,11 @@ def main():
                  )
 
         if namespace.nifti:
-            img = Nifti1Image(sampled_grid, affine)
+            affine_nifti = np.copy(affine)
+            affine_nifti = affine_nifti * 1000
+            affine_nifti[3][3] = 1
+            img = Nifti1Image(sampled_grid, affine_nifti)
+            img.header.set_xyzt_units(xyz=2)  # mm
             outfile = os.path.join(namespace.output, save_name + '.nii.gz')
             nibabel.save(img, outfile)
 

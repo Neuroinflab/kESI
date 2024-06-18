@@ -8,6 +8,8 @@ from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 from io import StringIO
 
+from kesi.mfem_solver.interpolated_mfem_coefficient import CSDCoefficient
+
 
 def prepare_mesh(meshfile, refinement):
     # to create run
@@ -39,12 +41,40 @@ def mfem_solve_mesh_multiprocessing_wrap(electrode_position, meshfile, boundary_
     except RuntimeError:
         pass  # already configured
     mesh = prepare_mesh(meshfile, refinement)
-    result = mfem_solve_mesh(electrode_position, mesh, boundary_potential, conductivities)
+    coeff = electrode_coefficient(electrode_position)
+    result = mfem_solve_mesh(coeff, mesh, boundary_potential, conductivities)
     sol = np.array(result.GetDataArray())
     return sol
 
 
-def mfem_solve_mesh(electrode_position, mesh, boundary_potential, conductivities):
+def electrode_coefficient(electrode_position):
+    # for each point charge
+    point_charge_coeff = mfem.DeltaCoefficient()
+    point_charge_coeff.SetScale(1)
+    point_charge_coeff.SetDeltaCenter(mfem.Vector(electrode_position))
+    return point_charge_coeff
+
+
+def csd_distribution_coefficient(grid, values, type='nearest'):
+    """grid - list of x, y, z values of grid definition - numpy arrays of grid nodes positions,
+    values - 3D numpy array of CSD values
+    type - "nearest" (extremely fast) or "linear" (slow) interpolation"""
+    coeff = CSDCoefficient(grid[0], grid[1], grid[2], values)
+    if type == 'nearest':
+        coeff_func = coeff.get_nearest_neighbor_compiled_coeff()
+        return coeff_func
+    else:
+        return coeff
+
+
+def mfem_solve_mesh(csd_coefficient, mesh, boundary_potential, conductivities):
+    """
+    csd_coefficient - CSD distribution in coefficient form
+    mesh - MFEM mesh object
+    boundary_potential - value of the potential at the ground
+    conductivities - numpy array of conductivities in S/m one per mesh material, can be longer than amount of materials - extra values won't not be used
+    """
+
     fespace = prepare_fespace(mesh)
     print('Number of finite element unknowns: ' +
           str(fespace.GetTrueVSize()))
@@ -65,13 +95,9 @@ def mfem_solve_mesh(electrode_position, mesh, boundary_potential, conductivities
 
     conductivities_coeff = mfem.PWConstCoefficient(conductivities_vector)
 
-    # for each point charge
-    point_charge_coeff = mfem.DeltaCoefficient()
-    point_charge_coeff.SetScale(1)
-    point_charge_coeff.SetDeltaCenter(mfem.Vector(electrode_position))
-    b.AddDomainIntegrator(mfem.DomainLFIntegrator(point_charge_coeff))
-
+    b.AddDomainIntegrator(mfem.DomainLFIntegrator(csd_coefficient))
     b.Assemble()
+
     x = mfem.GridFunction(fespace)
     # setting initial values in all points, boundary elements will enforce this  value
     x.Assign(float(boundary_potential))
@@ -177,7 +203,8 @@ def main():
         results = []
         for row_id, electrode in tqdm(electrodes.iterrows(), desc="simulating electrodes"):
             electrode_position = electrode[["X", "Y", "Z"]].astype(float).values
-            result = mfem_solve_mesh(electrode_position, mesh, boundary_potential=namespace.boundary_potential,
+            electrode_coeff = electrode_coefficient(electrode_position)
+            result = mfem_solve_mesh(electrode_coeff, mesh, boundary_potential=namespace.boundary_potential,
                                      conductivities=conductivities_vector)
             results.append(result)
 
@@ -202,16 +229,23 @@ def main():
     os.makedirs(outdir, exist_ok=True)
 
     output = StringIO()
-
-    print("Formatting output mesh")
+    print("saving output mesh")
     mesh.PrintVTK(output, 0)
-    for result, electrode_name in tqdm(list(zip(results, electrodes.NAME.values)), desc='formatting output potential'):
-        result.SaveVTK(output, "potential_{}".format(electrode_name), 0)
-
-    for result, electrode_name in tqdm(list(zip(results_correction, electrodes.NAME.values)),
-                                       desc='formatting output correction'):
-        result.SaveVTK(output, "correction_{}".format(electrode_name), 0)
-
-    print("Saving")
     with open(output_filename, 'w') as vtk_file:
         vtk_file.write(output.getvalue())
+    del output
+
+    for result, electrode_name in tqdm(list(zip(results, electrodes.NAME.values)), desc='saving output potential'):
+        output = StringIO()
+        result.SaveVTK(output, "potential_{}".format(electrode_name), 0)
+        with open(output_filename, 'a') as vtk_file:
+            vtk_file.write(output.getvalue())
+        del output
+
+    for result, electrode_name in tqdm(list(zip(results_correction, electrodes.NAME.values)),
+                                       desc='saving output correction'):
+        output = StringIO()
+        result.SaveVTK(output, "correction_{}".format(electrode_name), 0)
+        with open(output_filename, 'a') as vtk_file:
+            vtk_file.write(output.getvalue())
+        del output

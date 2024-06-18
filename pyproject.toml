@@ -46,6 +46,7 @@ dependencies = [
     "pyvista ~= 0.43",
     "pandas ~= 2.0",
     "nibabel ~= 5.1.0",
+    "numba ~= 0.59.1",
     # "dolfin",
     # "meshio",
     # "snakemake",
