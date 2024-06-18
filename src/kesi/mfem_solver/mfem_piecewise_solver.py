@@ -9,6 +9,7 @@ from tqdm.contrib.concurrent import process_map
 from io import StringIO
 
 from kesi.mfem_solver.interpolated_mfem_coefficient import CSDCoefficient
+from kesi.utils import str_to_bool
 
 
 def prepare_mesh(meshfile, refinement):
@@ -156,6 +157,14 @@ def main():
                         help="base conductivity of infinite space, for the leadfield theoretical part estimation",
                         default=0.33)
 
+    parser.add_argument("--save-correction", type=str_to_bool,
+                         help="save solved correction per electrode",
+                         default=True)
+
+    parser.add_argument("--save-potential", type=str_to_bool,
+                         help="save solved potential per electrode",
+                         default=True)
+
     parser.add_argument('--additional-refinement', dest='additional_refinement', action='store_true',
                         help='Enable additional uniform refinement of the mesh')
     parser.set_defaults(additional_refinement=False)
@@ -166,6 +175,9 @@ def main():
     parser.set_defaults(multiprocessing=False)
 
     namespace = parser.parse_args()
+
+    if not (namespace.save_potential or namespace.save_correction):
+        raise Exception("Nothing will be saved! Exiting")
 
     conductivities_vector = np.array(namespace.conductivities)
     electrodes = pd.read_csv(namespace.electrodefile)
@@ -235,17 +247,18 @@ def main():
         vtk_file.write(output.getvalue())
     del output
 
-    for result, electrode_name in tqdm(list(zip(results, electrodes.NAME.values)), desc='saving output potential'):
-        output = StringIO()
-        result.SaveVTK(output, "potential_{}".format(electrode_name), 0)
-        with open(output_filename, 'a') as vtk_file:
-            vtk_file.write(output.getvalue())
-        del output
-
-    for result, electrode_name in tqdm(list(zip(results_correction, electrodes.NAME.values)),
-                                       desc='saving output correction'):
-        output = StringIO()
-        result.SaveVTK(output, "correction_{}".format(electrode_name), 0)
-        with open(output_filename, 'a') as vtk_file:
-            vtk_file.write(output.getvalue())
-        del output
+    if namespace.save_potential:
+        for result, electrode_name in tqdm(list(zip(results, electrodes.NAME.values)), desc='saving output potential'):
+            output = StringIO()
+            result.SaveVTK(output, "potential_{}".format(electrode_name), 0)
+            with open(output_filename, 'a') as vtk_file:
+                vtk_file.write(output.getvalue())
+            del output
+    if namespace.save_correction:
+        for result, electrode_name in tqdm(list(zip(results_correction, electrodes.NAME.values)),
+                                           desc='saving output correction'):
+            output = StringIO()
+            result.SaveVTK(output, "correction_{}".format(electrode_name), 0)
+            with open(output_filename, 'a') as vtk_file:
+                vtk_file.write(output.getvalue())
+            del output
