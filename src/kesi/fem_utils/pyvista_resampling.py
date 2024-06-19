@@ -1,4 +1,5 @@
 import argparse
+import glob
 import os
 
 import nibabel
@@ -9,12 +10,15 @@ import pyvista
 from nibabel import Nifti1Image
 from tqdm import tqdm
 
-from kesi.fem_utils.grid_utils import create_grid, load_or_create_grid
+from kesi.fem_utils.grid_utils import load_or_create_grid
 
 
 def main():
     parser = argparse.ArgumentParser(description="samples mesh solution using vista resample")
-    parser.add_argument("meshfile", help='VTK mesh file with solution')
+    parser.add_argument("meshfile",
+                        help=('VTK mesh file with solutions. '
+                              'If there are *.npz  files in the same folder, '
+                              'solutions from those files will be used instead'))
     parser.add_argument("electrodefile",
                         help=('CSV with electrode names and positions, in meters, with a header of: \n'
                               '\tNAME,X,Y,Z')
@@ -25,7 +29,8 @@ def main():
 
     parser.add_argument("--attribute", help='VTK attribute to sample', default='potential')
     parser.add_argument('-s', "--sampling-step", type=float, help="step of the sampling grid", default=0.001)
-    parser.add_argument('-g', "--grid-file", type=str, help="grid file, if provided sampling step is ignored", default=None)
+    parser.add_argument('-g', "--grid-file", type=str, help="grid file, if provided sampling step is ignored",
+                        default=None)
     parser.add_argument('--nifti', dest='nifti', action='store_true',
                         help='Additionally store sampled potential in nifti format')
     parser.set_defaults(nifti=False)
@@ -46,9 +51,13 @@ def main():
                                  spacing=[affine[0][0], affine[1][1], affine[2][2]],
                                  origin=[affine[0][3], affine[1][3], affine[2][3]]
                                  )
-    result = str_grid.sample(mesh, progress_bar=True, snap_to_closest_point=True)
 
-    to_sample = [i for i in result.array_names if i.startswith(namespace.attribute)]
+    array_names = list(mesh.array_names)
+    npz_files = list(glob.glob(os.path.join(os.path.dirname(namespace.meshfile), '*.npz')))
+    npz_file_names = [os.path.splitext(os.path.basename(i))[0] for i in npz_files]
+    array_names = list(set(array_names + npz_file_names))
+
+    to_sample = [i for i in array_names if i.startswith(namespace.attribute)]
     save_names = []
     for i in to_sample:
         line = i.split("_", maxsplit=1)
@@ -60,8 +69,25 @@ def main():
 
     os.makedirs(namespace.output, exist_ok=True)
 
-    for nr, save_name in enumerate(tqdm(save_names, "saving")):
+    mesh_copy = mesh.copy()
+    mesh_copy.clear_point_data()
+
+    for nr, save_name in enumerate(tqdm(save_names, "resampling and saving")):
         array_name = to_sample[nr]
+        dirname = os.path.dirname(namespace.meshfile)
+        npz_file_path = os.path.join(dirname, array_name + '.npz')
+        if os.path.exists(npz_file_path):
+            print("Using solution from", npz_file_path, array_name)
+            npz_data = np.load(npz_file_path)['sol']
+            assert npz_data.shape[0] == mesh_copy.points.shape[0]
+            mesh_copy.point_data[array_name] = npz_data
+        else:
+            print("Using solution from", namespace.meshfile, array_name)
+            mesh_copy.point_data[array_name] = mesh.point_data[array_name]
+
+        result = str_grid.sample(mesh_copy, progress_bar=True, snap_to_closest_point=True)
+        mesh_copy.clear_point_data()
+
         sampled_grid = result[array_name].reshape((*result.dimensions, 1), order="F")
         CORRECTION_POTENTIAL = sampled_grid[:, :, :, 0]
         X = grid[0][:, 0, 0][:, None, None]

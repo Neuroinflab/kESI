@@ -1,9 +1,9 @@
 import argparse
+import glob
 import os.path
 from functools import partial
 
 import nibabel
-import numpy
 import numpy as np
 import pandas as pd
 import pyvista
@@ -11,7 +11,6 @@ from nibabel import Nifti1Image
 from sklearn.metrics import DistanceMetric
 from sklearn.neighbors import KDTree
 from tqdm import tqdm
-import mfem.ser as mfem
 from tqdm.contrib.concurrent import process_map
 from kesi.fem_utils.grid_utils import create_grid, load_or_create_grid
 
@@ -100,7 +99,10 @@ def voxel_downsampling(points, values, lower_bound=np.array([0, 0, 0]), upper_bo
 
 def main():
     parser = argparse.ArgumentParser(description="samples mesh solution using voxel downsampling")
-    parser.add_argument("meshfile", help='VTK mesh file with solution')
+    parser.add_argument("meshfile",
+                        help=('VTK mesh file with solution. '
+                              'If there is a *_solutions.npz file in the same folder, '
+                              'solutions from that file will be used instead'))
     parser.add_argument("electrodefile",
                         help=('CSV with electrode names and positions, in meters, with a header of: \n'
                               '\tNAME,X,Y,Z')
@@ -124,7 +126,13 @@ def main():
 
     grid, affine = load_or_create_grid(vertices, step=namespace.sampling_step, gridfile=namespace.grid_file)
 
-    to_sample = [i for i in mesh.array_names if i.startswith(namespace.attribute)]
+    array_names = list(mesh.array_names)
+    npz_files = list(glob.glob(os.path.join(os.path.dirname(namespace.meshfile), '*.npz')))
+    npz_file_names = [os.path.splitext(os.path.basename(i))[0] for i in npz_files]
+    array_names = list(set(array_names + npz_file_names))
+
+    to_sample = [i for i in array_names if i.startswith(namespace.attribute)]
+
     save_names = []
     for i in to_sample:
         line = i.split("_", maxsplit=1)
@@ -136,10 +144,20 @@ def main():
 
     os.makedirs(namespace.output, exist_ok=True)
 
-    for nr, save_name in enumerate(tqdm(save_names, "saving")):
+    for nr, save_name in enumerate(tqdm(save_names, "resampling and saving")):
 
         array_name = to_sample[nr]
-        sol = np.array(mesh[array_name])
+        dirname = os.path.dirname(namespace.meshfile)
+        npz_file_path = os.path.join(dirname, array_name + '.npz')
+        if os.path.exists(npz_file_path):
+            print("Using solution from", npz_file_path, array_name)
+            npz_data = np.load(npz_file_path)['sol']
+            assert npz_data.shape[0] == mesh.points.shape[0]
+            sol = npz_data
+        else:
+            print("Using solution from", namespace.meshfile, array_name)
+            sol = mesh.point_data[array_name]
+
         metric = DistanceMetric.get_metric('minkowski', p=np.inf)
         sampled_solution, affine = voxel_downsampling(np.array(vertices), sol, grid=grid, affine=affine,
                                                       mesh_max_elem_size=namespace.mesh_max_elem_size,
@@ -167,8 +185,7 @@ def main():
                  )
 
         if namespace.nifti:
-            img = Nifti1Image(sampled_grid, affine)
-            affine_nifti = affine_nifti * 1000
+            affine_nifti = affine * 1000
             affine_nifti[3][3] = 1
             img = Nifti1Image(sampled_grid, affine_nifti)
             img.header.set_xyzt_units(xyz=2)  # mm

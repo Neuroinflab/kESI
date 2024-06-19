@@ -1,3 +1,5 @@
+import os.path
+
 import numpy as np
 
 
@@ -82,6 +84,3 @@ def load_or_create_grid(voxels, step, gridfile=None):
         new_affine[1][3] = new_000[1]
         new_affine[2][3] = new_000[2]
         return grid, new_affine
-
-def save_sampled_solution():
-    pass

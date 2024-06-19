@@ -138,7 +138,7 @@ def main():
                               '\tNAME,X,Y,Z')
                         )
     parser.add_argument("output", type=str,
-                        help=("output folder or path to .vtk file with results."
+                        help=("output folder with results."
                               "Results will be saved as VTK attributes with names:"
                               "potential_ELECTRODE_NAME, and correction_ELECTRODE_NAME"
                               )
@@ -158,12 +158,12 @@ def main():
                         default=0.33)
 
     parser.add_argument("--save-correction", type=str_to_bool,
-                         help="save solved correction per electrode",
-                         default=True)
+                        help="y/n save solved correction per electrode",
+                        default=True)
 
     parser.add_argument("--save-potential", type=str_to_bool,
-                         help="save solved potential per electrode",
-                         default=True)
+                        help="y/n save solved potential per electrode",
+                        default=True)
 
     parser.add_argument('--additional-refinement', dest='additional_refinement', action='store_true',
                         help='Enable additional uniform refinement of the mesh')
@@ -174,9 +174,27 @@ def main():
                         help='Enable multiprocessing per electrode, broken rn')
     parser.set_defaults(multiprocessing=False)
 
+    parser.add_argument("--save-vtk", type=str_to_bool,
+                        help="y/n save solved correction per electrode in the vtk file",
+                        default=True)
+
+    parser.add_argument("--save-numpy", type=str_to_bool,
+                        help=("y/n save mesh solution in a series of numpy files,"
+                              " saves a lot of space compared to VTK, but cannot"
+                              " be previewed using industry standard mesh viewers, can still be used for sampling"),
+                        default=False)
+
+    parser.add_argument("--numpy-precision", type=np.dtype,
+                        help=("Dtype precision for numpy solution saving, in numpy dtype understood string form. ie: "
+                              "float32 float64 etc"),
+                        default=np.dtype("float32"))
+
     namespace = parser.parse_args()
 
     if not (namespace.save_potential or namespace.save_correction):
+        raise Exception("Nothing will be saved! Exiting")
+
+    if not (namespace.save_vtk or namespace.save_numpy):
         raise Exception("Nothing will be saved! Exiting")
 
     conductivities_vector = np.array(namespace.conductivities)
@@ -232,12 +250,8 @@ def main():
         correction_gridf.Assign(correction)
         results_correction.append(correction_gridf)
 
-    if namespace.output.endswith(".vtk"):
-        outdir = os.path.dirname(namespace.output)
-        output_filename = namespace.output
-    else:
-        outdir = namespace.output
-        output_filename = os.path.join(outdir, os.path.splitext(os.path.basename(namespace.meshfile))[0] + '.vtk')
+    outdir = namespace.output
+    output_filename = os.path.join(outdir, os.path.splitext(os.path.basename(namespace.meshfile))[0] + '.vtk')
     os.makedirs(outdir, exist_ok=True)
 
     output = StringIO()
@@ -249,16 +263,32 @@ def main():
 
     if namespace.save_potential:
         for result, electrode_name in tqdm(list(zip(results, electrodes.NAME.values)), desc='saving output potential'):
+            name = "potential_{}".format(electrode_name)
             output = StringIO()
-            result.SaveVTK(output, "potential_{}".format(electrode_name), 0)
-            with open(output_filename, 'a') as vtk_file:
-                vtk_file.write(output.getvalue())
+            result.SaveVTK(output, name, 0)
+            if namespace.save_vtk:
+                with open(output_filename, 'a') as vtk_file:
+                    vtk_file.write(output.getvalue())
+
+            if namespace.save_numpy:
+                data_vtk = [float(i) for i in output.getvalue().splitlines()[2:]]
+                data_vtk = np.array(data_vtk)
+                numpy_name = os.path.join(os.path.dirname(output_filename), name)
+                np.savez_compressed(numpy_name, sol=data_vtk.astype(namespace.numpy_precision))
             del output
+
     if namespace.save_correction:
         for result, electrode_name in tqdm(list(zip(results_correction, electrodes.NAME.values)),
                                            desc='saving output correction'):
+            name = "correction_{}".format(electrode_name)
             output = StringIO()
-            result.SaveVTK(output, "correction_{}".format(electrode_name), 0)
-            with open(output_filename, 'a') as vtk_file:
-                vtk_file.write(output.getvalue())
+            result.SaveVTK(output, name, 0)
+            if namespace.save_vtk:
+                with open(output_filename, 'a') as vtk_file:
+                    vtk_file.write(output.getvalue())
+            if namespace.save_numpy:
+                data_vtk = [float(i) for i in output.getvalue().splitlines()[2:]]
+                data_vtk = np.array(data_vtk)
+                numpy_name = os.path.join(os.path.dirname(output_filename), name)
+                np.savez_compressed(numpy_name, sol=data_vtk.astype(namespace.numpy_precision))
             del output
