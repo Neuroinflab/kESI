@@ -29,6 +29,7 @@ import warnings
 
 import numpy as np
 from scipy import signal as ssi
+from tqdm import tqdm
 
 from ._tools import reshape
 
@@ -180,7 +181,7 @@ class KernelConstructor(object):
     def _calculate_potential_basis_functions_at_electrodes(self,
                                                      electrodes,
                                                      potential_basis_functions):
-        for i, electrode in enumerate(electrodes):
+        for i, electrode in enumerate(tqdm(electrodes, desc='constructing B array')):
             POT = potential_basis_functions(electrode)
 
             self._alloc_potential_basis_functions_if_necessary(POT.size,
@@ -221,7 +222,7 @@ class CrossKernelConstructor(object):
     def _create_crosskernel(self, potential_basis_functions_at_electrodes):
         self._n_electrodes = potential_basis_functions_at_electrodes.shape[1]
         for i, potential_basis_functions in enumerate(
-                                     potential_basis_functions_at_electrodes.T):
+                                     tqdm(potential_basis_functions_at_electrodes.T, desc='creating crosskernel per electrode')):
             self.ci.update_src(self._basis_functions_weights,
                                potential_basis_functions)
             self._set_crosskernel_column(i, self._basis_functions_to_csd())
