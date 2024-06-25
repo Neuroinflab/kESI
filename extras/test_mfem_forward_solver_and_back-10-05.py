@@ -19,15 +19,15 @@ conductivities = np.array([0.33, 1.65, 0.0165, 0.33, 1e-10])
 
 # electrodes_file = os.path.join(this_folder, "data", "generated", "tutorial", "four_spheres", "tutorial_electrodes_four.csv")
 
-electrodes_file = os.path.join(this_folder, "data", "bundled", "electrode_locations", "10_20", "10_20_FOUR_SPHERES_SCALP_0.089.csv")
-# electrodes_file = os.path.join(this_folder, "data", "bundled", "electrode_locations", "10_20", "10_20_MINIMUM_FOUR_SPHERES_SCALP_0.089.csv")
+electrodes_file = os.path.join(this_folder, "data", "bundled", "electrode_locations", "10_20", "10_20_FOUR_SPHERES_SCALP_0.088.csv")
 electrodes_df = pd.read_csv(electrodes_file)
 
 electrode_correction_sampling_folder = os.path.join("data",
                                                     "generated",
                                                     "tutorial",
                                                     "four_spheres",
-                                                    "mfem_sampled_leadfield_corrections_air_10_20_big"
+                                                    "mfem_leadfield_corrections_10_20_big_0.005_0.088",
+                                                    "sampled_correction",
                                                     )
 
 sampling_points = electrodes_df[["X", "Y", "Z"]].values
@@ -128,7 +128,7 @@ nibabel.save(img, base_path + '.nii.gz')
 
 
 
-img = Nifti1Image(kesi_eigensources, new_affine)
+img = Nifti1Image(kesi_eigensources.astype(np.float32), new_affine)
 
 img.header.set_xyzt_units(xyz=2, t=24)  # mm
 zooms = list(img.header.get_zooms())

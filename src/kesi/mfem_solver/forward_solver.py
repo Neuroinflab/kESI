@@ -8,17 +8,21 @@ from kesi.mfem_solver.mfem_piecewise_solver import mfem_solve_mesh, csd_distribu
 from mfem import ser as mfem
 
 class CSDForwardSolver:
-    def __init__(self, meshfile, conductivities, boundary_value=0, additional_refinement=False):
+    def __init__(self, meshfile, conductivities, boundary_value=0, additional_refinement=False,
+                 sampling_points=None):
         """
         meshfile - mfem compatable mesh file
         conductivities - numpy array of conductances per mesh material in S/m
-        sampling points - numpy array (N, 3) of simulated electrodes positions
-        boundary_value - the value at boundaries, usually grounding electrode
+        sampling points - numpy array (N, 3) of simulated electrodes positions, if provided now, will be used to refine mesh around those positions
+        boundary_value - the value at boudaries, usually grounding electrode
         """
         self.meshfile = meshfile
         self.conductivities = conductivities
         self.boundary_value = boundary_value
-        self.mesh = prepare_mesh(self.meshfile, additional_refinement)
+        if sampling_points:
+            self.mesh = prepare_mesh(self.meshfile, additional_refinement, sampling_points)
+        else:
+            self.mesh = prepare_mesh(self.meshfile, additional_refinement)
         self.solution = None
         self.solution_interpolated = None
 
