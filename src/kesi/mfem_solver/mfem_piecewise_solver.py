@@ -12,7 +12,33 @@ from kesi.mfem_solver.interpolated_mfem_coefficient import CSDCoefficient
 from kesi.utils import str_to_bool
 
 
-def prepare_mesh(meshfile, refinement):
+def refine_around_electrodes(mesh, electrode_positions):
+    """
+    mfem::Array<int> refine_elements;
+for (int i = 0; i < mesh.GetNE(); ++i)
+{
+    mfem::ElementTransformation *trans = mesh.GetElementTransformation(i);
+    mfem::Vector center;
+    trans->Transform(mfem::Geometries.GetCenter(mesh.GetElementBaseGeometry(i)), center);
+
+    double distance = center.DistanceTo(refine_point);
+    if (distance < some_threshold)
+    {
+        refine_elements.Append(i);
+    }
+}
+
+mfem::Mesh refined_mesh = mesh;
+refined_mesh.GeneralRefinement(refine_elements);
+
+refined_mesh.Finalize(true);
+    """
+    raise NotImplementedError("Refinement around electrodes is not implemented yet")
+    return mesh
+
+
+def prepare_mesh(meshfile, refinement, electrode_positions=None):
+    "if electrode positions are given, perform additional refinement around electrodes positions, array (N, 3)"
     # to create run
     # gmsh -3 -format msh22 four_spheres_in_air_with_plane.geo
     print("Loading mesh...")
@@ -23,6 +49,10 @@ def prepare_mesh(meshfile, refinement):
         print("additional uniform refinement...")
         mesh.UniformRefinement()
         print("additional uniform refinement... Done")
+
+    if electrode_positions is not None:
+        mesh = refine_around_electrodes(mesh, electrode_positions)
+
 
     return mesh
 
@@ -35,13 +65,12 @@ def prepare_fespace(mesh):
     return fespace
 
 
-def mfem_solve_mesh_multiprocessing_wrap(electrode_position, meshfile, boundary_potential, conductivities, refinement):
+def mfem_solve_mesh_multiprocessing_wrap(electrode_position, mesh, boundary_potential, conductivities, refinement):
     try:
         device = mfem.Device("cpu")
         device.Print()
     except RuntimeError:
         pass  # already configured
-    mesh = prepare_mesh(meshfile, refinement)
     coeff = electrode_coefficient(electrode_position)
     result = mfem_solve_mesh(coeff, mesh, boundary_potential, conductivities)
     sol = np.array(result.GetDataArray())
@@ -169,6 +198,10 @@ def main():
                         help='Enable additional uniform refinement of the mesh')
     parser.set_defaults(additional_refinement=False)
 
+    parser.add_argument("--electrode-refinement", type=str_to_bool,
+                        help=("Refine mesh around electrode points"),
+                        default=False)
+
     # todo debug multiprocessing!!!!
     parser.add_argument('--multiprocessing', dest='multiprocessing', action='store_true',
                         help='Enable multiprocessing per electrode, broken rn')
@@ -202,7 +235,24 @@ def main():
 
     device = mfem.Device("cpu")
     device.Print()
-    mesh = prepare_mesh(namespace.meshfile, namespace.additional_refinement)
+    if namespace.electrode_refinement:
+        electrodes_for_prepare = electrodes[["X", "Y", "Z"]].values
+    else:
+        electrodes_for_prepare = None
+    mesh = prepare_mesh(namespace.meshfile, namespace.additional_refinement, electrodes_for_prepare)
+
+    outdir = namespace.output
+    output_filename = os.path.join(outdir, os.path.splitext(os.path.basename(namespace.meshfile))[0] + '.vtk')
+    os.makedirs(outdir, exist_ok=True)
+
+    # todo: at 0.002 max element size for spheres with plane it only saves 16 megabytes of mesh, I don't understand why
+    # it happens in any mode of PrintVTK, even directly to file
+    output = StringIO()
+    print("saving output mesh")
+    mesh.PrintVTK(output, 0)
+    with open(output_filename, 'w') as vtk_file:
+        vtk_file.write(output.getvalue())
+    del output
 
     if len(mesh.attributes.GetDataArray()) > len(conductivities_vector):
         raise Exception("There is more materials than provided conductivities!")
@@ -213,7 +263,7 @@ def main():
 
     if namespace.multiprocessing:
         electrode_positions = electrodes[["X", "Y", "Z"]].values
-        fn = partial(mfem_solve_mesh_multiprocessing_wrap, meshfile=namespace.meshfile,
+        fn = partial(mfem_solve_mesh_multiprocessing_wrap, mesh=mesh,
                      boundary_potential=namespace.boundary_potential,
                      conductivities=conductivities_vector,
                      refinement=namespace.additional_refinement)
@@ -241,6 +291,7 @@ def main():
     results_correction = []
     verts = mesh.GetVertexArray()
     fespace = prepare_fespace(mesh)
+
     for result, electrode_position in tqdm(list(zip(results, electrodes[["X", "Y", "Z"]].astype(float).values)),
                                            desc='adding theoretical solution'):
         distance_to_electrode = np.linalg.norm(np.array(electrode_position) - verts, ord=2, axis=1)
@@ -249,17 +300,6 @@ def main():
         correction_gridf = mfem.GridFunction(fespace)
         correction_gridf.Assign(correction)
         results_correction.append(correction_gridf)
-
-    outdir = namespace.output
-    output_filename = os.path.join(outdir, os.path.splitext(os.path.basename(namespace.meshfile))[0] + '.vtk')
-    os.makedirs(outdir, exist_ok=True)
-
-    output = StringIO()
-    print("saving output mesh")
-    mesh.PrintVTK(output, 0)
-    with open(output_filename, 'w') as vtk_file:
-        vtk_file.write(output.getvalue())
-    del output
 
     if namespace.save_potential:
         for result, electrode_name in tqdm(list(zip(results, electrodes.NAME.values)), desc='saving output potential'):

@@ -1,9 +1,11 @@
+import argparse
 import os.path
 
 import nibabel
 import numpy as np
 import pandas as pd
 import pylab as pb
+
 
 def create_meshgrid_from_affine(affine, data):
     x, y, z, comp = data.shape
@@ -19,11 +21,21 @@ def create_meshgrid_from_affine(affine, data):
 
 
 def main():
-    electrode_file = "/home/mdovgialo/projects/halje_data_analysis/kESI/extras/data/bundled/electrode_locations/10_20/10_20_FOUR_SPHERES_DEPTH_L2_0.089_TEST.csv"
-    sampled_potential = "/home/mdovgialo/projects/halje_data_analysis/kESI/extras/data/generated/tutorial/four_spheres/mfem_leadfield_corrections_10_20_TEST_DEPTH/sampled_potential"
-    sampled_correction = "/home/mdovgialo/projects/halje_data_analysis/kESI/extras/data/generated/tutorial/four_spheres/mfem_leadfield_corrections_10_20_TEST_DEPTH/sampled_correction"
+    parser = argparse.ArgumentParser(description="Draw crossection of electrode potentials")
+    parser.add_argument("electrode", type=str, help="Electrodes CSV")
+    parser.add_argument("potential", type=str, help="Folder with sampled potential")
+    parser.add_argument("correction", type=str, help="Folder with sampled correction")
+    parser.add_argument("-x", type=int, help="Slice at X coordinate (in voxels)", default=130)
+    parser.add_argument("-y", type=int, help="Slice at Y coordinate (in voxels)", default=118)
+
+    args = parser.parse_args()
+
+    electrode_file = args.electrode
+    sampled_potential = args.potential
+    sampled_correction = args.correction
+
     electrodes = pd.read_csv(electrode_file)
-    slice_of_interest = np.s_[130, 118, :]
+    slice_of_interest = np.s_[args.x, args.y, :]
 
     fig_corr = pb.figure()
     fig_pot = pb.figure()
@@ -86,10 +98,6 @@ def main():
     pb.title("Correction recalculated")
 
     pb.show()
-
-
-
-
 
 
 if __name__ == '__main__':

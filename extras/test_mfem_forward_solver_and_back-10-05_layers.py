@@ -88,14 +88,42 @@ logger.info("Sampling potential grid done")
 brain_mask = ((np.sum(meshgird_collate ** 2, axis=3)**0.5) < 0.079)
 
 logger.info("Starting kesi solver")
-kesi_solver = Kesi3d(meshgrid, electrode_names, electrode_correction_sampling_folder,
-                    conductivity=0.33, R_init=0.03, mask=brain_mask)
 
-import IPython
-IPython.embed()
+solution_dx = 0.01
+sol_x = np.arange(min_x, max_x, solution_dx)
+sol_y = np.arange(min_y, max_y, solution_dx)
+sol_z = np.arange(min_z, max_z, solution_dx)
+solution_meshrid = np.meshgrid(sol_x, sol_y, sol_z, indexing='ij')
+
+
+solution_affine = np.zeros((4, 4))
+solution_affine[0][0] = np.abs(solution_dx)
+solution_affine[1][1] = np.abs(solution_dx)
+solution_affine[2][2] = np.abs(solution_dx)
+# last row is always 0 0 0 1
+
+new_000 = np.array([solution_meshrid[0][0, 0 ,0], solution_meshrid[1][0, 0 ,0], solution_meshrid[2][0, 0 ,0]])
+solution_affine[0][3] = new_000[0]
+solution_affine[1][3] = new_000[1]
+solution_affine[2][3] = new_000[2]
+
+solution_affine = solution_affine * 1000  # to mm
+solution_affine[3][3] = 1
+
+meshgird_collate_sol = np.rollaxis(np.array(solution_meshrid), 0, 4)
+brain_mask_sol = ((np.sum(meshgird_collate_sol ** 2, axis=3)**0.5) < 0.079)
+
+
+kesi_solver = Kesi3d(solution_meshrid, electrode_names, electrode_correction_sampling_folder,
+                    conductivity=0.33, R_init=0.03, mask=brain_mask_sol)
+#
+# import IPython
+# IPython.embed()
+
+
 logger.info("Starting kesi solver cv lambda")
 #best_lambda, lambd, errors = kesi_solver.cv_lambda(potential[:, None])
-best_lambda, lambd, errors = kesi_solver.cv_lambda(potential[:, None], np.logspace(-8, 20, 100))
+best_lambda, lambd, errors = kesi_solver.cv_lambda(potential[:, None], np.logspace(-7, 20, 100))
 
 logger.info("Starting kesi reconstructing")
 reconstructed_csd = kesi_solver.reconstruct_csd(potential[:, None], best_lambda)
@@ -123,7 +151,7 @@ new_affine = new_affine * 1000  # to mm
 new_affine[3][3] = 1
 
 
-img = Nifti1Image(csd_grid, new_affine)
+img = Nifti1Image(csd_grid, solution_affine)
 
 img.header.set_xyzt_units(xyz=2, t=24)  # mm
 zooms = list(img.header.get_zooms())
@@ -142,7 +170,7 @@ nibabel.save(img, base_path + '.nii.gz')
 
 
 
-img = Nifti1Image(kesi_eigensources, new_affine)
+img = Nifti1Image(kesi_eigensources, solution_affine)
 
 img.header.set_xyzt_units(xyz=2, t=24)  # mm
 zooms = list(img.header.get_zooms())
@@ -185,9 +213,10 @@ base_path = os.path.expanduser(os.path.join("~/test", "test_potential"))
 nibabel.save(img, base_path + '.nii.gz')
 
 
-kcsd_solver = KcsdKesi3d(meshgrid, sampling_points,
+
+kcsd_solver = KcsdKesi3d(solution_meshrid, sampling_points,
                     conductivity=0.33, R_init=0.03, mask=brain_mask)
-best_lambda, lambd, errors = kcsd_solver.cv_lambda(potential[:, None])
+best_lambda, lambd, errors = kcsd_solver.cv_lambda(potential[:, None], np.logspace(-7, 20, 100))
 reconstructed_csd = kcsd_solver.reconstruct_csd(potential[:, None], best_lambda)
 
 kcsd_eigenvalues, kcsd_eigensources = kcsd_solver.eigh(best_lambda)
@@ -195,7 +224,7 @@ kcsd_eigenvalues, kcsd_eigensources = kcsd_solver.eigh(best_lambda)
 
 csd_grid = reconstructed_csd * 1e9 / 1e3 ** 3  # transform from Amper per meter cubed to nanoAmpers per milimiter cubed
 
-img = Nifti1Image(csd_grid, new_affine)
+img = Nifti1Image(csd_grid, solution_affine)
 img.header.set_xyzt_units(xyz=2, t=24)  # mm
 zooms = list(img.header.get_zooms())
 sample_period_us = (1 / 1000) * 1e6
@@ -212,7 +241,7 @@ print("Saving output Nifti, shape: {} dtype: {} maximum size on disk {:0.3f} Gb"
 base_path = os.path.expanduser(os.path.join("~/test", "test_kcsd"))
 nibabel.save(img, base_path + '.nii.gz')
 
-img = Nifti1Image(kcsd_eigensources.astype(np.float32), new_affine)
+img = Nifti1Image(kcsd_eigensources.astype(np.float32), solution_affine)
 
 img.header.set_xyzt_units(xyz=2, t=24)  # mm
 zooms = list(img.header.get_zooms())

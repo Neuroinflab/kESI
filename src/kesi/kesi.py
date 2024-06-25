@@ -9,7 +9,7 @@ from kesi.common import SphericalSplineSourceKCSD, GaussianSourceKCSD3D, cv
 from kesi.kernel.constructor import Convolver, ConvolverInterfaceIndexed, KernelConstructor, CrossKernelConstructor
 from kesi.kernel.electrode import Conductivity
 from kesi.kernel import potential_basis_functions as pbf
-from kesi.kernel.electrode import LinearlyInterpolatedLeadfieldCorrection
+from kesi.kernel.electrode import LinearlyInterpolatedLeadfieldCorrection, NearestNeighbourInterpolatedLeadfieldCorrection
 
 
 class KcsdKesi3d:
@@ -160,7 +160,8 @@ class KcsdKesi3d:
 
 
 class Kesi3d(KcsdKesi3d):
-    def __init__(self, estimation_points_grid, electrode_names, electrode_folder, conductivity=1.0, R_init=1.0, mask=None, source_type='spherical'):
+    def __init__(self, estimation_points_grid, electrode_names, electrode_folder, conductivity=1.0, R_init=1.0,
+                 mask=None, source_type='spherical', interpolation='linear'):
         """
         estimation_points_grid: list of fleshed out meshgrids X, Y, Z, which span the CSD estimation, even grid spacing along all axii
         electrode_names - list of electrode names to use from electrode folder
@@ -169,6 +170,8 @@ class Kesi3d(KcsdKesi3d):
         R_init: radius of the sources
         mask: None for no mask, 3D tensor of bools to put sources along estimation_points_grids nodes
         source_type: Type of the CSD sources, spherical or gaussian
+        interpolation: str, "linear" or "nearest" - interpolator to map correction potentials to estimation points grid
+            nearest is around 2 times faster
         """
         assert source_type in ['spherical', 'gaussian']
         if mask is None:
@@ -180,7 +183,12 @@ class Kesi3d(KcsdKesi3d):
         positions = []
         for el_name in electrode_names:
             el_path = os.path.join(electrode_folder, el_name + '.npz')
-            electrode = LinearlyInterpolatedLeadfieldCorrection(el_path)
+            if interpolation == 'linear':
+                electrode = LinearlyInterpolatedLeadfieldCorrection(el_path)
+            elif interpolation == 'nearest':
+                electrode = NearestNeighbourInterpolatedLeadfieldCorrection(el_path)
+            else:
+                raise NotImplementedError("Interpolator not implemented: {}".format(interpolation))
             electrodes.append(electrode)
             positions.append([electrode.x, electrode.y, electrode.z])
 
