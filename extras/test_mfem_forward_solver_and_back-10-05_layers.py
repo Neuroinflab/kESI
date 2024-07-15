@@ -10,6 +10,13 @@ from kesi.kesi import Kesi3d, KcsdKesi3d
 from kesi.mfem_solver.forward_solver import CSDForwardSolver
 import logging
 
+from ncsd_tools.grid_utils import create_atlas_addon_nii_with_circles
+
+
+def normalize_eigensources(kcsd_eigensources):
+    for i in range(kcsd_eigensources.shape[-1]):
+        kcsd_eigensources[:, :, :, i] /= np.max(np.abs(kcsd_eigensources[:, :, :, i]))
+    return kcsd_eigensources
 
 logger = logging.getLogger("test")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s;%(levelname)s;%(message)s")
@@ -89,7 +96,7 @@ brain_mask = ((np.sum(meshgird_collate ** 2, axis=3)**0.5) < 0.079)
 
 logger.info("Starting kesi solver")
 
-solution_dx = 0.01
+solution_dx = 0.005
 sol_x = np.arange(min_x, max_x, solution_dx)
 sol_y = np.arange(min_y, max_y, solution_dx)
 sol_z = np.arange(min_z, max_z, solution_dx)
@@ -115,7 +122,7 @@ brain_mask_sol = ((np.sum(meshgird_collate_sol ** 2, axis=3)**0.5) < 0.079)
 
 
 kesi_solver = Kesi3d(solution_meshrid, electrode_names, electrode_correction_sampling_folder,
-                    conductivity=0.33, R_init=0.03, mask=brain_mask_sol)
+                    conductivity=0.33, R_init=0.012, mask=brain_mask_sol)
 #
 # import IPython
 # IPython.embed()
@@ -130,6 +137,8 @@ reconstructed_csd = kesi_solver.reconstruct_csd(potential[:, None], best_lambda)
 
 logger.info("Starting kesi eigenvectors")
 kesi_eigenvalues, kesi_eigensources = kesi_solver.eigh(best_lambda)
+
+kesi_eigensources = normalize_eigensources(kesi_eigensources)
 
 
 csd_grid = reconstructed_csd * 1e9 / 1e3 ** 3  # transform from Amper per meter cubed to nanoAmpers per milimiter cubed
@@ -168,6 +177,9 @@ print("Saving output Nifti, shape: {} dtype: {} maximum size on disk {:0.3f} Gb"
                                                                                         ))
 nibabel.save(img, base_path + '.nii.gz')
 
+create_atlas_addon_nii_with_circles(sampling_points * 1000, size=7, atlas_type=base_path + '.nii.gz',
+                                    savedir=os.path.dirname(base_path), title="electrodes"
+                                    )
 
 
 img = Nifti1Image(kesi_eigensources, solution_affine)
@@ -215,12 +227,15 @@ nibabel.save(img, base_path + '.nii.gz')
 
 
 kcsd_solver = KcsdKesi3d(solution_meshrid, sampling_points,
-                    conductivity=0.33, R_init=0.03, mask=brain_mask)
+                    conductivity=0.33, R_init=0.012, mask=brain_mask_sol)
+
+
 best_lambda, lambd, errors = kcsd_solver.cv_lambda(potential[:, None], np.logspace(-7, 20, 100))
 reconstructed_csd = kcsd_solver.reconstruct_csd(potential[:, None], best_lambda)
 
 kcsd_eigenvalues, kcsd_eigensources = kcsd_solver.eigh(best_lambda)
 
+kcsd_eigensources = normalize_eigensources(kcsd_eigensources)
 
 csd_grid = reconstructed_csd * 1e9 / 1e3 ** 3  # transform from Amper per meter cubed to nanoAmpers per milimiter cubed
 
