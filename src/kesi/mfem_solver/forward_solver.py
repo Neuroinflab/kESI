@@ -6,15 +6,20 @@ from scipy.spatial import Delaunay
 from kesi.mfem_solver.mfem_piecewise_solver import mfem_solve_mesh, csd_distribution_coefficient, prepare_mesh, \
     prepare_fespace
 from mfem import ser as mfem
+from tqdm import tqdm
+import math
+
 
 class CSDForwardSolver:
     def __init__(self, meshfile, conductivities, boundary_value=0, additional_refinement=False,
-                 sampling_points=None):
+                 sampling_points=None,
+                 interpolator=LinearNDInterpolator):
         """
         meshfile - mfem compatable mesh file
         conductivities - numpy array of conductances per mesh material in S/m
         sampling points - numpy array (N, 3) of simulated electrodes positions, if provided now, will be used to refine mesh around those positions
         boundary_value - the value at boudaries, usually grounding electrode
+        interpolator - can use from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
         """
         self.meshfile = meshfile
         self.conductivities = conductivities
@@ -25,6 +30,7 @@ class CSDForwardSolver:
             self.mesh = prepare_mesh(self.meshfile, additional_refinement)
         self.solution = None
         self.solution_interpolated = None
+        self.interpolator = interpolator
 
     def solve(self, xyz, csd):
         """
@@ -40,7 +46,8 @@ class CSDForwardSolver:
         verts = np.array(self.mesh.GetVertexArray())
         sol = self.solution.GetDataArray()
         verts_triangulation = Delaunay(verts)
-        self.solution_interpolated = LinearNDInterpolator(verts_triangulation, sol)
+
+        self.solution_interpolated = self.interpolator(verts_triangulation, sol)
         return solution
 
     def sample_solution_probe(self, x, y, z):

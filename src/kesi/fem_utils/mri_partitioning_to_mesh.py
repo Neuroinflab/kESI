@@ -12,7 +12,7 @@ from tqdm import tqdm
 import tempfile
 import mfem.ser as mfem
 from sklearn.neighbors import KDTree
-
+from nibabel.processing import conform
 
 def create_cell_data_from_mri(mri, mri_grid):
     """assumes mri is in mm and mri_grid is in meters"""
@@ -25,6 +25,13 @@ def create_cell_data_from_mri(mri, mri_grid):
         data.append(mri_data[i[0], i[1], i[2]])
     return data
 
+def align_mri_volume_to_ras(mri):
+    voxel_sizes = tuple(np.abs([mri.header.get_base_affine()[0][0],
+                   mri.header.get_base_affine()[1][1],
+                   mri.header.get_base_affine()[2][2],
+                   ]))
+    mri = conform(mri, out_shape=mri.shape, voxel_size=voxel_sizes , order=0)
+    return mri
 
 def main():
     parser = argparse.ArgumentParser(description=("A tool to transform partitioned MRI scan to a cube mesh "
@@ -35,12 +42,17 @@ def main():
                                                   "For visualisation in applications which cannot load MFEM format"))
     parser.add_argument("mri",
                         help=('Segmented 3D volume file, for example .nii.gz format'))
+    parser.add_argument("-o" "--outdir",
+                        help=('output directory, by default'))
 
     namespace = parser.parse_args()
 
     base_outfile = os.path.splitext(namespace.mri)[0]
 
     mri = nibabel.load(namespace.mri)
+    # needed for good vertex orientation
+    mri = align_mri_volume_to_ras(mri)
+
     meshgrid = vertex_grid_from_volume(mri)
 
     mri_grid = pyvista.StructuredGrid(meshgrid[0], meshgrid[1], meshgrid[2])
@@ -53,10 +65,7 @@ def main():
     surf = mri_unstructured_grid.extract_surface(progress_bar=True)
     surf.compute_normals()
 
-    # todo hack: why not -1????
-    down_cells = np.where(surf.face_normals[:, 2] == 1)[0]
-
-    down_cell_positions = surf.cell_centers().points[surf.face_normals[:, 2] == 1]
+    down_cell_positions = surf.cell_centers().points[surf.face_normals[:, 2] == -1]
     boundary_tree = KDTree(down_cell_positions)
 
     with tempfile.NamedTemporaryFile(suffix='.vtk') as fp:
@@ -74,8 +83,14 @@ def main():
             mean_coords = coords.mean(axis=0)
             boundary_elements_coords.append(mean_coords)
         boundary_elements_coords = np.array(boundary_elements_coords)
-        # todo: hack 1 mm distance
-        counts = boundary_tree.query_radius(boundary_elements_coords, r=2, count_only=True)
+
+        vox_size = np.mean(np.abs([mri.header.get_base_affine()[0][0],
+                        mri.header.get_base_affine()[1][1],
+                        mri.header.get_base_affine()[2][2],
+                               ]
+                              )
+                       ) / 1000 # in meters
+        counts = boundary_tree.query_radius(boundary_elements_coords, r=vox_size * 1.5, count_only=True)
 
         for i in range(mfem_mesh.GetNBE()):
             if counts[i] > 0:
@@ -85,8 +100,8 @@ def main():
         mfem_mesh.FinalizeMesh(0, True)
         mfem_mesh.Print(base_outfile + '.mesh')
         # todo add save vtk param
-        mfem_mesh.PrintVTK(base_outfile + '.vtk')
-        mfem_mesh.PrintBdrVTU(base_outfile + '.vtu')
+        mfem_mesh.PrintVTK(base_outfile + '_volume.vtk')
+        mfem_mesh.PrintBdrVTU(base_outfile + '_boundaries')
 
 
 if __name__ == '__main__':
