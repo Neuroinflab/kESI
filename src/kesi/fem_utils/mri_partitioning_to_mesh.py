@@ -15,7 +15,8 @@ from sklearn.neighbors import KDTree
 
 
 def create_cell_data_from_mri(mri, mri_grid):
-    cell_centers = mri_grid.cell_centers().points
+    """assumes mri is in mm and mri_grid is in meters"""
+    cell_centers = mri_grid.cell_centers().points * 1000
     inv_affine = np.linalg.inv(mri.affine)
     voxel_ids = apply_affine(inv_affine, cell_centers).astype(int)
     mri_data = mri.get_fdata()
