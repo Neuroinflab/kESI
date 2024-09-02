@@ -27,7 +27,7 @@ def get_brain_mask(solution_affine, solution_shape, path_to_materials_nii, brain
     brain_mask_image = (materials_data == brain_material)
     brain_mask_image = nibabel.Nifti1Image(brain_mask_image.astype(np.float32), materials_image.affine)
     brain_mask_matching = nibabel.processing.resample_from_to(brain_mask_image, (solution_shape, solution_affine), order=3)
-    brain_mask = (brain_mask_matching.get_fdata() > 0.5)
+    brain_mask = (brain_mask_matching.get_fdata() > -0.5)
     return brain_mask
 
 
@@ -97,8 +97,6 @@ neg_s = GaussianSourceKCSD3D(posn[0], posn[1], posn[2], size, conductivity=0.33)
 ground_truth += pos_s.csd(*meshgrid)
 ground_truth -= neg_s.csd(*meshgrid)
 
-import IPython
-IPython.embed()
 
 logger.info("Solving")
 solution = solver.solve(grid, ground_truth)
@@ -148,7 +146,9 @@ sample_period_us = (1 / 1000) * 1e6
 zooms[-1] = sample_period_us
 img.header.set_zooms(tuple(zooms))
 
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "test_brain_mask"))
+os.makedirs(os.path.expanduser("~/test_fsaverage_low_res_no_mask"), exist_ok=True)
+
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_low_res_no_mask", "test_brain_mask"))
 
 size_on_disk = brain_mask_sol.size * brain_mask_sol.itemsize / 1024 / 1024 / 1024
 print("Saving output Nifti, shape: {} dtype: {} maximum size on disk {:0.3f} Gb".format(brain_mask_sol.shape,
@@ -176,7 +176,7 @@ new_affine = new_affine * 1000  # to mm
 new_affine[3][3] = 1
 
 
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "fsaverage"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_low_res_no_mask", "fsaverage"))
 
 atlas_path = os.path.join(this_folder, "data", "bundled", "fsaverage_template", "fsaverage_brain_materials_1mm.nii.gz")
 create_atlas_addon_nii_with_circles(sampling_points * 1000, size=4, atlas_type=atlas_path,
@@ -192,7 +192,7 @@ sample_period_us = (1 / 1000) * 1e6
 zooms[-1] = sample_period_us
 img.header.set_zooms(tuple(zooms))
 
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "test_gt"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_low_res_no_mask", "test_gt"))
 
 nibabel.save(img, base_path + '.nii.gz')
 
@@ -204,7 +204,7 @@ sample_period_us = (1 / 1000) * 1e6
 zooms[-1] = sample_period_us
 img.header.set_zooms(tuple(zooms))
 
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "test_potential"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_low_res_no_mask", "test_potential"))
 
 nibabel.save(img, base_path + '.nii.gz')
 
@@ -252,7 +252,7 @@ sample_period_us = (1 / 1000) * 1e6
 zooms[-1] = sample_period_us
 img.header.set_zooms(tuple(zooms))
 
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "test_kesi"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_low_res_no_mask", "test_kesi"))
 
 size_on_disk = csd_grid.size * csd_grid.itemsize / 1024 / 1024 / 1024
 print("Saving output Nifti, shape: {} dtype: {} maximum size on disk {:0.3f} Gb".format(csd_grid.shape,
@@ -269,7 +269,7 @@ sample_period_us = (1 / 1000) * 1e6
 zooms[-1] = sample_period_us
 img.header.set_zooms(tuple(zooms))
 
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "test_kesi_eigensources"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_low_res_no_mask", "test_kesi_eigensources"))
 
 size_on_disk = csd_grid.size * csd_grid.itemsize / 1024 / 1024 / 1024
 print("Saving output Nifti, shape: {} dtype: {} maximum size on disk {:0.3f} Gb".format(csd_grid.shape,
@@ -299,14 +299,14 @@ sample_period_us = (1 / 1000) * 1e6
 zooms[-1] = sample_period_us
 img.header.set_zooms(tuple(zooms))
 
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "test_kcsd"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_low_res_no_mask", "test_kcsd"))
 
 size_on_disk = csd_grid.size * csd_grid.itemsize / 1024 / 1024 / 1024
 print("Saving output Nifti, shape: {} dtype: {} maximum size on disk {:0.3f} Gb".format(csd_grid.shape,
                                                                                         csd_grid.dtype,
                                                                                         size_on_disk
                                                                                         ))
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "test_kcsd"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_low_res_no_mask", "test_kcsd"))
 nibabel.save(img, base_path + '.nii.gz')
 
 img = Nifti1Image(kcsd_eigensources.astype(np.float32), solution_affine)
@@ -317,7 +317,7 @@ sample_period_us = (1 / 1000) * 1e6
 zooms[-1] = sample_period_us
 img.header.set_zooms(tuple(zooms))
 
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "test_kcsd_eigensources"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_low_res_no_mask", "test_kcsd_eigensources"))
 
 size_on_disk = kcsd_eigensources.size * csd_grid.itemsize / 1024 / 1024 / 1024
 print("Saving output Nifti, shape: {} dtype: {} maximum size on disk {:0.3f} Gb".format(kcsd_eigensources.shape,

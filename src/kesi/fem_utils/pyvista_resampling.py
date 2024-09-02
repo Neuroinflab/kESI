@@ -27,7 +27,7 @@ def main():
     parser.add_argument("-bc", "--base-conductivity", type=float,
                         help="base conductivity for kCSD assumptions", default=0.33)
 
-    parser.add_argument("--attribute", help='VTK attribute to sample', default='potential')
+    parser.add_argument("--attribute", help='VTK attribute to sample', default='correction')
     parser.add_argument('-s', "--sampling-step", type=float, help="step of the sampling grid", default=0.001)
     parser.add_argument('-g', "--grid-file", type=str, help="grid file, if provided sampling step is ignored",
                         default=None)

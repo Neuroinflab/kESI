@@ -97,8 +97,6 @@ neg_s = GaussianSourceKCSD3D(posn[0], posn[1], posn[2], size, conductivity=0.33)
 ground_truth += pos_s.csd(*meshgrid)
 ground_truth -= neg_s.csd(*meshgrid)
 
-import IPython
-IPython.embed()
 
 logger.info("Solving")
 solution = solver.solve(grid, ground_truth)
@@ -114,7 +112,7 @@ logger.info("Sampling potential grid")
 potential_grid = solver.sample_solution(meshgird_collate)
 logger.info("Sampling potential grid done")
 
-solution_dx = 0.005
+solution_dx = 0.001
 sol_x = np.arange(min_x, max_x, solution_dx)
 sol_y = np.arange(min_y, max_y, solution_dx)
 sol_z = np.arange(min_z, max_z, solution_dx)
@@ -141,6 +139,8 @@ solution_shape = meshgird_collate_sol.shape[0:3]
 
 brain_mask_sol = get_brain_mask(solution_affine, solution_shape, materials_nii_path)
 
+os.makedirs(os.path.expanduser("~/test_fsaverage_high_res"), exist_ok=True)
+
 img = Nifti1Image(brain_mask_sol[:, :, :, None].astype(np.float32), solution_affine)
 img.header.set_xyzt_units(xyz=2, t=24)  # mm
 zooms = list(img.header.get_zooms())
@@ -148,7 +148,7 @@ sample_period_us = (1 / 1000) * 1e6
 zooms[-1] = sample_period_us
 img.header.set_zooms(tuple(zooms))
 
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "test_brain_mask"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_high_res", "test_brain_mask"))
 
 size_on_disk = brain_mask_sol.size * brain_mask_sol.itemsize / 1024 / 1024 / 1024
 print("Saving output Nifti, shape: {} dtype: {} maximum size on disk {:0.3f} Gb".format(brain_mask_sol.shape,
@@ -176,7 +176,7 @@ new_affine = new_affine * 1000  # to mm
 new_affine[3][3] = 1
 
 
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "fsaverage"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_high_res", "fsaverage"))
 
 atlas_path = os.path.join(this_folder, "data", "bundled", "fsaverage_template", "fsaverage_brain_materials_1mm.nii.gz")
 create_atlas_addon_nii_with_circles(sampling_points * 1000, size=4, atlas_type=atlas_path,
@@ -192,7 +192,7 @@ sample_period_us = (1 / 1000) * 1e6
 zooms[-1] = sample_period_us
 img.header.set_zooms(tuple(zooms))
 
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "test_gt"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_high_res", "test_gt"))
 
 nibabel.save(img, base_path + '.nii.gz')
 
@@ -204,13 +204,13 @@ sample_period_us = (1 / 1000) * 1e6
 zooms[-1] = sample_period_us
 img.header.set_zooms(tuple(zooms))
 
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "test_potential"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_high_res", "test_potential"))
 
 nibabel.save(img, base_path + '.nii.gz')
 
 
 kesi_solver = Kesi3d(solution_meshrid, electrode_names, electrode_correction_sampling_folder,
-                    conductivity=0.33, R_init=0.012, mask=brain_mask_sol)
+                    conductivity=0.33, R_init=0.0012, mask=brain_mask_sol)
 
 logger.info("Starting kesi solver cv lambda")
 #best_lambda, lambd, errors = kesi_solver.cv_lambda(potential[:, None])
@@ -252,7 +252,7 @@ sample_period_us = (1 / 1000) * 1e6
 zooms[-1] = sample_period_us
 img.header.set_zooms(tuple(zooms))
 
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "test_kesi"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_high_res", "test_kesi"))
 
 size_on_disk = csd_grid.size * csd_grid.itemsize / 1024 / 1024 / 1024
 print("Saving output Nifti, shape: {} dtype: {} maximum size on disk {:0.3f} Gb".format(csd_grid.shape,
@@ -269,7 +269,7 @@ sample_period_us = (1 / 1000) * 1e6
 zooms[-1] = sample_period_us
 img.header.set_zooms(tuple(zooms))
 
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "test_kesi_eigensources"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_high_res", "test_kesi_eigensources"))
 
 size_on_disk = csd_grid.size * csd_grid.itemsize / 1024 / 1024 / 1024
 print("Saving output Nifti, shape: {} dtype: {} maximum size on disk {:0.3f} Gb".format(csd_grid.shape,
@@ -280,7 +280,7 @@ nibabel.save(img, base_path + '.nii.gz')
 
 
 kcsd_solver = KcsdKesi3d(solution_meshrid, sampling_points,
-                    conductivity=0.33, R_init=0.012, mask=brain_mask_sol)
+                    conductivity=0.33, R_init=0.0012, mask=brain_mask_sol)
 
 
 best_lambda, lambd, errors = kcsd_solver.cv_lambda(potential[:, None], np.logspace(-7, 20, 100))
@@ -299,14 +299,14 @@ sample_period_us = (1 / 1000) * 1e6
 zooms[-1] = sample_period_us
 img.header.set_zooms(tuple(zooms))
 
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "test_kcsd"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_high_res", "test_kcsd"))
 
 size_on_disk = csd_grid.size * csd_grid.itemsize / 1024 / 1024 / 1024
 print("Saving output Nifti, shape: {} dtype: {} maximum size on disk {:0.3f} Gb".format(csd_grid.shape,
                                                                                         csd_grid.dtype,
                                                                                         size_on_disk
                                                                                         ))
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "test_kcsd"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_high_res", "test_kcsd"))
 nibabel.save(img, base_path + '.nii.gz')
 
 img = Nifti1Image(kcsd_eigensources.astype(np.float32), solution_affine)
@@ -317,7 +317,7 @@ sample_period_us = (1 / 1000) * 1e6
 zooms[-1] = sample_period_us
 img.header.set_zooms(tuple(zooms))
 
-base_path = os.path.expanduser(os.path.join("~/test_fsaverage", "test_kcsd_eigensources"))
+base_path = os.path.expanduser(os.path.join("~/test_fsaverage_high_res", "test_kcsd_eigensources"))
 
 size_on_disk = kcsd_eigensources.size * csd_grid.itemsize / 1024 / 1024 / 1024
 print("Saving output Nifti, shape: {} dtype: {} maximum size on disk {:0.3f} Gb".format(kcsd_eigensources.shape,
