@@ -43,7 +43,7 @@ def main():
     parser.add_argument("mri",
                         help=('Segmented 3D volume file, for example .nii.gz format'))
     parser.add_argument("-o" "--outdir",
-                        help=('output directory, by default'))
+                        help='output directory')
 
     namespace = parser.parse_args()
 
