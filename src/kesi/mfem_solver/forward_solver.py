@@ -1,13 +1,27 @@
+from functools import lru_cache
+
 import numpy as np
-import pyvista
 from scipy.interpolate import LinearNDInterpolator
 from scipy.spatial import Delaunay
 
-from kesi.mfem_solver.mfem_piecewise_solver import mfem_solve_mesh, csd_distribution_coefficient, prepare_mesh, \
-    prepare_fespace
-from mfem import ser as mfem
-from tqdm import tqdm
-import math
+from kesi.mfem_solver.mfem_piecewise_solver import mfem_solve_mesh, csd_distribution_coefficient, prepare_mesh
+
+
+@lru_cache
+def _cachedDelaunay(verts):
+    """verts as tuple of tuples"""
+    verts = np.array(verts)
+    verts_triangulation = Delaunay(verts)
+    return verts_triangulation
+
+
+def cachedDelaunay(verts):
+    """
+    Calculates delaunay triangulation of given vertices, with caching of the result in RAM
+
+    verts - numpy array of verts (N, 3)
+    """
+    return _cachedDelaunay(tuple(map(tuple, verts)))
 
 
 class CSDForwardSolver:
@@ -45,7 +59,7 @@ class CSDForwardSolver:
 
         verts = np.array(self.mesh.GetVertexArray())
         sol = self.solution.GetDataArray()
-        verts_triangulation = Delaunay(verts)
+        verts_triangulation = cachedDelaunay(verts)
 
         self.solution_interpolated = self.interpolator(verts_triangulation, sol)
         return solution
