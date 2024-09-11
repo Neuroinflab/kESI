@@ -1,6 +1,7 @@
 import os.path
 
 import numpy as np
+from nibabel.affines import apply_affine
 
 
 def stacked_id(id, shape):
@@ -84,3 +85,18 @@ def load_or_create_grid(voxels, step, gridfile=None):
         new_affine[1][3] = new_000[1]
         new_affine[2][3] = new_000[2]
         return grid, new_affine
+
+
+def vertex_grid_from_volume(nibabel_volume):
+    """returns a vertices positions to create boxes around MRI scan voxes. Assumes MRI scan is in mm"""
+    xx, yy, zz = np.meshgrid(np.arange(-0.5, nibabel_volume.shape[0] + 0.5),
+                             np.arange(-0.5, nibabel_volume.shape[1] + 0.5),
+                             np.arange(-0.5, nibabel_volume.shape[2] + 0.5),
+                             indexing='ij')
+    epi_vox2anat = nibabel_volume.affine
+    xxyyzz_voxel_space = np.stack([xx, yy, zz], axis=-1)
+    xxyyzz_real_space = apply_affine(epi_vox2anat, xxyyzz_voxel_space) / 1000  # from mm to meters
+
+    grid = [xxyyzz_real_space[:, :, :, 0], xxyyzz_real_space[:, :, :, 1], xxyyzz_real_space[:, :, :, 2]]
+    return grid
+

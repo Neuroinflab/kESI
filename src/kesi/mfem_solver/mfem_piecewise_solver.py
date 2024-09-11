@@ -281,7 +281,7 @@ def main():
     else:
         # singlethreaded electrode sim
         results = []
-        for row_id, electrode in tqdm(electrodes.iterrows(), desc="simulating electrodes"):
+        for row_id, electrode in tqdm(electrodes.iterrows(), desc="simulating electrodes", total=len(electrodes)):
             electrode_position = electrode[["X", "Y", "Z"]].astype(float).values
             electrode_coeff = electrode_coefficient(electrode_position)
             result = mfem_solve_mesh(electrode_coeff, mesh, boundary_potential=namespace.boundary_potential,
