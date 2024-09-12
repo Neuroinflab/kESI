@@ -46,11 +46,7 @@ class CSDForwardSolver:
         self.solution_interpolated = None
         self.interpolator = interpolator
 
-    def solve(self, xyz, csd):
-        """
-        saves solution into self.solution as MFEM gridfunction and self.solution_interpolated for sampling at any point
-        """
-        coeff = csd_distribution_coefficient(xyz, csd)
+    def solve_coeff(self, coeff):
         solution = mfem_solve_mesh(csd_coefficient=coeff,
                                    mesh=self.mesh,
                                    boundary_potential=self.boundary_value,
@@ -63,6 +59,14 @@ class CSDForwardSolver:
 
         self.solution_interpolated = self.interpolator(verts_triangulation, sol)
         return solution
+
+    def solve(self, xyz, csd):
+        """
+        saves solution into self.solution as MFEM gridfunction and self.solution_interpolated for sampling at any point
+        """
+        coeff = csd_distribution_coefficient(xyz, csd)
+        return self.solve_coeff(coeff)
+
 
     def sample_solution_probe(self, x, y, z):
         return self.solution_interpolated([x, y, z])[0]

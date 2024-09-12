@@ -5,7 +5,7 @@ import nibabel
 import numpy as np
 import pandas as pd
 import pylab as pb
-
+from nibabel.affines import apply_affine
 
 def create_meshgrid_from_affine(affine, data):
     x, y, z, comp = data.shape
@@ -21,10 +21,10 @@ def create_meshgrid_from_affine(affine, data):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Draw crossection nifty files")
+    parser = argparse.ArgumentParser(description="Draw crossection nifty files, works well only with no skew or rotation, rectilinear affine")
     parser.add_argument("files", nargs='+', type=str, help="nifty files")
-    parser.add_argument("-x", type=int, help="Slice at X coordinate (in voxels)", default=130)
-    parser.add_argument("-y", type=int, help="Slice at Y coordinate (in voxels)", default=118)
+    parser.add_argument("-x", type=int, help="Slice at X coordinate (in meters)", default=0)
+    parser.add_argument("-y", type=int, help="Slice at Y coordinate (in meters)", default=0)
 
     args = parser.parse_args()
 
@@ -36,6 +36,12 @@ def main():
         name = os.path.basename(file)
         correction = nibabel.load(file)
         vol_data = correction.get_fdata()
+
+        inv_affine = np.linalg.inv(correction.affine)
+
+        x_vox, y_vox, z_vox = apply_affine(inv_affine, [args.x, args.y, 0])
+        slice_of_interest = np.s_[int(x_vox), int(y_vox), :]
+
         meshgrid = create_meshgrid_from_affine(correction.affine, vol_data) / 1000 # mm to meters
         data_slice = vol_data[slice_of_interest]
         data_x = meshgrid[slice_of_interest]
