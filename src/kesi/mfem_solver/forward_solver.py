@@ -4,24 +4,8 @@ import numpy as np
 from scipy.interpolate import LinearNDInterpolator
 from scipy.spatial import Delaunay
 
+from kesi.fem_utils.pyvista_resampling import convert_mfem_to_pyvista, pyvista_sample_points, pyvista_sample_grid
 from kesi.mfem_solver.mfem_piecewise_solver import mfem_solve_mesh, csd_distribution_coefficient, prepare_mesh
-
-
-@lru_cache
-def _cachedDelaunay(verts):
-    """verts as tuple of tuples"""
-    verts = np.array(verts)
-    verts_triangulation = Delaunay(verts)
-    return verts_triangulation
-
-
-def cachedDelaunay(verts):
-    """
-    Calculates delaunay triangulation of given vertices, with caching of the result in RAM
-
-    verts - numpy array of verts (N, 3)
-    """
-    return _cachedDelaunay(tuple(map(tuple, verts)))
 
 
 class CSDForwardSolver:
@@ -53,11 +37,7 @@ class CSDForwardSolver:
                                    conductivities=self.conductivities)
         self.solution = solution
 
-        verts = np.array(self.mesh.GetVertexArray())
-        sol = self.solution.GetDataArray()
-        verts_triangulation = cachedDelaunay(verts)
-
-        self.solution_interpolated = self.interpolator(verts_triangulation, sol)
+        self.pyvista_mesh_solution = convert_mfem_to_pyvista(self.mesh, [solution], ["pot"])
         return solution
 
     def solve(self, xyz, csd):
@@ -67,12 +47,21 @@ class CSDForwardSolver:
         coeff = csd_distribution_coefficient(xyz, csd)
         return self.solve_coeff(coeff)
 
-
     def sample_solution_probe(self, x, y, z):
-        return self.solution_interpolated([x, y, z])[0]
+        points = np.array([[x, y, z]])
+        cloud = self.sample_solution(points)
+        return cloud.get_array("pot")
 
     def sample_solution(self, positions):
-        """positions - array (N, 3)"""
-        assert self.solution_interpolated is not None
-        pos_arr = np.array(positions)
-        return self.solution_interpolated(pos_arr)
+        """positions - array (N, 3) or meshgrid stack [X, Y, Z, 3]"""
+
+        cloud = pyvista_sample_points(self.pyvista_mesh_solution, positions)
+        data = cloud.get_array("pot")
+        return data
+
+    def sample_grid(self, grid):
+        sampled = pyvista_sample_grid(self.pyvista_mesh_solution, grid)
+        data = sampled.get_array("pot")
+        sampled_grid = data.reshape(grid.shape[0:3], order="F")
+        return sampled_grid
+
