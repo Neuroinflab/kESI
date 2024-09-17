@@ -1,6 +1,6 @@
 import argparse
 import os
-from functools import partial
+from functools import partial, lru_cache
 import mfem.ser as mfem
 import numpy as np
 import pandas as pd
@@ -37,8 +37,9 @@ refined_mesh.Finalize(true);
     return mesh
 
 
+@lru_cache
 def prepare_mesh(meshfile, refinement, electrode_positions=None):
-    "if electrode positions are given, perform additional refinement around electrodes positions, array (N, 3)"
+    "if electrode positions are given, perform additional refinement around electrodes positions, tuple of tuples of length 3"
     # to create run
     # gmsh -3 -format msh22 four_spheres_in_air_with_plane.geo
     print("Loading mesh...")
@@ -52,7 +53,6 @@ def prepare_mesh(meshfile, refinement, electrode_positions=None):
 
     if electrode_positions is not None:
         mesh = refine_around_electrodes(mesh, electrode_positions)
-
 
     return mesh
 
@@ -122,6 +122,7 @@ def mfem_solve_mesh(csd_coefficient, mesh, boundary_potential, conductivities):
     b = mfem.LinearForm(fespace)
 
     conductivities_vector = mfem.Vector(list(1.0 / (4 * np.pi * conductivities)))
+    # conductivities_vector = mfem.Vector(list(conductivities))
 
     conductivities_coeff = mfem.PWConstCoefficient(conductivities_vector)
 

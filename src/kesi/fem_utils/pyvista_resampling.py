@@ -1,6 +1,8 @@
 import argparse
 import glob
 import os
+import tempfile
+from io import StringIO
 
 import nibabel
 import numpy as np
@@ -11,6 +13,70 @@ from nibabel import Nifti1Image
 from tqdm import tqdm
 
 from kesi.fem_utils.grid_utils import load_or_create_grid
+import mfem.ser as mfem
+
+from kesi.mfem_solver.mfem_piecewise_solver import prepare_fespace
+
+
+
+def convert_mfem_to_pyvista(mesh, solutions, names):
+    """
+    mesh - mfem mesh object
+    solutions - list gridfunctions
+    names - list of gridfunction names to use
+    """
+
+    assert len(solutions) == len(names)
+    with tempfile.NamedTemporaryFile(suffix='.vtk') as fp:
+        output = StringIO()
+        print("saving output mesh")
+        mesh.PrintVTK(output, 0)
+        with open(fp.name, 'a') as vtk_file:
+            vtk_file.write(output.getvalue())
+        del output
+
+        fespace = prepare_fespace(mesh)
+        x = mfem.GridFunction(fespace)
+        # setting initial values in all points, boundary elements will enforce this  value
+        for name, sol in zip(names, solutions):
+            output = StringIO()
+
+            x.Assign(sol.GetDataArray())
+            x.SaveVTK(output, name, 0)  # this crashes when using passed solutions, missing fespace???
+
+            with open(fp.name, 'a') as vtk_file:
+                vtk_file.write(output.getvalue())
+            del output
+
+        pyvista_mesh = pyvista.read(fp.name)
+    return pyvista_mesh
+
+
+def pyvista_sample_points(pyvista_mesh, points):
+    point_cloud = pyvista.PolyData(points)
+    sampled = point_cloud.sample(pyvista_mesh, progress_bar=True, snap_to_closest_point=True)
+    return sampled
+
+
+def pyvista_sample_grid(pyvista_mesh, grid):
+    """
+    grid - meshgrid [x, y, z, 3]
+    """
+    dimensions = grid.shape[0:4]
+    spacing = [
+        grid[1, 0, 0, 0] - grid[0, 0, 0, 0],
+        grid[0, 1, 0, 1] - grid[0, 0, 0, 1],
+        grid[0, 0, 1, 2] - grid[0, 0, 0, 2],
+
+    ]
+    origin = [grid[0, 0, 0, 0], grid[0, 0, 0, 1], grid[0, 0, 0, 2]]
+
+    str_grid = pyvista.ImageData(dimensions=dimensions,
+                                 spacing=spacing,
+                                 origin=origin
+                                 )
+    sampled = str_grid.sample(pyvista_mesh, progress_bar=True, snap_to_closest_point=True)
+    return sampled
 
 
 def main():
