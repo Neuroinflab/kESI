@@ -121,7 +121,6 @@ def mfem_solve_mesh(csd_coefficient, mesh, boundary_potential, conductivities):
 
     b = mfem.LinearForm(fespace)
 
-    # conductivities_vector = mfem.Vector(list(1.0 / (4 * np.pi * conductivities)))
     conductivities_vector = mfem.Vector(list(conductivities))
 
     conductivities_coeff = mfem.PWConstCoefficient(conductivities_vector)
