@@ -61,7 +61,8 @@ def main():
 
         electrode_position = np.array([x, y, z])
         distance_to_electrode = np.linalg.norm(np.array(electrode_position) - potential_meshgrid, ord=2, axis=3)
-        v_kcsd = 1.0 / (4 * np.pi * 0.33 * distance_to_electrode)
+
+        v_kcsd = 1.0 / (4 * np.pi * 0.01 * distance_to_electrode)
         potential_theoretical = v_kcsd
         potential_theoretical_slice = potential_theoretical[slice_of_interest].squeeze()
         potential_theoretical_x = potential_meshgrid[slice_of_interest]
