@@ -8,6 +8,7 @@ from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 from io import StringIO
 
+from kesi.fem_utils.vtk_utils import grid_function_save_vtk
 from kesi.mfem_solver.interpolated_mfem_coefficient import CSDCoefficient
 from kesi.utils import str_to_bool
 
@@ -247,9 +248,10 @@ def main():
 
     # todo: at 0.002 max element size for spheres with plane it only saves 16 megabytes of mesh, I don't understand why
     # it happens in any mode of PrintVTK, even directly to file
+    # MAYBE FIXED BY REIMPLEMENTING SAVING OF THE GRID FUNCTIONS!!!
     output = StringIO()
     print("saving output mesh")
-    mesh.PrintVTK(output, 0)
+    mesh.PrintVTK(output)
     with open(output_filename, 'w') as vtk_file:
         vtk_file.write(output.getvalue())
     del output
@@ -301,14 +303,17 @@ def main():
         correction_gridf.Assign(correction)
         results_correction.append(correction_gridf)
 
+    if namespace.save_vtk:
+        with open(output_filename, 'a') as vtk_file:
+            vtk_file.write("POINT_DATA " + str(mesh.GetNV()) + "\n")
+
     if namespace.save_potential:
         for result, electrode_name in tqdm(list(zip(results, electrodes.NAME.values)), desc='saving output potential'):
             name = "potential_{}".format(electrode_name)
-            output = StringIO()
-            result.SaveVTK(output, name, 0)
+
             if namespace.save_vtk:
                 with open(output_filename, 'a') as vtk_file:
-                    vtk_file.write(output.getvalue())
+                    grid_function_save_vtk(result, vtk_file, name)
 
             if namespace.save_numpy:
                 data_vtk = [float(i) for i in output.getvalue().splitlines()[2:]]
@@ -321,11 +326,11 @@ def main():
         for result, electrode_name in tqdm(list(zip(results_correction, electrodes.NAME.values)),
                                            desc='saving output correction'):
             name = "correction_{}".format(electrode_name)
-            output = StringIO()
-            result.SaveVTK(output, name, 0)
+
             if namespace.save_vtk:
                 with open(output_filename, 'a') as vtk_file:
-                    vtk_file.write(output.getvalue())
+                    grid_function_save_vtk(result, vtk_file, name)
+
             if namespace.save_numpy:
                 data_vtk = [float(i) for i in output.getvalue().splitlines()[2:]]
                 data_vtk = np.array(data_vtk)
