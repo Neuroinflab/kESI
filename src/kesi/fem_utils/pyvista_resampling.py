@@ -15,8 +15,8 @@ from tqdm import tqdm
 from kesi.fem_utils.grid_utils import load_or_create_grid
 import mfem.ser as mfem
 
+from kesi.fem_utils.vtk_utils import grid_function_save_vtk
 from kesi.mfem_solver.mfem_piecewise_solver import prepare_fespace
-
 
 
 def convert_mfem_to_pyvista(mesh, solutions, names):
@@ -30,23 +30,19 @@ def convert_mfem_to_pyvista(mesh, solutions, names):
     with tempfile.NamedTemporaryFile(suffix='.vtk') as fp:
         output = StringIO()
         print("saving output mesh")
-        mesh.PrintVTK(output, 0)
+        mesh.PrintVTK(output)
         with open(fp.name, 'a') as vtk_file:
             vtk_file.write(output.getvalue())
         del output
 
         fespace = prepare_fespace(mesh)
         x = mfem.GridFunction(fespace)
-        # setting initial values in all points, boundary elements will enforce this  value
-        for name, sol in zip(names, solutions):
-            output = StringIO()
 
-            x.Assign(sol.GetDataArray())
-            x.SaveVTK(output, name, 0)  # this crashes when using passed solutions, missing fespace???
-
-            with open(fp.name, 'a') as vtk_file:
-                vtk_file.write(output.getvalue())
-            del output
+        with open(fp.name, 'a') as vtk_file:
+            vtk_file.write("POINT_DATA " + str(mesh.GetNV()) + "\n")
+            for name, sol in zip(names, solutions):
+                x.Assign(sol.GetDataArray())
+                grid_function_save_vtk(x, vtk_file, name)
 
         pyvista_mesh = pyvista.read(fp.name)
     return pyvista_mesh

@@ -77,12 +77,15 @@ def main():
 
         mfem_mesh = mfem.Mesh(fp.name)
         boundary_elements_coords = []
+
         for i in range(mfem_mesh.GetNBE()):
             vertices = mfem_mesh.GetBdrElementVertices(i)
+            # todo look how boundary vertices look like, what are they, can I mark any as boundary?
             coords = np.array([mfem_mesh.GetVertexArray(j) for j in vertices])
             mean_coords = coords.mean(axis=0)
             boundary_elements_coords.append(mean_coords)
         boundary_elements_coords = np.array(boundary_elements_coords)
+
 
         vox_size = np.mean(np.abs([mri.header.get_base_affine()[0][0],
                         mri.header.get_base_affine()[1][1],

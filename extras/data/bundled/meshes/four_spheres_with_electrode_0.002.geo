@@ -7,7 +7,7 @@ General.NumThreads = 16;
 Mesh.MeshSizeExtendFromBoundary = 1;
 Mesh.MeshSizeFactor = 1;
 Mesh.MeshSizeMin = 0;
-Mesh.MeshSizeMax  = 0.005;
+Mesh.MeshSizeMax  = 0.002;
 //Automatically compute mesh element sizes from curvature, using the value as the target number of elements per 2 * Pi radians
 Mesh.MeshSizeFromCurvature = 0;
 Mesh.MeshSizeFromPoints = 1;

@@ -25,6 +25,7 @@ def main():
     parser.add_argument("files", nargs='+', type=str, help="nifty files")
     parser.add_argument("-x", type=int, help="Slice at X coordinate (in meters)", default=0)
     parser.add_argument("-y", type=int, help="Slice at Y coordinate (in meters)", default=0)
+    parser.add_argument("-g", type=float, help="position on Z axis to use as common reference, by default none", default=None)
 
     args = parser.parse_args()
 
@@ -47,8 +48,12 @@ def main():
         data_x = meshgrid[slice_of_interest]
         data_x = data_x[:, np.where((np.diff(data_x, axis=0)!=0).all(axis=0))[0][0]].squeeze()
 
-
-        pb.plot(data_x, data_slice, label=name)
+        if args.g is not None:
+            ref_level_id = np.argmin(np.abs(data_x - args.g))
+            ref_level = data_slice[ref_level_id]
+            pb.plot(data_x, data_slice-ref_level, label=name)
+        else:
+            pb.plot(data_x, data_slice, label=name)
 
 
     pb.legend()

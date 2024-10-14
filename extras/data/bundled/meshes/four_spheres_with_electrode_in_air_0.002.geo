@@ -7,7 +7,7 @@ General.NumThreads = 16;
 Mesh.MeshSizeExtendFromBoundary = 1;
 Mesh.MeshSizeFactor = 1;
 Mesh.MeshSizeMin = 0;
-Mesh.MeshSizeMax  = 0.01;
+Mesh.MeshSizeMax  = 0.002;
 //Automatically compute mesh element sizes from curvature, using the value as the target number of elements per 2 * Pi radians
 Mesh.MeshSizeFromCurvature = 0;
 Mesh.MeshSizeFromPoints = 1;
@@ -30,19 +30,25 @@ Sphere(3) = {0, 0, 0, 0.086, -Pi/2, Pi/2, 2*Pi};
 //+
 Sphere(4) = {0, 0, 0, 0.09, -Pi/2, Pi/2, 2*Pi};
 
+Box(10) = {-0.15, -0.15, -0.1, 0.3, 0.3, 0.3};
+
+
+BooleanDifference(20) = {Volume{10}; Delete;}{Volume{1,2,3,4};};
 BooleanDifference(7) = {Volume{4}; Delete;}{Volume{1,2,3};};
 BooleanDifference(6) = {Volume{3}; Delete;}{Volume{1,2};};
 BooleanDifference(5) = {Volume{2}; Delete;}{Volume{1};};
 
 //+
-Disk(5) = {-0, 0, -0.088, 0.002, 0.002};
+Disk(30) = {-0, 0, -0.088, 0.002, 0.002};
 
 
-v() = BooleanFragments {Volume{7}; Delete;}{Surface{5}; Delete;};//+
+v() = BooleanFragments {Volume{7}; Delete;}{Surface{30}; Delete;};//+
 
-Physical Surface(1) = {5};
+Physical Surface(1) = {30};
 Physical Volume(1) = {1};
 Physical Volume(2) = {5};
 Physical Volume(3) = {6};
 Physical Volume(4) = {7};
+Physical Volume(5) = {20};
+
 

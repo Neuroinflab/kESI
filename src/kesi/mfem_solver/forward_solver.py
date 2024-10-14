@@ -1,8 +1,5 @@
-from functools import lru_cache
-
 import numpy as np
-from scipy.interpolate import LinearNDInterpolator
-from scipy.spatial import Delaunay
+
 
 from kesi.fem_utils.pyvista_resampling import convert_mfem_to_pyvista, pyvista_sample_points, pyvista_sample_grid
 from kesi.mfem_solver.mfem_piecewise_solver import mfem_solve_mesh, csd_distribution_coefficient, prepare_mesh
@@ -10,14 +7,12 @@ from kesi.mfem_solver.mfem_piecewise_solver import mfem_solve_mesh, csd_distribu
 
 class CSDForwardSolver:
     def __init__(self, meshfile, conductivities, boundary_value=0, additional_refinement=False,
-                 sampling_points=None,
-                 interpolator=LinearNDInterpolator):
+                 sampling_points=None,):
         """
         meshfile - mfem compatable mesh file
         conductivities - numpy array of conductances per mesh material in S/m
         sampling points - numpy array (N, 3) of simulated electrodes positions, if provided now, will be used to refine mesh around those positions
         boundary_value - the value at boudaries, usually grounding electrode
-        interpolator - can use from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
         """
         self.meshfile = meshfile
         self.conductivities = conductivities
@@ -28,7 +23,6 @@ class CSDForwardSolver:
             self.mesh = prepare_mesh(self.meshfile, additional_refinement)
         self.solution = None
         self.solution_interpolated = None
-        self.interpolator = interpolator
 
     def solve_coeff(self, coeff):
         solution = mfem_solve_mesh(csd_coefficient=coeff,
