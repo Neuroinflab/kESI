@@ -316,11 +316,9 @@ def main():
                     grid_function_save_vtk(result, vtk_file, name)
 
             if namespace.save_numpy:
-                data_vtk = [float(i) for i in output.getvalue().splitlines()[2:]]
-                data_vtk = np.array(data_vtk)
+                data_vtk = np.array(result.GetDataArray())
                 numpy_name = os.path.join(os.path.dirname(output_filename), name)
                 np.savez_compressed(numpy_name, sol=data_vtk.astype(namespace.numpy_precision))
-            del output
 
     if namespace.save_correction:
         for result, electrode_name in tqdm(list(zip(results_correction, electrodes.NAME.values)),
@@ -332,8 +330,6 @@ def main():
                     grid_function_save_vtk(result, vtk_file, name)
 
             if namespace.save_numpy:
-                data_vtk = [float(i) for i in output.getvalue().splitlines()[2:]]
-                data_vtk = np.array(data_vtk)
+                data_vtk = np.array(result.GetDataArray())
                 numpy_name = os.path.join(os.path.dirname(output_filename), name)
                 np.savez_compressed(numpy_name, sol=data_vtk.astype(namespace.numpy_precision))
-            del output
