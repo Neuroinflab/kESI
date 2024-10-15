@@ -5,6 +5,7 @@ import nibabel
 import numpy as np
 import pandas as pd
 import pylab as pb
+from nibabel.affines import apply_affine
 
 
 def create_meshgrid_from_affine(affine, data):
@@ -25,8 +26,10 @@ def main():
     parser.add_argument("electrode", type=str, help="Electrodes CSV")
     parser.add_argument("potential", type=str, help="Folder with sampled potential")
     parser.add_argument("correction", type=str, help="Folder with sampled correction")
-    parser.add_argument("-x", type=int, help="Slice at X coordinate (in voxels)", default=130)
-    parser.add_argument("-y", type=int, help="Slice at Y coordinate (in voxels)", default=118)
+    parser.add_argument("-x", type=float, help="Slice at X coordinate in mm, if default - will use electrode coordinates", default=None)
+    parser.add_argument("-y", type=float, help="Slice at Y coordinate mm, if default - will use electrode coordinates", default=None)
+    parser.add_argument("-e", type=str, nargs='+', help="Electrode filter, names of electrodes to draw", default=None)
+
 
     args = parser.parse_args()
 
@@ -35,16 +38,34 @@ def main():
     sampled_correction = args.correction
 
     electrodes = pd.read_csv(electrode_file)
-    slice_of_interest = np.s_[args.x, args.y, :]
 
     fig_corr = pb.figure()
     fig_pot = pb.figure()
     fig_pot_theor = pb.figure()
     fig_corr2 = pb.figure()
+    electrode_filter = args.e
 
     for electrode_id in range(len(electrodes)):
         name, x, y ,z = electrodes.iloc[electrode_id]
+        if electrode_filter:
+            if name not in electrode_filter:
+                continue
         correction = nibabel.load(os.path.join(sampled_correction, "{}.nii.gz").format(name))
+
+        if args.x is None:
+            x_slice = x * 1000
+        else:
+            x_slice = args.x
+
+        if args.y is None:
+            y_slice = y * 1000
+        else:
+            y_slice = args.y
+
+        inv_affine = np.linalg.inv(correction.affine)
+        x_vox, y_vox, z_vox = apply_affine(inv_affine, [x_slice, y_slice, 0])
+        slice_of_interest = np.s_[int(x_vox), int(y_vox), :]
+
         correction_data = correction.get_fdata()
         correction_meshgrid = create_meshgrid_from_affine(correction.affine, correction_data) / 1000 # mm to meters
         correction_slice = correction_data[slice_of_interest]
@@ -54,6 +75,11 @@ def main():
 
         potential = nibabel.load(os.path.join(sampled_potential, "{}.nii.gz").format(name))
         potential_data = potential.get_fdata()
+
+        inv_affine = np.linalg.inv(potential.affine)
+        x_vox, y_vox, z_vox = apply_affine(inv_affine, [x_slice, y_slice, 0])
+        slice_of_interest = np.s_[int(x_vox), int(y_vox), :]
+
         potential_meshgrid = create_meshgrid_from_affine(potential.affine, potential_data) / 1000 # mm to meters
         potential_slice = potential_data[slice_of_interest].squeeze()
         potential_x = potential_meshgrid[slice_of_interest]
