@@ -39,7 +39,7 @@ try:                                   # Enables further import of `shape()`
     from .kernel._tools import shape   # from the module; if the file is not a
 except ImportError:                    # module, `shape()` is unnecessary, thus
     pass                               # the raised exception may be ignored.
-
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -1003,7 +1003,7 @@ class FourSphereModel(object):
 def cv(reconstructor, measured, regularization_parameters):
     errors = []
 
-    for regularization_parameter in regularization_parameters:
+    for regularization_parameter in tqdm(regularization_parameters, desc='CV finding best lambda'):
         logger.info('cv(): error estimation for regularization parameter: {:g}'.format(regularization_parameter))
         ERR = reconstructor.leave_one_out_errors(measured,
                                                  regularization_parameter)

@@ -43,14 +43,14 @@ class CSDForwardSolver:
 
     def sample_solution_probe(self, x, y, z):
         points = np.array([[x, y, z]])
-        cloud = self.sample_solution(points)
-        return cloud.get_array("pot")
+        data = np.array(self.sample_solution(points))
+        return np.squeeze(data)
 
     def sample_solution(self, positions):
         """positions - array (N, 3) or meshgrid stack [X, Y, Z, 3]"""
 
         cloud = pyvista_sample_points(self.pyvista_mesh_solution, positions)
-        data = cloud.get_array("pot")
+        data = np.array(cloud.get_array("pot"))
         return data
 
     def sample_grid(self, grid):

@@ -27,6 +27,7 @@ import sys
 import numpy as np
 import warnings
 import functools
+from tqdm import tqdm
 
 
 def warn_deprecated(message, stacklevel=1):
@@ -97,6 +98,13 @@ class _LinearKernelSolver(object):
         n = self._kernel.shape[0]
         KERNEL = self._kernel + regularization_parameter * np.identity(n)
         IDX_N = np.arange(n)
+
+        result = []
+        for i, ROW in enumerate(tqdm(rhs, desc='leave one out error estimation',
+                                     leave=False)):
+            est = self._leave_one_out_estimate(KERNEL, rhs, i, IDX_N != i) - ROW
+            result.append(est)
+        return result
         return [self._leave_one_out_estimate(KERNEL, rhs, i, IDX_N != i) - ROW
                 for i, ROW in enumerate(rhs)]
 
