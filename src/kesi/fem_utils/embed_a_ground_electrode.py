@@ -1,3 +1,4 @@
+# TODO FINISH THIS ONE DAY, SPLIT MESH BY MATERIAL CREATE AN ELECTRODE AND EMBED IT USING GMSH ...
 from collections import defaultdict
 
 import gmsh
