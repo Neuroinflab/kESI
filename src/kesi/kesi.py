@@ -288,6 +288,7 @@ class Kesi3dNumericalOnly(KcsdKesi3d):
         interpolation: str, "linear" or "nearest" - interpolator to map correction potentials to estimation points grid
             nearest is around 2 times faster
         """
+        self.positions = electrode_positions
         assert source_type in ['spherical', 'gaussian']
         if mask is None:
             mask = np.ones_like(estimation_points_grid[0], dtype=bool)

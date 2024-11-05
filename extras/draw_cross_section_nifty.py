@@ -23,8 +23,8 @@ def create_meshgrid_from_affine(affine, data):
 def main():
     parser = argparse.ArgumentParser(description="Draw crossection nifty files, works well only with no skew or rotation, rectilinear affine")
     parser.add_argument("files", nargs='+', type=str, help="nifty files")
-    parser.add_argument("-x", type=int, help="Slice at X coordinate (in meters)", default=0)
-    parser.add_argument("-y", type=int, help="Slice at Y coordinate (in meters)", default=0)
+    parser.add_argument("-x", type=float, help="Slice at X coordinate (in meters)", default=0)
+    parser.add_argument("-y", type=float, help="Slice at Y coordinate (in meters)", default=0)
     parser.add_argument("-g", type=float, help="position on Z axis to use as common reference, by default none", default=None)
 
     args = parser.parse_args()
@@ -37,6 +37,9 @@ def main():
         name = os.path.basename(file)
         correction = nibabel.load(file)
         vol_data = correction.get_fdata()
+        # in case Nifty has components, grab the first one
+        if len(vol_data.shape) == 5:
+            vol_data = correction.get_fdata()[:, : ,:, :, 0]
 
         inv_affine = np.linalg.inv(correction.affine)
 
