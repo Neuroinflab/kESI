@@ -26,6 +26,7 @@ def main():
     parser.add_argument("-x", type=float, help="Slice at X coordinate (in meters)", default=0)
     parser.add_argument("-y", type=float, help="Slice at Y coordinate (in meters)", default=0)
     parser.add_argument("-g", type=float, help="position on Z axis to use as common reference, by default none", default=None)
+    parser.add_argument("-f", "--frame_number", type=int, help="frame/component number", default=0)
 
     args = parser.parse_args()
 
@@ -39,7 +40,11 @@ def main():
         vol_data = correction.get_fdata()
         # in case Nifty has components, grab the first one
         if len(vol_data.shape) == 5:
-            vol_data = correction.get_fdata()[:, : ,:, :, 0]
+            try:
+                vol_data = correction.get_fdata()[:, : ,:, :, args.frame_number]
+            except IndexError:
+                vol_data = correction.get_fdata()[:, :, :, args.frame_number, :]
+
 
         inv_affine = np.linalg.inv(correction.affine)
 
