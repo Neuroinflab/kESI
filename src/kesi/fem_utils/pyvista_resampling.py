@@ -49,6 +49,7 @@ def convert_mfem_to_pyvista(mesh, solutions, names):
 
 
 def pyvista_sample_points(pyvista_mesh, points):
+    """points - np.array [N, 3] of new sampling points"""
     point_cloud = pyvista.PolyData(points)
     sampled = point_cloud.sample(pyvista_mesh, progress_bar=True, snap_to_closest_point=True)
     return sampled

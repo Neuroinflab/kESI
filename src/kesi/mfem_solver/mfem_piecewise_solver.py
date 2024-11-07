@@ -164,8 +164,8 @@ def main():
                               ' conductivity, all coordinates are assumed to be in meters')
                         )
     parser.add_argument("electrodefile",
-                        help=('CSV with electrode names and positions, in meters, with a header of: \n'
-                              '\tNAME,X,Y,Z')
+                        help=('CSV with electrode names and positions, in milimeters, with a header of: \n'
+                              '\tlabel,x,y,z')
                         )
     parser.add_argument("output", type=str,
                         help=("output folder with results."
@@ -237,7 +237,7 @@ def main():
     device = mfem.Device("cpu")
     device.Print()
     if namespace.electrode_refinement:
-        electrodes_for_prepare = electrodes[["X", "Y", "Z"]].values
+        electrodes_for_prepare = electrodes[["x", "y", "z"]].values / 1000  # electrodes in mm, mesh in meters
     else:
         electrodes_for_prepare = None
     mesh = prepare_mesh(namespace.meshfile, namespace.additional_refinement, electrodes_for_prepare)
@@ -264,7 +264,7 @@ def main():
         raise Exception("Mesh material indexes are not correct, they should start with 1 and increase by 1")
 
     if namespace.multiprocessing:
-        electrode_positions = electrodes[["X", "Y", "Z"]].values
+        electrode_positions = electrodes[["x", "y", "z"]].values / 1000  # electrodes in mm, mesh in meters
         fn = partial(mfem_solve_mesh_multiprocessing_wrap, mesh=mesh,
                      boundary_potential=namespace.boundary_potential,
                      conductivities=conductivities_vector,
@@ -284,7 +284,8 @@ def main():
         # singlethreaded electrode sim
         results = []
         for row_id, electrode in tqdm(electrodes.iterrows(), desc="simulating electrodes", total=len(electrodes)):
-            electrode_position = electrode[["X", "Y", "Z"]].astype(float).values
+            # electrodes in mm, mesh in meters
+            electrode_position = electrode[["x", "y", "z"]].astype(float).values / 1000
             electrode_coeff = electrode_coefficient(electrode_position)
             result = mfem_solve_mesh(electrode_coeff, mesh, boundary_potential=namespace.boundary_potential,
                                      conductivities=conductivities_vector)
@@ -294,7 +295,7 @@ def main():
     verts = mesh.GetVertexArray()
     fespace = prepare_fespace(mesh)
 
-    for result, electrode_position in tqdm(list(zip(results, electrodes[["X", "Y", "Z"]].astype(float).values)),
+    for result, electrode_position in tqdm(list(zip(results, electrodes[["x", "y", "z"]].astype(float).values / 1000)),
                                            desc='adding theoretical solution'):
         distance_to_electrode = np.linalg.norm(np.array(electrode_position) - verts, ord=2, axis=1)
         v_kcsd = 1.0 / (4 * np.pi * namespace.base_conductivity * distance_to_electrode)
