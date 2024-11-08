@@ -4,6 +4,7 @@ from functools import partial, lru_cache
 import mfem.ser as mfem
 import numpy as np
 import pandas as pd
+import pyvista
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 from io import StringIO
@@ -309,7 +310,7 @@ def main():
             vtk_file.write("POINT_DATA " + str(mesh.GetNV()) + "\n")
 
     if namespace.save_potential:
-        for result, electrode_name in tqdm(list(zip(results, electrodes.NAME.values)), desc='saving output potential'):
+        for result, electrode_name in tqdm(list(zip(results, electrodes['label'].values)), desc='saving output potential'):
             name = "potential_{}".format(electrode_name)
 
             if namespace.save_vtk:
@@ -322,7 +323,7 @@ def main():
                 np.savez_compressed(numpy_name, sol=data_vtk.astype(namespace.numpy_precision))
 
     if namespace.save_correction:
-        for result, electrode_name in tqdm(list(zip(results_correction, electrodes.NAME.values)),
+        for result, electrode_name in tqdm(list(zip(results_correction, electrodes['label'].values)),
                                            desc='saving output correction'):
             name = "correction_{}".format(electrode_name)
 
@@ -334,3 +335,9 @@ def main():
                 data_vtk = np.array(result.GetDataArray())
                 numpy_name = os.path.join(os.path.dirname(output_filename), name)
                 np.savez_compressed(numpy_name, sol=data_vtk.astype(namespace.numpy_precision))
+
+    # use pyvista to rewrite VTK in binary form
+    if namespace.save_vtk:
+        print("Resaving in binary")
+        pyvista_mesh = pyvista.read(output_filename)
+        pyvista_mesh.save(output_filename)

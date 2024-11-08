@@ -21,6 +21,7 @@ def main():
         kernel = data['KERNEL']
         ticks = np.arange(0, len(info['ch_names']))
         ticklabels = info['ch_names']
+        print(ticklabels)
 
         fig, axs = pb.subplots(1, 2)
         c = axs[0].imshow(kernel)
