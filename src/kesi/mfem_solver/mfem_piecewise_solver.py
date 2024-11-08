@@ -1,6 +1,8 @@
 import argparse
 import os
 from functools import partial, lru_cache
+from multiprocessing import set_start_method
+
 import mfem.ser as mfem
 import numpy as np
 import pandas as pd
@@ -67,13 +69,18 @@ def prepare_fespace(mesh):
     return fespace
 
 
-def mfem_solve_mesh_multiprocessing_wrap(electrode_position, mesh, boundary_potential, conductivities, refinement):
+def mfem_solve_mesh_multiprocessing_wrap(electrode_position, boundary_potential, conductivities,
+                                         meshfile,
+                                         electrodes_for_prepare,
+                                         refinement,
+                                         ):
     try:
         device = mfem.Device("cpu")
         device.Print()
     except RuntimeError:
         pass  # already configured
     coeff = electrode_coefficient(electrode_position)
+    mesh = prepare_mesh(meshfile, refinement, electrodes_for_prepare)
     result = mfem_solve_mesh(coeff, mesh, boundary_potential, conductivities)
     sol = np.array(result.GetDataArray())
     return sol
@@ -107,6 +114,7 @@ def mfem_solve_mesh(csd_coefficient, mesh, boundary_potential, conductivities):
     conductivities - numpy array of conductivities in S/m one per mesh material, can be longer than amount of materials - extra values won't not be used
     """
 
+    # this fespace will get garbage collected and gridfunctions will crash on some operations!!!!!
     fespace = prepare_fespace(mesh)
     print('Number of finite element unknowns: ' +
           str(fespace.GetTrueVSize()))
@@ -242,6 +250,9 @@ def main():
     else:
         electrodes_for_prepare = None
     mesh = prepare_mesh(namespace.meshfile, namespace.additional_refinement, electrodes_for_prepare)
+    # fespace might need to exist all the time for GridFunctions to work, if fespace gets eaten by garbage collector
+    # GF crashes
+    fespace = prepare_fespace(mesh)
 
     outdir = namespace.output
     output_filename = os.path.join(outdir, os.path.splitext(os.path.basename(namespace.meshfile))[0] + '.vtk')
@@ -266,35 +277,37 @@ def main():
 
     if namespace.multiprocessing:
         electrode_positions = electrodes[["x", "y", "z"]].values / 1000  # electrodes in mm, mesh in meters
-        fn = partial(mfem_solve_mesh_multiprocessing_wrap, mesh=mesh,
+        fn = partial(mfem_solve_mesh_multiprocessing_wrap,
                      boundary_potential=namespace.boundary_potential,
                      conductivities=conductivities_vector,
+                     meshfile=namespace.meshfile,
+                     electrodes_for_prepare=electrodes_for_prepare,
                      refinement=namespace.additional_refinement)
-
+        set_start_method("spawn")
         results_np = process_map(fn, electrode_positions, desc="simulating electrodes mp", chunksize=1)
 
-        fespace = prepare_fespace(mesh)
-
-        results = []
-        for result in tqdm(results_np, desc='recovering solutions'):
-            solution_gridf = mfem.GridFunction(fespace)
-            solution_gridf.Assign(np.array(result))
-            results.append(solution_gridf)
-        # need to recreate solution in FEM
     else:
         # singlethreaded electrode sim
-        results = []
+        results_np = []
         for row_id, electrode in tqdm(electrodes.iterrows(), desc="simulating electrodes", total=len(electrodes)):
             # electrodes in mm, mesh in meters
             electrode_position = electrode[["x", "y", "z"]].astype(float).values / 1000
             electrode_coeff = electrode_coefficient(electrode_position)
             result = mfem_solve_mesh(electrode_coeff, mesh, boundary_potential=namespace.boundary_potential,
                                      conductivities=conductivities_vector)
-            results.append(result)
+            results_np.append(np.array(result.GetDataArray()))
+
+    # due to WEIRD pyMFEM behaviour grid functions can loose their associated fespace, or mesh or whatnot and just SEGFAULT
+    # to fight it need to recreate fespace or use the one which will be availabe all the time and recreate the gridfunction
+    # todo report it???? Find minimal example?
+    results = []
+    for result in tqdm(results_np, desc='recovering solutions'):
+        solution_gridf = mfem.GridFunction(fespace)
+        solution_gridf.Assign([float(i) for i in list(result.copy())])
+        results.append(solution_gridf)
 
     results_correction = []
     verts = mesh.GetVertexArray()
-    fespace = prepare_fespace(mesh)
 
     for result, electrode_position in tqdm(list(zip(results, electrodes[["x", "y", "z"]].astype(float).values / 1000)),
                                            desc='adding theoretical solution'):
@@ -310,9 +323,9 @@ def main():
             vtk_file.write("POINT_DATA " + str(mesh.GetNV()) + "\n")
 
     if namespace.save_potential:
-        for result, electrode_name in tqdm(list(zip(results, electrodes['label'].values)), desc='saving output potential'):
+        for result, electrode_name in tqdm(list(zip(results, electrodes['label'].values)),
+                                           desc='saving output potential'):
             name = "potential_{}".format(electrode_name)
-
             if namespace.save_vtk:
                 with open(output_filename, 'a') as vtk_file:
                     grid_function_save_vtk(result, vtk_file, name)

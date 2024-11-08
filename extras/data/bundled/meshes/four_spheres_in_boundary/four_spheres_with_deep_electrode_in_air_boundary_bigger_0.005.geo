@@ -1,6 +1,7 @@
 // Gmsh project created on Fri May 10 17:43:53 2024
 Mesh.Algorithm = 5;
 Mesh.MshFileVersion = 2.2;
+Mesh.Binary = 1;
 
 General.NumThreads = 16;
 
@@ -39,7 +40,7 @@ Physical Volume(5) = {20};
 
 Field[1] = Box;
 Field[1].VIn = 0.005; // Mesh size inside the cube
-Field[1].VOut = 2; // Mesh size outside the cube
+Field[1].VOut = 10; // Mesh size outside the cube
 Field[1].XMin = -0.15; // X min of the cube
 Field[1].XMax = 0.15; // X max of the cube
 Field[1].YMin = -0.15; // Y min of the cube
@@ -50,7 +51,7 @@ Field[1].ZMax = 0.15; // Z max of the cube
 
 Field[2] = Box;
 Field[2].VIn = 0.02; // Mesh size inside the cube
-Field[2].VOut = 2; // Mesh size outside the cube
+Field[2].VOut = 10; // Mesh size outside the cube
 Field[2].XMin = -0.5; // X min of the cube
 Field[2].XMax = 0.5; // X max of the cube
 Field[2].YMin = -0.5; // Y min of the cube
