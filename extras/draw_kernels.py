@@ -25,7 +25,9 @@ def main():
 
         fig, axs = pb.subplots(1, 2)
         c = axs[0].imshow(kernel)
-        axs[0].set_title("{}\n kernel".format(file.split(os.sep)[-2]))
+        average = np.average(kernel)
+        std = np.std(kernel)
+        axs[0].set_title("{}\n kernel\naverage: {}\n std: {}".format(file.split(os.sep)[-2], average, std))
         axs[0].set_yticks(ticks)
         axs[0].set_xticks(ticks)
 
