@@ -125,7 +125,9 @@ class _LinearKernelSolver(object):
         try:
             solved = scipy.linalg.solve(A, B, assume_a='pos')
         except scipy.linalg.LinAlgError:  # can we even assume it's symmetric and  positively defined in case it isnt
-            solved = scipy.linalg.solve(A, B, assume_a='gen')
+            warnings.warn("KERNEL MATRIX IS NOT POSITIVELY DEFINED, USING LINALG.PINV")
+            solved = np.dot(scipy.linalg.pinv(A), B)
+            # solved = scipy.linalg.solve(A, B, assume_a='gen')
 
         # the methods for solving were experimented on, kCSD has the same results with all of them
         # solved = scipy.linalg.solve(A, B, assume_a='pos') is the fastest, by 2 orders of magnitude

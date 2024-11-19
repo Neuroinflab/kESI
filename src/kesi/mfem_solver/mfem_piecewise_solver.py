@@ -1,9 +1,12 @@
 import argparse
 import os
 from functools import partial, lru_cache
+from multiprocessing import set_start_method
+
 import mfem.ser as mfem
 import numpy as np
 import pandas as pd
+import pyvista
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 from io import StringIO
@@ -66,13 +69,18 @@ def prepare_fespace(mesh):
     return fespace
 
 
-def mfem_solve_mesh_multiprocessing_wrap(electrode_position, mesh, boundary_potential, conductivities, refinement):
+def mfem_solve_mesh_multiprocessing_wrap(electrode_position, boundary_potential, conductivities,
+                                         meshfile,
+                                         electrodes_for_prepare,
+                                         refinement,
+                                         ):
     try:
         device = mfem.Device("cpu")
         device.Print()
     except RuntimeError:
         pass  # already configured
     coeff = electrode_coefficient(electrode_position)
+    mesh = prepare_mesh(meshfile, refinement, electrodes_for_prepare)
     result = mfem_solve_mesh(coeff, mesh, boundary_potential, conductivities)
     sol = np.array(result.GetDataArray())
     return sol
@@ -106,6 +114,7 @@ def mfem_solve_mesh(csd_coefficient, mesh, boundary_potential, conductivities):
     conductivities - numpy array of conductivities in S/m one per mesh material, can be longer than amount of materials - extra values won't not be used
     """
 
+    # this fespace will get garbage collected and gridfunctions will crash on some operations!!!!!
     fespace = prepare_fespace(mesh)
     print('Number of finite element unknowns: ' +
           str(fespace.GetTrueVSize()))
@@ -164,8 +173,8 @@ def main():
                               ' conductivity, all coordinates are assumed to be in meters')
                         )
     parser.add_argument("electrodefile",
-                        help=('CSV with electrode names and positions, in meters, with a header of: \n'
-                              '\tNAME,X,Y,Z')
+                        help=('CSV with electrode names and positions, in milimeters, with a header of: \n'
+                              '\tlabel,x,y,z')
                         )
     parser.add_argument("output", type=str,
                         help=("output folder with results."
@@ -237,10 +246,13 @@ def main():
     device = mfem.Device("cpu")
     device.Print()
     if namespace.electrode_refinement:
-        electrodes_for_prepare = electrodes[["X", "Y", "Z"]].values
+        electrodes_for_prepare = electrodes[["x", "y", "z"]].values / 1000  # electrodes in mm, mesh in meters
     else:
         electrodes_for_prepare = None
     mesh = prepare_mesh(namespace.meshfile, namespace.additional_refinement, electrodes_for_prepare)
+    # fespace might need to exist all the time for GridFunctions to work, if fespace gets eaten by garbage collector
+    # GF crashes
+    fespace = prepare_fespace(mesh)
 
     outdir = namespace.output
     output_filename = os.path.join(outdir, os.path.splitext(os.path.basename(namespace.meshfile))[0] + '.vtk')
@@ -264,37 +276,40 @@ def main():
         raise Exception("Mesh material indexes are not correct, they should start with 1 and increase by 1")
 
     if namespace.multiprocessing:
-        electrode_positions = electrodes[["X", "Y", "Z"]].values
-        fn = partial(mfem_solve_mesh_multiprocessing_wrap, mesh=mesh,
+        electrode_positions = electrodes[["x", "y", "z"]].values / 1000  # electrodes in mm, mesh in meters
+        fn = partial(mfem_solve_mesh_multiprocessing_wrap,
                      boundary_potential=namespace.boundary_potential,
                      conductivities=conductivities_vector,
+                     meshfile=namespace.meshfile,
+                     electrodes_for_prepare=electrodes_for_prepare,
                      refinement=namespace.additional_refinement)
-
+        set_start_method("spawn")
         results_np = process_map(fn, electrode_positions, desc="simulating electrodes mp", chunksize=1)
 
-        fespace = prepare_fespace(mesh)
-
-        results = []
-        for result in tqdm(results_np, desc='recovering solutions'):
-            solution_gridf = mfem.GridFunction(fespace)
-            solution_gridf.Assign(np.array(result))
-            results.append(solution_gridf)
-        # need to recreate solution in FEM
     else:
         # singlethreaded electrode sim
-        results = []
+        results_np = []
         for row_id, electrode in tqdm(electrodes.iterrows(), desc="simulating electrodes", total=len(electrodes)):
-            electrode_position = electrode[["X", "Y", "Z"]].astype(float).values
+            # electrodes in mm, mesh in meters
+            electrode_position = electrode[["x", "y", "z"]].astype(float).values / 1000
             electrode_coeff = electrode_coefficient(electrode_position)
             result = mfem_solve_mesh(electrode_coeff, mesh, boundary_potential=namespace.boundary_potential,
                                      conductivities=conductivities_vector)
-            results.append(result)
+            results_np.append(np.array(result.GetDataArray()))
+
+    # due to WEIRD pyMFEM behaviour grid functions can loose their associated fespace, or mesh or whatnot and just SEGFAULT
+    # to fight it need to recreate fespace or use the one which will be availabe all the time and recreate the gridfunction
+    # todo report it???? Find minimal example?
+    results = []
+    for result in tqdm(results_np, desc='recovering solutions'):
+        solution_gridf = mfem.GridFunction(fespace)
+        solution_gridf.Assign([float(i) for i in list(result.copy())])
+        results.append(solution_gridf)
 
     results_correction = []
     verts = mesh.GetVertexArray()
-    fespace = prepare_fespace(mesh)
 
-    for result, electrode_position in tqdm(list(zip(results, electrodes[["X", "Y", "Z"]].astype(float).values)),
+    for result, electrode_position in tqdm(list(zip(results, electrodes[["x", "y", "z"]].astype(float).values / 1000)),
                                            desc='adding theoretical solution'):
         distance_to_electrode = np.linalg.norm(np.array(electrode_position) - verts, ord=2, axis=1)
         v_kcsd = 1.0 / (4 * np.pi * namespace.base_conductivity * distance_to_electrode)
@@ -308,9 +323,9 @@ def main():
             vtk_file.write("POINT_DATA " + str(mesh.GetNV()) + "\n")
 
     if namespace.save_potential:
-        for result, electrode_name in tqdm(list(zip(results, electrodes.NAME.values)), desc='saving output potential'):
+        for result, electrode_name in tqdm(list(zip(results, electrodes['label'].values)),
+                                           desc='saving output potential'):
             name = "potential_{}".format(electrode_name)
-
             if namespace.save_vtk:
                 with open(output_filename, 'a') as vtk_file:
                     grid_function_save_vtk(result, vtk_file, name)
@@ -321,7 +336,7 @@ def main():
                 np.savez_compressed(numpy_name, sol=data_vtk.astype(namespace.numpy_precision))
 
     if namespace.save_correction:
-        for result, electrode_name in tqdm(list(zip(results_correction, electrodes.NAME.values)),
+        for result, electrode_name in tqdm(list(zip(results_correction, electrodes['label'].values)),
                                            desc='saving output correction'):
             name = "correction_{}".format(electrode_name)
 
@@ -333,3 +348,9 @@ def main():
                 data_vtk = np.array(result.GetDataArray())
                 numpy_name = os.path.join(os.path.dirname(output_filename), name)
                 np.savez_compressed(numpy_name, sol=data_vtk.astype(namespace.numpy_precision))
+
+    # use pyvista to rewrite VTK in binary form
+    if namespace.save_vtk:
+        print("Resaving in binary")
+        pyvista_mesh = pyvista.read(output_filename)
+        pyvista_mesh.save(output_filename)
