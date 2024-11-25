@@ -202,6 +202,7 @@ class Analytical(_Base):
                                                                      electrode),
                 super()._potential_basis_functions(electrode))
 
+    # todo WHyyy???? to use the same model in both electrode and basis source? WHYYYY???
     def _potential_divided_by_relative_conductivity_if_available(self,
                                                                  electrode):
         return self._divide_by_relative_conductivity_if_available(
@@ -213,6 +214,7 @@ class Analytical(_Base):
     def _divide_by_relative_conductivity_if_available(self,
                                                       potential,
                                                       electrode):
+        # if I use a different model for electrodes...
         try:
             factor = 1.0 / electrode.conductivity
 

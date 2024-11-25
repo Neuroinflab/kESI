@@ -124,6 +124,32 @@ class GaussianSourceKCSD3D(GaussianSourceBase):
                                   self._c * self._fraction_of_erf_to_x_limit_in_0)
 
 
+class PointSourceKCSD:
+    def __init__(self, x, y, z, conductivity=1.0):
+        """x, y, z in meters, conductivity in siemens per meter"""
+        self.x = x
+        self.y = y
+        self.z = z
+        self.conductivity = conductivity
+
+
+    def csd(self, X, Y, Z):
+        # point csd, return closest to given X Y Z
+        # TODO
+        # might be a bad idea....
+        distance = np.sqrt((X - self.x)**2 + (Y - self.y)**2 + (Z - self.z)**2)
+        csd = np.zeros_like(distance)
+        csd[np.argmin(distance)] = 1.0
+        return csd
+
+    def potential(self, X, Y, Z):
+        distance = np.sqrt((X - self.x)**2 + (Y - self.y)**2 + (Z - self.z)**2)
+        v_kcsd = 1.0 / (4 * np.pi * self.conductivity * distance)
+        return v_kcsd
+
+
+    # TODO DO THIS AND TRY CALCULATING KCSD WITH IT AS ELECTRODE SOURCE!
+
 def polynomial(coefficients, X):
     """
     Parameters

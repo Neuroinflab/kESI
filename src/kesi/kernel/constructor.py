@@ -182,6 +182,8 @@ class KernelConstructor(object):
                                                      electrodes,
                                                      potential_basis_functions):
         for i, electrode in enumerate(tqdm(electrodes, desc='constructing B array')):
+            # in kESI potential_basis_functions is kesi.kernel.potential_basis_functions.Numerical object
+            # in kCSD potential_basis_functions is kesi.kernel.potential_basis_functions.Analytical object
             POT = potential_basis_functions(electrode)
 
             self._alloc_potential_basis_functions_if_necessary(POT.size,

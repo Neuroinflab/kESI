@@ -5,7 +5,7 @@ import numpy as np
 from scipy.integrate import romb
 
 from kesi import Reconstructor
-from kesi.common import SphericalSplineSourceKCSD, GaussianSourceKCSD3D, cv
+from kesi.common import SphericalSplineSourceKCSD, GaussianSourceKCSD3D, cv, PointSourceKCSD
 from kesi.kernel.constructor import Convolver, ConvolverInterfaceIndexed, KernelConstructor, CrossKernelConstructor
 from kesi.kernel.electrode import Conductivity
 from kesi.kernel import potential_basis_functions as pbf
@@ -41,11 +41,20 @@ class KcsdKesi3d:
                                    6.75 / R_init ** 3]]
             model_src = SphericalSplineSourceKCSD(0, 0, 0,
                                                   spline_nodes,
-                                                  spline_polynomials)
+                                                  spline_polynomials,
+                                                  conductivity=conductivity,
+                                                  )
         elif source_type == 'gaussian':
-            model_src = GaussianSourceKCSD3D(0, 0, 0, R_init, conductivity=conductivity)
+            model_src = GaussianSourceKCSD3D(0, 0, 0, R_init,
+                                             conductivity=conductivity,
+                                             )
         else:
             NotImplemented("Unsupported source type {}".format(source_type))
+
+
+        electrode_model_src = PointSourceKCSD(0, 0, 0,
+                                              conductivity=conductivity,
+                                              )
 
         # only works with non rotated affines!!!!!!
         x = estimation_points_grid[0][:, 0, 0]
@@ -90,7 +99,7 @@ class KcsdKesi3d:
                                                         mask)
 
         pbf_kcsd = pbf.Analytical(convolver_interface,
-                                  potential=model_src.potential)
+                                  potential=electrode_model_src.potential)
 
         kernel_constructor = KernelConstructor()
 
@@ -274,7 +283,9 @@ class Kesi3dCorrected(KcsdKesi3d):
                                       CROSSKERNEL_KESI)
         self.reconstructor = reconstructor
 
+
 class Kesi3dNumericalOnly(KcsdKesi3d):
+
     def __init__(self, estimation_points_grid, electrode_names, electrode_mesh_path, electrode_positions, conductivity=1.0, R_init=1.0,
                  mask=None, source_type='spherical'):
         """
