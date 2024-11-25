@@ -185,6 +185,10 @@ class _LeadfieldFromElectrode(_FromLeadfieldNotMasked):
 
 class Analytical(_Base):
     def __init__(self, convolver_interface, potential, **kwargs):
+        """
+        potential - vector callable generating the model (centered at 0,0,0) basis source potential
+        (suggested conductivity == 1 S/m)
+        """
         super().__init__(convolver_interface, **kwargs)
         self.potential = potential
 
@@ -202,7 +206,6 @@ class Analytical(_Base):
                                                                      electrode),
                 super()._potential_basis_functions(electrode))
 
-    # todo WHyyy???? to use the same model in both electrode and basis source? WHYYYY???
     def _potential_divided_by_relative_conductivity_if_available(self,
                                                                  electrode):
         return self._divide_by_relative_conductivity_if_available(

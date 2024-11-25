@@ -84,14 +84,14 @@ class KcsdKesi3d:
             warnings.warn("Source size is smaller than step, are you sure it's intentional?")
             minimum_romberg_k = 2
         else:
-            minimum_romberg_k = int(np.ceil(np.log(source_size_in_grid - 1) / np.log(2)))
+            minimum_romberg_k = int(np.ceil(np.log2(source_size_in_grid - 1)))
 
         romberg_n = 2 ** minimum_romberg_k + 1
-        # ROMBERG_WEIGHTS = romb(np.identity(ROMBERG_N),
-        #                        dx=2 ** -ROMBERG_K)
 
+        # this is intentional,
+        # because quadrature is supposed to be on unitary span
         ROMBERG_WEIGHTS = romb(np.identity(romberg_n),
-                               sim_space_step)
+                               dx=2 ** -minimum_romberg_k)
 
         convolver_interface = ConvolverInterfaceIndexed(convolver,
                                                         model_src.csd,
@@ -99,7 +99,7 @@ class KcsdKesi3d:
                                                         mask)
 
         pbf_kcsd = pbf.Analytical(convolver_interface,
-                                  potential=electrode_model_src.potential)
+                                  potential=model_src.potential)
 
         kernel_constructor = KernelConstructor()
 
@@ -251,11 +251,14 @@ class Kesi3dCorrected(KcsdKesi3d):
             minimum_romberg_k = int(np.ceil(np.log(source_size_in_grid - 1) / np.log(2)))
 
         romberg_n = 2 ** minimum_romberg_k + 1
-        # ROMBERG_WEIGHTS = romb(np.identity(ROMBERG_N),
-        #                        dx=2 ** -ROMBERG_K)
 
+        # this is intentional,
+        # because quadrature is supposed to be on unitary span
         ROMBERG_WEIGHTS = romb(np.identity(romberg_n),
-                               sim_space_step)
+                               dx=2 ** -minimum_romberg_k)
+
+        # ROMBERG_WEIGHTS = romb(np.identity(romberg_n),
+        #                        sim_space_step)
 
         convolver_interface = ConvolverInterfaceIndexed(convolver,
                                                         model_src.csd,
@@ -355,11 +358,10 @@ class Kesi3dNumericalOnly(KcsdKesi3d):
             minimum_romberg_k = int(np.ceil(np.log(source_size_in_grid - 1) / np.log(2)))
 
         romberg_n = 2 ** minimum_romberg_k + 1
-        # ROMBERG_WEIGHTS = romb(np.identity(ROMBERG_N),
-        #                        dx=2 ** -ROMBERG_K)
-
+        # this is intentional,
+        # because quadrature is supposed to be on unitary span
         ROMBERG_WEIGHTS = romb(np.identity(romberg_n),
-                               sim_space_step)
+                               dx=2 ** -minimum_romberg_k)
 
         convolver_interface = ConvolverInterfaceIndexed(convolver,
                                                         model_src.csd,
