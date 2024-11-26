@@ -873,6 +873,10 @@ class FourSphereModel(object):
         def H_v(self, r_ele):
             COEF = np.full((len(r_ele), len(self.n)),
                            np.nan)
+            # TODO I think here we need a case for r_ele < self.loc_r
+            # in practice it would be the same as for the rest of the brain sphere
+            # except with inverted values of r_ele and self.loc_r
+
             IDX_LOW = r_ele >= self.loc_r
 
             for i, r in zip(np.arange(len(r_ele))[~IDX_LOW],
@@ -885,7 +889,7 @@ class FourSphereModel(object):
             if IDX.any():
                 _r_ele = r_ele[IDX].reshape(-1, 1)
                 T1 = ((_r_ele / self.radius.brain) ** self.n) * self.A1()
-                T2 = ((self.rz / _r_ele) ** (self.n + 1))
+                T2 = ((self.rz / _r_ele) ** (self.n + 1))  # rz == loc_r TODO inverse fraction for IDX_LOW? to sample below the dipole?
                 COEF[IDX, :] = T1 + T2
 
             IDX_LOW[IDX_HIGH] = False

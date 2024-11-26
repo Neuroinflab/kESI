@@ -35,6 +35,7 @@ class MeshElectrode:
         self.y = position[1]
         self.z = position[2]
         self.attribute_prefix = attribute_prefix
+        # we don't add conductivity here, because it's accounted for in leadfield
 
     def resample(self, X, Y, Z):
         points = np.vstack([X.ravel(), Y.ravel(), Z.ravel()]).T

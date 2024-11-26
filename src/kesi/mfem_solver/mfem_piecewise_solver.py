@@ -13,7 +13,7 @@ from io import StringIO
 
 from kesi.fem_utils.vtk_utils import grid_function_save_vtk
 from kesi.mfem_solver.interpolated_mfem_coefficient import CSDCoefficient
-from kesi.utils import str_to_bool
+from kesi.utils import str_to_bool, write_run_summary
 
 
 def refine_around_electrodes(mesh, electrode_positions):
@@ -212,7 +212,6 @@ def main():
                         help=("Refine mesh around electrode points"),
                         default=False)
 
-    # todo debug multiprocessing!!!!
     parser.add_argument('--multiprocessing', dest='multiprocessing', action='store_true',
                         help='Enable multiprocessing per electrode, broken rn')
     parser.set_defaults(multiprocessing=False)
@@ -239,6 +238,8 @@ def main():
 
     if not (namespace.save_vtk or namespace.save_numpy):
         raise Exception("Nothing will be saved! Exiting")
+
+    write_run_summary(savedir=namespace.output, namespace=namespace)
 
     conductivities_vector = np.array(namespace.conductivities)
     electrodes = pd.read_csv(namespace.electrodefile)
