@@ -185,6 +185,10 @@ class _LeadfieldFromElectrode(_FromLeadfieldNotMasked):
 
 class Analytical(_Base):
     def __init__(self, convolver_interface, potential, **kwargs):
+        """
+        potential - vector callable generating the model (centered at 0,0,0) basis source potential
+        (suggested conductivity == 1 S/m)
+        """
         super().__init__(convolver_interface, **kwargs)
         self.potential = potential
 

@@ -30,6 +30,7 @@ class KcsdKesi3d:
 
         sim_space_step = np.abs(estimation_points_grid[0][0, 0, 0] - estimation_points_grid[0][1, 0, 0])
 
+        # conductivity is accounted for in electrodes, and sources should have 1.0 conductivity
         electrodes = [Conductivity(i[0], i[1], i[2], conductivity) for i in positions]
 
         if source_type == 'spherical':
@@ -43,7 +44,7 @@ class KcsdKesi3d:
                                                   spline_nodes,
                                                   spline_polynomials)
         elif source_type == 'gaussian':
-            model_src = GaussianSourceKCSD3D(0, 0, 0, R_init, conductivity=conductivity)
+            model_src = GaussianSourceKCSD3D(0, 0, 0, R_init)
         else:
             NotImplemented("Unsupported source type {}".format(source_type))
 
@@ -58,10 +59,8 @@ class KcsdKesi3d:
         convolver = Convolver(pot_grid, csd_grid)
         self.convolver = convolver
 
-        # romberg weights define a kernel created around source placed at electrode
-        # for analytical kernels, we just need to have a ROMBRRG_N * dx to span significant portion of the kernel...
-        # I guess for numerically corrected it needs to be as big as possible to include numerical corrections across the brain?
-        # most likely it just decays differently
+        # romberg weights must have enough grid node points to span a kernel created around source placed
+        # at electrode in CSD space
 
         x = np.linspace(-R_init * 100, R_init * 100, 100000)
         csd = model_src.csd(x, np.zeros_like(x), np.zeros_like(x))
@@ -70,19 +69,20 @@ class KcsdKesi3d:
         cutoff = csd.max() * 1.0e-4
         effective_source_radius = np.abs(x[np.argmax(csd >= cutoff)])
 
-        source_size_in_grid = int(effective_source_radius / sim_space_step * 2)
+        source_size_in_grid = int(effective_source_radius / sim_space_step * 2) + 2 # one extra node to capture zeroes
         if source_size_in_grid < 2:
             warnings.warn("Source size is smaller than step, are you sure it's intentional?")
             minimum_romberg_k = 2
         else:
-            minimum_romberg_k = int(np.ceil(np.log(source_size_in_grid - 1) / np.log(2)))
+            minimum_romberg_k = int(np.ceil(np.log2(source_size_in_grid - 1)))
 
         romberg_n = 2 ** minimum_romberg_k + 1
-        # ROMBERG_WEIGHTS = romb(np.identity(ROMBERG_N),
-        #                        dx=2 ** -ROMBERG_K)
 
+        # this is intentional, we are not using the grid spacing,
+        # because quadrature is supposed to be on unitary span
+        # it's taken into account in later calculations
         ROMBERG_WEIGHTS = romb(np.identity(romberg_n),
-                               sim_space_step)
+                               dx=2 ** -minimum_romberg_k)
 
         convolver_interface = ConvolverInterfaceIndexed(convolver,
                                                         model_src.csd,
@@ -160,122 +160,9 @@ class KcsdKesi3d:
         return eigenvalues, eigensources
 
 
-class Kesi3dCorrected(KcsdKesi3d):
-    def __init__(self, estimation_points_grid, electrode_names, electrode_folder, conductivity=1.0, R_init=1.0,
-                 mask=None, source_type='spherical', interpolation='linear'):
-        """
-        estimation_points_grid: list of fleshed out meshgrids X, Y, Z, which span the CSD estimation, even grid spacing along all axii
-        electrode_names - list of electrode names to use from electrode folder
-        electrode_folder - str, path to folder with sampled electrode corrections
-        conductivity: tissue conductivity, at the sources, defaults to 1 S/m
-        R_init: radius of the sources
-        mask: None for no mask, 3D tensor of bools to put sources along estimation_points_grids nodes
-        source_type: Type of the CSD sources, spherical or gaussian
-        interpolation: str, "linear" or "nearest" - interpolator to map correction potentials to estimation points grid
-            nearest is around 2 times faster
-        """
-        assert source_type in ['spherical', 'gaussian']
-        if mask is None:
-            mask = np.ones_like(estimation_points_grid[0], dtype=bool)
-
-        sim_space_step = np.abs(estimation_points_grid[0][0, 0, 0] - estimation_points_grid[0][1, 0, 0])
-
-        electrodes = []
-        positions = []
-        for el_name in electrode_names:
-            el_path = os.path.join(electrode_folder, el_name + '.npz')
-            if interpolation == 'linear':
-                electrode = LinearlyInterpolatedLeadfieldCorrection(el_path)
-            elif interpolation == 'nearest':
-                electrode = NearestNeighbourInterpolatedLeadfieldCorrection(el_path)
-            else:
-                raise NotImplementedError("Interpolator not implemented: {}".format(interpolation))
-            electrodes.append(electrode)
-            positions.append([electrode.x, electrode.y, electrode.z])
-
-        self.positions = np.array(positions)
-
-        if source_type == 'spherical':
-            spline_nodes = [R_init / 3, R_init]
-            spline_polynomials = [[1],
-                                  [0,
-                                   6.75 / R_init,
-                                   -13.5 / R_init ** 2,
-                                   6.75 / R_init ** 3]]
-            model_src = SphericalSplineSourceKCSD(0, 0, 0,
-                                                  spline_nodes,
-                                                  spline_polynomials,
-                                                  conductivity=conductivity)
-        elif source_type == 'gaussian':
-            model_src = GaussianSourceKCSD3D(0, 0, 0, R_init, conductivity=conductivity)
-        else:
-            NotImplemented("Unsupported source type {}".format(source_type))
-
-        # only works with non rotated affines!!!!!!
-        x = estimation_points_grid[0][:, 0, 0]
-        y = estimation_points_grid[1][0, :, 0]
-        z = estimation_points_grid[2][0, 0, :]
-
-        pot_grid = [x, y, z]
-        csd_grid = [x, y, z]
-
-        convolver = Convolver(pot_grid, csd_grid)
-        self.convolver = convolver
-
-        # romberg weights define a kernel created around source placed at electrode
-        # for analytical kernels, we just need to have a ROMBRRG_N * dx to span significant portion of the kernel...
-        # I guess for numerically corrected it needs to be as big as possible to include numerical corrections across the brain?
-        # most likely it just decays differently
-
-        x = np.linspace(-R_init * 100, R_init * 100, 100000)
-        csd = model_src.csd(x, np.zeros_like(x), np.zeros_like(x))
-
-        # we assume that source is symmetrical...
-        cutoff = csd.max() * 1.0e-4
-        effective_source_radius = np.abs(x[np.argmax(csd >= cutoff)])
-
-        source_size_in_grid = int(effective_source_radius / sim_space_step * 2)
-        if source_size_in_grid < 2:
-            warnings.warn("Source size is smaller than step, are you sure it's intentional?")
-            minimum_romberg_k = 2
-        else:
-            minimum_romberg_k = int(np.ceil(np.log(source_size_in_grid - 1) / np.log(2)))
-
-        romberg_n = 2 ** minimum_romberg_k + 1
-        # ROMBERG_WEIGHTS = romb(np.identity(ROMBERG_N),
-        #                        dx=2 ** -ROMBERG_K)
-
-        ROMBERG_WEIGHTS = romb(np.identity(romberg_n),
-                               sim_space_step)
-
-        convolver_interface = ConvolverInterfaceIndexed(convolver,
-                                                        model_src.csd,
-                                                        ROMBERG_WEIGHTS,
-                                                        mask)
-
-        pbf_instance = pbf.AnalyticalCorrectedNumerically(convolver_interface,
-                                                          potential=model_src.potential)
-
-        kernel_constructor = KernelConstructor()
-
-        CSD_MASK = np.ones(convolver.shape('CSD'),
-                           dtype=bool)
-
-        kernel_constructor.crosskernel = CrossKernelConstructor(convolver_interface,
-                                                                CSD_MASK)
-
-        B_KESI = kernel_constructor.potential_basis_functions_at_electrodes(electrodes,
-                                                                            pbf_instance)
-        KERNEL_KESI = kernel_constructor.kernel(B_KESI)
-        CROSSKERNEL_KESI = kernel_constructor.crosskernel(B_KESI)
-        del B_KESI  # the array is large and no longer needed
-
-        reconstructor = Reconstructor(KERNEL_KESI,
-                                      CROSSKERNEL_KESI)
-        self.reconstructor = reconstructor
-
 class Kesi3dNumericalOnly(KcsdKesi3d):
-    def __init__(self, estimation_points_grid, electrode_names, electrode_mesh_path, electrode_positions, conductivity=1.0, R_init=1.0,
+
+    def __init__(self, estimation_points_grid, electrode_names, electrode_mesh_path, electrode_positions, R_init=1.0,
                  mask=None, source_type='spherical'):
         """
         estimation_points_grid: list of fleshed out meshgrids X, Y, Z, which span the CSD estimation, even grid spacing along all axii
@@ -285,8 +172,6 @@ class Kesi3dNumericalOnly(KcsdKesi3d):
         R_init: radius of the sources
         mask: None for no mask, 3D tensor of bools to put sources along estimation_points_grids nodes
         source_type: Type of the CSD sources, spherical or gaussian
-        interpolation: str, "linear" or "nearest" - interpolator to map correction potentials to estimation points grid
-            nearest is around 2 times faster
         """
         self.positions = electrode_positions
         assert source_type in ['spherical', 'gaussian']
@@ -297,6 +182,7 @@ class Kesi3dNumericalOnly(KcsdKesi3d):
 
         electrodes = read_mesh_electrodes(electrode_mesh_path, electrode_names, electrode_positions)
 
+        # conductivity of the sources is not set, as the conductivity is accounted for in the electrode leadfield
         if source_type == 'spherical':
             spline_nodes = [R_init / 3, R_init]
             spline_polynomials = [[1],
@@ -307,9 +193,9 @@ class Kesi3dNumericalOnly(KcsdKesi3d):
             model_src = SphericalSplineSourceKCSD(0, 0, 0,
                                                   spline_nodes,
                                                   spline_polynomials,
-                                                  conductivity=conductivity)
+                                                  )
         elif source_type == 'gaussian':
-            model_src = GaussianSourceKCSD3D(0, 0, 0, R_init, conductivity=conductivity)
+            model_src = GaussianSourceKCSD3D(0, 0, 0, R_init)
         else:
             NotImplemented("Unsupported source type {}".format(source_type))
 
@@ -324,10 +210,8 @@ class Kesi3dNumericalOnly(KcsdKesi3d):
         convolver = Convolver(pot_grid, csd_grid)
         self.convolver = convolver
 
-        # romberg weights define a kernel created around source placed at electrode
-        # for analytical kernels, we just need to have a ROMBRRG_N * dx to span significant portion of the kernel...
-        # I guess for numerically corrected it needs to be as big as possible to include numerical corrections across the brain?
-        # most likely it just decays differently
+        # romberg weights must have enough grid node points to span a kernel created around source placed
+        # at electrode in CSD space
 
         x = np.linspace(-R_init * 100, R_init * 100, 100000)
         csd = model_src.csd(x, np.zeros_like(x), np.zeros_like(x))
@@ -336,7 +220,7 @@ class Kesi3dNumericalOnly(KcsdKesi3d):
         cutoff = csd.max() * 1.0e-4
         effective_source_radius = np.abs(x[np.argmax(csd >= cutoff)])
 
-        source_size_in_grid = int(effective_source_radius / sim_space_step * 2)
+        source_size_in_grid = int(effective_source_radius / sim_space_step * 2) + 2 # one extra node to capture zeroes
         if source_size_in_grid < 2:
             warnings.warn("Source size is smaller than step, are you sure it's intentional?")
             minimum_romberg_k = 2
@@ -344,11 +228,12 @@ class Kesi3dNumericalOnly(KcsdKesi3d):
             minimum_romberg_k = int(np.ceil(np.log(source_size_in_grid - 1) / np.log(2)))
 
         romberg_n = 2 ** minimum_romberg_k + 1
-        # ROMBERG_WEIGHTS = romb(np.identity(ROMBERG_N),
-        #                        dx=2 ** -ROMBERG_K)
 
+        # this is intentional, we are not using the grid spacing,
+        # because quadrature is supposed to be on unitary span
+        # it's taken into account in later calculations
         ROMBERG_WEIGHTS = romb(np.identity(romberg_n),
-                               sim_space_step)
+                               dx=2 ** -minimum_romberg_k)
 
         convolver_interface = ConvolverInterfaceIndexed(convolver,
                                                         model_src.csd,
@@ -373,4 +258,5 @@ class Kesi3dNumericalOnly(KcsdKesi3d):
 
         reconstructor = Reconstructor(KERNEL_KESI,
                                       CROSSKERNEL_KESI)
+
         self.reconstructor = reconstructor
