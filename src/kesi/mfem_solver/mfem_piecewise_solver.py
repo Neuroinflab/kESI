@@ -198,7 +198,7 @@ def main():
 
     parser.add_argument("--save-correction", type=str_to_bool,
                         help="y/n save solved correction per electrode",
-                        default=True)
+                        default=False)
 
     parser.add_argument("--save-potential", type=str_to_bool,
                         help="y/n save solved potential per electrode",
