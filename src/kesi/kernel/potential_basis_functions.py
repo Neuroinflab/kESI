@@ -184,11 +184,26 @@ class _LeadfieldFromElectrode(_FromLeadfieldNotMasked):
 
 
 class Analytical(_Base):
+    """
+    ### Potential Basis Functions: analytical solution of the forward problem (kCSD)
+
+    If the model potential basis is known for certain assumptions (e.g. these of kCSD)
+    which are considered met, then `Analytical` class can be used.
+    It strightforwardly calculates values of potential basis functions from:
+    - coordinates of their centroids,
+    - model potential basis,
+    - electrode location.
+    """
     def __init__(self, convolver_interface, potential, **kwargs):
         """
-        potential - vector callable generating the model (centered at 0,0,0) basis source potential
-        (suggested conductivity == 1 S/m)
+        Parameters
+        ----------
+
+        potential : callable
+            vector callable generating the model (centered at 0,0,0) basis source potential
+            (suggested conductivity == 1 S/m)
         """
+
         super().__init__(convolver_interface, **kwargs)
         self.potential = potential
 
@@ -228,6 +243,18 @@ class Analytical(_Base):
 
 class Numerical(_LeadfieldFromElectrode,
                 _PotAttribute):
+    """
+    ### Potential Basis Functions: purely numerical solution of the forward problem (kCSD/kESI)
+
+    If the model potential basis is unknown, but leadfields of electrodes can be calculated in
+     nodes of the _POT_ grid, then `Numerical` class can be used.  It calculates values of
+     potential basis functions numerically from:
+    - coordinates of their centroids,
+    - model CSD basis,
+    - leadfield of the electrode (`.leadfield()` method of the electrode object).
+
+    Note, that **if the leadfield is not regular enough, significant numerical errors are expected**.
+    """
     pass
 
 
@@ -271,4 +298,19 @@ class NumericalCorrection(_FromLeadfieldNotMasked,
 
 class AnalyticalCorrectedNumerically(NumericalCorrection,
                                      Analytical):
+    """
+    ### Potential Basis Functions: numerically corrected analytical solution of the forward problem (kESI)
+
+    If the model potential basis is known for certain assumptions (e.g. these of kCSD) which are not met,
+    but corrections of leadfields of electrodes can be calculated in nodes of the convolver _POT_ grid,
+    then `AnalyticalCorrectedNumerically` class can be used.  It calculates values of potential basis functions from:
+
+    - coordinates of their centroids,
+    - model CSD basis,
+    - model potential basis (to be corrected),
+    - electrode location,
+    - correction of the leadfield of the electrode (`.correction_leadfield()` method of the electrode object).
+
+    As the leadfield correction is often more regular than the leadfield itself, numerical errors are smaller than in purely numerical approach.
+    """
     pass

@@ -1,6 +1,8 @@
 import os
 import sys
 
+import numpy as np
+
 
 def str_to_bool(value):
     if isinstance(value, bool):
@@ -10,7 +12,6 @@ def str_to_bool(value):
     elif value.lower() in {'true', 't', '1', 'yes', 'y'}:
         return True
     raise ValueError(f'{value} is not a valid boolean value')
-
 
 def write_run_summary(savedir, namespace=None):
     os.makedirs(savedir, exist_ok=True)

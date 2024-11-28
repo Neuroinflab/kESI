@@ -21,13 +21,35 @@ def read_mesh_electrodes(mesh_file_path, electrode_names, electrode_positions=No
             electrodes.append(MeshElectrode(mesh, electrode, attribute_prefix, position=position))
     return electrodes
 
+
 @cached
 def _resample_mesh_memoized(mesh, points):
     points = np.array(points)
     resampled_mesh = pyvista_sample_points(mesh, points)
     return resampled_mesh
 
+
 class MeshElectrode:
+    """
+    An electrode object contains information about electrode spatial location (.x, .y and .z attribute),
+     which is an absolute minimum to be used by kESI (in this case: kCSD with known
+     profile of potential basis functions). It may also provide additional information about:
+
+    medium conductivity (.conductivity attribute) normalized by the conductivity
+    assumed when calculating the profile of potential basis function for kCSD, or
+    leadfield (.leadfield() method) which enables
+    kESI for arbitrary shape of CSD basis functions, or
+    leadfield correction (.correction_leadfield() method) which enables kESI for setups
+    violating kCSD assumptions, while facilitating application of analitically derived
+    kCSD base functions to avoid significant numerical errors,
+    base conductivity (.conductivity attribute) assumed when calculating the leadfield correction.
+
+    MeshElectrode reads .vtk files with leadfields and resamples it to convolver._POT_ grid when called for.
+
+   To be used with pbf.Numerical, as it defines the leadfield.
+
+    """
+
     def __init__(self, pyvista_mesh, electrode_name, attribute_prefix='potential', position=(np.nan, np.nan, np.nan)):
         self.name = electrode_name
         self.mesh = pyvista_mesh
