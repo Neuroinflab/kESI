@@ -1,9 +1,6 @@
 import os
 import sys
 
-import numpy as np
-
-
 def str_to_bool(value):
     if isinstance(value, bool):
         return value
