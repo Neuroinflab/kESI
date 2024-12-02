@@ -92,8 +92,62 @@ class FunctionalKernelFieldReconstructor(FunctionalFieldReconstructor):
 
 class Reconstructor(_CrossKernelReconstructor):
     """
-    A wrapper around (cross)kernel matrices facilitating
-    CSD reconstruction without explicit matrix operations.
+    The reconstructor object is a wrapper arround (cross)kernel matrices
+    facilitating CSD reconstruction without explicit matrix operations.
+    It is a callable which accepts an $N$ element vector
+    (or $N \times T$ element matrix) of potential values as its parameter
+    and returns a $C$ element vector (or $C \times T$ element matrix)
+    of reconstructed CSD at the selected nodes of the CSD grid.  It also
+    accepts an optional regularization parameter (which defaults to 0).
+    Additionally, the object facilitates efficient leave-one-out
+    cross-validation.
+
+    ## Regularization
+
+    Mathematically, any potential vector $V$ can be seen as a linear combination of eigenvectors $v_i$ of the kernel matrix $K$:
+    $$
+    V = \sum_{i=1}^N a_i v_i ,
+    $$
+    $$
+    K = \sum_{i=1}^N v_i \lambda_i v_i^T ,
+    $$
+    which makes the CSD reconstruction $C$:
+    $$
+    C = \sum_{i=1}^N \frac{a_i}{\lambda_i} \tilde{v}_i ,
+    $$
+    where $\tilde{v}_i$ are eigensources.  A noisy vector $\hat{V} = V + \varepsilon$ can be seen as:
+    $$
+    \hat{V} = \sum_{i=1}^N (a_i + \varepsilon_i) v_i = V + \sum_{i=1}^N \varepsilon_i v_i ,
+    $$
+    which makes the CSD reconstruction $\hat{C}$:
+    $$
+    \hat{C} = C + \sum_{i=1}^N \frac{\varepsilon_i}{\lambda_i} \tilde{v}_i ,
+    $$
+    and the noise-related error $E$:
+    $$
+    E = \sum_{i=1}^N \frac{\varepsilon_i}{\lambda_i} \tilde{v}_i .
+    $$
+    It is clear that noise component associated with small eigenvalues ($\lambda_i$) can easily dominate the solution.
+
+    A technique called regularization limits impact of components associated with small eigenvalues by slightly modifying the solution:
+    $$
+    \hat{C}' = \sum_{i=1}^N \frac{a_i + \varepsilon_i}{\lambda_i + \lambda} \tilde{v}_i ,
+    $$
+    where $\lambda$ is the regularization parameter.  But regularization is not a silver bullet.  While it limits the noise-related error:
+    $$
+    E' = \sum_{i=1}^N \frac{\varepsilon_i}{\lambda_i + \lambda} \tilde{v}_i ,
+    $$
+    it also suppresses reconstructions of eigensources associated with small eigenvalues, as:
+    $$
+    C' = \sum_{i=1}^N \frac{a_i}{\lambda_i + \lambda} \tilde{v}_i .
+    $$
+    It is thus important to choose the regularization parameter $\lambda$ wisely.
+    The span of parameters from which it is being selected should cover eigenvalues of the kernel.
+    Values smaller than the smallest eigenvalue have negligible effect, while values larger than the
+    largest eigenvalue suppress reconstruction completely, thus the optimal value of the regularization
+    parameter is expected to fall in the span of eigenvalues.  If the smallest of parameters is selected,
+    that may suggest that the solution should not be regularized.  Such suggestion is explicite if the set
+    of tested parameters includes $0$.
     """
     def __init__(self, kernel, crosskernel):
         """

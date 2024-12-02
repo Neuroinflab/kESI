@@ -36,6 +36,22 @@ class _Base(object):
 
 
 class Conductivity(_Base):
+    """
+        An electrode object contains information about electrode spatial location (.x, .y and .z attribute),
+     which is an absolute minimum to be used by kESI (in this case: kCSD with known
+     profile of potential basis functions). It may also provide additional information about:
+
+    medium conductivity (.conductivity attribute) normalized by the conductivity
+    assumed when calculating the profile of potential basis function for kCSD, or
+    leadfield (.leadfield() method) which enables
+    kESI for arbitrary shape of CSD basis functions, or
+    leadfield correction (.correction_leadfield() method) which enables kESI for setups
+    violating kCSD assumptions, while facilitating application of analitically derived
+    kCSD base functions to avoid significant numerical errors,
+    base conductivity (.conductivity attribute) assumed when calculating the leadfield correction.
+
+    Conductivity is the most basic of Electrode objects, used in pbf.Analytical, to calculate leadfield.
+    """
     def __init__(self, x, y, z, conductivity, **kwargs):
         super().__init__(x=x, y=y, z=z, **kwargs)
         self.conductivity = conductivity
@@ -134,6 +150,30 @@ class _Regularized(Conductivity):
 
 
 class _InterpolatedLeadfieldCorrection(_LeadfieldCorrectionBase):
+    """
+        An electrode object contains information about electrode spatial location (.x, .y and .z attribute),
+     which is an absolute minimum to be used by kESI (in this case: kCSD with known
+     profile of potential basis functions). It may also provide additional information about:
+
+    medium conductivity (.conductivity attribute) normalized by the conductivity
+    assumed when calculating the profile of potential basis function for kCSD, or
+    leadfield (.leadfield() method) which enables
+    kESI for arbitrary shape of CSD basis functions, or
+    leadfield correction (.correction_leadfield() method) which enables kESI for setups
+    violating kCSD assumptions, while facilitating application of analitically derived
+    kCSD base functions to avoid significant numerical errors,
+    base conductivity (.conductivity attribute) assumed when calculating the leadfield correction.
+
+    InerpolatedleadfieldCorrection object is an Electrode object to use with pbf.AnalyticalCorrectedNumerically
+    reads a numerical correction from a numpy sampled grid of FEM simulated partial potential of a point source,
+    which corrects a V = 1 / (4 pi sigma R) potential to include actualy domain geometry and conductivity
+
+    To be used with pbf.AnalyticalCorrectedNumerically
+
+    # TODO: it might not ever be used and might get deleted...? As MFEM solver has no issues and doesn't really
+    #  allow partial potential calculation in easy way
+    # TODO: rewrite to sample .vtk?
+    """
     def _correction_leadfield(self, SAMPLES, XYZ):
         return self._interpolate(SAMPLES, XYZ)
 
@@ -148,14 +188,31 @@ class _InterpolatedLeadfieldCorrection(_LeadfieldCorrectionBase):
 
 
 class LinearlyInterpolatedLeadfieldCorrection(_InterpolatedLeadfieldCorrection):
+    """
+    Class which defines _InterpolatedLeadfieldCorrection to use linear interploation (slow)
+
+    To be used with pbf.AnalyticalCorrectedNumerically
+    """
     interpolation_method = "linear"
 
 
 class NearestNeighbourInterpolatedLeadfieldCorrection(_InterpolatedLeadfieldCorrection):
+    """
+    Class which defines _InterpolatedLeadfieldCorrection to use Nearest Neigbor interpolation (fast inaccurate)
+
+    To be used with pbf.AnalyticalCorrectedNumerically
+    """
     interpolation_method = "nearest"
 
 
 class IntegrationNodesAtSamplingGrid(_LeadfieldCorrectionBase):
+    """
+    Class which defines _InterpolatedLeadfieldCorrection not interpolate, in case convolver._POT_ grid is exactly equal
+    to the sampled correction_leadfield grid.
+
+    To be used with pbf.AnalyticalCorrectedNumerically
+    """
+
     def _correction_leadfield(self, SAMPLES, XYZ):
         # if XYZ points are in nodes of the sampling grid,
         # no time-consuming interpolation is necessary

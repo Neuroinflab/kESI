@@ -1,3 +1,4 @@
+import math
 import os.path
 import warnings
 
@@ -33,6 +34,13 @@ class KcsdKesi3d:
         # conductivity is accounted for in electrodes, and sources should have 1.0 conductivity
         electrodes = [Conductivity(i[0], i[1], i[2], conductivity) for i in positions]
 
+        # Basis functions with infinite support (Gaussian) have certain (luckily minor) drawbacks:
+        #
+        #     yield a fuzzy and (theoretically) spatially unlimited CSD reconstructions,
+        #     require sampling the model basis function globally rather than locally.
+        # We can reduce the cropping error to 0 (literally) by use of CSD basis functions with
+        # finite support, like functions of distance from their centroids
+        # (; thus spherically symmetric), defined piecewise by polynomials
         if source_type == 'spherical':
             spline_nodes = [R_init / 3, R_init]
             spline_polynomials = [[1],
@@ -124,6 +132,15 @@ class KcsdKesi3d:
         csd_3d = csd.reshape(list(self.convolver.shape('CSD')) + [csd.shape[1]])
         return csd_3d
 
+    def select_lambdas_order_for_cv(self):
+        eigenvalues, eigensource = self.eigh()
+        eigenvalues_min = np.min(eigenvalues)
+        eigenvalues_max = np.max(eigenvalues)
+
+        eigh_min_order = math.floor(math.log(np.abs(eigenvalues_min), 10)) - 3
+        eigh_max_order = math.floor(math.log(np.abs(eigenvalues_max), 10)) + 3
+        return eigh_min_order, eigh_max_order
+
     def cv_lambda(self, potential, lambd=None):
         """
         potential: 2D array of potential at electrode positions given in constructor [electrodes x samples]
@@ -136,7 +153,8 @@ class KcsdKesi3d:
         assert potential.shape[0] == len(self.positions)
 
         if lambd is None:
-            lambd = np.logspace(-20, 20, 1000)
+            min_or, max_or = self.select_lambdas_for_cv()
+            lambd = np.logspace(min_or, max_or, 1000)
 
         errors = np.array(cv(self.reconstructor, potential, lambd)).flatten()
         best_lambda = np.array(lambd[np.argmin(errors)]).flatten()
@@ -183,6 +201,14 @@ class Kesi3dNumericalOnly(KcsdKesi3d):
         electrodes = read_mesh_electrodes(electrode_mesh_path, electrode_names, electrode_positions)
 
         # conductivity of the sources is not set, as the conductivity is accounted for in the electrode leadfield
+
+        # Basis functions with infinite support (Gaussian) have certain (luckily minor) drawbacks:
+        #
+        #     yield a fuzzy and (theoretically) spatially unlimited CSD reconstructions,
+        #     require sampling the model basis function globally rather than locally.
+        # We can reduce the cropping error to 0 (literally) by use of CSD basis functions with
+        # finite support, like functions of distance from their centroids
+        # (; thus spherically symmetric), defined piecewise by polynomials
         if source_type == 'spherical':
             spline_nodes = [R_init / 3, R_init]
             spline_polynomials = [[1],

@@ -49,6 +49,34 @@ def deprecated(old, new):
 
 
 class Convolver(object):
+    """
+    Convolver is the engine of kernel construction tools.  It is used to:
+    - integrate leadfield (correction) weighted by CSD basis functions,
+    - obtain CSD profile of a mixture of basis functions.
+
+    Convolver operates on three regular 3D grids of coordinates:
+    - _POT_ grid used for leadfield (_reciprocal potential_) integration,
+    - _CSD_ grid used for CSD profile calculation,
+    - _SRC_ grid used for distributing centroids of basis functions.
+
+    The _SRC_ grid is an intersection (in the set operation sense) of the
+    _POT_ and the _CSD_ grids, thus they define the convolver unequivocally.
+
+    As we want convolver to use the Romberg method for integration ($2^k + 1$
+    quadrature nodes), the integrated CSD profile will be cropped to $2^{k - 1} h_c$
+    from centroid in every dimension, where $h_c$ is the quadrature step size
+    (distance between adjacent _POT_ grid nodes) in the $c$ dimension.  To avoid errors by design,
+    we want $h_R^k \leq h_c$, where $h_R^k = 2^{1 - k} R$.
+    But in order not to waste quadrature nodes we want also $h_c \approx h_R^k$.
+    Thus we construct the _POT_ grid such that
+    $$
+    h_R^k \leq h_c < h_R^k \frac{span_c}{span_c - h_R^k} ,
+    $$
+    where $span_c \gg h_R^k$ is span of the _POT_ grid in the $c$ dimension
+    (proof not included).
+
+    """
+
     def __init__(self, potential_grid, csd_grid):
         self.POT_GRID = []
         self.CSD_GRID = []
@@ -148,6 +176,23 @@ class Convolver(object):
 
 
 class KernelConstructor(object):
+    """
+    ### Kernel constructor
+
+    The kernel constructor is an object which is a collection
+    of callables (methods) facilitating construction of values
+    of basis functions at electrodes
+    ($\mathbf{B}~=~[\mathbf{b}(x_1), \ldots, \mathbf{b}(x_N)]$,
+    where $x_i$ is the position of the $i$-th electrode)
+    and the kernel matrix ($\mathbf{K}~=~\mathbf{B}^T\mathbf{B}$).
+
+    The methods are:
+    - `.potential_basis_functions_at_electrodes()` which constructs
+      $\mathbf{B}$ from a sequence of kesi.kernel.electrode.Conductivity or kesi.kernel.mesh_electrode.MeshElectrode objects and a PBF
+      object responsible for basis functions in the potential space,
+    - `.kernel()` which constructs the kernel matrix from $\mathbf{B}$.
+    """
+
     class NoElectrodesGivenException(ValueError):
         @classmethod
         def check(cls, electrodes):
@@ -173,14 +218,14 @@ class KernelConstructor(object):
         with self:
             with potential_basis_functions:
                 self._calculate_potential_basis_functions_at_electrodes(
-                                                      electrodes,
-                                                      potential_basis_functions)
+                    electrodes,
+                    potential_basis_functions)
 
             return self._potential_basis_functions
 
     def _calculate_potential_basis_functions_at_electrodes(self,
-                                                     electrodes,
-                                                     potential_basis_functions):
+                                                           electrodes,
+                                                           potential_basis_functions):
         for i, electrode in enumerate(tqdm(electrodes, desc='constructing B array')):
             POT = potential_basis_functions(electrode)
 
@@ -197,6 +242,22 @@ class KernelConstructor(object):
 
 
 class CrossKernelConstructor(object):
+    """
+    Cross-kernel constructor
+
+    CSD can be reconstructed in nodes of the _CSD_ grid.  To calculate
+    the cross-kernel matrix we select their subset using a CSD mask, which should have dimensions corresponding to
+    convolver._CSD_ grid dimensions.
+
+
+    As cross-kernel matrix is a function of the $\mathbf{B}$ matrix
+    (see eq. 11 in
+    [What we can and what we cannot see with extracellular multielectrodes](https://doi.org/10.1371/journal.pcbi.1008615)),
+    its constructor is a callable taking $\mathbf{B}$ as an argument.
+    We assign the callable to `kernel_constructor.crosskernel`
+    attribute to keep all kernel construction callables in one object.
+    """
+
     def __init__(self,
                  convolver_interface,
                  csd_mask,
@@ -222,7 +283,7 @@ class CrossKernelConstructor(object):
     def _create_crosskernel(self, potential_basis_functions_at_electrodes):
         self._n_electrodes = potential_basis_functions_at_electrodes.shape[1]
         for i, potential_basis_functions in enumerate(
-                                     tqdm(potential_basis_functions_at_electrodes.T, desc='creating crosskernel per electrode')):
+                tqdm(potential_basis_functions_at_electrodes.T, desc='creating crosskernel per electrode')):
             self.ci.update_src(self._basis_functions_weights,
                                potential_basis_functions)
             self._set_crosskernel_column(i, self._basis_functions_to_csd())
@@ -237,7 +298,7 @@ class CrossKernelConstructor(object):
 
     def _basis_functions_to_csd(self):
         return self._crop_csd(self.ci.basis_functions_weights_to_csd(
-                                                 self._basis_functions_weights))
+            self._basis_functions_weights))
 
     def _crop_csd(self, csd):
         return csd[self.csd_mask]
@@ -263,6 +324,7 @@ class ConvolverInterface_base(object):
     If `weights` are tuple they are interpreted as weights of quadrature in X, Y
     and Z direction.
     """
+
     def __init__(self, convolver, csd, weights):
         self.convolver = convolver
         self.csd = csd
@@ -298,11 +360,11 @@ class ConvolverInterface_base(object):
                              else int(round(r * pot / csd)) * 2 + 1)
                             for r, pot, csd in zip(self._src_radius,
                                                    *map(self.convolver.steps,
-                                                     ['POT', 'CSD']))]
+                                                        ['POT', 'CSD']))]
         return self.convolver.basis_functions_weights_to_csd(
-                                                        basis_functions_weights,
-                                                        self.csd,
-                                                        csd_kernel_shape)
+            basis_functions_weights,
+            self.csd,
+            csd_kernel_shape)
 
     def meshgrid(self, name):
         return np.meshgrid(*getattr(self.convolver,
@@ -311,6 +373,31 @@ class ConvolverInterface_base(object):
 
 
 class ConvolverInterfaceIndexed(ConvolverInterface_base):
+    """
+    The convolver interface binds the convolver to:
+    - a CSD profile,
+    - weights of a quadrature of equally-spaced nodes,
+    - boolean mask of nodes of the _SRC_ grid with centroids
+      of basis functions.
+
+    We derive quadrature weights by applying Romberg's method
+    to identity matrix ($2^k +1$ one-hot vectors), which yields
+    the effective weights used by the method.
+
+    When analytical solution of the kCSD forward problem is
+    used coupled with numeric potential correction, the domain
+    of CSD used for calculation of the potential correction is
+    limited to the support of the leadfield correction.  Thus,
+    close to the support boundary the numeric correction is
+    calculated for a different (cropped) CSD profile than was
+    used for the corrected analytical solution.  To avoid errors,
+    it is advised not to put centroids near the boundary of the
+    support (which is a subset of the _POT_ grid).  It is also
+    advised to limit supports of CSD bases to where current
+    sources are biologically possible (here we include only CSD
+    bases which supports fit in the brain).
+    """
+
     def __init__(self, convolver, csd, weights, source_mask):
         super().__init__(convolver, csd, weights)
         self.source_mask = source_mask
