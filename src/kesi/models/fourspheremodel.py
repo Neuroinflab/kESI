@@ -112,7 +112,7 @@ class FourSphereModel(object):
             self.loc_r = np.sqrt(np.square(loc).sum())
             self.loc_v = (loc / self.loc_r
                           if self.loc_r != 0
-                          else np.array([[0, 0, 1]]))
+                          else np.array([[0, 0, 1]], dtype=np.float128))
 
         @property
         def loc(self):
@@ -138,20 +138,21 @@ class FourSphereModel(object):
             self.rz1 = self.loc_r / self.model.radius.brain
 
         def __call__(self, X, Y, Z):
-            ELECTRODES = np.vstack([X, Y, Z]).T
+            ELECTRODES = np.vstack([X, Y, Z], dtype=np.float128).T
 
             ele_dist = np.linalg.norm(ELECTRODES, axis=1)
             COS_THETA = self.cos_theta(ELECTRODES / ele_dist.reshape(-1, 1))
             tan_cosinus = self.tan_versor_cosinus(ELECTRODES).flatten()
 
             COEF = self.H_v(ele_dist)
+            COEF_RAD = self.H_v(ele_dist, rad=True)
             LPMV = lpmv(1,  # expensive for n >= 10_000;
                         self.n.reshape(1, -1),  # line_profiler claims 99.7%
-                        COS_THETA)  # experimental complexity O(n^2)
+                        COS_THETA.astype(np.float64)).astype(np.float128)  # experimental complexity O(n^2)
             LFUNCPROD = (COEF * LPMV).sum(axis=1)
 
-            NCOEF = self.n * COEF
-            RAD_COEF = np.hstack([np.zeros((COEF.shape[0], 1)),
+            NCOEF = self.n * COEF_RAD
+            RAD_COEF = np.hstack([np.zeros((COEF_RAD.shape[0], 1)),
                                   NCOEF])
             LFACTOR = np.polynomial.legendre.legval(COS_THETA.flatten(),
                                                     RAD_COEF.T,
@@ -164,10 +165,8 @@ class FourSphereModel(object):
             tan_potential = -mag_tan * tan_cosinus * LFUNCPROD
 
             # correction for below dipole position
-            rad_potential_cor = ((ele_dist >= self.loc_r).astype(float) - 0.5) * 2
 
             rad_potential = mag_rad * LFACTOR
-            rad_potential = rad_potential * rad_potential_cor
             potentials = tan_potential + rad_potential
             return potentials / (4 * np.pi * self.model.conductivity.brain * (self.rz ** 2))
 
@@ -210,21 +209,22 @@ class FourSphereModel(object):
 
             return cos
 
-        def H_v(self, r_ele):
+        def H_v(self, r_ele, rad=False):
             COEF = np.full((len(r_ele), len(self.n)),
-                           np.nan)
-            # TODO I think here we need a case for r_ele < self.loc_r
-            # in practice it would be the same as for the rest of the brain sphere
-            # except with inverted values of r_ele and self.loc_r
+                           np.nan, dtype=np.float128)
 
             IDX_BELOW = r_ele < self.loc_r
 
             if IDX_BELOW.any():
-
                 _r_ele = r_ele[IDX_BELOW].reshape(-1, 1)
                 T1 = ((_r_ele / self.radius.brain) ** self.n) * self.A1()
-                T2 = ((_r_ele / self.rz) ** (
-                            self.n + 1))  # rz == loc_r TODO inverse fraction for IDX_LOW? to sample below the dipole?
+
+                if rad:
+                    T2 = -1 * ((_r_ele / self.rz) ** (
+                            self.n - 1))
+                else:
+                    T2 = ((_r_ele / self.rz) ** (
+                            self.n + 1))
                 COEF[IDX_BELOW, :] = T1 + T2
 
             IDX_LOW = r_ele >= self.loc_r
