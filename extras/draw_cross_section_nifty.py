@@ -35,7 +35,7 @@ def main():
     fig = pb.figure()
 
     for file in args.files:
-        name = os.path.basename(file)
+        name = "{} {}".format(os.path.basename(os.path.dirname(file)), os.path.basename(file))
         correction = nibabel.load(file)
         vol_data = correction.get_fdata()
         # in case Nifty has components, grab the first one
@@ -48,7 +48,7 @@ def main():
 
         inv_affine = np.linalg.inv(correction.affine)
 
-        x_vox, y_vox, z_vox = apply_affine(inv_affine, [args.x, args.y, 0])
+        x_vox, y_vox, z_vox = apply_affine(inv_affine, [args.x * 1000, args.y * 1000, 0])
         slice_of_interest = np.s_[int(x_vox), int(y_vox), :]
 
         meshgrid = create_meshgrid_from_affine(correction.affine, vol_data) / 1000 # mm to meters
