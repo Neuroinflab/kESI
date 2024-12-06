@@ -26,7 +26,9 @@ class FourSphereModel(object):
             return cls(*[config.getfloat(section, field)
                          for section in FourSphereModel._LAYERS])
 
-    def __init__(self, conductivity, radius, n=100):
+    def __init__(self, conductivity, radius, n=100, precision="float64"):
+        assert precision in ["float64", "float128"]
+        self.precision = precision
         self.n = np.arange(1, n)
         self._set_radii(radius)
         self._set_conductivities(conductivity)
@@ -110,9 +112,15 @@ class FourSphereModel(object):
 
         def set_dipole_loc(self, loc):
             self.loc_r = np.sqrt(np.square(loc).sum())
+
+            if self.model.precision == 'float128':
+                default_vector = np.array([[0, 0, 1]], dtype=np.float128)
+            else:
+                default_vector = np.array([[0, 0, 1]])
+
             self.loc_v = (loc / self.loc_r
                           if self.loc_r != 0
-                          else np.array([[0, 0, 1]], dtype=np.float128))
+                          else default_vector)
 
         @property
         def loc(self):
@@ -138,7 +146,10 @@ class FourSphereModel(object):
             self.rz1 = self.loc_r / self.model.radius.brain
 
         def __call__(self, X, Y, Z):
-            ELECTRODES = np.vstack([X, Y, Z], dtype=np.float128).T
+            if self.model.precision == 'float128':
+                ELECTRODES = np.vstack([X, Y, Z], dtype=np.float128).T
+            else:
+                ELECTRODES = np.vstack([X, Y, Z]).T
 
             ele_dist = np.linalg.norm(ELECTRODES, axis=1)
             COS_THETA = self.cos_theta(ELECTRODES / ele_dist.reshape(-1, 1))
@@ -146,9 +157,14 @@ class FourSphereModel(object):
 
             COEF = self.H_v(ele_dist)
             COEF_RAD = self.H_v(ele_dist, rad=True)
-            LPMV = lpmv(1,  # expensive for n >= 10_000;
-                        self.n.reshape(1, -1),  # line_profiler claims 99.7%
-                        COS_THETA.astype(np.float64)).astype(np.float128)  # experimental complexity O(n^2)
+            if self.model.precision == 'float128':
+                LPMV = lpmv(1,  # expensive for n >= 10_000;
+                            self.n.reshape(1, -1),  # line_profiler claims 99.7%
+                            COS_THETA.astype(np.float64)).astype(np.float128)  # experimental complexity O(n^2)
+            else:
+                LPMV = lpmv(1,  # expensive for n >= 10_000;
+                            self.n.reshape(1, -1),  # line_profiler claims 99.7%
+                            COS_THETA)  # experimental complexity O(n^2)
             LFUNCPROD = (COEF * LPMV).sum(axis=1)
 
             NCOEF = self.n * COEF_RAD
@@ -158,7 +174,7 @@ class FourSphereModel(object):
                                                     RAD_COEF.T,
                                                     tensor=False)
 
-            sign_rad = np.sign(self.north_projection(self.p_rad)) #.....
+            sign_rad = np.sign(self.north_projection(self.p_rad))  # .....
             mag_rad = sign_rad * np.linalg.norm(self.p_rad)
             mag_tan = np.linalg.norm(self.p_tan)  # sign_tan * np.linalg.norm(dp_tan)
 
@@ -168,7 +184,8 @@ class FourSphereModel(object):
 
             rad_potential = mag_rad * LFACTOR
             potentials = tan_potential + rad_potential
-            return potentials / (4 * np.pi * self.model.conductivity.brain * (self.rz ** 2))
+            result = potentials / (4 * np.pi * self.model.conductivity.brain * (self.rz ** 2))
+            return result.astype(np.float64)
 
         def cos_theta(self, ele_versors):
             cos_theta = self.north_projection(ele_versors)
@@ -210,22 +227,31 @@ class FourSphereModel(object):
             return cos
 
         def H_v(self, r_ele, rad=False):
-            COEF = np.full((len(r_ele), len(self.n)),
-                           np.nan, dtype=np.float128)
+            if self.model.precision == "float128":
+                COEF = np.full((len(r_ele), len(self.n)),
+                               np.nan, dtype=np.float128)
+            else:
+                COEF = np.full((len(r_ele), len(self.n)),
+                               np.nan)
 
             IDX_BELOW = r_ele < self.loc_r
 
             if IDX_BELOW.any():
-                _r_ele = r_ele[IDX_BELOW].reshape(-1, 1)
-                T1 = ((_r_ele / self.radius.brain) ** self.n) * self.A1()
+                warnings.warn(
+                    "trying to sample analytically solved potential in undefined areas, expect NaNs in the solution")
 
-                if rad:
-                    T2 = -1 * ((_r_ele / self.rz) ** (
-                            self.n - 1))
-                else:
-                    T2 = ((_r_ele / self.rz) ** (
-                            self.n + 1))
-                COEF[IDX_BELOW, :] = T1 + T2
+            # TODO: fix the below sampling...
+            # if IDX_BELOW.any():
+            #     _r_ele = r_ele[IDX_BELOW].reshape(-1, 1)
+            #     T1 = ((_r_ele / self.radius.brain) ** self.n) * self.A1()
+            #
+            #     if rad:
+            #         T2 = -1 * ((_r_ele / self.rz) ** (
+            #                 self.n - 1))
+            #     else:
+            #         T2 = ((_r_ele / self.rz) ** (
+            #                 self.n + 1))
+            #     COEF[IDX_BELOW, :] = T1 + T2
 
             IDX_LOW = r_ele >= self.loc_r
             IDX_HIGH = r_ele < self.radius.brain
@@ -234,7 +260,7 @@ class FourSphereModel(object):
                 _r_ele = r_ele[IDX].reshape(-1, 1)
                 T1 = ((_r_ele / self.radius.brain) ** self.n) * self.A1()
                 T2 = ((self.rz / _r_ele) ** (
-                            self.n + 1))
+                        self.n + 1))
                 COEF[IDX, :] = T1 + T2
 
             IDX_LOW[IDX_HIGH] = False
@@ -264,11 +290,9 @@ class FourSphereModel(object):
                 T2 = ((self.radius.scalp / _r_ele) ** (self.n + 1)) * self.B4()
                 COEF[IDX, :] = T1 + T2
 
-            # for i, r in zip(np.arange(len(r_ele))[~IDX_HIGH],
-            #                 r_ele[~IDX_HIGH]):
-            #     print("Invalid position of electrode #{:d}: {:f} (off by {:e})".format(
-            #         i, r, r - self.radius.scalp))
-
+            if (~IDX_HIGH).any():
+                warnings.warn(
+                    "trying to sample analytically solved potential in undefined areas, expect NaNs in the solution")
             return COEF
 
         @property
