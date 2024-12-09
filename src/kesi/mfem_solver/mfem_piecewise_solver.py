@@ -11,38 +11,47 @@ from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 from io import StringIO
 
+
 from kesi.fem_utils.vtk_utils import grid_function_save_vtk
 from kesi.mfem_solver.interpolated_mfem_coefficient import CSDCoefficient
 from kesi.utils import str_to_bool, write_run_summary
+from scipy.spatial import KDTree
 
 
-def refine_around_electrodes(mesh, electrode_positions):
-    """
-    mfem::Array<int> refine_elements;
-for (int i = 0; i < mesh.GetNE(); ++i)
-{
-    mfem::ElementTransformation *trans = mesh.GetElementTransformation(i);
-    mfem::Vector center;
-    trans->Transform(mfem::Geometries.GetCenter(mesh.GetElementBaseGeometry(i)), center);
+def calculate_refinement_error(mesh, electrode_positions, refinement_radius):
+    vertices = np.array(mesh.GetVertexArray())
+    centroids = []
+    for i in tqdm(range(mesh.GetNE()), total=mesh.GetNE(), desc='calculating element centroids'):
+        element = mesh.GetElement(i)
+        centroid = vertices[element.GetVerticesArray()].mean(axis=0)
+        centroids.append(centroid)
+    centroids = np.array(centroids)
+    tree = KDTree(centroids)
+    error = np.zeros(mesh.GetNE())
 
-    double distance = center.DistanceTo(refine_point);
-    if (distance < some_threshold)
-    {
-        refine_elements.Append(i);
-    }
-}
+    for electrode_position in electrode_positions:
+        nearby = tree.query_ball_point(electrode_position, refinement_radius)
+        error[nearby] = 1.0
 
-mfem::Mesh refined_mesh = mesh;
-refined_mesh.GeneralRefinement(refine_elements);
+    error_mfem =  mfem.Vector(mesh.GetNE())
+    error_mfem.Assign(error)
+    return error_mfem
 
-refined_mesh.Finalize(true);
-    """
-    raise NotImplementedError("Refinement around electrodes is not implemented yet")
+
+def refine_around_electrodes(mesh, electrode_positions, refinement_radius=0.01, steps=2):
+    """refines the mesh around electrode_positions (tuple of tuples[len 3]) with mesh element centroids in refinement_radius,
+    performs that steps times."""
+    for i in range(steps):
+        # everything close enough to electrode positions is marked as 1, far away as 0
+        error_mfem = calculate_refinement_error(mesh, electrode_positions, refinement_radius)
+        # we refine all elements who's error is higher than 0.5
+        mesh.RefineByError(error_mfem, 0.5, 0, 0)
+        mesh.Finalize()
     return mesh
 
 
 @lru_cache
-def prepare_mesh(meshfile, refinement, electrode_positions=None):
+def prepare_mesh(meshfile, refinement, electrode_positions=None, refinement_radius=0.01):
     "if electrode positions are given, perform additional refinement around electrodes positions, tuple of tuples of length 3"
     # to create run
     # gmsh -3 -format msh22 four_spheres_in_air_with_plane.geo
@@ -56,7 +65,7 @@ def prepare_mesh(meshfile, refinement, electrode_positions=None):
         print("additional uniform refinement... Done")
 
     if electrode_positions is not None:
-        mesh = refine_around_electrodes(mesh, electrode_positions)
+        mesh = refine_around_electrodes(mesh, electrode_positions, refinement_radius=0.01)
 
     return mesh
 
@@ -86,10 +95,10 @@ def mfem_solve_mesh_multiprocessing_wrap(electrode_position, boundary_potential,
     return sol
 
 
-def electrode_coefficient(electrode_position):
+def electrode_coefficient(electrode_position, scale=1):
     # for each point charge
     point_charge_coeff = mfem.DeltaCoefficient()
-    point_charge_coeff.SetScale(1)
+    point_charge_coeff.SetScale(scale)
     point_charge_coeff.SetDeltaCenter(mfem.Vector(electrode_position))
     return point_charge_coeff
 
@@ -135,7 +144,11 @@ def mfem_solve_mesh(csd_coefficient, mesh, boundary_potential, conductivities):
 
     conductivities_coeff = mfem.PWConstCoefficient(conductivities_vector)
 
-    b.AddDomainIntegrator(mfem.DomainLFIntegrator(csd_coefficient))
+    if isinstance(csd_coefficient, list):
+        for i in csd_coefficient:
+            b.AddDomainIntegrator(mfem.DomainLFIntegrator(i))
+    else:
+        b.AddDomainIntegrator(mfem.DomainLFIntegrator(csd_coefficient))
     b.Assemble()
 
     x = mfem.GridFunction(fespace)
