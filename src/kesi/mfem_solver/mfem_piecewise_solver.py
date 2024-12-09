@@ -115,40 +115,53 @@ def csd_distribution_coefficient(grid, values, type='nearest'):
         return coeff
 
 
-def mfem_solve_mesh(csd_coefficient, mesh, boundary_potential, conductivities):
+def mfem_solve_mesh(csd_coefficient, mesh, boundary_potential, conductivities, dirichlet=False):
     """
     csd_coefficient - CSD distribution in coefficient form
     mesh - MFEM mesh object
     boundary_potential - value of the potential at the ground
     conductivities - numpy array of conductivities in S/m one per mesh material, can be longer than amount of materials - extra values won't not be used
+    dirichlet - boolean - to enable dirichlet boundary condition, otherwise it's neuman - and boundary_potential is the current through boundary
     """
 
-    # this fespace will get garbage collected and gridfunctions will crash on some operations!!!!!
+    # import IPython
+    # IPython.embed()
+
+    # this fespace will get garbage collected and returned gridfunctions will crash on some operations!!!!!
     fespace = prepare_fespace(mesh)
     print('Number of finite element unknowns: ' +
           str(fespace.GetTrueVSize()))
 
+    conductivities_vector = mfem.Vector(list(conductivities))
+    conductivities_coeff = mfem.PWConstCoefficient(conductivities_vector)
+
     # this is a masking list which decides, which boundaries of the mesh are Dirichlet boundaries
     # in this case we have 4 spheres, and for some reason index of the outside boundary is 5
     # for now I want to set the outside boundary of the 4 spheres as essential boundary and having a 0 potential.
+    # dirichlet boundary
     ess_bdr = mfem.intArray(mesh.bdr_attributes.Max())
     ess_bdr.Assign(0)
+    # if dirichlet:
     ess_bdr[mesh.bdr_attributes[-1] - 1] = 1
-
+    # if Neuman should be an empty list
     ess_tdof_list = mfem.intArray()
-    fespace.GetEssentialTrueDofs(ess_bdr, ess_tdof_list)
+    if dirichlet:
+        fespace.GetEssentialTrueDofs(ess_bdr, ess_tdof_list)
+    else:
+        ess_tdof_list = mfem.intArray([ess_tdof_list[0], ])  # only fix the first one
 
     b = mfem.LinearForm(fespace)
-
-    conductivities_vector = mfem.Vector(list(conductivities))
-
-    conductivities_coeff = mfem.PWConstCoefficient(conductivities_vector)
-
     if isinstance(csd_coefficient, list):
         for i in csd_coefficient:
             b.AddDomainIntegrator(mfem.DomainLFIntegrator(i))
     else:
         b.AddDomainIntegrator(mfem.DomainLFIntegrator(csd_coefficient))
+
+    if not dirichlet:
+        # Define Neumann boundary function
+        g = mfem.ConstantCoefficient(boundary_potential)
+        nbc_coef = mfem.ProductCoefficient(conductivities_coeff, g)
+        b.AddBoundaryIntegrator(mfem.BoundaryLFIntegrator(g), ess_bdr)
     b.Assemble()
 
     x = mfem.GridFunction(fespace)
