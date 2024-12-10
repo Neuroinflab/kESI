@@ -33,7 +33,8 @@ def main():
         positions = sampled_mesh.points[:, 2]
 
         vtk_name = os.path.basename(mesh_file)
-        label = "{} {}".format(vtk_name, args.attribute)
+        dirname = os.path.basename(os.path.dirname(mesh_file))
+        label = "{} {} {}".format(dirname, vtk_name, args.attribute)
 
         if args.g is not None:
             ref_level_id = np.argmin(np.abs(positions - args.g))

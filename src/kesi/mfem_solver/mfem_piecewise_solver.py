@@ -29,7 +29,7 @@ def calculate_refinement_error(mesh, electrode_positions, refinement_radius):
     tree = KDTree(centroids)
     error = np.zeros(mesh.GetNE())
 
-    for electrode_position in electrode_positions:
+    for electrode_position in tqdm(electrode_positions, desc='setting elements to refine'):
         nearby = tree.query_ball_point(electrode_position, refinement_radius)
         error[nearby] = 1.0
 
@@ -51,8 +51,18 @@ def refine_around_electrodes(mesh, electrode_positions, refinement_radius=0.01, 
 
 
 @lru_cache
-def prepare_mesh(meshfile, refinement, electrode_positions=None, refinement_radius=0.01):
-    "if electrode positions are given, perform additional refinement around electrodes positions, tuple of tuples of length 3"
+def prepare_mesh(meshfile, refinement, electrode_positions=None, refinement_radius=0.01, steps=2):
+    """
+    Params:
+
+    :param meshfile: path to MFEM compatible mesh file
+    :param refinement: - bool - set to true to uniformly refine mesh
+    :param electrode_positions: - set to None to do nothing, set to tuple of tuples, containing electrode positions to refine the mesh around the electrodes
+        Example: ((0, 0,0), (1,1,1))
+    :param refinement_radius: - float, how much space around the electrodes to refine, all element which centroids fit into the radius will get refined.
+        If the mesh is too coarse there might be no mesh element in the refinement radius, you might want to increase the radius
+    :param steps: how many times we want to do the refinement around electrode positions.
+    """
     # to create run
     # gmsh -3 -format msh22 four_spheres_in_air_with_plane.geo
     print("Loading mesh...")
@@ -65,7 +75,7 @@ def prepare_mesh(meshfile, refinement, electrode_positions=None, refinement_radi
         print("additional uniform refinement... Done")
 
     if electrode_positions is not None:
-        mesh = refine_around_electrodes(mesh, electrode_positions, refinement_radius=0.01)
+        mesh = refine_around_electrodes(mesh, electrode_positions, refinement_radius=refinement_radius, steps=steps)
 
     return mesh
 
@@ -82,6 +92,8 @@ def mfem_solve_mesh_multiprocessing_wrap(electrode_position, boundary_potential,
                                          meshfile,
                                          electrodes_for_prepare,
                                          refinement,
+                                         refinement_radius,
+                                         refinement_steps,
                                          ):
     try:
         device = mfem.Device("cpu")
@@ -89,7 +101,7 @@ def mfem_solve_mesh_multiprocessing_wrap(electrode_position, boundary_potential,
     except RuntimeError:
         pass  # already configured
     coeff = electrode_coefficient(electrode_position)
-    mesh = prepare_mesh(meshfile, refinement, electrodes_for_prepare)
+    mesh = prepare_mesh(meshfile, refinement, electrodes_for_prepare, refinement_radius, refinement_steps)
     result = mfem_solve_mesh(coeff, mesh, boundary_potential, conductivities)
     sol = np.array(result.GetDataArray())
     return sol
@@ -115,7 +127,7 @@ def csd_distribution_coefficient(grid, values, type='nearest'):
         return coeff
 
 
-def mfem_solve_mesh(csd_coefficient, mesh, boundary_potential, conductivities, dirichlet=False):
+def mfem_solve_mesh(csd_coefficient, mesh, boundary_potential, conductivities, dirichlet=True):
     """
     csd_coefficient - CSD distribution in coefficient form
     mesh - MFEM mesh object
@@ -147,8 +159,6 @@ def mfem_solve_mesh(csd_coefficient, mesh, boundary_potential, conductivities, d
     ess_tdof_list = mfem.intArray()
     if dirichlet:
         fespace.GetEssentialTrueDofs(ess_bdr, ess_tdof_list)
-    else:
-        ess_tdof_list = mfem.intArray([ess_tdof_list[0], ])  # only fix the first one
 
     b = mfem.LinearForm(fespace)
     if isinstance(csd_coefficient, list):
@@ -160,12 +170,12 @@ def mfem_solve_mesh(csd_coefficient, mesh, boundary_potential, conductivities, d
     if not dirichlet:
         # Define Neumann boundary function
         g = mfem.ConstantCoefficient(boundary_potential)
-        nbc_coef = mfem.ProductCoefficient(conductivities_coeff, g)
         b.AddBoundaryIntegrator(mfem.BoundaryLFIntegrator(g), ess_bdr)
     b.Assemble()
 
     x = mfem.GridFunction(fespace)
     # setting initial values in all points, boundary elements will enforce this  value
+    # if they are set to be eesential True Dofs (dirichlet conditions) when Forming a linear system
     x.Assign(float(boundary_potential))
 
     a = mfem.BilinearForm(fespace)
@@ -177,6 +187,8 @@ def mfem_solve_mesh(csd_coefficient, mesh, boundary_potential, conductivities, d
     B = mfem.Vector()
     X = mfem.Vector()
 
+    # ess_tdof_list is a list of elements which are supposed to be already solved, Dirichlet boundary condition
+    # if it's an empty list then there is no enforced potential value. Point sources will not converge
     a.FormLinearSystem(ess_tdof_list, x, b, A, X, B)
     print("Size of linear system: " + str(A.Height()))
 
@@ -186,8 +198,6 @@ def mfem_solve_mesh(csd_coefficient, mesh, boundary_potential, conductivities, d
 
     a.RecoverFEMSolution(X, b, x)
 
-    # extract vertices and solution as numpy array
-    # sol = x.GetDataArray()
     return x
 
 
@@ -234,9 +244,16 @@ def main():
                         help='Enable additional uniform refinement of the mesh')
     parser.set_defaults(additional_refinement=False)
 
-    parser.add_argument("--electrode-refinement", type=str_to_bool,
-                        help=("Refine mesh around electrode points"),
-                        default=False)
+    parser.add_argument("--electrode-refinement", type=float,
+                        help=("Refine mesh around electrode points, radius in meters. Leave unset for no refinement. "
+                              "If the mesh is too coarse there might be no element centroids in the radius. "
+                              "Set the radius appropriately. Defaults to no refinement."),
+                        default=None)
+
+    parser.add_argument("--electrode-refinement-steps", type=int,
+                        help=("When doing mesh refinement around electrodes, define amount of refinement steps. Each step subdivides the elements near electrodes."
+                              " Defaults to 2."),
+                        default=2)
 
     parser.add_argument('--multiprocessing', dest='multiprocessing', action='store_true',
                         help='Enable multiprocessing per electrode, broken rn')
@@ -258,6 +275,8 @@ def main():
                         default=np.dtype("float32"))
 
     namespace = parser.parse_args()
+    if namespace.multiprocessing:
+        set_start_method("spawn")
 
     if not (namespace.save_potential or namespace.save_correction):
         raise Exception("Nothing will be saved! Exiting")
@@ -274,9 +293,11 @@ def main():
     device.Print()
     if namespace.electrode_refinement:
         electrodes_for_prepare = electrodes[["x", "y", "z"]].values / 1000  # electrodes in mm, mesh in meters
+        electrodes_for_prepare = tuple((tuple(i) for i in electrodes_for_prepare))
     else:
         electrodes_for_prepare = None
-    mesh = prepare_mesh(namespace.meshfile, namespace.additional_refinement, electrodes_for_prepare)
+    mesh = prepare_mesh(namespace.meshfile, namespace.additional_refinement, electrodes_for_prepare, refinement_radius=namespace.electrode_refinement,
+                        steps=namespace.electrode_refinement_steps)
     # fespace might need to exist all the time for GridFunctions to work, if fespace gets eaten by garbage collector
     # GF crashes
     fespace = prepare_fespace(mesh)
@@ -309,8 +330,10 @@ def main():
                      conductivities=conductivities_vector,
                      meshfile=namespace.meshfile,
                      electrodes_for_prepare=electrodes_for_prepare,
-                     refinement=namespace.additional_refinement)
-        set_start_method("spawn")
+                     refinement=namespace.additional_refinement,
+                     refinement_radius=namespace.electrode_refinement,
+                     refinement_steps=namespace.electrode_refinement_steps
+                     )
         results_np = process_map(fn, electrode_positions, desc="simulating electrodes mp", chunksize=1)
 
     else:
