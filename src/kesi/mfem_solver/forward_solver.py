@@ -7,18 +7,20 @@ from kesi.mfem_solver.mfem_piecewise_solver import mfem_solve_mesh, csd_distribu
 
 class CSDForwardSolver:
     def __init__(self, meshfile, conductivities, boundary_value=0, additional_refinement=False,
-                 sampling_points=None,):
+                 sampling_points=None, refinement_steps=2, refinement_radius=0.01):
         """
         meshfile - mfem compatable mesh file
         conductivities - numpy array of conductances per mesh material in S/m
         sampling points - numpy array (N, 3) of simulated electrodes positions, if provided now, will be used to refine mesh around those positions
         boundary_value - the value at boudaries, usually grounding electrode
+        refinement_steps - how many times we want to subdivide the mesh around sampling points
+        refinement_radius - distance of from the sampling points of mesh elements we want to subdivide
         """
         self.meshfile = meshfile
         self.conductivities = conductivities
         self.boundary_value = boundary_value
         if sampling_points:
-            self.mesh = prepare_mesh(self.meshfile, additional_refinement, sampling_points)
+            self.mesh = prepare_mesh(self.meshfile, additional_refinement, sampling_points, steps=refinement_steps, refinement_radius=refinement_radius)
         else:
             self.mesh = prepare_mesh(self.meshfile, additional_refinement)
         self.solution = None
