@@ -63,6 +63,14 @@ def main():
         else:
             pb.plot(data_x, data_slice, label=name)
 
+    ###############3
+    a = 0.030
+
+    x = [0, a * 2]
+    p = 100 * 1e-6
+    y = [-p/(4 * np.pi * 0.33 * a**2), p/(4 * np.pi * 0.33 * a**2)]
+    pb.scatter(x, y, label='dipole at 0.03 analytical free space solution')
+
 
     pb.legend()
     pb.show()
