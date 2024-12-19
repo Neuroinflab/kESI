@@ -53,12 +53,21 @@ def main():
 
     cos_theta = np.sum((world_coords / r[:, None]) * dipole_vec, axis=1)
 
-    potential_flat = mag / (4 * np.pi * sigma) * (r - a * cos_theta) / np.cbrt(r**2 + a**2 - 2*a*r*cos_theta)
+    potential_flat = mag / (4 * np.pi * sigma) * (r - a * cos_theta) / np.sqrt(r**2 + a**2 - 2*a*r*cos_theta) ** 3
     potential_3d = potential_flat.reshape(shape)
 
     img = nibabel.Nifti1Image(potential_3d, affine)
     img.header.set_xyzt_units(xyz=2)  # mm
     nibabel.save(img, os.path.join(outdir, "wzor_4.nii.gz"))
+
+
+    potential_flat = cos_theta
+    potential_3d = potential_flat.reshape(shape)
+
+    img = nibabel.Nifti1Image(potential_3d, affine)
+    img.header.set_xyzt_units(xyz=2)  # mm
+    nibabel.save(img, os.path.join(outdir, "cos_theta.nii.gz"))
+
 
 
     potential_flat = mag /(4 * np.pi * sigma * np.sqrt(r**2 + a**2 - 2*a*r*cos_theta))
