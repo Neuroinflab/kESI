@@ -183,10 +183,13 @@ class KcsdKesi3d:
         kCSD or kESI methods only differ in cross kernel and kernel construction methods,
         but in the end saving is the same
         """
-
         np.savez_compressed(fname,
-                            POT_GRID=self.pot_grid,
-                            CSD_GRID=self.csd_grid,
+                            POT_GRIDX=self.pot_grid[0],
+                            POT_GRIDY=self.pot_grid[1],
+                            POT_GRIDZ=self.pot_grid[2],
+                            CSD_GRIDX=self.csd_grid[0],
+                            CSD_GRIDY=self.csd_grid[1],
+                            CSD_GRIDZ=self.csd_grid[2],
                             CROSS_KERNEL=self.reconstructor._cross_kernel,
                             KERNEL=self.reconstructor._solve_kernel._kernel,
                             POSITIONS=self.positions,
@@ -201,8 +204,8 @@ class KcsdKesi3d:
         data = np.load(fname)
         instance = cls.__new__(cls)
 
-        instance.pot_grid = data['POT_GRID']
-        instance.csd_grid = data['CSD_GRID']
+        instance.pot_grid = [data['POT_GRIDX'], data['POT_GRIDY'], data['POT_GRIDZ'],]
+        instance.csd_grid = [data['CSD_GRIDX'], data['CSD_GRIDY'], data['CSD_GRIDZ']]
         instance.convolver = Convolver(instance.pot_grid, instance.csd_grid)
 
         instance.reconstructor = Reconstructor(data['KERNEL'],
