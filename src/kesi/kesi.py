@@ -63,7 +63,8 @@ class KcsdKesi3d:
 
         pot_grid = [x, y, z]
         csd_grid = [x, y, z]
-
+        self.pot_grid = pot_grid
+        self.csd_grid = csd_grid
         convolver = Convolver(pot_grid, csd_grid)
         self.convolver = convolver
 
@@ -177,6 +178,46 @@ class KcsdKesi3d:
 
         return eigenvalues, eigensources
 
+    def save(self, fname, optimal_lambda=0):
+        """saves the kESI object to a file
+        kCSD or kESI methods only differ in cross kernel and kernel construction methods,
+        but in the end saving is the same
+        """
+        np.savez_compressed(fname,
+                            POT_GRIDX=self.pot_grid[0],
+                            POT_GRIDY=self.pot_grid[1],
+                            POT_GRIDZ=self.pot_grid[2],
+                            CSD_GRIDX=self.csd_grid[0],
+                            CSD_GRIDY=self.csd_grid[1],
+                            CSD_GRIDZ=self.csd_grid[2],
+                            CROSS_KERNEL=self.reconstructor._cross_kernel,
+                            KERNEL=self.reconstructor._solve_kernel._kernel,
+                            POSITIONS=self.positions,
+                            OPTIMAL_LAMBDA=optimal_lambda,
+                            )
+
+    @classmethod
+    def load(cls, fname):
+        """Loads kESI/kCSD object ready for decomposition.
+        Kesi and kcsd objects only differ in the way of matrices construction, but in the end require the same api and
+        matrices."""
+        data = np.load(fname)
+        instance = cls.__new__(cls)
+
+        instance.pot_grid = [data['POT_GRIDX'], data['POT_GRIDY'], data['POT_GRIDZ'],]
+        instance.csd_grid = [data['CSD_GRIDX'], data['CSD_GRIDY'], data['CSD_GRIDZ']]
+        instance.convolver = Convolver(instance.pot_grid, instance.csd_grid)
+
+        instance.reconstructor = Reconstructor(data['KERNEL'],
+                                           data['CROSS_KERNEL'])
+        instance.optimal_lambda = data['OPTIMAL_LAMBDA']
+
+        instance.positions = data['POSITIONS']
+
+        return instance
+
+
+
 
 class Kesi3dNumericalOnly(KcsdKesi3d):
 
@@ -232,7 +273,8 @@ class Kesi3dNumericalOnly(KcsdKesi3d):
 
         pot_grid = [x, y, z]
         csd_grid = [x, y, z]
-
+        self.pot_grid = pot_grid
+        self.csd_grid = csd_grid
         convolver = Convolver(pot_grid, csd_grid)
         self.convolver = convolver
 
