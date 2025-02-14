@@ -1,15 +1,30 @@
 import warnings
 
 import numpy as np
+from memoization import cached
 from scipy.special import lpmv
 
 
 class PointMonopole(object):
     def __init__(self, model, monopole_loc, amplitude):
+        """Amplitude - float in ampers"""
         self.model = model
         self.amplitude = amplitude
         self.set_monopole_loc(monopole_loc)
         self._set_monopole_r()
+        self.n = np.arange(0, self.model.n[-1] + 1)[None, :]
+
+        # we only support placing sources in the first shell
+        assert self.loc_r < self.model.radius[0]
+
+        # the first shell is then split to shell below and above the point source
+        self.radius = [self.loc_r ] + list (self.model.radius)
+        self.conductivity = [self.model.conductivity[0], ] + list(self.model.conductivity)
+        ### what we need from the model
+        # self.model.conductivity
+        # self.model.radius
+        # self.model.n
+        # self.model.precision
 
     def set_monopole_loc(self, loc):
         self.loc_r = np.sqrt(np.square(loc).sum())
@@ -36,29 +51,15 @@ class PointMonopole(object):
         ele_dist = np.linalg.norm(ELECTRODES, axis=1)
         COS_THETA = self.cos_theta(ELECTRODES / ele_dist.reshape(-1, 1))
 
-        if self.model.precision == 'float128':
-            LPMV = lpmv(1,  # expensive for n >= 10_000;
-                        self.n.reshape(1, -1),  # line_profiler claims 99.7%
-                        COS_THETA.astype(np.float64)).astype(np.float128)  # experimental complexity O(n^2)
-        else:
-            LPMV = lpmv(1,  # expensive for n >= 10_000;
-                        self.n.reshape(1, -1),  # line_profiler claims 99.7%
-                        COS_THETA)  # experimental complexity O(n^2)
+        COEFFA = self.COEFFA(ele_dist)
+        COEFFB = self.COEFFB(ele_dist)
+
         COEFFS = COEFFA + COEFFB
         LFACTOR = np.polynomial.legendre.legval(COS_THETA.flatten(),
                                                 COEFFS.T,
                                                 tensor=False)
 
-        sign_rad = np.sign(self.north_projection(self.p_rad))  # .....
-        mag_rad = sign_rad * np.linalg.norm(self.p_rad)
-        mag_tan = np.linalg.norm(self.p_tan)  # sign_tan * np.linalg.norm(dp_tan)
-
-        tan_potential = -mag_tan * tan_cosinus * LFUNCPROD
-
-        # correction for below dipole position
-
-        rad_potential = mag_rad * LFACTOR
-        result = self.amplitude * LFACTOR / (4 * np.pi * self.model.conductivity.brain * (self.rz ** 2))
+        result = self.amplitude / (4 * np.pi * self.model.conductivity.brain) * LFACTOR
         return result.astype(np.float64)
 
 
@@ -75,33 +76,13 @@ class PointMonopole(object):
 
         return cos_theta
 
-    def tan_versor_cosinus(self, ele_pos):
-        ele_north = self.north_vector(ele_pos)
-        ele_parallel = ele_pos - ele_north
-        ele_parallel_v = ele_parallel / np.sqrt(np.square(ele_parallel).sum(axis=1).reshape(-1, 1))
 
-        tan_parallel = self.p_tan - self.north_vector(self.p_tan)
-        tan_r = np.sqrt(np.square(tan_parallel).sum())
-        if tan_r == 0:
-            warnings.warn("no tangential dipole",
-                          RuntimeWarning)
-            return np.zeros((ele_pos.shape[0], 1))
+    def COEFFA(self, r_ele):
+        """returns an arrauy of coeeficients with size of [n_measurement_points, n], where n is the model order
 
-        tan_parallel_v = tan_parallel / tan_r
-        cos = np.matmul(ele_parallel_v,
-                        tan_parallel_v.T)
-
-        if abs(cos).max() - 1 > 1e-10:
-            warnings.warn("cos out of [-1 - 1e-10, 1 + 1e-10]",
-                          RuntimeWarning)
-
-        if np.isnan(cos).any():
-            warnings.warn("invalid value of cos", RuntimeWarning)
-            cos = np.nan_to_num(cos)
-
-        return cos
-
-    def H_v(self, r_ele, rad=False):
+        Params:
+        r_ele - list of electrode distances from center of the shells (0, 0, 0) point)
+        """
         if self.model.precision == "float128":
             COEF = np.full((len(r_ele), len(self.n)),
                            np.nan, dtype=np.float128)
@@ -109,140 +90,135 @@ class PointMonopole(object):
             COEF = np.full((len(r_ele), len(self.n)),
                            np.nan)
 
-        IDX_BELOW = r_ele < self.loc_r
-
-        if IDX_BELOW.any():
-            warnings.warn(
-                "trying to sample analytically solved potential in undefined areas, expect NaNs in the solution")
-
-        # TODO: fix the below sampling...
-        # if IDX_BELOW.any():
-        #     _r_ele = r_ele[IDX_BELOW].reshape(-1, 1)
-        #     T1 = ((_r_ele / self.radius.brain) ** self.n) * self.A1()
-        #
-        #     if rad:
-        #         T2 = -1 * ((_r_ele / self.rz) ** (
-        #                 self.n - 1))
-        #     else:
-        #         T2 = ((_r_ele / self.rz) ** (
-        #                 self.n + 1))
-        #     COEF[IDX_BELOW, :] = T1 + T2
-
-        IDX_LOW = r_ele >= self.loc_r
-        IDX_HIGH = r_ele < self.radius.brain
-        IDX = IDX_LOW & IDX_HIGH
-        if IDX.any():
-            _r_ele = r_ele[IDX].reshape(-1, 1)
-            T1 = ((_r_ele / self.radius.brain) ** self.n) * self.A1()
-            T2 = ((self.rz / _r_ele) ** (
-                    self.n + 1))
-            COEF[IDX, :] = T1 + T2
-
-        IDX_LOW[IDX_HIGH] = False
-        IDX_HIGH = r_ele < self.radius.csf
-        IDX = IDX_LOW & IDX_HIGH
-        if IDX.any():
-            _r_ele = r_ele[IDX].reshape(-1, 1)
-            T1 = ((_r_ele / self.radius.csf) ** self.n) * self.A2()
-            T2 = ((self.radius.csf / _r_ele) ** (self.n + 1)) * self.B2()
-            COEF[IDX, :] = T1 + T2
-
-        IDX_LOW[IDX_HIGH] = False
-        IDX_HIGH = r_ele < self.radius.skull
-        IDX = IDX_LOW & IDX_HIGH
-        if IDX.any():
-            _r_ele = r_ele[IDX].reshape(-1, 1)
-            T1 = ((_r_ele / self.radius.skull) ** self.n) * self.A3()
-            T2 = ((self.radius.skull / _r_ele) ** (self.n + 1)) * self.B3()
-            COEF[IDX, :] = T1 + T2
-
-        IDX_LOW[IDX_HIGH] = False
-        IDX_HIGH = r_ele <= self.radius.scalp
-        IDX = IDX_LOW & IDX_HIGH
-        if IDX.any():
-            _r_ele = r_ele[IDX].reshape(-1, 1)
-            T1 = ((_r_ele / self.radius.scalp) ** self.n) * self.A4()
-            T2 = ((self.radius.scalp / _r_ele) ** (self.n + 1)) * self.B4()
-            COEF[IDX, :] = T1 + T2
-
-        if (~IDX_HIGH).any():
-            warnings.warn(
-                "trying to sample analytically solved potential in undefined areas, expect NaNs in the solution")
+        for shell_id, shell_radius in self.radius:
+            if shell_id == 0:
+                in_shell = r_ele < self.loc_r
+            else:
+                in_shell = self.radius[shell_id - 1] <= r_ele < shell_radius
+            if in_shell.any():
+                if shell_id == 0:
+                    COEF[in_shell] = 1
+                    COEF[in_shell] = COEF[in_shell] * self.A(1) * (r_ele[in_shell] / self.radius[1]) ** self.n
+                elif shell_id == 1:
+                    COEF[in_shell] = 1
+                    COEF[in_shell] = COEF[in_shell] * self.A(1) * (r_ele[in_shell] / self.radius[1]) ** self.n
+                elif shell_id == len(self.radius) - 1:
+                    COEF[in_shell] = 0
+                else:
+                    COEF[in_shell] = 1
+                    COEF[in_shell] = COEF[in_shell] * self.A(shell_id) * (r_ele[in_shell] / self.radius[shell_id]) ** self.n
         return COEF
 
-    @property
-    def n(self):
-        return self.model.n
+    def COEFFB(self, r_ele):
+        """returns an arrauy of coeeficients with size of [n_measurement_points, n], where n is the model order
 
-    def A1(self, n=None):
-        try:
-            return self._A1
-        except AttributeError:
-            n = self.n
+        Params:
+        r_ele - list of electrode distances from center of the shells (0, 0, 0) point)
+        """
+        if self.model.precision == "float128":
+            COEF = np.full((len(r_ele), len(self.n)),
+                           np.nan, dtype=np.float128)
+        else:
+            COEF = np.full((len(r_ele), len(self.n)),
+                           np.nan)
 
-        Z_n = self.Z(n)
-        k = (n + 1.) / n
-        self._A1 = self.rz1 ** (n + 1) * (Z_n + self.s12 * k) / (self.s12 - Z_n)
-        return self._A1
+        for shell_id, shell_radius in self.radius:
+            if shell_id == 0:
+                in_shell = r_ele < self.loc_r
+            else:
+                in_shell = self.radius[shell_id - 1] <= r_ele < shell_radius
+            if in_shell.any():
+                if shell_id == 0:
+                    COEF[in_shell] = 1 / self.loc_r
+                    COEF[in_shell] = COEF[in_shell] * (r_ele[in_shell] / self.loc_r) ** self.n
+                elif shell_id == 1:
+                    COEF[in_shell] = 1 / self.loc_r
+                    COEF[in_shell] = COEF[in_shell] * (self.loc_r / r_ele[in_shell] ) ** (self.n + 1)
+                elif shell_id == len(self.radius) - 1:
+                    COEF[in_shell] = 1
+                    COEF[in_shell] = self.B(shell_id) * (self.radius[shell_id - 1] / r_ele[in_shell]) ** (self.n + 1)
+                else:
+                    COEF[in_shell] = 1
+                    COEF[in_shell] = self.B(shell_id) * (self.radius[shell_id - 1] / r_ele[in_shell]) ** (self.n + 1)
+        return COEF
 
-    def A2(self, n=None):
-        try:
-            return self._A2
-        except AttributeError:
-            n = self.n
+    @cached
+    def transition_submatric(self, shell_id):
+        """Returns n transition matrices, to transition from shell shell_id-1 to shell_id"""
+        matrices = []
+        for n in self.n[0]:
+            A = np.array([[1, 0],
+                      0, self.radius[shell_id -2]/self.radius[shell_id - 1]]
+                         )
+            B = np.array([[1, 1],
+                          [n, -(n+1)]
+                          ]
+                         )
+            C = np.array([[1, 0],
+                          [0, self.conductivity[shell_id-1] / self.conductivity[shell_id]]])
+            D = np.array([[n+1, 1],
+                          [n, -1]])
+            E = np.array([[1/(self.radius[shell_id-1]/self.radius[shell_id])**n, 0],
+                          [0, 1]
+                          ]
+                         )
+            result = (1 / (2 * n + 1)) * E @ D @ C @ B @ A
+            matrices.append(result)
+        return matrices
 
-        self._A2 = ((self.A1(n) + self.rz1 ** (n + 1))
-                    / (self.Y(n) * self.r21 ** (n + 1) + self.r12 ** n))
+    @cached
+    def transition_matrix(self, shell_id_from, shell_id_to):
+        """Returns n transition matrices in a list, where n is order of the model
 
-        return self._A2
+        Transition matrix transforms A, B coeff for shell N to A, B coeffs for shell N+1
+        """
 
-    def A3(self, n=None):
-        try:
-            return self._A3
-        except AttributeError:
-            n = self.n
+        matrices_to_combine = []
+        for shell_id in range(shell_id_from + 1, shell_id_to + 1):
+            matrices_to_combine.append(self.transition_submatric(shell_id))
 
-        self._A3 = ((self.A2(n) + self.B2(n))
-                    / (self.r23 ** n + self.V(n) * self.r32 ** (n + 1)))
-        return self._A3
+        matrixes = []
+        for n in len(self.n[0]):
+            if len(matrices_to_combine) == 1:
+                matrixes.append(matrices_to_combine[0][n])
+            else:
+                matrixes.append((matrices_to_combine[0][n]))
+                for i in len(matrices_to_combine[1:]):
+                    matrixes[-1] = matrixes[-1] @ i[n]
+        return matrixes
 
-    def B2(self, n=None):
-        try:
-            return self._B2
-        except AttributeError:
-            n = self.n
+    @cached
+    def A(self, shell_id):
+        """shape [1, n], where n is the order of the model"""
+        if shell_id == len(self.radius) -1:
+            A = np.array([0,] * len(self.n))[None, :]
+        elif shell_id == 1:
+            M = np.array(self.transition_matrix(1, len(self.radius) - 1))
+            A = -M[:, 0, 1] / (M[:, 0, 0] * self.loc_r)[None, :]
+        else:
+            AB = []
+            init = np.array([[self.A(1),],
+                             [self.B(1),],
+                             ]
+                            )
+            for i in range(self.n):
+                AB.append(self.transition_matrix(1, shell_id)[i] @ init)
+            A = np.array(i[0, 0] for i in AB)[None, :]
 
-        self._B2 = self.A2(n) * self.Y(n)
-        return self._B2
+        return A
 
-    def A4(self, n=None):
-        try:
-            return self._A4
-        except AttributeError:
-            n = self.n
-
-        k = (n + 1.) / n
-        self._A4 = k * ((self.A3(n) + self.B3(n))
-                        / (k * self.r34 ** n + self.r43 ** (n + 1)))
-        return self._A4
-
-    def B3(self, n=None):
-        try:
-            return self._B3
-        except AttributeError:
-            n = self.n
-
-        self._B3 = self.A3(n) * self.V(n)
-        return self._B3
-
-    def B4(self, n=None):
-        try:
-            return self._B4
-        except AttributeError:
-            n = self.n
-
-        self._B4 = self.A4(n) * n / (n + 1.)
-        return self._B4
-
-    def __getattr__(self, name):
-        return getattr(self.model, name)
+    @cached
+    def B(self, shell_id):
+        """shape [1, n], where n is the order of the model"""
+        if shell_id == 1:
+            B = np.array([1 / self.loc_r,] * len(self.n))[None, :]
+        else:
+            AB = []
+            init = np.array([[self.A(1),],
+                             [self.B(1),],
+                             ]
+                            )
+            for i in range(self.n):
+                AB.append(self.transition_matrix(1, shell_id)[i] @ init)
+            B = np.array(i[1, 0] for i in AB)[None, :]
+        return B
