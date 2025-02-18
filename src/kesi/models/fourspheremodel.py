@@ -99,14 +99,14 @@ class FourSphereModel(object):
 
     def __call__(self, loc, P):
         return PointDipole(self,
-                                 np.reshape(loc,
-                                            (1, 3)),
-                                 np.reshape(P,
-                                            (1, 3)))
+                           np.reshape(loc,
+                                      (1, 3)),
+                           np.reshape(P,
+                                      (1, 3)))
 
     def get_dipole_model(self, loc, P):
         return self(loc, P)
 
     def get_monopolar_model(self, loc, A):
-        return PointMonopole(loc, np.reshape(loc,
-                                            (1, 3)), A)
+        return PointMonopole(self, np.reshape(loc,
+                                             (1, 3)), A)
