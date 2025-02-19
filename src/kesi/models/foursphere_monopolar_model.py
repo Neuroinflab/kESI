@@ -7,7 +7,37 @@ from tqdm import tqdm
 
 class PointMonopole(object):
     def __init__(self, model, monopole_loc, amplitude):
-        """Amplitude - float in ampers"""
+        """
+        Creates the point source in a N sphere conductive model, with a boundary condition of outer shell being at
+        0V potential. Spheres originate at 0,0,0.
+
+        Edge case - monopole location cannot be at 0,0,0.
+        Source must be in the inner sphere.
+        All units should be SI (meters, amperes)
+
+        Parameters:
+              model: an object with attributes:
+                  conductivity - iterable defining conductivities in the conentric spheres in S/m
+                  radius - iterable defining shell radii, in meters
+                  conductivity and radius must be of the same length, at least 3 concentric spheres.
+                  n - list of expansion therms will only look at the last one (N), that will be our maximum therm
+                     Final equation will have therms of the expansion from 0 to N.
+                  precision - "float64" or "float128" string, defines the precision of calculations.
+                      Big radii (hundreds of meters) require 128 bit floats, takes a long time.
+              monopole_loc: dipole location in 3D space, numpy array of shape (3,) or (1, 3)
+              amplitude: float, ampers, total activity of the point source
+        """
+
+        if monopole_loc.shape == (3, ):
+            monopole_loc = monopole_loc[None, :]
+        elif monopole_loc.shape == (1, 3):
+            pass  # this is fine
+        else:
+            raise ValueError("Unupported monopole_loc shape", monopole_loc.shape)
+
+        assert len(model.radius) == len(model.conductivity)
+        assert len(model.radius) >= 3
+
         self.model = model
         self.amplitude = amplitude
         self.set_monopole_loc(monopole_loc)
@@ -42,6 +72,15 @@ class PointMonopole(object):
         self.rz1 = self.loc_r / self.model.radius.brain
 
     def __call__(self, X, Y, Z):
+        """
+        Samples the point source in N-spheres.
+
+        Params:
+          - X, Y, Z: three one dimensional arrays, of the same length,
+                     together they define points in 3D space to sample the potential
+        """
+        import IPython
+        IPython.embed()
         if self.model.precision == 'float128':
             ELECTRODES = np.vstack([X, Y, Z], dtype=np.float128).T
         else:

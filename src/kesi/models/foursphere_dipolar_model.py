@@ -136,6 +136,68 @@ class PointDipole(object):
                            np.nan)
 
         IDX_BELOW = r_ele < self.loc_r
+
+        if IDX_BELOW.any():
+            warnings.warn(
+                "trying to sample analytically solved potential in undefined areas, expect NaNs in the solution")
+
+        # TODO: fix the below sampling...
+        # if IDX_BELOW.any():
+        #     _r_ele = r_ele[IDX_BELOW].reshape(-1, 1)
+        #     T1 = ((_r_ele / self.radius.brain) ** self.n) * self.A1()
+        #
+        #     if rad:
+        #         T2 = -1 * ((_r_ele / self.rz) ** (
+        #                 self.n - 1))
+        #     else:
+        #         T2 = ((_r_ele / self.rz) ** (
+        #                 self.n + 1))
+        #     COEF[IDX_BELOW, :] = T1 + T2
+
+        IDX_LOW = r_ele >= self.loc_r
+        IDX_HIGH = r_ele < self.radius.brain
+        IDX = IDX_LOW & IDX_HIGH
+        if IDX.any():
+            _r_ele = r_ele[IDX].reshape(-1, 1)
+            T1 = ((_r_ele / self.radius.brain) ** self.n) * self.A1()
+            T2 = ((self.rz / _r_ele) ** (
+                    self.n + 1))
+            COEF[IDX, :] = T1 + T2
+
+        IDX_LOW[IDX_HIGH] = False
+        IDX_HIGH = r_ele < self.radius.csf
+        IDX = IDX_LOW & IDX_HIGH
+        if IDX.any():
+            _r_ele = r_ele[IDX].reshape(-1, 1)
+            T1 = ((_r_ele / self.radius.csf) ** self.n) * self.A2()
+            T2 = ((self.radius.csf / _r_ele) ** (self.n + 1)) * self.B2()
+            COEF[IDX, :] = T1 + T2
+
+        IDX_LOW[IDX_HIGH] = False
+        IDX_HIGH = r_ele < self.radius.skull
+        IDX = IDX_LOW & IDX_HIGH
+        if IDX.any():
+            _r_ele = r_ele[IDX].reshape(-1, 1)
+            T1 = ((_r_ele / self.radius.skull) ** self.n) * self.A3()
+            T2 = ((self.radius.skull / _r_ele) ** (self.n + 1)) * self.B3()
+            COEF[IDX, :] = T1 + T2
+
+        IDX_LOW[IDX_HIGH] = False
+        IDX_HIGH = r_ele <= self.radius.scalp
+        IDX = IDX_LOW & IDX_HIGH
+        if IDX.any():
+            _r_ele = r_ele[IDX].reshape(-1, 1)
+            T1 = ((_r_ele / self.radius.scalp) ** self.n) * self.A4()
+            T2 = ((self.radius.scalp / _r_ele) ** (self.n + 1)) * self.B4()
+            COEF[IDX, :] = T1 + T2
+
+        if (~IDX_HIGH).any():
+            warnings.warn(
+                "trying to sample analytically solved potential in undefined areas, expect NaNs in the solution")
+        return COEF
+
+    @property
+    def n(self):
         return self.model.n
 
     def A1(self, n=None):
