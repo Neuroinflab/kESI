@@ -2,6 +2,7 @@ import warnings
 
 import numpy as np
 from memoization import cached
+from tqdm import tqdm
 
 
 class PointMonopole(object):
@@ -53,9 +54,11 @@ class PointMonopole(object):
         COEFFB = self.COEFFB(ele_dist)
 
         COEFFS = COEFFA + COEFFB
+        print("starting legendre.legval")
         LFACTOR = np.polynomial.legendre.legval(COS_THETA.flatten(),
                                                 COEFFS.T,
                                                 tensor=False)
+        print("legendre.legval finished")
 
         result = self.amplitude / (4 * np.pi * self.model.conductivity.brain) * LFACTOR
         return result.astype(np.float64)
@@ -91,24 +94,20 @@ class PointMonopole(object):
             COEF = np.full((len(r_ele), self.n.shape[0]),
                            np.nan)
 
-        for shell_id, shell_radius in enumerate(self.radius):
+        for shell_id, shell_radius in enumerate(tqdm(self.radius, desc="coeffA shells")):
             if shell_id == 0:
                 in_shell = r_ele < self.loc_r
             else:
                 in_shell = np.logical_and((self.radius[shell_id - 1] <= r_ele), (r_ele < shell_radius))
             if in_shell.any():
                 if shell_id == 0:
-                    COEF[in_shell] = 1
-                    COEF[in_shell] = COEF[in_shell] * self.A(1) * ((r_ele[in_shell] / self.radius[1]) ** self.n).T
+                    COEF[in_shell] = self.A(1) * ((r_ele[in_shell] / self.radius[1]) ** self.n).T
                 elif shell_id == 1:
-                    COEF[in_shell] = 1
-                    COEF[in_shell] = COEF[in_shell] * self.A(1) * ((r_ele[in_shell] / self.radius[1]) ** self.n).T
+                    COEF[in_shell] = self.A(1) * ((r_ele[in_shell] / self.radius[1]) ** self.n).T
                 elif shell_id == len(self.radius) - 1:
                     COEF[in_shell] = 0
                 else:
-                    COEF[in_shell] = 1
-                    COEF[in_shell] = COEF[in_shell] * self.A(shell_id) * (
-                                (r_ele[in_shell] / self.radius[shell_id]) ** self.n).T
+                    COEF[in_shell] = self.A(shell_id) * ((r_ele[in_shell] / self.radius[shell_id]) ** self.n).T
         return COEF
 
     def COEFFB(self, r_ele):
@@ -124,7 +123,7 @@ class PointMonopole(object):
             COEF = np.full((len(r_ele), self.n.shape[0]),
                            np.nan)
 
-        for shell_id, shell_radius in enumerate(self.radius):
+        for shell_id, shell_radius in enumerate(tqdm(self.radius, desc="coeffB shells")):
             if shell_id == 0:
                 in_shell = r_ele < self.loc_r
             else:
@@ -137,18 +136,18 @@ class PointMonopole(object):
                     COEF[in_shell] = 1 / self.loc_r
                     COEF[in_shell] = COEF[in_shell] * ((self.loc_r / r_ele[in_shell]) ** (self.n + 1)).T
                 elif shell_id == len(self.radius) - 1:
-                    COEF[in_shell] = 1
                     COEF[in_shell] = self.B(shell_id) * (
-                                (self.radius[shell_id - 1] / r_ele[in_shell]) ** (self.n + 1)).T
+                            (self.radius[shell_id - 1] / r_ele[in_shell]) ** (self.n + 1)).T
                 else:
-                    COEF[in_shell] = 1
                     COEF[in_shell] = self.B(shell_id) * (
-                                (self.radius[shell_id - 1] / r_ele[in_shell]) ** (self.n + 1)).T
+                            (self.radius[shell_id - 1] / r_ele[in_shell]) ** (self.n + 1)).T
         return COEF
 
     @cached
     def transition_submatric(self, shell_id):
         """Returns n transition matrices, to transition from shell shell_id-1 to shell_id"""
+
+        assert shell_id >= 2
         matrices = []
 
         for n in self.n[:, 0]:
@@ -199,8 +198,14 @@ class PointMonopole(object):
             if len(matrices_to_combine) == 1:
                 matrixes.append(matrices_to_combine[0][n])
             else:
-                temporary_matrix = matrices_to_combine[0][n]
-                for m in range(1, len(matrices_to_combine)):
+                # matrices_to_combine transition matrices are stored in ascending order K1, K2, K2
+                # here we need to multiply then in descending order:
+                # K5 @ K4 @ K3 ...
+
+                # start from the last one:
+                temporary_matrix = matrices_to_combine[-1][n]
+                # generating indexes from second to last (len -2), to 0:
+                for m in range(len(matrices_to_combine) - 2 , -1, -1):
                     temporary_matrix = temporary_matrix @ matrices_to_combine[m][n]
                 matrixes.append(temporary_matrix)
 
