@@ -27,6 +27,8 @@ def main():
     parser.add_argument("-y", type=float, help="Slice at Y coordinate (in meters)", default=0)
     parser.add_argument("-g", type=float, help="position on Z axis to use as common reference, by default none", default=None)
     parser.add_argument("-f", "--frame_number", type=int, help="frame/component number", default=0)
+    parser.add_argument("-r", type=float, nargs='+', help="draw vertical lines", default=None)
+
 
     args = parser.parse_args()
 
@@ -62,6 +64,10 @@ def main():
             pb.plot(data_x, data_slice-ref_level, label=name)
         else:
             pb.plot(data_x, data_slice, label=name)
+    if args.r:
+        for r in args.r:
+            pb.axvline(r, linestyle='--', color='black')
+
 
 
     pb.legend()
