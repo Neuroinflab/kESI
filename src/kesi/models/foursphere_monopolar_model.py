@@ -15,6 +15,8 @@ class PointMonopole(object):
         Source must be in the inner sphere.
         All units should be SI (meters, amperes)
 
+        Instantialized model is callable to query the voltage at given points.
+
         Parameters:
               model: an object with attributes:
                   conductivity - iterable defining conductivities in the conentric spheres in S/m
@@ -28,7 +30,7 @@ class PointMonopole(object):
               amplitude: float, ampers, total activity of the point source
         """
 
-        if monopole_loc.shape == (3, ):
+        if monopole_loc.shape == (3,):
             monopole_loc = monopole_loc[None, :]
         elif monopole_loc.shape == (1, 3):
             pass  # this is fine
@@ -73,14 +75,12 @@ class PointMonopole(object):
 
     def __call__(self, X, Y, Z):
         """
-        Samples the point source in N-spheres.
+        Samples the potential of point source in N-spheres, in Volts.
 
         Params:
           - X, Y, Z: three one dimensional arrays, of the same length,
                      together they define points in 3D space to sample the potential
         """
-        import IPython
-        IPython.embed()
         if self.model.precision == 'float128':
             ELECTRODES = np.vstack([X, Y, Z], dtype=np.float128).T
         else:
@@ -244,7 +244,7 @@ class PointMonopole(object):
                 # start from the last one:
                 temporary_matrix = matrices_to_combine[-1][n]
                 # generating indexes from second to last (len -2), to 0:
-                for m in range(len(matrices_to_combine) - 2 , -1, -1):
+                for m in range(len(matrices_to_combine) - 2, -1, -1):
                     temporary_matrix = temporary_matrix @ matrices_to_combine[m][n]
                 matrixes.append(temporary_matrix)
 

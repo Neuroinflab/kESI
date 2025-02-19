@@ -47,6 +47,14 @@ class PointDipole(object):
         self.rz1 = self.loc_r / self.model.radius.brain
 
     def __call__(self, X, Y, Z):
+        """
+        Samples the potential of point source in N-spheres, in Volts.
+
+
+        Params:
+          - X, Y, Z: three one dimensional arrays, of the same length,
+                     together they define points in 3D space to sample the potential
+        """
         if self.model.precision == 'float128':
             ELECTRODES = np.vstack([X, Y, Z], dtype=np.float128).T
         else:
