@@ -100,7 +100,7 @@ class PointMonopole(object):
         print("legendre.legval finished")
 
         result = self.amplitude / (4 * np.pi * self.model.conductivity.brain) * LFACTOR
-        return result.astype(np.float64)
+        return result
 
     def cos_theta(self, ele_versors):
         cos_theta = self.north_projection(ele_versors)
