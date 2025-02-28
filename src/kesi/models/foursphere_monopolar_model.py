@@ -71,7 +71,7 @@ class PointMonopole(object):
                       else default_vector)
 
     def _set_monopole_r(self):
-        self.rz1 = self.loc_r / self.model.radius.brain
+        self.rz1 = self.loc_r / self.model.radius[0]
 
     def __call__(self, X, Y, Z):
         """
@@ -99,7 +99,7 @@ class PointMonopole(object):
                                                 tensor=False)
         print("legendre.legval finished")
 
-        result = self.amplitude / (4 * np.pi * self.model.conductivity.brain) * LFACTOR
+        result = self.amplitude / (4 * np.pi * self.model.conductivity[0]) * LFACTOR
         return result
 
     def cos_theta(self, ele_versors):

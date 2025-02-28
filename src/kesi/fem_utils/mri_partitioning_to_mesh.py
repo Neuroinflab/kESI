@@ -138,9 +138,11 @@ def main():
 
     mri_with_boundaries.cell_data['material'] = np.array(cell_data, dtype=int)
 
+    average_cell_size = mri_grid.get_cell(0).cast_to_unstructured_grid().compute_cell_sizes()["Volume"][0] ** (
+            1 / 3)
+
     if electrode_position is not None:
-        average_cell_size = mri_grid.get_cell(0).cast_to_unstructured_grid().compute_cell_sizes()["Volume"][0] ** (
-                1 / 3)
+
 
         if electrode_radius < average_cell_size:
             warnings.warn("Electrode radius {} too small. Increasing electrode radius to {}".format(electrode_radius,
@@ -158,15 +160,18 @@ def main():
         mri_with_boundaries = mri_with_boundaries_clipped
 
     else:
-        import IPython
-        IPython.embed()
-        mri_with_boundaries
-        electrode = pyvista.Sphere(radius=np.max(np.abs(mri_with_boundaries.bounds)),
-                                   center=(0, 0 ,0))
+        # TODO: HACKS without CLIPPPING MFEM REFUSES TO LOAD THE MESH WTF
+        # so we chip a corner tiny bit
+        electrode = pyvista.Sphere(radius=average_cell_size,
+                                   center=(mri_with_boundaries.bounds[0],
+                                           mri_with_boundaries.bounds[2],
+                                           mri_with_boundaries.bounds[4])
+        )
         electrode.cell_data["material"] = np.array([10] * electrode.n_cells,
                                                    dtype=mri_with_boundaries.cell_data.active_scalars.dtype)
-        mri_with_boundaries_clipped = mri_with_boundaries.clip_surface(electrode, invert=True, progress_bar=True,
+        mri_with_boundaries = mri_with_boundaries.clip_surface(electrode, invert=False, progress_bar=True,
                                                                crinkle=namespace.crinkle)
+
 
 
         # mri_with_boundaries = mri_with_boundaries.clean(progress_bar=True)
