@@ -10,11 +10,7 @@ import pyvista
 
 from kesi.utils import write_run_summary
 from kesi.fem_utils.grid_utils import vertex_grid_from_volume
-import vtk
 from tqdm import tqdm
-import tempfile
-import mfem.ser as mfem
-from sklearn.neighbors import KDTree
 from nibabel.processing import conform
 
 
@@ -63,7 +59,7 @@ def main():
                               " boundaries with decreasing spatial resolution"),
                         # default=(0.5, 0.3, 200.0, 50.0))
                         default=(0.5, 0.2, 10.0, 3.0, 200.0, 10.0))
-                        # default=(0.15, 0.03, 0.5, 0.2, 10.0, 3.0,))
+    # default=(0.15, 0.03, 0.5, 0.2, 10.0, 3.0,))
     parser.add_argument("-e", "--electrode", nargs=3, type=float,
                         help=("grounding electrode position if not given there will be only far boundary condition"),
                         default=None)
@@ -78,7 +74,6 @@ def main():
     namespace = parser.parse_args()
     os.makedirs(namespace.outdir, exist_ok=True)
     write_run_summary(namespace.outdir, namespace)
-
 
     # extra_boundaries = (0.15, 0.01, 0.5, 0.05, 10.0, 1.0, 200.0, 10.0)
     # extra_boundaries = (0.15, 0.01, 0.5, 0.05, 10.0, 1.0, 30, 10.0)
@@ -113,20 +108,18 @@ def main():
 
     boundary_coords = [mri_x, mri_y, mri_z]
     for b in boundaries:
-        b_x = np.arange(-b[0]/2, b[0]/2 + b[1], b[1])
+        b_x = np.arange(-b[0] / 2, b[0] / 2 + b[1], b[1])
         b_x = b_x[np.logical_or(b_x < np.min(boundary_coords[0]), b_x > np.max(boundary_coords[0]))]
         final_x = np.array(sorted(list(boundary_coords[0]) + list(b_x)))
 
-        b_y = np.arange(-b[0]/2, b[0]/2 + b[1], b[1])
+        b_y = np.arange(-b[0] / 2, b[0] / 2 + b[1], b[1])
         b_y = b_y[np.logical_or(b_y < np.min(boundary_coords[1]), b_y > np.max(boundary_coords[1]))]
         final_y = np.array(sorted(list(boundary_coords[1]) + list(b_y)))
 
-        b_z = np.arange(-b[0]/2, b[0]/2 + b[1], b[1])
+        b_z = np.arange(-b[0] / 2, b[0] / 2 + b[1], b[1])
         b_z = b_z[np.logical_or(b_z < np.min(boundary_coords[2]), b_z > np.max(boundary_coords[2]))]
         final_z = np.array(sorted(list(boundary_coords[2]) + list(b_z)))
         boundary_coords = [final_x, final_y, final_z]
-
-
 
     mri_with_boundaries = pyvista.RectilinearGrid(*boundary_coords)
     mri_with_boundaries = mri_with_boundaries.cast_to_unstructured_grid()
@@ -143,7 +136,6 @@ def main():
 
     if electrode_position is not None:
 
-
         if electrode_radius < average_cell_size:
             warnings.warn("Electrode radius {} too small. Increasing electrode radius to {}".format(electrode_radius,
                                                                                                     average_cell_size))
@@ -153,7 +145,7 @@ def main():
         electrode.cell_data["material"] = np.array([10] * electrode.n_cells,
                                                    dtype=mri_with_boundaries.cell_data.active_scalars.dtype)
         mri_with_boundaries_clipped = mri_with_boundaries.clip_surface(electrode, invert=False, progress_bar=True,
-                                                               crinkle=namespace.crinkle)
+                                                                       crinkle=namespace.crinkle)
 
         if (mri_with_boundaries.n_cells == mri_with_boundaries_clipped.n_cells):
             raise ValueError("Radius still too small, nothing was clipped!!!")
@@ -166,13 +158,11 @@ def main():
                                    center=(mri_with_boundaries.bounds[0],
                                            mri_with_boundaries.bounds[2],
                                            mri_with_boundaries.bounds[4])
-        )
+                                   )
         electrode.cell_data["material"] = np.array([10] * electrode.n_cells,
                                                    dtype=mri_with_boundaries.cell_data.active_scalars.dtype)
         mri_with_boundaries = mri_with_boundaries.clip_surface(electrode, invert=False, progress_bar=True,
                                                                crinkle=namespace.crinkle)
-
-
 
         # mri_with_boundaries = mri_with_boundaries.clean(progress_bar=True)
     mri_with_boundaries.save(os.path.join(namespace.outdir, os.path.basename(base_outfile) + '_volume.vtu'),
