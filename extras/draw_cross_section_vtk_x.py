@@ -11,10 +11,11 @@ def main():
     parser = argparse.ArgumentParser(description="Draw crossection of electrode potentials")
     parser.add_argument("vtk", nargs='+', type=str, help="Mesh files (in meter)")
     parser.add_argument("attribute", type=str, help="attribute name to draw")
-    parser.add_argument("-x", type=float, help="Slice at X coordinate in mm, if default - will use electrode coordinates", default=0)
+    parser.add_argument("-z", type=float, help="Slice at Z coordinate in mm, if default - will use electrode coordinates", default=0)
     parser.add_argument("-y", type=float, help="Slice at Y coordinate mm, if default - will use electrode coordinates", default=0)
     parser.add_argument("-dx", type=float, help="sampling resolution in mm", default=1)
-    parser.add_argument("-g", type=float, help="position on Z axis to use as common reference, by default none", default=None)
+    parser.add_argument("-g", type=float, help="position on X axis to use as common reference, by default none", default=None)
+    parser.add_argument("-r", type=float, nargs='+', help="draw vertical lines", default=None)
 
     args = parser.parse_args()
 
@@ -22,17 +23,20 @@ def main():
 
     for mesh_file in args.vtk:
         mesh = pyvista.read(mesh_file)
-        z_min, z_max = mesh.bounds[-2:]
+        x_min, x_max = mesh.bounds[0:2]
 
-        sampling_z = np.arange(z_min, z_max, args.dx / 1000)
-        sampling_points = np.vstack([np.ones_like(sampling_z) * args.x / 1000,
-                                     np.ones_like(sampling_z) * args.y / 1000,
-                                     sampling_z]).T
+        x_min, x_max = -0.05, 0.05
+
+        sampling_x = np.arange(x_min, x_max, args.dx / 1000)
+        sampling_points = np.vstack([sampling_x,
+                                     np.ones_like(sampling_x) * args.y / 1000,
+                                     np.ones_like(sampling_x) * args.z / 1000,
+                                     ]).T
 
         sampled_mesh = pyvista_sample_points(mesh, sampling_points)
 
         values =  sampled_mesh.get_array(args.attribute)
-        positions = sampled_mesh.points[:, 2]
+        positions = sampled_mesh.points[:, 0]
 
         vtk_name = os.path.basename(mesh_file)
         dirname = os.path.basename(os.path.dirname(mesh_file))
@@ -45,6 +49,9 @@ def main():
         else:
             pb.plot(positions, values, label=label)
 
+    if args.r:
+        for r in args.r:
+            pb.axvline(r / 1000, linestyle='--', color='black')
     pb.legend()
     pb.show()
 
