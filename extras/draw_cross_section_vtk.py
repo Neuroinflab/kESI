@@ -45,6 +45,14 @@ def main():
         else:
             pb.plot(positions, values, label=label)
 
+    # testing stuff
+    distance_to_source = np.abs(positions - 0.0232)
+    conductivity = 1.5
+    amplitude_ampers = 1
+    full_anal = 1.0 / (4 * np.pi * conductivity * distance_to_source) * amplitude_ampers
+    pb.plot(positions, full_anal, label="fully analytical")
+    ###
+
     pb.legend()
     pb.show()
 
