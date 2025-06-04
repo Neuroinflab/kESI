@@ -1,4 +1,5 @@
 import argparse
+import math
 import os
 from functools import partial, lru_cache
 from multiprocessing import set_start_method
@@ -6,6 +7,7 @@ from multiprocessing import set_start_method
 import mfem.ser as mfem
 import numpy as np
 import pandas as pd
+import psutil
 import pyvista
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
@@ -200,6 +202,32 @@ def mfem_solve_mesh(csd_coefficient, mesh, boundary_potential, conductivities, d
 
     return x
 
+def estimate_sensible_process_count(safety_margin=3):
+    """
+    Call this function just before starting clones of your process.
+    Assumes that clones will use similar amount of memory time safety margin.
+    Makes sure to return amount of processes which will fit in free RAM
+    """
+    process = psutil.Process(os.getpid())
+    mem_info = process.memory_info()
+    resident_memory_bytes = mem_info.rss
+    resident_memory_needed_bytes = resident_memory_bytes * safety_margin
+    mem = psutil.virtual_memory()
+    available_ram_bytes = mem.available
+    proces_num = int(math.floor(available_ram_bytes / resident_memory_needed_bytes))
+
+    print(("PROCESS COUNT ESTIMATION: Avialable RAM: {:.2f} Gb, this"
+          " process takes {:.2f} Gb of RAM, including safety margin of {} - we will spawn {} "
+           "processes").format(available_ram_bytes / 1024 ** 3, resident_memory_needed_bytes / 1024 **3,
+                               safety_margin, proces_num)
+          )
+    if proces_num > os.cpu_count():
+        proces_num = os.cpu_count()
+        print("however this computer has only {} cores, reducing process number to {}".format(os.cpu_count(),
+                                                                                              os.cpu_count())
+              )
+    return proces_num
+
 
 def main():
     parser = argparse.ArgumentParser(description="samples mesh solution using voxel downsampling")
@@ -256,8 +284,13 @@ def main():
                         default=2)
 
     parser.add_argument('--multiprocessing', dest='multiprocessing', action='store_true',
-                        help='Enable multiprocessing per electrode, broken rn')
+                        help='Enable multiprocessing per electrode')
     parser.set_defaults(multiprocessing=False)
+
+    parser.add_argument('-pc', "--process-count", type=int,
+                        help=("if multiprocessing is enabled sets the amount of cores to use,"
+                              " default as much CPU cores as possible to fit into RAM"),
+                        default=None)
 
     parser.add_argument("--save-vtk", type=str_to_bool,
                         help="y/n save solved correction per electrode in the vtk file",
@@ -334,7 +367,18 @@ def main():
                      refinement_radius=namespace.electrode_refinement,
                      refinement_steps=namespace.electrode_refinement_steps
                      )
-        results_np = process_map(fn, electrode_positions, desc="simulating electrodes mp", chunksize=1)
+
+        if namespace.process_count is not None:
+            assert isinstance(namespace.process_count, int)
+            assert namespace.process_count > 0
+            process_count = namespace.process_count
+        else:
+            # need a safety margin of 3 - in empirical testing setting up the FEM solution space, takes around
+            # 3 times more ram than the loaded fem space and the mesh.
+            process_count = estimate_sensible_process_count(safety_margin=3)
+            assert process_count > 0
+        results_np = process_map(fn, electrode_positions, desc="simulating electrodes mp", chunksize=1,
+                                 max_workers=process_count)
 
     else:
         # singlethreaded electrode sim
