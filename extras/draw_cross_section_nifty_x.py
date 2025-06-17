@@ -23,8 +23,8 @@ def create_meshgrid_from_affine(affine, data):
 def main():
     parser = argparse.ArgumentParser(description="Draw crossection nifty files, works well only with no skew or rotation, rectilinear affine")
     parser.add_argument("files", nargs='+', type=str, help="nifty files")
-    parser.add_argument("-z", type=float, help="Slice at Z coordinate (in meters)", default=0)
-    parser.add_argument("-y", type=float, help="Slice at Y coordinate (in meters)", default=0)
+    parser.add_argument("-z", type=float, help="Slice at Z coordinate (in mm)", default=0)
+    parser.add_argument("-y", type=float, help="Slice at Y coordinate (in mm)", default=0)
     parser.add_argument("-g", type=float, help="position on Z axis to use as common reference, by default none", default=None)
     parser.add_argument("-f", "--frame_number", type=int, help="frame/component number", default=0)
     parser.add_argument("-r", type=float, nargs='+', help="draw vertical lines", default=None)
@@ -53,7 +53,7 @@ def main():
 
         inv_affine = np.linalg.inv(correction.affine)
 
-        x_vox, y_vox, z_vox = apply_affine(inv_affine, [0, args.y * 1000, args.z * 1000])
+        x_vox, y_vox, z_vox = apply_affine(inv_affine, [0, args.y, args.z])
         slice_of_interest = np.s_[:, int(y_vox), int(z_vox)]
 
         meshgrid = create_meshgrid_from_affine(correction.affine, vol_data)
@@ -77,7 +77,8 @@ def main():
             pb.axvline(r, linestyle='--', color='black')
 
 
-
+    pb.xlabel("Position in X [mm]")
+    pb.ylabel("Potential [V]")
     pb.legend()
     pb.show()
 

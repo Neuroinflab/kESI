@@ -66,6 +66,3 @@ nibabel.save(final_image, os.path.join(current_dir, "materials.nii.gz"))
 
 
 
-
-import IPython
-IPython.embed()
