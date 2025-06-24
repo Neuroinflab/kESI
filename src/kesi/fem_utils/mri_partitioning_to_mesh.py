@@ -46,7 +46,8 @@ def align_mri_volume_to_ras(mri):
 def main():
     parser = argparse.ArgumentParser(description=("A tool to transform partitioned MRI scan to a cube mesh "
                                                   "with materials. Assumes each voxel is marked with material index. "
-                                                  "Saves MFEM compatible messh with the same name."
+                                                  "Saves MFEM compatible messh with the same name. "
+                                                  "Boundary is added as additional material with highest index."
                                                   ""))
     parser.add_argument("mri",
                         help=('Segmented 3D volume file, for example .nii.gz format'))
@@ -124,9 +125,10 @@ def main():
     mri_with_boundaries = pyvista.RectilinearGrid(*boundary_coords)
     mri_with_boundaries = mri_with_boundaries.cast_to_unstructured_grid()
 
-    # default value - last material
+    # default value - last material index + 1
+    boundary_value = list(reversed(sorted(np.unique(mri.get_fdata()))))[0] + 1
     cell_data = create_cell_data_from_mri(mri, mri_with_boundaries,
-                                          list(reversed(sorted(np.unique(mri.get_fdata()))))[0]
+                                          boundary_value
                                           )
 
     mri_with_boundaries.cell_data['material'] = np.array(cell_data, dtype=int)
