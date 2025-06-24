@@ -16,6 +16,7 @@ class CSDForwardSolver:
         refinement_steps - how many times we want to subdivide the mesh around sampling points
         refinement_radius - distance of from the sampling points of mesh elements we want to subdivide
         """
+
         self.meshfile = meshfile
         self.conductivities = conductivities
         self.boundary_value = boundary_value

@@ -349,12 +349,17 @@ def main():
         vtk_file.write(output.getvalue())
     del output
 
-    if len(mesh.attributes.GetDataArray()) > len(conductivities_vector):
+
+    if len(np.unique(mesh.attributes.GetDataArray())) > len(conductivities_vector):
         raise Exception("There is more materials than provided conductivities!")
 
-    if not (mesh.attributes.GetDataArray()[:len(mesh.attributes.GetDataArray())] == (
-            np.array(range(len(mesh.attributes.GetDataArray()))) + 1)).all():
-        raise Exception("Mesh material indexes are not correct, they should start with 1 and increase by 1")
+    # attributes start with 1, and concuctivities vector is sampled starting from 1,
+    # so the biggest value can be equal to len
+    # but if there is any cell attribute index higher than amount of provided conductivities it's invalid
+    bad_mask = np.unique(mesh.attributes.GetDataArray()) > len(conductivities_vector)
+    if bad_mask.any():
+        raise Exception("Some mesh attributes try to sample beyond provided conductivities vector length!")
+
 
     if namespace.multiprocessing:
         electrode_positions = electrodes[["x", "y", "z"]].values / 1000  # electrodes in mm, mesh in meters
