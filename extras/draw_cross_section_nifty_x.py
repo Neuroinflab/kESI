@@ -30,6 +30,8 @@ def main():
     parser.add_argument("-r", type=float, nargs='+', help="draw vertical lines", default=None)
     parser.add_argument("-n", type=str,  help="normalize y/n", default="n")
     parser.add_argument("-l", "--labels", type=str, nargs='+', help="plot line labels per file", default=None)
+    parser.add_argument("-u", "--units", type=str, help="Y axis label. defaults to potential", default="Potential [V]")
+
 
 
     args = parser.parse_args()
@@ -78,7 +80,7 @@ def main():
 
 
     pb.xlabel("Position in X [mm]")
-    pb.ylabel("Potential [V]")
+    pb.ylabel(args.units)
     pb.legend()
     pb.show()
 
