@@ -7,6 +7,7 @@ import pylab as pb
 import pyvista
 from nibabel.affines import apply_affine
 from pyvista import StructuredGrid
+from tqdm import tqdm
 
 
 def read_nifti(file, frame_number=0):
@@ -89,7 +90,7 @@ def main():
 
     fig = pb.figure()
 
-    for nr, file in enumerate(args.files):
+    for nr, file in enumerate(tqdm(args.files)):
         if args.labels is not None:
             name = args.labels[nr]
         else:

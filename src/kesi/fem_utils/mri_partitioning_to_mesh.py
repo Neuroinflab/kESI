@@ -42,6 +42,9 @@ def align_mri_volume_to_ras(mri):
     mri = conform(mri, out_shape=mri.shape, voxel_size=voxel_sizes, order=0)
     return mri
 
+def chunk_list(lst, chunk_size=3):
+    return [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
+
 
 def main():
     parser = argparse.ArgumentParser(description=("A tool to transform partitioned MRI scan to a cube mesh "
@@ -60,10 +63,11 @@ def main():
                               " boundaries with decreasing spatial resolution"),
                         # default=(0.5, 0.3, 200.0, 50.0))
                         default=(0.5, 0.2, 10.0, 3.0, 200.0, 10.0))
-    # default=(0.15, 0.03, 0.5, 0.2, 10.0, 3.0,))
-    parser.add_argument("-e", "--electrode", nargs=3, type=float,
-                        help=("grounding electrode position if not given there will be only far boundary condition"),
-                        default=None)
+    parser.add_argument("-e", "--electrode", nargs="+", type=float,
+                        help=("grounding electrode position if not given there will be "
+                              "only far boundary condition, in meters, can have multiple electrodes, "
+                              "provide triplets of x y z coordinates"),
+                        )
     parser.add_argument("-r", "--electrode-radius", type=float,
                         help=("Grounding electrode radius"),
                         default=0.002)
@@ -80,7 +84,7 @@ def main():
     # extra_boundaries = (0.15, 0.01, 0.5, 0.05, 10.0, 1.0, 30, 10.0)
     extra_boundaries = namespace.boundaries
     electrode_radius = namespace.electrode_radius
-    electrode_position = namespace.electrode
+    electrode_positions = namespace.electrode
 
     assert (len(extra_boundaries) % 2) == 0
     # # extra_boundaries = (0.05, 0.01, 0.10, 0.02, 0.20, 0.03)
@@ -136,22 +140,24 @@ def main():
     average_cell_size = mri_grid.get_cell(0).cast_to_unstructured_grid().compute_cell_sizes()["Volume"][0] ** (
             1 / 3)
 
-    if electrode_position is not None:
+    if electrode_positions is not None:
+        assert len(electrode_positions) % 3 == 0
+        for electrode_position in chunk_list(electrode_positions):
 
-        if electrode_radius < average_cell_size:
-            warnings.warn("Electrode radius {} too small. Increasing electrode radius to {}".format(electrode_radius,
-                                                                                                    average_cell_size))
-            electrode_radius = average_cell_size
+            if electrode_radius < average_cell_size:
+                warnings.warn("Electrode radius {} too small. Increasing electrode radius to {}".format(electrode_radius,
+                                                                                                        average_cell_size))
+                electrode_radius = average_cell_size
 
-        electrode = pyvista.Sphere(radius=electrode_radius, center=electrode_position)
-        electrode.cell_data["material"] = np.array([10] * electrode.n_cells,
-                                                   dtype=mri_with_boundaries.cell_data.active_scalars.dtype)
-        mri_with_boundaries_clipped = mri_with_boundaries.clip_surface(electrode, invert=False, progress_bar=True,
-                                                                       crinkle=namespace.crinkle)
+            electrode = pyvista.Sphere(radius=electrode_radius, center=electrode_position)
+            electrode.cell_data["material"] = np.array([10] * electrode.n_cells,
+                                                       dtype=mri_with_boundaries.cell_data.active_scalars.dtype)
+            mri_with_boundaries_clipped = mri_with_boundaries.clip_surface(electrode, invert=False, progress_bar=True,
+                                                                           crinkle=namespace.crinkle)
 
-        if (mri_with_boundaries.n_cells == mri_with_boundaries_clipped.n_cells):
-            raise ValueError("Radius still too small, nothing was clipped!!!")
-        mri_with_boundaries = mri_with_boundaries_clipped
+            if (mri_with_boundaries.n_cells == mri_with_boundaries_clipped.n_cells):
+                raise ValueError("Radius still too small, nothing was clipped!!!")
+            mri_with_boundaries = mri_with_boundaries_clipped
 
     else:
         # TODO: HACKS without CLIPPPING MFEM REFUSES TO LOAD THE MESH WTF
