@@ -5,8 +5,8 @@ import nibabel
 import numpy as np
 import pylab as pb
 import pyvista
-from nibabel.affines import apply_affine
-from pyvista import StructuredGrid
+from nibabel.affines import apply_affine, voxel_sizes
+from scipy.spatial import KDTree
 from tqdm import tqdm
 
 
@@ -17,9 +17,9 @@ def read_nifti(file, frame_number=0):
 
     if len(data.shape) == 5:
         try:
-            data = data.get_fdata()[:, :, :, :, frame_number]
+            data = data[:, :, :, :, frame_number]
         except IndexError:
-            data = data.get_fdata()[:, :, :, frame_number, :]
+            data = data[:, :, :, frame_number, :]
 
     data = np.squeeze(data)
     assert len(data.shape) == 3
@@ -51,21 +51,27 @@ def read_nifti(file, frame_number=0):
     xyz = apply_affine(affine_m, ijk)
 
     # Create structured grid
-    grid = StructuredGrid()
-    grid.points = xyz
-    grid.dimensions = (nx, ny, nz)
-    grid["values"] = data.ravel(order="C")
+    #grid = StructuredGrid(xyz[:, 0], xyz[:, 1], xyz[:, 2])
+    grid = pyvista.PointSet(xyz)
+    data_formatted = []
+    for coord in ijk:
+        data_formatted.append(data[coord[0], coord[1], coord[2]])
+
+    grid["values"] = data_formatted
+
+    voxel_size = np.max(voxel_sizes(nifti_img.affine)) / 1000
+
     # slices = grid.slice_orthogonal()
     # slices.plot(show_bounds=True, show_axes=True)
 
-    return grid
+    return grid, voxel_size
 
 
 def read_volume(file, nifti_frame_number=0):
     if file.lower().endswith("nii.gz"):
         return read_nifti(file, nifti_frame_number)
     else:
-        return pyvista.read(file)
+        return pyvista.read(file), None
 
 
 def main():
@@ -90,13 +96,13 @@ def main():
 
     fig = pb.figure()
 
-    for nr, file in enumerate(tqdm(args.files)):
+    for nr, file in enumerate(tqdm(args.files, desc="loading")):
         if args.labels is not None:
             name = args.labels[nr]
         else:
             name = "{} {}".format(os.path.basename(os.path.dirname(file)), os.path.basename(file))
 
-        volume = read_volume(file, args.frame_number)
+        volume, voxel_size = read_volume(file, args.frame_number)
 
         line_start = np.array(args.s) / 1000
         line_end = np.array(args.e) / 1000
@@ -107,7 +113,10 @@ def main():
 
         line = pyvista.Line(line_start, line_end, int(resolution))
 
-        sampled_volume = line.sample(volume)
+        if voxel_size is None:
+            sampled_volume = line.sample(volume)
+        else:
+            sampled_volume = line.interpolate(volume, radius=voxel_size*2)
 
         points = sampled_volume.points
         data_x = np.linalg.norm(points - points[0], axis=1) * 1000  # show in mm
@@ -132,43 +141,83 @@ def main():
         for r in args.r:
             pb.axvline(r, linestyle='--', color='black')
 
+
+
+    pb.xlabel("Position along sampling line {} - {} [mm]".format(line_start * 1000, line_end * 1000))
+
+    pb.ylabel(args.units)
+    pb.legend()
+
     if args.mri is not None:
         direction = line_start - line_end
         origin = (line_start + line_end) / 2
         # Choose an arbitrary vector not parallel to the direction
         arbitrary = np.array([0, 0, 1])  # e.g., Z-axis
-        if np.allclose(np.cross(direction, arbitrary), 0):
-            arbitrary = np.array([0, 1, 0])  # fallback
-        normal = np.cross(direction, arbitrary)
 
-        mri_volume = read_volume(args.mri)
+        normal1 = np.cross(direction, arbitrary)
+
+        arbitrary2 = np.array([0, 1, 0])  # fallback
+        normal2 = np.cross(direction, arbitrary2)
+
+
+        print("loading mri background")
+        mri_volume, voxel_size = read_volume(args.mri)
 
         plane = pyvista.Plane(origin,
-                              direction=normal,
-                              i_size=length / 2,
-                              j_size=length / 2,
+                              direction=normal1,
+                              i_size=length,
+                              j_size=length,
                               i_resolution=int(resolution),
                               j_resolution=int(resolution),
                               )
-        sampled = plane.sample(mri_volume)
-        scalars_1d = sampled['values']
-        nx = int(resolution) + 1
-        ny = int(resolution) + 1
-        scalars_2d = scalars_1d.reshape(ny, nx)
 
-        line_ax = pb.gca()
-        line_ax.set_facecolor('none')
-        ax_img = line_ax.twinx()
-        ax_img.set_zorder(line_ax.get_zorder() - 1)
-        ax_img.get_yaxis().set_visible(False)
-        ax_img.imshow(scalars_2d, cmap='viridis', aspect='auto', origin='lower', zorder=-10,
-                      extent=[0, length * 1000, -length / 2 * 1000, length / 2 * 1000])
-        pb.sca(line_ax)
+        plane2 = pyvista.Plane(origin,
+                              direction=normal2,
+                              i_size=length,
+                              j_size=length,
+                              i_resolution=int(resolution),
+                              j_resolution=int(resolution),
+                              )
 
-    pb.xlabel("Position along sampling line {} - {} [mm]".format(line_start * 1000, line_end * 1000))
-    pb.ylabel(args.units)
-    pb.legend()
-    pb.show()
+        print("sampling mri background")
+        tree = KDTree(mri_volume.points)
+
+        distances, indices = tree.query(plane.points)
+        scalars_1d = mri_volume['values'][indices]
+        plane['values'] = scalars_1d
+
+        distances, indices = tree.query(plane2.points)
+        scalars_1d = mri_volume['values'][indices]
+        plane2['values'] = scalars_1d
+
+        line = pyvista.Line(line_start, line_end)
+
+        print("plot, close only using ctrl+c")
+        plotter = pyvista.Plotter()
+        plotter.add_mesh(plane, cmap='gray', opacity=1)
+        plotter.add_mesh(plane2, cmap='gray', opacity=1)
+        plotter.add_mesh(line, cmap='jet', line_width=10, style='wireframe', render_lines_as_tubes=True)
+        plotter.show_axes()
+
+        # plotter.show()
+        #
+        # import IPython
+        # IPython.embed()
+        plotter.show(interactive_update=True)
+
+
+        pb.ion()
+        pb.show()
+
+        while True:
+            try:
+                plotter.update()
+            except AttributeError:
+                pass
+            pb.gcf().canvas.draw_idle()
+            pb.gcf().canvas.start_event_loop(0.01)
+    else:
+        pb.show()
 
 
 if __name__ == '__main__':
