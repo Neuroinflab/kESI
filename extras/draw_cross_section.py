@@ -116,7 +116,7 @@ def main():
         if voxel_size is None:
             sampled_volume = line.sample(volume)
         else:
-            sampled_volume = line.interpolate(volume, radius=voxel_size*2)
+            sampled_volume = line.interpolate(volume, radius=voxel_size * 1.5)
 
         points = sampled_volume.points
         data_x = np.linalg.norm(points - points[0], axis=1) * 1000  # show in mm
