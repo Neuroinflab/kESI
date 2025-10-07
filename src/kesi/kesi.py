@@ -4,6 +4,7 @@ import warnings
 
 import numpy as np
 from scipy.integrate import romb
+from tqdm import tqdm
 
 from kesi import Reconstructor
 from kesi.common import SphericalSplineSourceKCSD, GaussianSourceKCSD3D, cv
@@ -12,7 +13,6 @@ from kesi.kernel.electrode import Conductivity
 from kesi.kernel import potential_basis_functions as pbf
 from kesi.kernel.electrode import LinearlyInterpolatedLeadfieldCorrection, NearestNeighbourInterpolatedLeadfieldCorrection
 from kesi.kernel.mesh_electrode import read_mesh_electrodes
-
 
 class KcsdKesi3d:
     def __init__(self, estimation_points_grid, positions, conductivity=1.0, R_init=1.0, mask=None, source_type='spherical'):
@@ -111,13 +111,76 @@ class KcsdKesi3d:
 
         B_KCSD = kernel_constructor.potential_basis_functions_at_electrodes(electrodes,
                                                                             pbf_kcsd)
+
+        self.b_kcsd = B_KCSD
+
+        # kernel here is a subset of a kernel only at electrode places
         KERNEL_KCSD = kernel_constructor.kernel(B_KCSD)
+
+
+        # to calculate potential everywhere, we need a "full" kernel
+        # which is potential_basis_sources_at_grid x potential_basis_sources_at_electrodes.T
+        #FULL_KERNEL_KCSD/CROSSKERNEL_KCSD_POT
+        CROSSKERNEL_KCSD_POT = self.potential_cross_kernel(electrodes, pbf_kcsd, conductivity, kernel_constructor)
+
+
         CROSSKERNEL_KCSD = kernel_constructor.crosskernel(B_KCSD)
-        del B_KCSD  # the array is large and no longer needed
+        import IPython
+        IPython.embed()
 
         reconstructor_kcsd = Reconstructor(KERNEL_KCSD,
                                            CROSSKERNEL_KCSD)
         self.reconstructor = reconstructor_kcsd
+
+        ## potentials_kernel
+
+        pot_kernel_constructor = KernelConstructor()
+        pot_convolver_interface = ConvolverInterfaceIndexed(convolver,
+                                                        model_src.potential,
+                                                        ROMBERG_WEIGHTS,
+                                                        mask)
+        pot_pbf_kcsd = pbf.Analytical(pot_convolver_interface,
+                                      potential=model_src.potential)
+
+        pot_kernel_constructor.crosskernel = CrossKernelConstructor(pot_convolver_interface,
+                                                                    CSD_MASK)
+
+        KCSD_POT2 = pot_kernel_constructor.potential_basis_functions_at_electrodes(electrodes,
+                                                                                  pot_pbf_kcsd)
+
+        CROSSKERNEL_KCSD_POT2 = pot_kernel_constructor.crosskernel(KCSD_POT2)
+
+        pot_reconstructor_kcsd = Reconstructor(KERNEL_KCSD,
+                                               KCSD_POT2)
+        self.KCSD_POT = CROSSKERNEL_KCSD_POT
+        self.KERNEL_KCSD = KERNEL_KCSD
+        self.CROSSKERNEL_KCSD = CROSSKERNEL_KCSD
+        self.CROSSKERNEL_KCSD_POT1 = CROSSKERNEL_KCSD_POT
+        self.CROSSKERNEL_KCSD_POT2 = CROSSKERNEL_KCSD_POT2
+
+        self.reconstructor_pot = pot_reconstructor_kcsd
+
+        del B_KCSD  # the array is large and no longer needed
+
+    def potential_cross_kernel(self, electrodes, potential_basis_functions, conductivity, kernel_constructor):
+        B_KCSD = kernel_constructor.potential_basis_functions_at_electrodes(electrodes,
+                                                                            potential_basis_functions)
+
+        grid_size = np.prod([np.max(x.shape) for x in potential_basis_functions.convolver_interface.convolver.POT_GRID])
+
+        result = np.full((grid_size, len(electrodes)),
+                                                      np.nan)
+        pot_coords = potential_basis_functions.convolver_interface.pot_coords()
+        for j in tqdm(range(grid_size), total=grid_size, desc="calculating KCSD matrix for potential"):
+
+            for i in range(len(electrodes)):
+                grid_point = Conductivity(pot_coords[0][j], pot_coords[1][j], pot_coords[2][j], conductivity)
+
+                sources_at_grid_point =  kernel_constructor.potential_basis_functions_at_electrodes([grid_point],
+                                                                                potential_basis_functions, verbose=False)
+
+                result[j, i] = np.sum(B_KCSD[:, i] * sources_at_grid_point[:, 0])
+        return result
 
     def reconstruct_csd(self, potential, regularization_parameter=0):
         """

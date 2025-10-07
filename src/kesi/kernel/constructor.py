@@ -212,21 +212,23 @@ class KernelConstructor(object):
 
     def potential_basis_functions_at_electrodes(self,
                                                 electrodes,
-                                                potential_basis_functions):
+                                                potential_basis_functions, verbose=True):
         self.NoElectrodesGivenException.check(electrodes)
 
         with self:
             with potential_basis_functions:
                 self._calculate_potential_basis_functions_at_electrodes(
                     electrodes,
-                    potential_basis_functions)
+                    potential_basis_functions,
+                verbose)
 
             return self._potential_basis_functions
 
     def _calculate_potential_basis_functions_at_electrodes(self,
                                                            electrodes,
-                                                           potential_basis_functions):
-        for i, electrode in enumerate(tqdm(electrodes, desc='constructing B array')):
+                                                           potential_basis_functions,
+                                                           verbose=True):
+        for i, electrode in enumerate(tqdm(electrodes, desc='constructing B array', disable=not verbose)):
             POT = potential_basis_functions(electrode)
 
             self._alloc_potential_basis_functions_if_necessary(POT.size,
@@ -412,6 +414,9 @@ class ConvolverInterfaceIndexed(ConvolverInterface_base):
 
     def src_coords(self):
         return [A[self.source_mask] for A in self.meshgrid('SRC')]
+
+    def pot_coords(self):
+        return [A.flatten() for A in self.meshgrid('SRC')]
 
     def update_src(self, src, values):
         src[self.source_mask] = values

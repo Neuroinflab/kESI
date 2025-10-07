@@ -26,6 +26,8 @@
 
 import functools
 
+from kesi.kernel.constructor import ConvolverInterface_base
+
 
 def _sum_of_not_none(f):
     @functools.wraps(f)
@@ -38,7 +40,7 @@ def _sum_of_not_none(f):
 
 
 class _Base(object):
-    def __init__(self, convolver_interface):
+    def __init__(self, convolver_interface: ConvolverInterface_base):
         self.__in_context = False
         self.convolver_interface = convolver_interface
 
