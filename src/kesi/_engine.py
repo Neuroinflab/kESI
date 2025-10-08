@@ -104,9 +104,9 @@ class _LinearKernelSolver(object):
                               "big for scipy.linalg.solve(lhs, rhs, assume_a='pos')\n"
                               "trying to use scipy.linalg.solve(lhs, rhs, assume_a='gen')")
             # sometimes at high amount of electrodes (how much?),
-            # the values in the kernel become such enourmously large that calculating determinant, or inverting
+            # the values in the kernel become such enormously large that calculating determinant, or inverting
             # the matrix using normal means becomes impossible, some internal values must over or underflow,
-            # which casues LinAlgErrors, which calculations make it seem like the matrix is singular
+            # which casues LinAlgErrors, which in calculations make it seem like the matrix is singular
             # pinv calculates the pseudo inverse of the matrix using SVD, if matrix is invertible then it's gonna be
             # exactly the inverse.
             # more details and experimenting with solvers:

@@ -114,14 +114,6 @@ class KcsdKesi3d:
         KERNEL_KCSD = kernel_constructor.kernel(B_KCSD)
         CROSSKERNEL_KCSD = kernel_constructor.crosskernel(B_KCSD)
 
-        print("B_KCSD")
-        print(B_KCSD)
-        print("KERNEL_KCSD")
-        print(KERNEL_KCSD)
-        print("CROSSKERNEL_KCSD")
-        print(CROSSKERNEL_KCSD)
-
-
         del B_KCSD  # the array is large and no longer needed
 
 
