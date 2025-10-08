@@ -119,7 +119,7 @@ class KcsdKesi3d:
         print("KERNEL_KCSD")
         print(KERNEL_KCSD)
         print("CROSSKERNEL_KCSD")
-        CROSSKERNEL_KCSD
+        print(CROSSKERNEL_KCSD)
 
 
         del B_KCSD  # the array is large and no longer needed

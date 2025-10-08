@@ -98,7 +98,13 @@ class _LinearKernelSolver(object):
         try:
             solved = scipy.linalg.solve(lhs, rhs, assume_a='pos')
         except scipy.linalg.LinAlgError:  # can we even assume it's symmetric and  positively defined in case it isnt
-            solved = scipy.linalg.solve(lhs, rhs, assume_a='gen')
+            try:
+                solved = scipy.linalg.solve(lhs, rhs, assume_a='gen')
+            # if matrix is very malformed, on some cpu's it's failing to compute, but it usually has some sliver of sense
+            # so we want to still compute it
+            except scipy.linalg.LinAlgError:
+                solved = np.linalg.solve(lhs, rhs)
+
 
         return solved
 
