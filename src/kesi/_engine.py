@@ -99,9 +99,22 @@ class _LinearKernelSolver(object):
         except scipy.linalg.LinAlgError:  # can we even assume it's symmetric and  positively defined in case it isnt
             try:
                 solved = scipy.linalg.solve(lhs, rhs, assume_a='gen')
-            # if matrix is very malformed, on some cpu's it's failing to compute, but it usually has some sliver of sense
-            # so we want to still compute it
+                warnings.warn("Kernel is not symmetric and positively defined,"
+                              "or might be ill formed or values too "
+                              "big for scipy.linalg.solve(lhs, rhs, assume_a='pos')\n"
+                              "trying to use scipy.linalg.solve(lhs, rhs, assume_a='gen')")
+            # sometimes at high amount of electrodes (how much?),
+            # the values in the kernel become such enourmously large that calculating determinant, or inverting
+            # the matrix using normal means becomes impossible, some internal values must over or underflow,
+            # which casues LinAlgErrors, which calculations make it seem like the matrix is singular
+            # pinv calculates the pseudo inverse of the matrix using SVD, if matrix is invertible then it's gonna be
+            # exactly the inverse.
+            # more details and experimenting with solvers:
+            # https://github.com/Neuroinflab/kESI/issues/38#issuecomment-2459891602
             except scipy.linalg.LinAlgError:
+                warnings.warn("Kernel is badly defined still, trying to use slower methods which can work with "
+                              "badly defined or high value matrices: "
+                              "scipy.linalg.pinv, it still should converge into good solution")
                 solved = np.dot(scipy.linalg.pinv(lhs), rhs)
 
 
