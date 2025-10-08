@@ -94,7 +94,6 @@ class _LinearKernelSolver(object):
 
     def __call__(self, rhs, regularization_parameter=0):
         lhs = self._kernel + regularization_parameter * np.identity(self._kernel.shape[0])
-
         try:
             solved = scipy.linalg.solve(lhs, rhs, assume_a='pos')
         except scipy.linalg.LinAlgError:  # can we even assume it's symmetric and  positively defined in case it isnt
@@ -103,7 +102,7 @@ class _LinearKernelSolver(object):
             # if matrix is very malformed, on some cpu's it's failing to compute, but it usually has some sliver of sense
             # so we want to still compute it
             except scipy.linalg.LinAlgError:
-                solved = np.linalg.solve(lhs, rhs)
+                solved = np.dot(scipy.linalg.pinv(lhs), rhs)
 
 
         return solved
