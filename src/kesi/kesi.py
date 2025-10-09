@@ -29,6 +29,8 @@ class KcsdKesi3d:
         if mask is None:
             mask = np.ones_like(estimation_points_grid[0], dtype=bool)
 
+        sources_n = np.sum(mask)
+
         sim_space_step = np.abs(estimation_points_grid[0][0, 0, 0] - estimation_points_grid[0][1, 0, 0])
 
         # conductivity is accounted for in electrodes, and sources should have 1.0 conductivity
@@ -111,8 +113,12 @@ class KcsdKesi3d:
 
         B_KCSD = kernel_constructor.potential_basis_functions_at_electrodes(electrodes,
                                                                             pbf_kcsd)
-        KERNEL_KCSD = kernel_constructor.kernel(B_KCSD)
-        CROSSKERNEL_KCSD = kernel_constructor.crosskernel(B_KCSD)
+
+
+        # we normalize B_KCSD by amount of sources, because otherwise KERNEL, and CROSSKERNELL explodes into infinity
+        # Normalizing allows it to stay in a sensible range of float64
+        KERNEL_KCSD = kernel_constructor.kernel(B_KCSD) / sources_n
+        CROSSKERNEL_KCSD = kernel_constructor.crosskernel(B_KCSD) / sources_n
 
         del B_KCSD  # the array is large and no longer needed
 
