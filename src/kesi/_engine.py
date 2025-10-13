@@ -94,11 +94,22 @@ class _LinearKernelSolver(object):
 
     def __call__(self, rhs, regularization_parameter=0):
         lhs = self._kernel + regularization_parameter * np.identity(self._kernel.shape[0])
-
         try:
             solved = scipy.linalg.solve(lhs, rhs, assume_a='pos')
         except scipy.linalg.LinAlgError:  # can we even assume it's symmetric and  positively defined in case it isnt
-            solved = scipy.linalg.solve(lhs, rhs, assume_a='gen')
+            # sometimes at high amount of electrodes (70 electrodes/250k sources)
+            # the values in the kernel become such enormously large that calculating determinant, or inverting
+            # the matrix using normal means becomes impossible, some internal values must over or underflow,
+            # which casues LinAlgErrors, which in calculations make it seem like the matrix is singular
+            # pinv calculates the pseudo inverse of the matrix using SVD, if matrix is invertible then it's gonna be
+            # exactly the inverse.
+            # more details and experimenting with solvers:
+            # https://github.com/Neuroinflab/kESI/issues/38#issuecomment-2459891602
+            warnings.warn("Kernel is badly defined, trying to use slower methods which can work with "
+                          "badly defined or high value matrices: "
+                          "scipy.linalg.pinv, it still should converge into good solution")
+            solved = np.dot(scipy.linalg.pinv(lhs), rhs)
+
 
         return solved
 
@@ -125,15 +136,18 @@ class _LinearKernelSolver(object):
         try:
             solved = scipy.linalg.solve(A, B, assume_a='pos')
         except scipy.linalg.LinAlgError:  # can we even assume it's symmetric and  positively defined in case it isnt
-            warnings.warn("KERNEL MATRIX IS NOT POSITIVELY DEFINED, USING LINALG.PINV")
+            warnings.warn("Kernel is badly defined, trying to use slower methods which can work with "
+                          "badly defined or high value matrices: "
+                          "scipy.linalg.pinv, it still should converge into good solution")
             solved = np.dot(scipy.linalg.pinv(A), B)
-            # solved = scipy.linalg.solve(A, B, assume_a='gen')
+
 
         # the methods for solving were experimented on, kCSD has the same results with all of them
         # solved = scipy.linalg.solve(A, B, assume_a='pos') is the fastest, by 2 orders of magnitude
         # kESI solutions are unstable and raise warnings...
 
         ### tried methods:
+        # https://github.com/Neuroinflab/kESI/issues/38#issuecomment-2459891602
         # solved = np.linalg.solve(A, B)  ## original method
         # solved = scipy.linalg.solve(A, B, assume_a='pos')
         # solved = scipy.linalg.solve(A, B, assume_a='gen')
