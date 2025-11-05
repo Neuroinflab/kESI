@@ -139,6 +139,8 @@ def main():
         # default value - index given by a user
         boundary_value = namespace.default_index
         print(f'Index defined by a user: {boundary_value}')
+        if boundary_value in mri.get_fdata():
+            warnings.warn("Warning: default index already occurs in data")
     else:
         # default value - last material index + 1
         boundary_value = list(reversed(sorted(np.unique(mri.get_fdata()))))[0] + 1
