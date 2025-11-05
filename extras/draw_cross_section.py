@@ -20,8 +20,14 @@ def read_nifti(file, frame_number=0):
             data = data[:, :, :, :, frame_number]
         except IndexError:
             data = data[:, :, :, frame_number, :]
+        data = np.squeeze(data)
 
-    data = np.squeeze(data)
+    elif len(data.shape) == 4:
+        try:
+            data = data[:, :, :, frame_number]
+        except IndexError:
+            print('Error: frame number out of data time scale')
+
     assert len(data.shape) == 3
     affine_mm = nifti_img.affine
 
@@ -89,6 +95,7 @@ def main():
                         help="position on the line to use as common reference, in mm, by default none", default=None)
     parser.add_argument("-r", type=float, nargs='+', help="draw vertical lines", default=None)
     parser.add_argument("-n", type=str, help="normalize y/n", default="n")
+    parser.add_argument("-an",type=str, help="alternative normalization y/n, if -n = 'y'", default="n")
     parser.add_argument("-l", "--labels", type=str, nargs='+', help="plot line labels per file", default=None)
     parser.add_argument("-u", "--units", type=str, help="Y axis label. defaults to potential", default="Potential [V]")
 
@@ -130,9 +137,12 @@ def main():
             ref_level_id = np.argmin(np.abs(data_x - args.g))
             ref_level = data_slice[ref_level_id]
             pb.plot(data_x, data_slice - ref_level, label=name)
-        elif args.n == 'y':
+        elif args.n == 'y' and args.an == 'n':
             normalized = data_slice - np.nanmin(data_slice)
             normalized = normalized / np.nanmax(normalized)
+            pb.plot(data_x, normalized, label=name)
+        elif args.n == 'y' and args.an == 'y':
+            normalized = data_slice / np.nanmax(np.abs(data_slice))
             pb.plot(data_x, normalized, label=name)
 
         else:
@@ -147,6 +157,7 @@ def main():
 
     pb.ylabel(args.units)
     pb.legend()
+    pb.grid()
 
     if args.mri is not None:
         direction = line_start - line_end
