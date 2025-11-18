@@ -71,6 +71,12 @@ def main():
     parser.add_argument("-r", "--electrode-radius", type=float,
                         help=("Grounding electrode radius"),
                         default=0.002)
+    parser.add_argument('-di', '--default-index', type=int,
+                        help=('Index of a default material,'
+                              ' defualt - last material index + 1.'
+                              ' Be aware that index of a material can not'
+                              ' be bigger than number of defined conductivities'),
+                        default=None)
     parser.add_argument('--crinkle', action=argparse.BooleanOptionalAction,
                         help=("Instead of carving out the electrode"
                               " shape in the mesh, delete a few mesh cells")
@@ -129,11 +135,20 @@ def main():
     mri_with_boundaries = pyvista.RectilinearGrid(*boundary_coords)
     mri_with_boundaries = mri_with_boundaries.cast_to_unstructured_grid()
 
-    # default value - last material index + 1
-    boundary_value = list(reversed(sorted(np.unique(mri.get_fdata()))))[0] + 1
+    if namespace.default_index is not None:
+        # default value - index given by a user
+        boundary_value = namespace.default_index
+        print(f'Index defined by a user: {boundary_value}')
+        if boundary_value in mri.get_fdata():
+            warnings.warn("Warning: default index already occurs in data")
+    else:
+        # default value - last material index + 1
+        boundary_value = list(reversed(sorted(np.unique(mri.get_fdata()))))[0] + 1
+        print(f'Default index: {boundary_value}')
+    
     cell_data = create_cell_data_from_mri(mri, mri_with_boundaries,
-                                          boundary_value
-                                          )
+                                            boundary_value
+                                            )
 
     mri_with_boundaries.cell_data['material'] = np.array(cell_data, dtype=int)
 
