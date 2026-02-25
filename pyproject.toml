@@ -30,6 +30,7 @@ version = "0.3a0.dev0"
 authors = [
     { name = "Jakub M. Dzik", email = "jakub.m.dzik+kesi@gmail.com" },
     { name = "Marta Bejtka", email = "m.bejtka@nencki.edu.pl" },
+    { name = "Marian Dovgialo", email = "m.dovgialo@nencki.edu.pl" },
 ]
 # maintainers = []
 description = "Implementation of kernel Electric Source Imaging (kESI) method."
@@ -40,7 +41,6 @@ requires-python = ">=3.9"
 dependencies = [
     "numpy >= 1.24",
     "scipy >= 1.10.1",
-    "numba-scipy >= 0.4.0",
     "mfem >= 4.7.0.1",
     "scikit-learn >= 1.4",
     "tqdm >= 4.66",
@@ -66,10 +66,11 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Software Development",
