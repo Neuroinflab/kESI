@@ -11,20 +11,14 @@ rk
 
 # Installation
 
-You need to use conda to install the appropriate dependencies defined in `enviroment_*.yml` files, `*` stands for different Python versions.
-To install kESI with the legacy FEniCS for Python 3.10 you are required to use conda:
-
-`conda env create -f enviroment_3.10.yml`
-
-Activate `kesi_310` enviroment:
-
-`conda activate kesi_310` 
-
-afterwards use pip to install the kESI package:
+Create and activate python environment with python 3.9 or higher (tested 3.10) repository.
+Afterwards use pip to install the kESI package:
 
 `pip install .`
 
-If you wish to only use modern MFEM solver, you can install using pip without any additional package manager requirement.
+it should install kESI and all the dependendies.
+
+To ensure you are using verified working dependency versions, you can use UV (https://github.com/astral-sh/uv) to install the tested dependencies locked in a lock file. Simply run the `uv sync` command, which will create a virtual environment with all the dependencies locked in a lock file and install kESI in that environment.
 
 Additionally, kESI requires `gmsh` for mesh generation and FEM segmentation. You'll have to install it from your package manager for example Ubuntu:
 

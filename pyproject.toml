@@ -36,7 +36,7 @@ description = "Implementation of kernel Electric Source Imaging (kESI) method."
 license = { file = "LICENSE" }
 # readme = "README.md"
 # keywords = []
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 dependencies = [
     "numpy ~= 1.24",
     "scipy ~= 1.10.1",
