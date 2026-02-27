@@ -1,5 +1,5 @@
 from mfem import ser as mfem
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 def grid_function_save_vtk(gf, os, field_name):

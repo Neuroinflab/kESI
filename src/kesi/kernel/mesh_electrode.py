@@ -1,7 +1,7 @@
 from memoization import cached
 import numpy as np
 import pyvista
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from kesi.fem_utils.pyvista_resampling import pyvista_sample_points
 
 

@@ -10,7 +10,7 @@ import pyvista
 
 from kesi.utils import write_run_summary
 from kesi.fem_utils.grid_utils import vertex_grid_from_volume
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from nibabel.processing import conform
 
 

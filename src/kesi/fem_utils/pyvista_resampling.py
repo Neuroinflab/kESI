@@ -10,7 +10,7 @@ import pandas as pd
 
 import pyvista
 from nibabel import Nifti1Image
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from kesi.fem_utils.grid_utils import load_or_create_grid
 import mfem.ser as mfem

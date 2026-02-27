@@ -4,7 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 import pyvista
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 def point_potential_solve_mesh(electrode_position, mesh, conductivity):
