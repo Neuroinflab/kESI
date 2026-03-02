@@ -29,8 +29,6 @@ import warnings
 import functools
 
 import scipy.linalg
-from tqdm import tqdm
-
 
 def warn_deprecated(message, stacklevel=1):
     warnings.warn(DeprecationWarning(message),
@@ -113,14 +111,14 @@ class _LinearKernelSolver(object):
 
         return solved
 
-    def leave_one_out_errors(self, rhs, regularization_parameter=0):
+    def leave_one_out_errors(self, rhs, regularization_parameter=0, progress=False):
         n = self._kernel.shape[0]
         KERNEL = self._kernel + regularization_parameter * np.identity(n)
         IDX_N = np.arange(n)
 
         result = []
-        for i, ROW in enumerate(tqdm(rhs, desc='leave one out error estimation',
-                                     leave=False)):
+
+        for i, ROW in enumerate(rhs):
             est = self._leave_one_out_estimate(KERNEL, rhs, i, IDX_N != i) - ROW
             result.append(est)
 

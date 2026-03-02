@@ -10,7 +10,7 @@ import pyvista
 from nibabel import Nifti1Image
 from sklearn.metrics import DistanceMetric
 from sklearn.neighbors import KDTree
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from tqdm.contrib.concurrent import process_map
 from kesi.fem_utils.grid_utils import create_grid, load_or_create_grid
 

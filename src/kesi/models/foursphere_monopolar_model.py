@@ -2,7 +2,7 @@ import warnings
 
 import numpy as np
 from memoization import cached
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 class PointMonopole(object):

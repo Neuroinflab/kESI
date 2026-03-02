@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import psutil
 import pyvista
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from tqdm.contrib.concurrent import process_map
 from io import StringIO
 

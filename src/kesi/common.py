@@ -37,7 +37,7 @@ try:  # Enables further import of `shape()`
     from .kernel._tools import shape  # from the module; if the file is not a
 except ImportError:  # module, `shape()` is unnecessary, thus
     pass  # the raised exception may be ignored.
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 # for backward compatibility
 from kesi.models.fourspheremodel import FourSphereModel  # noqa
