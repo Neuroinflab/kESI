@@ -1,7 +1,9 @@
-import mfem.ser as mfem
 import numpy as np
 import scipy.interpolate as si
-
+try:
+    import mfem.ser as mfem
+except ImportError:
+    pass
 
 class CSDCoefficient(mfem.PyCoefficient):
 

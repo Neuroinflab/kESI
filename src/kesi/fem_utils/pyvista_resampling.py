@@ -13,10 +13,15 @@ from nibabel import Nifti1Image
 from tqdm.auto import tqdm
 
 from kesi.fem_utils.grid_utils import load_or_create_grid
-import mfem.ser as mfem
+
+try:
+    import mfem.ser as mfem
+    # there is no need for prepare_fespace if there is no mfem
+    from kesi.mfem_solver.mfem_piecewise_solver import prepare_fespace
+except ImportError:
+    pass
 
 from kesi.fem_utils.vtk_utils import grid_function_save_vtk
-from kesi.mfem_solver.mfem_piecewise_solver import prepare_fespace
 
 
 def convert_mfem_to_pyvista(mesh, solutions, names):

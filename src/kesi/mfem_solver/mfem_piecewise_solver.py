@@ -4,7 +4,11 @@ import os
 from functools import partial, lru_cache
 from multiprocessing import set_start_method
 
-import mfem.ser as mfem
+try:
+    import mfem.ser as mfem
+except ImportError:
+    pass
+
 import numpy as np
 import pandas as pd
 import psutil
