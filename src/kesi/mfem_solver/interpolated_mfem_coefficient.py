@@ -1,5 +1,8 @@
 import numpy as np
 import scipy.interpolate as si
+
+from kesi.fem_utils import mfem_check
+
 try:
     import mfem.ser as mfem
 except ImportError:
@@ -8,6 +11,7 @@ except ImportError:
 class CSDCoefficient(mfem.PyCoefficient):
 
     def __init__(self, x, y, z, values):
+        mfem_check()
         """x, y, z grid definition, values - numpy, 3D grid of CSD values"""
         super().__init__()
         self.x = x

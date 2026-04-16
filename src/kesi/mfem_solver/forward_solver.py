@@ -1,6 +1,5 @@
 import numpy as np
-
-
+from kesi.fem_utils import mfem_check
 from kesi.fem_utils.pyvista_resampling import convert_mfem_to_pyvista, pyvista_sample_points, pyvista_sample_grid
 from kesi.mfem_solver.mfem_piecewise_solver import mfem_solve_mesh, csd_distribution_coefficient, prepare_mesh
 
@@ -16,12 +15,13 @@ class CSDForwardSolver:
         refinement_steps - how many times we want to subdivide the mesh around sampling points
         refinement_radius - distance of from the sampling points of mesh elements we want to subdivide
         """
-
+        mfem_check()
         self.meshfile = meshfile
         self.conductivities = conductivities
         self.boundary_value = boundary_value
         if sampling_points:
-            self.mesh = prepare_mesh(self.meshfile, additional_refinement, sampling_points, steps=refinement_steps, refinement_radius=refinement_radius)
+            self.mesh = prepare_mesh(self.meshfile, additional_refinement, sampling_points, steps=refinement_steps,
+                                     refinement_radius=refinement_radius)
         else:
             self.mesh = prepare_mesh(self.meshfile, additional_refinement)
         self.solution = None
@@ -61,4 +61,3 @@ class CSDForwardSolver:
         data = sampled.get_array("pot")
         sampled_grid = data.reshape(grid.shape[0:3], order="F")
         return sampled_grid
-
