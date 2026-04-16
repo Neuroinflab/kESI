@@ -1,4 +1,8 @@
-from mfem import ser as mfem
+try:
+    from mfem import ser as mfem
+except ImportError:
+    pass
+
 from tqdm.auto import tqdm
 
 

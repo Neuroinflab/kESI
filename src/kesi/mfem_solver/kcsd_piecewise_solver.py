@@ -6,7 +6,6 @@ import pandas as pd
 import pyvista
 from tqdm.auto import tqdm
 
-
 def point_potential_solve_mesh(electrode_position, mesh, conductivity):
     distance_to_electrode = np.linalg.norm(np.array(electrode_position) - mesh.points, ord=2, axis=1)
     v_kcsd = 1.0 / (4 * np.pi * conductivity * distance_to_electrode)
@@ -14,7 +13,11 @@ def point_potential_solve_mesh(electrode_position, mesh, conductivity):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="samples mesh solution using voxel downsampling")
+    parser = argparse.ArgumentParser(description=("Calculates an anaylytical infinite space isotropic solution "
+                                                 "for point source inverse leadfields per electrode, "
+                                                  "using mesh as a solution space/grid"
+                                                  )
+                                     )
     parser.add_argument("meshfile",
                         help=('MFEM compatible mesh, assumes it has'
                               ' one boundary condition physical group (material) and N materials of different'
@@ -34,10 +37,6 @@ def main():
     parser.add_argument('-c', "--conductivity", type=float,
                         help=("Universe conductivity"),
                         default=0.33)
-
-    parser.add_argument('--multiprocessing', dest='multiprocessing', action='store_true',
-                        help='Enable multiprocessing per electrode, broken rn')
-    parser.set_defaults(multiprocessing=False)
 
     namespace = parser.parse_args()
 

@@ -581,7 +581,6 @@ source = { editable = "." }
 dependencies = [
     { name = "memoization" },
     { name = "meshio" },
-    { name = "mfem" },
     { name = "nibabel" },
     { name = "numba" },
     { name = "numpy" },
@@ -596,11 +595,16 @@ dependencies = [
     { name = "tqdm" },
 ]
 
+[package.optional-dependencies]
+fem = [
+    { name = "mfem" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "memoization", specifier = ">=0.4.0" },
     { name = "meshio", specifier = ">=5.2.6" },
-    { name = "mfem", specifier = ">=4.7.0.1" },
+    { name = "mfem", marker = "extra == 'fem'", specifier = ">=4.7.0.1" },
     { name = "nibabel", specifier = ">=5.1.0" },
     { name = "numba", specifier = ">=0.59.1" },
     { name = "numpy", specifier = ">=1.24" },
@@ -612,6 +616,7 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.10.1" },
     { name = "tqdm", specifier = ">=4.66" },
 ]
+provides-extras = ["fem"]
 
 [[package]]
 name = "kiwisolver"

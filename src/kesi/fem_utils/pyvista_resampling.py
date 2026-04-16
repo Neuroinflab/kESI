@@ -13,10 +13,15 @@ from nibabel import Nifti1Image
 from tqdm.auto import tqdm
 
 from kesi.fem_utils.grid_utils import load_or_create_grid
-import mfem.ser as mfem
+
+try:
+    import mfem.ser as mfem
+    # there is no need for prepare_fespace if there is no mfem
+    from kesi.mfem_solver.mfem_piecewise_solver import prepare_fespace
+except ImportError:
+    pass
 
 from kesi.fem_utils.vtk_utils import grid_function_save_vtk
-from kesi.mfem_solver.mfem_piecewise_solver import prepare_fespace
 
 
 def convert_mfem_to_pyvista(mesh, solutions, names):
@@ -83,14 +88,14 @@ def main():
                               'If there are *.npz  files in the same folder, '
                               'solutions from those files will be used instead'))
     parser.add_argument("electrodefile",
-                        help=('CSV with electrode names and positions, in meters, with a header of: \n'
-                              '\tNAME,X,Y,Z')
+                        help=('CSV with electrode names and positions, in milimeters, with a header of: \n'
+                              '\tlabel,x,y,z')
                         )
     parser.add_argument("output", help="Output folder")
     parser.add_argument("-bc", "--base-conductivity", type=float,
                         help="base conductivity for kCSD assumptions", default=0.33)
 
-    parser.add_argument("--attribute", help='VTK attribute to sample', default='correction')
+    parser.add_argument("--attribute", help='VTK attribute to sample', default='potential')
     parser.add_argument('-s', "--sampling-step", type=float, help="step of the sampling grid", default=0.001)
     parser.add_argument('-g', "--grid-file", type=str, help="grid file, if provided sampling step is ignored",
                         default=None)
@@ -104,6 +109,9 @@ def main():
 
     namespace = parser.parse_args()
     mesh = pyvista.read(namespace.meshfile, progress_bar=True)
+    if sum([i.startswith(namespace.attribute) for i in mesh.point_data.keys()]) < 1:
+        raise ValueError(f"No attributes in VTK which start with {namespace.attribute}")
+
     electrodes = pd.read_csv(namespace.electrodefile)
 
     vertices = mesh.points
@@ -157,12 +165,13 @@ def main():
         Y = grid[1][0, :, 0][None, :, None]
         Z = grid[2][0, 0, :][None, None, :]
         if not namespace.ignore_electrode_errors:
-            if np.sum(electrodes.NAME == save_name) > 1:
+            if np.sum(electrodes.label == save_name) > 1:
                 raise Exception("Multiple electrodes have the same names")
-            if np.sum(electrodes.NAME == save_name) == 0:
+            if np.sum(electrodes.label == save_name) == 0:
                 raise Exception("Electrode {} not found".format(save_name))
         try:
-            LOCATION = electrodes[electrodes.NAME == save_name][['X', 'Y', 'Z']].values[0]
+            # from m to mm
+            LOCATION = electrodes[electrodes.label == save_name][['x', 'y', 'z']].values[0] / 1000
         except IndexError:
             LOCATION = np.array([np.nan, np.nan, np.nan])
         BASE_CONDUCTIVITY = np.array(namespace.base_conductivity)

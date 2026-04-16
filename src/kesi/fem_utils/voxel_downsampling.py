@@ -21,7 +21,7 @@ def sample_points(query_points, kdtree, values, sampling_size=0.01, empty=0.0):
     sampled = []
     for chunk_id in tqdm(list(range(chunks)), desc='sampling by querying kdtree'):
         chunk = query_points[chunk_id * chunk_size:(chunk_id + 1) * chunk_size]
-        indices_per_query_points = kdtree.query_radius(chunk, r=sampling_size / 2,)
+        indices_per_query_points = kdtree.query_radius(chunk, r=sampling_size / 2, )
         for indices in indices_per_query_points:
             if len(indices) > 0:
                 value = np.mean(values[indices])
@@ -84,9 +84,9 @@ def voxel_downsampling(points, values, lower_bound=np.array([0, 0, 0]), upper_bo
         sampling_size = mesh_max_elem_size * 2
 
     grid_points = np.array([grid[0].ravel(),
-                           grid[1].ravel(),
-                           grid[2].ravel(),
-                           ]).T
+                            grid[1].ravel(),
+                            grid[2].ravel(),
+                            ]).T
     print("Building a kdtree...")
     kdtree = KDTree(points, metric=sampling_metric)
     print("Building a kdtree, done")
@@ -98,28 +98,35 @@ def voxel_downsampling(points, values, lower_bound=np.array([0, 0, 0]), upper_bo
 
 
 def main():
-    parser = argparse.ArgumentParser(description="samples mesh solution using voxel downsampling")
+    parser = argparse.ArgumentParser(description=("samples mesh solution using voxel downsampling, "
+                                                 "mainly used for VTK soulution visualisation in ITK-SNAP or in"
+                                                  " regularly spaced numpy files")
+                                     )
     parser.add_argument("meshfile",
                         help=('VTK mesh file with solution. '
                               'If there is a *_solutions.npz file in the same folder, '
                               'solutions from that file will be used instead'))
     parser.add_argument("electrodefile",
-                        help=('CSV with electrode names and positions, in meters, with a header of: \n'
-                              '\tNAME,X,Y,Z')
+                        help=('CSV with electrode names and positions, in milimeters, with a header of: \n'
+                              '\tlabel,x,y,z')
                         )
     parser.add_argument("output", help="Output folder")
     parser.add_argument("-bc", "--base-conductivity", type=float,
                         help="base conductivity for kCSD assumptions", default=0.33)
 
     parser.add_argument("--attribute", help='VTK attribute to sample', default='potential')
-    parser.add_argument('-s', "--sampling-step", type=float, help="step of the sampling grid", default=0.001)
-    parser.add_argument('-ms', "--mesh_max_elem_size", type=float, help="maximum element size of the mesh", default=0.005)  # todo make it automatic
-    parser.add_argument('-g', "--grid-file", type=str, help="grid file, if provided sampling step is ignored", default=None)
+    parser.add_argument('-s', "--sampling-step", type=float, help="step of the sampling grid in meters", default=0.001)
+    parser.add_argument('-ms', "--mesh_max_elem_size", type=float, help="maximum element size of the mesh",
+                        default=0.005)  # todo make it automatic
+    parser.add_argument('-g', "--grid-file", type=str, help="grid file, if provided sampling step is ignored",
+                        default=None)
     parser.add_argument('--nifti', dest='nifti', action='store_true',
                         help='Additionally store sampled potential in nifti format')
 
     namespace = parser.parse_args()
     mesh = pyvista.read(namespace.meshfile, progress_bar=True)
+    if sum([i.startswith(namespace.attribute) for i in mesh.point_data.keys()]) < 1:
+        raise ValueError(f"No attributes in VTK which start with {namespace.attribute}")
     electrodes = pd.read_csv(namespace.electrodefile)
 
     vertices = mesh.points
@@ -168,11 +175,12 @@ def main():
         X = grid[0][:, 0, 0][:, None, None]
         Y = grid[1][0, :, 0][None, :, None]
         Z = grid[2][0, 0, :][None, None, :]
-        if np.sum(electrodes.NAME == save_name) > 1:
+        if np.sum(electrodes.label == save_name) > 1:
             raise Exception("Multiple electrodes have the same names")
-        if np.sum(electrodes.NAME == save_name) == 0:
+        if np.sum(electrodes.label == save_name) == 0:
             raise Exception("Electrode {} not found".format(save_name))
-        LOCATION = electrodes[electrodes.NAME == save_name][['X', 'Y', 'Z']].values[0]
+        # from milimeters to meters
+        LOCATION = electrodes[electrodes.label == save_name][['x', 'y', 'z']].values[0] / 1000
         BASE_CONDUCTIVITY = np.array(namespace.base_conductivity)
 
         outfile = os.path.join(namespace.output, save_name + '.npz')

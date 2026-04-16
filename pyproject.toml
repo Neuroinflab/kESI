@@ -41,7 +41,6 @@ requires-python = ">=3.9"
 dependencies = [
     "numpy >= 1.24",
     "scipy >= 1.10.1",
-    "mfem >= 4.7.0.1",
     "scikit-learn >= 1.4",
     "tqdm >= 4.66",
     "pyvista >= 0.44.2",
@@ -54,8 +53,6 @@ dependencies = [
     "psutil >= 7.0.0",
 
 ]
-
-
 
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -75,6 +72,11 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Software Development",
     "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.optional-dependencies]
+fem = [
+  "mfem >= 4.7.0.1",
 ]
 
 [project.urls]

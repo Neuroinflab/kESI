@@ -1,10 +1,18 @@
+from kesi.fem_utils import mfem_check
+# need to check it and give a sensible response to user before anything
+mfem_check()
+
 import argparse
 import math
 import os
 from functools import partial, lru_cache
 from multiprocessing import set_start_method
 
-import mfem.ser as mfem
+try:
+    import mfem.ser as mfem
+except ImportError:
+    pass
+
 import numpy as np
 import pandas as pd
 import psutil
@@ -65,6 +73,7 @@ def prepare_mesh(meshfile, refinement, electrode_positions=None, refinement_radi
         If the mesh is too coarse there might be no mesh element in the refinement radius, you might want to increase the radius
     :param steps: how many times we want to do the refinement around electrode positions.
     """
+    mfem_check()
     # to create run
     # gmsh -3 -format msh22 four_spheres_in_air_with_plane.geo
     print("Loading mesh...")
@@ -137,10 +146,7 @@ def mfem_solve_mesh(csd_coefficient, mesh, boundary_potential, conductivities, d
     conductivities - numpy array of conductivities in S/m one per mesh material, can be longer than amount of materials - extra values won't not be used
     dirichlet - boolean - to enable dirichlet boundary condition, otherwise it's neuman - and boundary_potential is the current through boundary
     """
-
-    # import IPython
-    # IPython.embed()
-
+    mfem_check()
     # this fespace will get garbage collected and returned gridfunctions will crash on some operations!!!!!
     fespace = prepare_fespace(mesh)
     print('Number of finite element unknowns: ' +
@@ -230,6 +236,7 @@ def estimate_sensible_process_count(safety_margin=3):
 
 
 def main():
+    mfem_check()
     parser = argparse.ArgumentParser(description="samples mesh solution using voxel downsampling")
     parser.add_argument("meshfile",
                         help=('MFEM compatible mesh, assumes it has'
