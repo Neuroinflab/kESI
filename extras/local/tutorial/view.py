@@ -125,6 +125,11 @@ class CoordinatePlanes(object):
         self.plot_planes([self._probe(f, *xyz) for xyz in self.PLANES_XYZ],
                          title)
 
+    def plot_function_vectorized(self, f, title):
+        self.plot_planes([self._probe_vectorized(f, *xyz) for xyz in self.PLANES_XYZ],
+                         title)
+
+
     def _probe(self, f, X, Y, Z):
         with np.nditer([np.reshape(X, (-1, 1, 1)),
                         np.reshape(Y, (1, -1, 1)),
@@ -137,6 +142,16 @@ class CoordinatePlanes(object):
                     _res[...] = np.nan
 
             return np.ma.masked_invalid(it.operands[3])
+
+    def _probe_vectorized(self, f, X, Y, Z):
+        points = []
+        with np.nditer([np.reshape(X, (-1, 1, 1)),
+                        np.reshape(Y, (1, -1, 1)),
+                        np.reshape(Z, (1, 1, -1)),
+                        None]) as it:
+            for _x, _y, _z, _res in it:
+                points.append([_x, _y, _z])
+        return f(np.array(points)).reshape(len(X), len(Y), len(Z))
 
 
 class Slice(CoordinatePlanes):

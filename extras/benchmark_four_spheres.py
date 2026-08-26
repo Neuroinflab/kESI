@@ -43,7 +43,7 @@ from local.fem._common import Stopwatch
 from kesi.common import FourSphereModel as ModelNew
 
 
-CONFIG = 'FEM/model_properties/four_spheres_csf_3_mm.ini'
+CONFIG = 'data/bundled/model_properties/four_spheres_csf_3_mm__Naess_Chintaluri_2017.ini'
 DIPOLE_R = 78e-3
 DIPOLE_LOC = [0., 0., DIPOLE_R]
 DIPOLE_P = [0.002, 0.003, 0.005]

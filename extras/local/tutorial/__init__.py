@@ -25,23 +25,25 @@
 ###############################################################################
 
 import numpy as np
-
-from .. import forward_model
-
-
-class SphericalForwardModel(forward_model.Spherical):
-    pass
+try:
+    from .. import forward_model
 
 
-class SliceForwardModel(forward_model.Slice):
-    def __init__(self, mesh, degree, config,
-                 quiet=True,
-                 ground_potential=0.0,
-                 element_type="CG"):
-        super().__init__(mesh, degree, config,
-                         quiet=quiet,
-                         ground_potential=ground_potential,
-                         element_type=element_type)
+    class SphericalForwardModel(forward_model.Spherical):
+        pass
+
+
+    class SliceForwardModel(forward_model.Slice):
+        def __init__(self, mesh, degree, config,
+                     quiet=True,
+                     ground_potential=0.0,
+                     element_type="CG"):
+            super().__init__(mesh, degree, config,
+                             quiet=quiet,
+                             ground_potential=ground_potential,
+                             element_type=element_type)
+except ModuleNotFoundError:
+    print("Warning, dolfin/fenics not available")
 
 
 def eigh(kernel):

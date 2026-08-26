@@ -125,7 +125,7 @@ class TestLegacyCrossKernelReconstructor(unittest.TestCase):
             verbose._CrossKernelReconstructor(
                 SpyKernelSolverClass([[]]),
                 [[]])
-
+            # tests if we return a warning?????
             self.assertEqual(1, len(w))
             self.assertTrue(issubclass(w[-1].category,
                                        DeprecationWarning))
